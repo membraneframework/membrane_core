@@ -98,7 +98,7 @@ defmodule Membrane.Testing.Endpoint do
   end
 
   @impl true
-  def handle_write(:input, buf, _ctx, state) do
+  def handle_buffer(:input, buf, _ctx, state) do
     case state do
       %{autodemand: false} -> {notify({:buffer, buf}), state}
       %{autodemand: true} -> {[demand: :input] ++ notify({:buffer, buf}), state}

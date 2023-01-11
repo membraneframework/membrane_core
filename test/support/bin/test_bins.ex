@@ -18,7 +18,7 @@ defmodule Membrane.Support.Bin.TestBins do
       do: {[demand: {:input, size}], state}
 
     @impl true
-    def handle_process(_pad, buf, _ctx, state), do: {[buffer: {:output, buf}], state}
+    def handle_buffer(_pad, buf, _ctx, state), do: {[buffer: {:output, buf}], state}
   end
 
   defmodule TestDynamicPadFilter do
@@ -52,7 +52,7 @@ defmodule Membrane.Support.Bin.TestBins do
     end
 
     @impl true
-    def handle_process(_input, buf, ctx, state) do
+    def handle_buffer(_input, buf, ctx, state) do
       buffers =
         ctx.pads
         |> Map.values()

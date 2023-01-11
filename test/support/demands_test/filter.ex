@@ -24,7 +24,7 @@ defmodule Membrane.Support.DemandsTest.Filter do
   end
 
   @impl true
-  def handle_process(:input, %Buffer{payload: payload}, _ctx, state) do
+  def handle_buffer(:input, %Buffer{payload: payload}, _ctx, state) do
     {[buffer: {:output, %Buffer{payload: payload <> <<255>>}}, redemand: :output], state}
   end
 

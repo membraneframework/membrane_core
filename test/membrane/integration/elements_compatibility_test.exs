@@ -131,7 +131,7 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
     end
 
     @impl true
-    def handle_process(:input, buf, _ctx, state) do
+    def handle_buffer(:input, buf, _ctx, state) do
       {[buffer: {:output, buf}], state}
     end
   end
@@ -160,7 +160,7 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
     end
 
     @impl true
-    def handle_write(_pad, buffer, _ctx, state) do
+    def handle_buffer(_pad, buffer, _ctx, state) do
       state = %{state | buffers: [buffer.payload | state.buffers], received: state.received + 1}
 
       cond do
@@ -210,7 +210,7 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
     end
 
     @impl true
-    def handle_write(_pad, buffer, _ctx, state) do
+    def handle_buffer(_pad, buffer, _ctx, state) do
       state = %{
         state
         | buffers: [buffer.payload | state.buffers],

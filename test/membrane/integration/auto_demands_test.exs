@@ -19,13 +19,13 @@ defmodule Membrane.Integration.AutoDemandsTest do
     end
 
     @impl true
-    def handle_process(:input, buffer, _ctx, %{direction: :up} = state) do
+    def handle_buffer(:input, buffer, _ctx, %{direction: :up} = state) do
       buffers = Enum.map(1..state.factor, fn _i -> buffer end)
       {[buffer: {:output, buffers}], state}
     end
 
     @impl true
-    def handle_process(:input, buffer, _ctx, %{direction: :down} = state) do
+    def handle_buffer(:input, buffer, _ctx, %{direction: :down} = state) do
       if state.counter < state.factor do
         {[], %{state | counter: state.counter + 1}}
       else
@@ -41,7 +41,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     def_output_pad :output, accepted_format: _any, demand_mode: :auto, availability: :on_request
 
     @impl true
-    def handle_process(:input, buffer, _ctx, state), do: {[forward: buffer], state}
+    def handle_buffer(:input, buffer, _ctx, state), do: {[forward: buffer], state}
   end
 
   [

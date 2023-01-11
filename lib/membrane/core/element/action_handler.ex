@@ -137,7 +137,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       when cb in [
              :handle_stream_format,
              :handle_event,
-             :handle_process_list,
+             :handle_buffers_batch,
              :handle_end_of_stream
            ] do
     dir =
@@ -152,7 +152,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       action =
         case cb do
           :handle_event -> {:event, {pad, data}}
-          :handle_process_list -> {:buffer, {pad, data}}
+          :handle_buffers_batch -> {:buffer, {pad, data}}
           :handle_stream_format -> {:stream_format, {pad, data}}
           :handle_end_of_stream -> {:end_of_stream, pad}
         end

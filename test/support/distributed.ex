@@ -52,7 +52,7 @@ defmodule Membrane.Support.Distributed do
     end
 
     @impl true
-    def handle_write(_pad, _buffer, _ctx, state) do
+    def handle_buffer(_pad, _buffer, _ctx, state) do
       {[demand: {:input, 1}], state}
     end
   end
