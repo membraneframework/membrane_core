@@ -1,12 +1,12 @@
-defmodule Membrane.RemoteControlled.PipelineTest do
+defmodule Membrane.RCPipelineTest do
   use ExUnit.Case
 
   import Membrane.ChildrenSpec
 
-  alias Membrane.RemoteControlled.Message
-  alias Membrane.RemoteControlled.Pipeline
+  alias Membrane.RCMessage
+  alias Membrane.RCPipeline
 
-  require Membrane.RemoteControlled.Pipeline
+  require Membrane.RCPipeline
 
   defmodule Filter do
     use Membrane.Filter
@@ -45,89 +45,93 @@ defmodule Membrane.RemoteControlled.PipelineTest do
                  |> child(:c, Membrane.Testing.Sink)
 
   defp setup_pipeline(_context) do
-    {:ok, _supervisor, pipeline} = start_supervised({Pipeline, controller_pid: self()})
+    {:ok, _supervisor, pipeline} = start_supervised({RCPipeline, controller_pid: self()})
     Process.link(pipeline)
 
     {:ok, pipeline: pipeline}
   end
 
-  describe "Membrane.RemoteControlled.Pipeline.subscribe/2" do
+  describe "Membrane.RCPipeline.subscribe/2" do
     setup :setup_pipeline
 
     test "testing process should receive all subscribed events", %{pipeline: pipeline} do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Notification{element: :b, data: %Membrane.Buffer{}})
-      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: :b, pad: :input})
+      RCPipeline.subscribe(pipeline, %RCMessage.Notification{
+        element: :b,
+        data: %Membrane.Buffer{}
+      })
+
+      RCPipeline.subscribe(pipeline, %RCMessage.StartOfStream{element: :b, pad: :input})
 
       # RUN
-      Pipeline.exec_actions(pipeline, spec: @pipeline_spec)
+      RCPipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      assert_receive %Message.Notification{
+      assert_receive %RCMessage.Notification{
         from: ^pipeline,
         element: :b,
         data: %Membrane.Buffer{payload: "test"}
       }
 
-      assert_receive %Message.StartOfStream{from: ^pipeline, element: :b, pad: :input}
+      assert_receive %RCMessage.StartOfStream{from: ^pipeline, element: :b, pad: :input}
 
-      refute_receive %Message.Terminated{from: ^pipeline}
+      refute_receive %RCMessage.Terminated{from: ^pipeline}
     end
 
     test "should allow to use wildcards in subscription pattern", %{pipeline: pipeline} do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.EndOfStream{})
+      RCPipeline.subscribe(pipeline, %RCMessage.EndOfStream{})
 
       # RUN
-      Pipeline.exec_actions(pipeline, spec: @pipeline_spec)
+      RCPipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      assert_receive %Message.EndOfStream{from: ^pipeline, element: :b, pad: :input}
+      assert_receive %RCMessage.EndOfStream{from: ^pipeline, element: :b, pad: :input}
 
-      assert_receive %Message.EndOfStream{from: ^pipeline, element: :c, pad: :input}
+      assert_receive %RCMessage.EndOfStream{from: ^pipeline, element: :c, pad: :input}
 
       # STOP
-      Pipeline.terminate(pipeline, blocking?: true)
+      RCPipeline.terminate(pipeline, blocking?: true)
 
       # TEST
-      refute_receive %Message.Terminated{from: ^pipeline}
-      refute_receive %Message.Notification{from: ^pipeline}
-      refute_receive %Message.StartOfStream{from: ^pipeline, element: _, pad: _}
+      refute_receive %RCMessage.Terminated{from: ^pipeline}
+      refute_receive %RCMessage.Notification{from: ^pipeline}
+      refute_receive %RCMessage.StartOfStream{from: ^pipeline, element: _, pad: _}
     end
   end
 
-  describe "Membrane.RemoteControlled.Pipeline await_* functions" do
+  describe "Membrane.RCPipeline await_* functions" do
     setup :setup_pipeline
 
     test "should await for requested messages", %{pipeline: pipeline} do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
-      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
-      Pipeline.subscribe(pipeline, %Message.Terminated{})
+      RCPipeline.subscribe(pipeline, %RCMessage.StartOfStream{element: _, pad: _})
+      RCPipeline.subscribe(pipeline, %RCMessage.Notification{element: _, data: _})
+      RCPipeline.subscribe(pipeline, %RCMessage.Terminated{})
 
       # RUN
-      Pipeline.exec_actions(pipeline, spec: @pipeline_spec)
+      RCPipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      Pipeline.await_start_of_stream(pipeline, :c, :input)
-      Pipeline.await_notification(pipeline, :b)
+      RCPipeline.await_start_of_stream(pipeline, :c, :input)
+      RCPipeline.await_notification(pipeline, :b)
     end
 
     test "should await for requested messages with parts of message body not being specified", %{
       pipeline: pipeline
     } do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
-      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+      RCPipeline.subscribe(pipeline, %RCMessage.StartOfStream{element: _, pad: _})
+      RCPipeline.subscribe(pipeline, %RCMessage.Notification{element: _, data: _})
 
       # RUN
-      Pipeline.exec_actions(pipeline, spec: @pipeline_spec)
+      RCPipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      Pipeline.await_start_of_stream(pipeline, :c)
-      msg = Pipeline.await_notification(pipeline, :b)
+      RCPipeline.await_start_of_stream(pipeline, :c)
+      msg = RCPipeline.await_notification(pipeline, :b)
 
-      assert msg == %Message.Notification{
+      assert msg == %RCMessage.Notification{
                from: pipeline,
                element: :b,
                data: %Membrane.Buffer{payload: "test"}
@@ -138,15 +142,15 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       pipeline: pipeline
     } do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
-      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+      RCPipeline.subscribe(pipeline, %RCMessage.StartOfStream{element: _, pad: _})
+      RCPipeline.subscribe(pipeline, %RCMessage.Notification{element: _, data: _})
       element = :c
 
       # START
-      Pipeline.exec_actions(pipeline, spec: @pipeline_spec)
+      RCPipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      Pipeline.await_start_of_stream(pipeline, element, :input)
+      RCPipeline.await_start_of_stream(pipeline, element, :input)
     end
   end
 end
