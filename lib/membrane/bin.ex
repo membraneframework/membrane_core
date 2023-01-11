@@ -50,6 +50,8 @@ defmodule Membrane.Bin do
   @doc """
   Callback that is called when new pad has been added to bin. Executed
   ONLY for dynamic pads.
+
+  Context passed to this callback contains additional field `:pad_options`.
   """
   @callback handle_pad_added(
               pad :: Pad.ref_t(),
@@ -60,6 +62,8 @@ defmodule Membrane.Bin do
   @doc """
   Callback that is called when some pad of the bin has been removed. Executed
   ONLY for dynamic pads.
+
+  Context passed to this callback contains additional field `:pad_options`.
   """
   @callback handle_pad_removed(
               pad :: Pad.ref_t(),

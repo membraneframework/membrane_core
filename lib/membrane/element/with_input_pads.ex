@@ -17,6 +17,8 @@ defmodule Membrane.Element.WithInputPads do
   given pad.
 
   In filters stream format is forwarded through all output pads by default.
+
+  Context passed to this callback contains additional field `:old_stream_format`.
   """
   @callback handle_stream_format(
               pad :: Pad.ref_t(),

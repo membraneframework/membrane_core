@@ -104,6 +104,8 @@ defmodule Membrane.Element.Base do
   @doc """
   Callback that is called when new pad has beed added to element. Executed
   ONLY for dynamic pads.
+
+  Context passed to this callback contains additional field `:pad_options`.
   """
   @callback handle_pad_added(
               pad :: Pad.ref_t(),
@@ -114,6 +116,8 @@ defmodule Membrane.Element.Base do
   @doc """
   Callback that is called when some pad of the element has beed removed. Executed
   ONLY for dynamic pads.
+
+  Context passed to this callback contains additional field `:pad_options`.
   """
   @callback handle_pad_removed(
               pad :: Pad.ref_t(),

@@ -22,6 +22,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @spec handle_setup(Parent.state_t()) :: Parent.state_t()
   def handle_setup(state) do
     Membrane.Logger.debug("Setup")
+
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_setup,

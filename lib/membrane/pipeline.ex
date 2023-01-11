@@ -199,6 +199,8 @@ defmodule Membrane.Pipeline do
 
   @doc """
   Callback invoked when crash of the crash group happens.
+
+  Context passed to this callback contains 2 additional fields: `:members` and `:crash_initiator`.
   """
   @callback handle_crash_group_down(
               group_name :: Child.group_t(),
@@ -208,6 +210,8 @@ defmodule Membrane.Pipeline do
 
   @doc """
   Callback invoked when pipeline is called using a synchronous call.
+
+  Context passed to this callback contains additional field `:from`.
   """
   @callback handle_call(
               message :: any,
