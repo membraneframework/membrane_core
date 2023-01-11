@@ -16,6 +16,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   }
 
   alias Membrane.Pad
+  alias Membrane.ParentError
 
   require Membrane.Core.Component
   require Membrane.Core.Message, as: Message
@@ -135,6 +136,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         links
       end)
 
+    :ok = assert_all_static_pads_linked_in_spec!(children_definitions, links)
+
     {all_children_names, state} =
       Enum.flat_map_reduce(children_definitions, state, &setup_children(&1, spec_ref, &2))
 
@@ -160,6 +163,37 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state = StartupUtils.exec_handle_spec_started(all_children_names, state)
     proceed_spec_startup(spec_ref, state)
+  end
+
+  defp assert_all_static_pads_linked_in_spec!(children_definitions, links) do
+    pads_to_link =
+      links
+      |> Enum.flat_map(&[&1.from, &1.to])
+      |> MapSet.new(&{&1.child, &1.pad_spec})
+
+    children_definitions
+    |> Enum.flat_map(fn {definitions, _options} -> definitions end)
+    |> Enum.flat_map(fn {child_name, child_definition, _opts} ->
+      child_module =
+        case child_definition do
+          %module{} -> module
+          module when is_atom(module) -> module
+        end
+
+      child_module.membrane_pads()
+      |> Keyword.values()
+      |> Enum.filter(&(&1.availability == :always))
+      |> Enum.map(&{child_name, &1.name})
+    end)
+    |> Enum.find(&(not MapSet.member?(pads_to_link, &1)))
+    |> case do
+      {child_name, pad_name} ->
+        raise ParentError,
+              "Child #{inspect(child_name)} has static pad #{inspect(pad_name)}, but it is not linked in spec"
+
+      nil ->
+        :ok
+    end
   end
 
   @spec make_canonical(Membrane.ChildrenSpec.t(), parsed_children_spec_options_t()) ::
@@ -537,9 +571,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       if result == :removed do
         state =
           Enum.reduce(group.members, state, fn child_name, state ->
-            {%{spec_ref: spec_ref}, state} = Bunch.Access.pop_in(state, [:children, child_name])
-            state = LinkUtils.unlink_element(child_name, state)
-            cleanup_spec_startup(spec_ref, state)
+            with {%{spec_ref: spec_ref}, state} <- pop_in(state, [:children, child_name]) do
+              state = LinkUtils.unlink_element(child_name, state)
+              cleanup_spec_startup(spec_ref, state)
+            else
+              {nil, state} -> state
+            end
           end)
 
         exec_handle_crash_group_down_callback(

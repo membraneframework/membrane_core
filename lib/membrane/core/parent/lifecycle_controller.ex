@@ -3,7 +3,14 @@ defmodule Membrane.Core.Parent.LifecycleController do
   use Bunch
 
   alias Membrane.{Child, ChildNotification, Core, Pad, Sync}
-  alias Membrane.Core.{CallbackHandler, Component, Message, Parent, TimerController}
+
+  alias Membrane.Core.{
+    CallbackHandler,
+    Component,
+    Message,
+    Parent,
+    TimerController
+  }
 
   alias Membrane.Core.Events
   alias Membrane.Core.Parent.{ChildLifeController}
@@ -26,18 +33,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
         state
       )
 
-    state = %{state | initialized?: true}
-
-    case state do
-      %Core.Pipeline.State{playing_requested?: true} ->
-        handle_playing(state)
-
-      %Core.Bin.State{} ->
-        Message.send(state.parent_pid, :initialized, state.name)
-        state
-
-      state ->
-        state
+    with %{setup_incomplete?: false} <- state do
+      Membrane.Core.LifecycleController.complete_setup(state)
     end
   end
 

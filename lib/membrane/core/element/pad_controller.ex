@@ -207,6 +207,12 @@ defmodule Membrane.Core.Element.PadController do
               "Tried to unlink a static pad #{inspect(pad_ref)}. Static pads cannot be unlinked unless element is terminating"
 
       {:error, :unknown_pad} ->
+        with false <- state.terminating?,
+             %{availability: :always} <- state.pads_info[Pad.name_by_ref(pad_ref)] do
+          raise Membrane.PadError,
+                "Tried to unlink a static pad #{inspect(pad_ref)}, before it was linked. Static pads cannot be unlinked unless element is terminating"
+        end
+
         Membrane.Logger.debug(
           "Ignoring unlinking pad #{inspect(pad_ref)} that hasn't been successfully linked"
         )

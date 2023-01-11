@@ -18,19 +18,11 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
   @impl true
   def handle_init(_ctx, _opts) do
-    children = [
-      child(:center_filter, Filter),
-      child(:sink, Testing.Sink)
-    ]
+    spec =
+      child(:center_filter, Filter)
+      |> child(:sink, Testing.Sink)
 
-    links = [
-      get_child(:center_filter)
-      |> get_child(:sink)
-    ]
-
-    spec = children ++ links
-
-    {[spec: spec, playback: :playing], %{}}
+    {[spec: spec], %{}}
   end
 
   @impl true

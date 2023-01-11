@@ -16,17 +16,17 @@ defmodule Membrane.Integration.DistributedPipelineTest do
       @impl true
       def handle_init(_ctx, _opts) do
         {[
-           spec: {child(:source, %Source{output: [1, 2, 3, 4, 5]}), node: :"first@127.0.0.1"},
-           spec:
+           spec: [
+             {child(:source, %Source{output: [1, 2, 3, 4, 5]}), node: :"first@127.0.0.1"},
              {get_child(:source)
               |> via_in(:input, toilet_capacity: 100, throttling_factor: 50)
               |> child(:sink, Sink), node: :"second@127.0.0.1"}
+           ]
          ], %{}}
       end
     end
 
     pipeline = Membrane.Testing.Pipeline.start_link_supervised!(module: Pipeline)
-    Membrane.Testing.Pipeline.execute_actions(pipeline, playback: :playing)
     assert_pipeline_play(pipeline)
     assert_end_of_stream(pipeline, :sink)
   end

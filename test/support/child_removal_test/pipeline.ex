@@ -49,7 +49,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
 
     spec = links ++ children
 
-    {[spec: spec, playback: :playing], %{}}
+    {[spec: spec], %{}}
   end
 
   @impl true

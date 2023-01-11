@@ -238,45 +238,45 @@ defmodule Membrane.Integration.ChildRemovalTest do
       send(RemovalDeferSink, :terminate)
       assert_receive {:DOWN, ^pipeline_monitor, :process, _pid, :normal}
     end
+  end
 
-    test "if all the children from the children group are removed" do
-      pipeline_pid =
-        Testing.Pipeline.start_link_supervised!(module: ChildRemovalTest.ChildRemovingPipeline)
+  test "If all the children from the children group are removed" do
+    pipeline_pid =
+      Testing.Pipeline.start_link_supervised!(module: ChildRemovalTest.ChildRemovingPipeline)
 
-      Testing.Pipeline.execute_actions(pipeline_pid, [
-        {:remove_children, :first_crash_group}
-      ])
+    Testing.Pipeline.execute_actions(pipeline_pid, [
+      {:remove_children, :first_crash_group}
+    ])
 
-      assert_pipeline_notified(
-        pipeline_pid,
-        :source,
-        {:pad_removed, {Membrane.Pad, :first, _ref}}
-      )
+    assert_pipeline_notified(
+      pipeline_pid,
+      :source,
+      {:pad_removed, {Membrane.Pad, :first, _ref}}
+    )
 
-      assert_pipeline_notified(
-        pipeline_pid,
-        :source,
-        {:pad_removed, {Membrane.Pad, :second, _ref}}
-      )
+    assert_pipeline_notified(
+      pipeline_pid,
+      :source,
+      {:pad_removed, {Membrane.Pad, :second, _ref}}
+    )
 
-      assert_pipeline_notified(
-        pipeline_pid,
-        :source,
-        {:pad_removed, {Membrane.Pad, :third, _ref}}
-      )
+    assert_pipeline_notified(
+      pipeline_pid,
+      :source,
+      {:pad_removed, {Membrane.Pad, :third, _ref}}
+    )
 
-      refute_pipeline_notified(
-        pipeline_pid,
-        :source,
-        {:pad_removed, {Membrane.Pad, :fourth, _ref}}
-      )
+    refute_pipeline_notified(
+      pipeline_pid,
+      :source,
+      {:pad_removed, {Membrane.Pad, :fourth, _ref}}
+    )
 
-      refute_pipeline_notified(
-        pipeline_pid,
-        :source,
-        {:pad_removed, {Membrane.Pad, :fifth, _ref}}
-      )
-    end
+    refute_pipeline_notified(
+      pipeline_pid,
+      :source,
+      {:pad_removed, {Membrane.Pad, :fifth, _ref}}
+    )
   end
 
   #############
