@@ -62,7 +62,7 @@ defmodule Membrane.Core.TimerController do
       CallbackHandler.exec_and_handle_callback(
         :handle_tick,
         Component.action_handler(state),
-        %{context: &Component.callback_context/1},
+        %{context: &Component.context_from_state/1},
         [timer_id],
         state
       )

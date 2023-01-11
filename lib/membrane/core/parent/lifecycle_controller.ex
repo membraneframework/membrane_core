@@ -27,7 +27,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
       CallbackHandler.exec_and_handle_callback(
         :handle_setup,
         Component.action_handler(state),
-        %{context: &Component.callback_context/1},
+        %{context: &Component.context_from_state/1},
         [],
         state
       )
@@ -56,7 +56,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     CallbackHandler.exec_and_handle_callback(
       :handle_playing,
       Component.action_handler(state),
-      %{context: &Component.callback_context/1},
+      %{context: &Component.context_from_state/1},
       [],
       state
     )
@@ -73,7 +73,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     CallbackHandler.exec_and_handle_callback(
       :handle_terminate_request,
       Component.action_handler(state),
-      %{context: &Component.callback_context/1},
+      %{context: &Component.context_from_state/1},
       [],
       state
     )
@@ -115,7 +115,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     CallbackHandler.exec_and_handle_callback(
       :handle_child_notification,
       Component.action_handler(state),
-      %{context: &Component.callback_context/1},
+      %{context: &Component.context_from_state/1},
       [notification, from],
       state
     )
@@ -126,7 +126,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     CallbackHandler.exec_and_handle_callback(
       :handle_info,
       Component.action_handler(state),
-      %{context: &Component.callback_context/1},
+      %{context: &Component.context_from_state/1},
       [message],
       state
     )
@@ -149,7 +149,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     CallbackHandler.exec_and_handle_callback(
       callback,
       Component.action_handler(state),
-      %{context: &Component.callback_context/1},
+      %{context: &Component.context_from_state/1},
       [element_name, pad_ref],
       state
     )

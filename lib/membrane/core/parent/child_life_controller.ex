@@ -639,7 +639,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          state
        ) do
     context_generator =
-      &Component.callback_context(&1,
+      &Component.context_from_state(&1,
         members: group_members,
         crash_initiator: crash_initiator
       )

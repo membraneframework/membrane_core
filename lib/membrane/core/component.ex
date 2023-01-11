@@ -6,12 +6,10 @@ defmodule Membrane.Core.Component do
           | Membrane.Core.Bin.State.t()
           | Membrane.Core.Element.State.t()
 
-  @type callback_context_option_t ::
-          Membrane.Core.Element.CallbackContext.option_t()
-          | Membrane.Core.Bin.CallbackContext.option_t()
-          | Membrane.Core.Pipeline.CallbackContext.option_t()
-
-  @type callback_context_options_t :: [callback_context_option_t()]
+  @type callback_context_optional_fields_t ::
+          Membrane.Core.Element.CallbackContext.optional_fields_t()
+          | Membrane.Core.Bin.CallbackContext.optional_fields_t()
+          | Membrane.Core.Pipeline.CallbackContext.optional_fields_t()
 
   @type callback_context_t ::
           Membrane.Element.CallbackContext.t()
@@ -25,9 +23,9 @@ defmodule Membrane.Core.Component do
       do: unquote(Module.concat([Membrane.Core, component, ActionHandler]))
   end)
 
-  @spec callback_context(state_t(), callback_context_options_t()) ::
+  @spec context_from_state(state_t(), callback_context_optional_fields_t()) ::
           callback_context_t()
-  def callback_context(state, args \\ []) do
+  def context_from_state(state, args \\ []) do
     alias Membrane.Core.{Bin, Element, Pipeline}
 
     callback_context_module =

@@ -1,13 +1,12 @@
 defmodule Membrane.Core.Bin.CallbackContext do
   @moduledoc false
 
-  @type option_t() :: {:pad_options, map()}
+  @type optional_fields_t :: [pad_options: map()]
 
-  @type options_t :: [option_t()]
-
-  @spec from_state(Membrane.Core.Bin.State.t(), options_t()) :: Membrane.Bin.CallbackContext.t()
-  def from_state(state, additional_fields \\ []) do
-    Map.new(additional_fields)
+  @spec from_state(Membrane.Core.Bin.State.t(), optional_fields_t()) ::
+          Membrane.Bin.CallbackContext.t()
+  def from_state(state, optional_fields \\ []) do
+    Map.new(optional_fields)
     |> Map.merge(%{
       clock: state.synchronization.clock,
       parent_clock: state.synchronization.parent_clock,

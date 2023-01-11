@@ -111,7 +111,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     CallbackHandler.exec_and_handle_callback(
       :handle_spec_started,
       action_handler,
-      %{context: &Component.callback_context/1},
+      %{context: &Component.context_from_state/1},
       [children_names],
       state
     )
