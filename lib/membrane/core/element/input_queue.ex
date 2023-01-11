@@ -218,38 +218,48 @@ defmodule Membrane.Core.Element.InputQueue do
     q
     |> @qe.pop
     |> case do
-      {{:value, {:buffers, b, inbound_metric_buf_size, _outbound_metric_buf_size}}, nq} ->
-        {b, back} = b |> outbound_metric.split_buffers(size_to_take_in_outbound_metric)
-        b_inbound_metric_size = inbound_metric.buffers_size(b)
-        b_outbound_metric_size = outbound_metric.buffers_size(b)
+      {{:value, {:buffers, buffers, inbound_metric_buf_size, _outbound_metric_buf_size}}, nq} ->
+        {buffers, excess_buffers} =
+          outbound_metric.split_buffers(buffers, size_to_take_in_outbound_metric)
 
-        case back do
+        buffers_size_inbound_metric = inbound_metric.buffers_size(buffers)
+        buffers_size_outbound_metric = outbound_metric.buffers_size(buffers)
+
+        case excess_buffers do
           [] ->
             q_pop(
               nq,
-              size_to_take_in_outbound_metric - b_outbound_metric_size,
+              size_to_take_in_outbound_metric - buffers_size_outbound_metric,
               inbound_metric,
               outbound_metric,
               queue_size - inbound_metric_buf_size,
               [
-                {:buffers, b, b_inbound_metric_size, b_outbound_metric_size} | acc
+                {:buffers, buffers, buffers_size_inbound_metric, buffers_size_outbound_metric}
+                | acc
               ]
             )
 
-          non_empty_back ->
-            back_inbound_metric_size = inbound_metric.buffers_size(non_empty_back)
-            back_outbound_metric_size = outbound_metric.buffers_size(non_empty_back)
+          non_empty_excess_buffers ->
+            excess_buffers_inbound_metric_size =
+              inbound_metric.buffers_size(non_empty_excess_buffers)
+
+            excess_buffers_outbound_metric_size =
+              outbound_metric.buffers_size(non_empty_excess_buffers)
 
             nq =
               @qe.push_front(
                 nq,
-                {:buffers, back, back_inbound_metric_size, back_outbound_metric_size}
+                {:buffers, excess_buffers, excess_buffers_inbound_metric_size,
+                 excess_buffers_outbound_metric_size}
               )
 
             {{:value,
-              [{:buffers, b, b_inbound_metric_size, b_outbound_metric_size} | acc]
+              [
+                {:buffers, buffers, buffers_size_inbound_metric, buffers_size_outbound_metric}
+                | acc
+              ]
               |> Enum.reverse()}, nq,
-             queue_size - inbound_metric_buf_size + back_inbound_metric_size}
+             queue_size - inbound_metric_buf_size + excess_buffers_inbound_metric_size}
         end
 
       {:empty, nq} ->
