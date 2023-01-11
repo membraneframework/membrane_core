@@ -104,7 +104,7 @@ defmodule Membrane.Pipeline do
   while `handle_init` should be used for things like parsing options, initializing state or spawning
   children.
   """
-  @callback handle_init(context :: CallbackContext.Init.t(), options :: pipeline_options) ::
+  @callback handle_init(context :: CallbackContext.t(), options :: pipeline_options) ::
               callback_return_t()
 
   @doc """
@@ -112,7 +112,7 @@ defmodule Membrane.Pipeline do
 
   By default it returns `t:Membrane.Pipeline.Action.terminate_t/0` with reason `:normal`.
   """
-  @callback handle_terminate_request(context :: CallbackContext.TerminateRequest.t(), state) ::
+  @callback handle_terminate_request(context :: CallbackContext.t(), state) ::
               callback_return_t()
 
   @doc """
@@ -121,7 +121,7 @@ defmodule Membrane.Pipeline do
   Any long-lasting or complex initialization should happen here.
   """
   @callback handle_setup(
-              context :: CallbackContext.Setup.t(),
+              context :: CallbackContext.t(),
               state
             ) ::
               callback_return_t
@@ -130,7 +130,7 @@ defmodule Membrane.Pipeline do
   Callback invoked when pipeline switches the playback to `:playing`.
   """
   @callback handle_playing(
-              context :: CallbackContext.Playing.t(),
+              context :: CallbackContext.t(),
               state
             ) ::
               callback_return_t
@@ -141,7 +141,7 @@ defmodule Membrane.Pipeline do
   @callback handle_child_notification(
               notification :: Membrane.ChildNotification.t(),
               element :: Child.name_t(),
-              context :: CallbackContext.ChildNotification.t(),
+              context :: CallbackContext.t(),
               state
             ) :: callback_return_t
 
@@ -153,7 +153,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_info(
               message :: any,
-              context :: CallbackContext.Info.t(),
+              context :: CallbackContext.t(),
               state
             ) ::
               callback_return_t
@@ -164,7 +164,7 @@ defmodule Membrane.Pipeline do
   @callback handle_element_start_of_stream(
               child :: Child.name_t(),
               pad :: Pad.ref_t(),
-              context :: CallbackContext.StreamManagement.t(),
+              context :: CallbackContext.t(),
               state
             ) :: callback_return_t
 
@@ -174,7 +174,7 @@ defmodule Membrane.Pipeline do
   @callback handle_element_end_of_stream(
               child :: Child.name_t(),
               pad :: Pad.ref_t(),
-              context :: CallbackContext.StreamManagement.t(),
+              context :: CallbackContext.t(),
               state
             ) :: callback_return_t
 
@@ -183,7 +183,7 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],
-              context :: CallbackContext.SpecStarted.t(),
+              context :: CallbackContext.t(),
               state
             ) :: callback_return_t
 
@@ -193,25 +193,29 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_tick(
               timer_id :: any,
-              context :: CallbackContext.Tick.t(),
+              context :: CallbackContext.t(),
               state
             ) :: callback_return_t
 
   @doc """
   Callback invoked when crash of the crash group happens.
+
+  Context passed to this callback contains 2 additional fields: `:members` and `:crash_initiator`.
   """
   @callback handle_crash_group_down(
               group_name :: Child.group_t(),
-              context :: CallbackContext.CrashGroupDown.t(),
+              context :: CallbackContext.t(),
               state
             ) :: callback_return_t
 
   @doc """
   Callback invoked when pipeline is called using a synchronous call.
+
+  Context passed to this callback contains additional field `:from`.
   """
   @callback handle_call(
               message :: any,
-              context :: CallbackContext.Call.t(),
+              context :: CallbackContext.t(),
               state
             ) ::
               callback_return_t

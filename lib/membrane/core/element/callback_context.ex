@@ -1,27 +1,23 @@
 defmodule Membrane.Core.Element.CallbackContext do
   @moduledoc false
 
-  use Membrane.Core.CallbackContext,
-    pads: %{Membrane.Pad.ref_t() => Membrane.Element.PadData.t()},
-    clock: Membrane.Clock.t() | nil,
-    parent_clock: Membrane.Clock.t() | nil,
-    name: Membrane.Element.name_t(),
-    playback: Membrane.Playback.t(),
-    resource_guard: Membrane.ResourceGuard.t(),
-    utility_supervisor: Membrane.UtilitySupervisor.t()
+  @type optional_fields_t ::
+          [incoming_demand: non_neg_integer()]
+          | [pad_options: map()]
+          | [old_stream_format: Membrane.StreamFormat.t()]
 
-  @impl true
-  def extract_default_fields(state, args) do
-    quote do
-      [
-        pads: unquote(state).pads_data,
-        clock: unquote(state).synchronization.clock,
-        parent_clock: unquote(state).synchronization.parent_clock,
-        name: unquote(state).name,
-        playback: unquote(state).playback,
-        resource_guard: unquote(state).resource_guard,
-        utility_supervisor: unquote(state).subprocess_supervisor
-      ]
-    end ++ args
+  @spec from_state(Membrane.Core.Element.State.t(), optional_fields_t()) ::
+          Membrane.Element.CallbackContext.t()
+  def from_state(state, optional_fields \\ []) do
+    Map.new(optional_fields)
+    |> Map.merge(%{
+      pads: state.pads_data,
+      clock: state.synchronization.clock,
+      parent_clock: state.synchronization.parent_clock,
+      name: state.name,
+      playback: state.playback,
+      resource_guard: state.resource_guard,
+      utility_supervisor: state.subprocess_supervisor
+    })
   end
 end

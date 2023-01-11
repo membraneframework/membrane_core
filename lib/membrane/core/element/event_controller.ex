@@ -8,8 +8,15 @@ defmodule Membrane.Core.Element.EventController do
   alias Membrane.{Event, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Events, Message, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, InputQueue, PadController, PlaybackQueue, State}
-  alias Membrane.Element.CallbackContext
+
+  alias Membrane.Core.Element.{
+    ActionHandler,
+    CallbackContext,
+    InputQueue,
+    PadController,
+    PlaybackQueue,
+    State
+  }
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
@@ -68,8 +75,7 @@ defmodule Membrane.Core.Element.EventController do
   defp do_exec_handle_event(pad_ref, %event_type{} = event, params, state)
        when event_type in [Events.StartOfStream, Events.EndOfStream] do
     data = PadModel.get_data!(state, pad_ref)
-    require CallbackContext.StreamManagement
-    context = CallbackContext.StreamManagement.from_state(state)
+    context = CallbackContext.from_state(state)
     callback = stream_event_to_callback(event)
     new_params = Map.put(params, :direction, data.direction)
     args = [pad_ref, context]
@@ -94,9 +100,10 @@ defmodule Membrane.Core.Element.EventController do
 
   defp do_exec_handle_event(pad_ref, event, params, state) do
     data = PadModel.get_data!(state, pad_ref)
-    require CallbackContext.Event
-    context = &CallbackContext.Event.from_state/1
-    params = %{context: context, direction: data.direction} |> Map.merge(params)
+
+    params =
+      %{context: &CallbackContext.from_state/1, direction: data.direction} |> Map.merge(params)
+
     args = [pad_ref, event]
     CallbackHandler.exec_and_handle_callback(:handle_event, ActionHandler, params, args, state)
   end

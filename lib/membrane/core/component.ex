@@ -6,6 +6,16 @@ defmodule Membrane.Core.Component do
           | Membrane.Core.Bin.State.t()
           | Membrane.Core.Element.State.t()
 
+  @type callback_context_optional_fields_t ::
+          Membrane.Core.Element.CallbackContext.optional_fields_t()
+          | Membrane.Core.Bin.CallbackContext.optional_fields_t()
+          | Membrane.Core.Pipeline.CallbackContext.optional_fields_t()
+
+  @type callback_context_t ::
+          Membrane.Element.CallbackContext.t()
+          | Membrane.Bin.CallbackContext.t()
+          | Membrane.Pipeline.CallbackContext.t()
+
   @spec action_handler(state_t) :: module
   [Pipeline, Bin, Element]
   |> Enum.map(fn component ->
@@ -13,38 +23,19 @@ defmodule Membrane.Core.Component do
       do: unquote(Module.concat([Membrane.Core, component, ActionHandler]))
   end)
 
-  defmacro callback_context_generator(restrict, module, state, args \\ []) do
-    module = Macro.expand(module, __ENV__)
+  @spec context_from_state(state_t(), callback_context_optional_fields_t()) ::
+          callback_context_t()
+  def context_from_state(state, args \\ []) do
+    alias Membrane.Core.{Bin, Element, Pipeline}
 
-    restrict =
-      case restrict do
-        :parent -> [Pipeline, Bin]
-        :child -> [Bin, Element]
-        :any -> [Pipeline, Bin, Element]
-        restrict -> restrict
+    callback_context_module =
+      case state do
+        %Element.State{} -> Element.CallbackContext
+        %Bin.State{} -> Bin.CallbackContext
+        %Pipeline.State{} -> Pipeline.CallbackContext
       end
 
-    requires =
-      restrict
-      |> Enum.map(fn component ->
-        quote do
-          require unquote(context(component, module))
-        end
-      end)
-
-    clauses =
-      restrict
-      |> Enum.flat_map(fn component ->
-        quote do
-          %unquote(state(component)){} ->
-            &unquote(context(component, module)).from_state(&1, unquote(args))
-        end
-      end)
-
-    quote do
-      unquote_splicing(requires)
-      unquote({:case, [], [state, [do: clauses]]})
-    end
+    callback_context_module.from_state(state, args)
   end
 
   @spec is_pipeline?(state_t) :: boolean()
@@ -64,9 +55,4 @@ defmodule Membrane.Core.Component do
 
   @spec is_parent?(state_t) :: boolean()
   def is_parent?(state), do: is_pipeline?(state) or is_bin?(state)
-
-  defp context(component, module),
-    do: Module.concat([Membrane, component, CallbackContext, module])
-
-  defp state(component), do: Module.concat([Membrane.Core, component, State])
 end

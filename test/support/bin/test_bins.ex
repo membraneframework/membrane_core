@@ -1,6 +1,5 @@
 defmodule Membrane.Support.Bin.TestBins do
   @moduledoc false
-  alias Membrane.ChildrenSpec
 
   defmodule TestFilter do
     @moduledoc false

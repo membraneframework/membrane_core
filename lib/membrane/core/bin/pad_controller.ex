@@ -5,9 +5,8 @@ defmodule Membrane.Core.Bin.PadController do
 
   use Bunch
 
-  alias Membrane.Bin.CallbackContext
   alias Membrane.{Core, LinkError, Pad}
-  alias Membrane.Core.Bin.{ActionHandler, State}
+  alias Membrane.Core.Bin.{ActionHandler, CallbackContext, State}
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.StreamFormatController
@@ -15,7 +14,6 @@ defmodule Membrane.Core.Bin.PadController do
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
-  require Membrane.Bin.CallbackContext.{PadAdded, PadRemoved}
   require Membrane.Logger
   require Membrane.Pad
 
@@ -289,11 +287,10 @@ defmodule Membrane.Core.Bin.PadController do
 
   @spec maybe_handle_pad_added(Pad.ref_t(), Core.Bin.State.t()) :: Core.Bin.State.t()
   defp maybe_handle_pad_added(ref, state) do
-    %{options: pad_opts, direction: direction, availability: availability} =
-      PadModel.get_data!(state, ref)
+    %{options: pad_opts, availability: availability} = PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
-      context = &CallbackContext.PadAdded.from_state(&1, options: pad_opts, direction: direction)
+      context = &CallbackContext.from_state(&1, pad_options: pad_opts)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_added,
@@ -309,15 +306,13 @@ defmodule Membrane.Core.Bin.PadController do
 
   @spec maybe_handle_pad_removed(Pad.ref_t(), Core.Bin.State.t()) :: Core.Bin.State.t()
   defp maybe_handle_pad_removed(ref, state) do
-    %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
+    %{availability: availability} = PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
-      context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
-
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
         ActionHandler,
-        %{context: context},
+        %{context: &CallbackContext.from_state/1},
         [ref],
         state
       )

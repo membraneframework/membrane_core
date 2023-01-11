@@ -44,26 +44,30 @@ defmodule Membrane.Bin do
   while `handle_init` should be used for things like parsing options, initializing state or
   spawning children.
   """
-  @callback handle_init(context :: CallbackContext.Init.t(), options :: options_t) ::
+  @callback handle_init(context :: CallbackContext.t(), options :: options_t) ::
               callback_return_t()
 
   @doc """
   Callback that is called when new pad has been added to bin. Executed
   ONLY for dynamic pads.
+
+  Context passed to this callback contains additional field `:pad_options`.
   """
   @callback handle_pad_added(
               pad :: Pad.ref_t(),
-              context :: CallbackContext.PadAdded.t(),
+              context :: CallbackContext.t(),
               state :: state_t
             ) :: callback_return_t
 
   @doc """
   Callback that is called when some pad of the bin has been removed. Executed
   ONLY for dynamic pads.
+
+  Context passed to this callback contains additional field `:pad_options`.
   """
   @callback handle_pad_removed(
               pad :: Pad.ref_t(),
-              context :: CallbackContext.PadRemoved.t(),
+              context :: CallbackContext.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -73,7 +77,7 @@ defmodule Membrane.Bin do
   Any long-lasting or complex initialization should happen here.
   """
   @callback handle_setup(
-              context :: CallbackContext.Setup.t(),
+              context :: CallbackContext.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -81,7 +85,7 @@ defmodule Membrane.Bin do
   Callback invoked when bin switches the playback to `:playing`.
   """
   @callback handle_playing(
-              context :: CallbackContext.Playing.t(),
+              context :: CallbackContext.t(),
               state :: state_t
             ) ::
               callback_return_t
@@ -92,7 +96,7 @@ defmodule Membrane.Bin do
   @callback handle_child_notification(
               notification :: Membrane.ChildNotification.t(),
               element :: Child.name_t(),
-              context :: CallbackContext.ChildNotification.t(),
+              context :: CallbackContext.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -101,7 +105,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_parent_notification(
               notification :: Membrane.ParentNotification.t(),
-              context :: CallbackContext.ParentNotification.t(),
+              context :: CallbackContext.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -113,7 +117,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_info(
               message :: any,
-              context :: CallbackContext.Info.t(),
+              context :: CallbackContext.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -123,7 +127,7 @@ defmodule Membrane.Bin do
   @callback handle_element_start_of_stream(
               child :: Child.name_t(),
               pad :: Pad.ref_t(),
-              context :: CallbackContext.StreamManagement.t(),
+              context :: CallbackContext.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -133,7 +137,7 @@ defmodule Membrane.Bin do
   @callback handle_element_end_of_stream(
               child :: Child.name_t(),
               pad :: Pad.ref_t(),
-              context :: CallbackContext.StreamManagement.t(),
+              context :: CallbackContext.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -142,7 +146,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_spec_started(
               children :: [Child.name_t()],
-              context :: CallbackContext.SpecStarted.t(),
+              context :: CallbackContext.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -152,7 +156,7 @@ defmodule Membrane.Bin do
   """
   @callback handle_tick(
               timer_id :: any,
-              context :: CallbackContext.Tick.t(),
+              context :: CallbackContext.t(),
               state :: state_t
             ) :: callback_return_t
 
@@ -161,7 +165,10 @@ defmodule Membrane.Bin do
 
   By default it returns `t:Membrane.Bin.Action.terminate_t/0` with reason `:normal`.
   """
-  @callback handle_terminate_request(context :: CallbackContext.TerminateRequest.t(), state_t) ::
+  @callback handle_terminate_request(
+              context :: CallbackContext.t(),
+              state_t
+            ) ::
               callback_return_t()
 
   @optional_callbacks handle_init: 2,
