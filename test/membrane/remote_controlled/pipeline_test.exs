@@ -21,7 +21,7 @@ defmodule Membrane.RCPipelineTest do
     end
 
     @impl true
-    def handle_process(_input, buf, _ctx, state) do
+    def handle_buffer(_input, buf, _ctx, state) do
       state = %{state | buffer_count: state.buffer_count + 1}
 
       notification_actions =

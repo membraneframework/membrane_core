@@ -53,7 +53,7 @@ defmodule Membrane.Support.ChildCrashTest.Filter do
   end
 
   @impl true
-  def handle_process(_pad, buf, _ctx, state) do
+  def handle_buffer(_pad, buf, _ctx, state) do
     actions =
       for pad <- state.output_pads do
         {:buffer, {pad, buf}}

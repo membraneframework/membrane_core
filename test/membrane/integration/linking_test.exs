@@ -454,7 +454,7 @@ defmodule Membrane.Integration.LinkingTest do
         demand_mode: :auto
 
       @impl true
-      def handle_process(_input, buffer, _ctx, state) do
+      def handle_buffer(_input, buffer, _ctx, state) do
         {[forward: buffer], state}
       end
     end

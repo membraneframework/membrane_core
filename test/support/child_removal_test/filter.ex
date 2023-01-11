@@ -59,7 +59,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   @impl true
-  def handle_process(_input, buf, ctx, state) do
+  def handle_buffer(_input, buf, ctx, state) do
     buffers =
       ctx.pads
       |> Map.values()

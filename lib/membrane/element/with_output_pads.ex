@@ -22,7 +22,7 @@ defmodule Membrane.Element.WithOutputPads do
 
   In filters, this callback should usually return `:demand` action with
   size sufficient for supplying incoming demand. This will result in calling
-  `c:Membrane.Filter.handle_process_list/4`, which is to supply
+  `c:Membrane.Filter.handle_buffer_list/4`, which is to supply
   the demand.
 
   If a source or an endpoint is unable to produce enough buffers, or a filter

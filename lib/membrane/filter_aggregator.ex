@@ -134,7 +134,7 @@ defmodule Membrane.FilterAggregator do
   end
 
   @impl true
-  def handle_process_list(:input, buffers, _ctx, %{states: states}) do
+  def handle_buffer_list(:input, buffers, _ctx, %{states: states}) do
     {actions, states} = pipe_downstream([buffer: {:output, buffers}], states)
     actions = reject_internal_actions(actions)
 
@@ -196,7 +196,7 @@ defmodule Membrane.FilterAggregator do
   end
 
   defp perform_action({:buffer, {:output, buffer}}, module, context, state) do
-    module.handle_process_list(:input, List.wrap(buffer), context, state)
+    module.handle_buffer_list(:input, List.wrap(buffer), context, state)
   end
 
   defp perform_action({:stream_format, {:output, stream_format}}, module, context, state) do
@@ -240,17 +240,17 @@ defmodule Membrane.FilterAggregator do
     {[], state}
   end
 
-  defp perform_action({:split, {:handle_process, []}}, _module, _context, state) do
+  defp perform_action({:split, {:handle_buffer, []}}, _module, _context, state) do
     {[], state}
   end
 
-  defp perform_action({:split, {:handle_process, args_lists}}, module, context, state) do
+  defp perform_action({:split, {:handle_buffer, args_lists}}, module, context, state) do
     {actions, {context, state}} =
       args_lists
       |> Enum.flat_map_reduce({context, state}, fn [:input, buffer], {acc_context, acc_state} ->
         acc_context = Context.before_incoming_action(acc_context, {:buffer, {:output, buffer}})
 
-        {actions, state} = module.handle_process(:input, buffer, context, acc_state)
+        {actions, state} = module.handle_buffer(:input, buffer, context, acc_state)
 
         acc_context = Context.after_incoming_action(acc_context, {:buffer, {:output, buffer}})
 

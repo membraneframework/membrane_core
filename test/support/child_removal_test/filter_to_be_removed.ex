@@ -11,7 +11,7 @@ defmodule Membrane.Support.ChildRemovalTest.FilterToBeRemoved do
   end
 
   @impl true
-  def handle_process(:input, buffers, _context, state) do
+  def handle_buffer(:input, buffers, _context, state) do
     {[buffer: {:output, buffers}], state}
   end
 end

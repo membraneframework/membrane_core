@@ -82,7 +82,7 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   @doc """
-  Executes `handle_process_list` or `handle_write_list` callback.
+  Executes `handle_buffer_list` or `handle_buffer_list` callback.
   """
   @spec exec_buffer_callback(
           Pad.ref_t(),
@@ -93,7 +93,7 @@ defmodule Membrane.Core.Element.BufferController do
     Telemetry.report_metric("buffer", 1, inspect(pad_ref))
 
     CallbackHandler.exec_and_handle_callback(
-      :handle_process_list,
+      :handle_buffer_list,
       ActionHandler,
       %{context: &CallbackContext.from_state/1},
       [pad_ref, buffers],
@@ -107,7 +107,7 @@ defmodule Membrane.Core.Element.BufferController do
     Telemetry.report_bitrate(buffers)
 
     CallbackHandler.exec_and_handle_callback(
-      :handle_write_list,
+      :handle_buffer_list,
       ActionHandler,
       %{context: &CallbackContext.from_state/1},
       [pad_ref, buffers],

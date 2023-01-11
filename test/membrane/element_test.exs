@@ -60,7 +60,7 @@ defmodule Membrane.ElementTest do
     end
 
     @impl true
-    def handle_process(_pad, _buffer, _context, state), do: {[], state}
+    def handle_buffer(_pad, _buffer, _context, state), do: {[], state}
   end
 
   setup do
