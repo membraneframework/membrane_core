@@ -125,26 +125,22 @@ defmodule Membrane.Pad do
   """
   @type bin_spec_t ::
           {name_t(),
-           [
-             {:availability, availability_t()}
-             | {:accepted_format, accepted_format_t()}
-             | {:mode, mode_t()}
-             | {:options, Keyword.t()}
-           ]}
+           availability: availability_t(),
+           accepted_format: accepted_format_t(),
+           mode: mode_t(),
+           options: Keyword.t()}
 
   @typedoc """
   Describes how a pad should be declared inside an element.
   """
   @type element_spec_t ::
           {name_t(),
-           [
-             {:availability, availability_t()}
-             | {:accepted_format, accepted_format_t()}
-             | {:mode, mode_t()}
-             | {:options, Keyword.t()}
-             | {:demand_mode, demand_mode_t()}
-             | {:demand_unit, Buffer.Metric.unit_t()}
-           ]}
+           availability: availability_t(),
+           accepted_format: accepted_format_t(),
+           mode: mode_t(),
+           options: Keyword.t(),
+           demand_mode: demand_mode_t(),
+           demand_unit: Buffer.Metric.unit_t()}
 
   @typedoc """
   Type describing a pad. Contains data parsed from `t:spec_t/0`
