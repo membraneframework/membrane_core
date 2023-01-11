@@ -24,7 +24,7 @@ defmodule Membrane.Logger do
 
   Verbose debugs should be used for logs that are USUALLY USEFUL for debugging,
   but printed so often that they make the output illegible. For example, it may
-  be a good idea to debug_verbose from within `c:Membrane.Filter.handle_buffer/4`
+  be a good idea to debug_verbose from within `c:Membrane.WithInputPads.handle_buffer/4`
   or `c:Membrane.Element.WithOutputPads.handle_demand/5` callbacks.
   """
 

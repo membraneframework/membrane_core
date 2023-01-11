@@ -49,8 +49,8 @@ defmodule Membrane.Element.Action do
 
   Useful when a long action is to be undertaken, and partial results need to
   be returned before entire process finishes (e.g. default implementation of
-  `c:Membrane.Filter.handle_buffer_list/4` uses split action to invoke
-  `c:Membrane.Filter.handle_buffer/4` with each buffer)
+  `c:Membrane.WithInputPads.handle_buffer_list/4` uses split action to invoke
+  `c:Membrane.WithInputPads.handle_buffer/4` with each buffer)
   """
   @type split_t :: {:split, {callback_name :: atom, args_list :: [[any]]}}
 
@@ -80,8 +80,7 @@ defmodule Membrane.Element.Action do
   of data from pad's internal queue, which _sends_ demands automatically when it
   runs out of data.
   If there is any data available at the pad, the data is passed to
-  `c:Membrane.Filter.handle_buffer_list/4`, `c:Membrane.Endpoint.handle_buffer_list/4`
-  or `c:Membrane.Sink.handle_buffer_list/4` callback. Invoked callback is
+  `c:Membrane.WithInputPads.handle_buffer_list/4` callback. Invoked callback is
   guaranteed not to receive more data than demanded.
 
   Demand size can be either a non-negative integer, that overrides existing demand,
@@ -136,12 +135,12 @@ defmodule Membrane.Element.Action do
 
   Allowed only when _all_ below conditions are met:
   - element is filter,
-  - callback is `c:Membrane.Filter.handle_buffer_list/4`,
+  - callback is `c:Membrane.WithInputPads.handle_buffer_list/4`,
   `c:Membrane.Element.WithInputPads.handle_stream_format/4`
   or `c:Membrane.Element.Base.handle_event/4`,
   - playback is `playing`
 
-  Keep in mind that `c:Membrane.Filter.handle_buffer_list/4` can only
+  Keep in mind that `c:Membrane.WithInputPads.handle_buffer_list/4` can only
   forward buffers, `c:Membrane.Element.WithInputPads.handle_stream_format/4` - stream formats
   and `c:Membrane.Element.Base.handle_event/4` - events.
   """
