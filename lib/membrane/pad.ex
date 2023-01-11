@@ -123,7 +123,14 @@ defmodule Membrane.Pad do
   Demand unit is derived from the first element inside the bin linked to the
   given input.
   """
-  @type bin_spec_t :: {name_t(), [common_spec_options_t]}
+  @type bin_spec_t ::
+          {name_t(),
+           [
+             {:availability, availability_t()}
+             | {:accepted_format, accepted_format_t()}
+             | {:mode, mode_t()}
+             | {:options, Keyword.t()}
+           ]}
 
   @typedoc """
   Describes how a pad should be declared inside an element.
@@ -131,19 +138,13 @@ defmodule Membrane.Pad do
   @type element_spec_t ::
           {name_t(),
            [
-             common_spec_options_t
+             {:availability, availability_t()}
+             | {:accepted_format, accepted_format_t()}
+             | {:mode, mode_t()}
+             | {:options, Keyword.t()}
              | {:demand_mode, demand_mode_t()}
              | {:demand_unit, Buffer.Metric.unit_t()}
            ]}
-
-  @typedoc """
-  Pad options used in `t:spec_t/0`
-  """
-  @type common_spec_options_t ::
-          {:availability, availability_t()}
-          | {:accepted_format, accepted_format_t()}
-          | {:mode, mode_t()}
-          | {:options, Keyword.t()}
 
   @typedoc """
   Type describing a pad. Contains data parsed from `t:spec_t/0`
