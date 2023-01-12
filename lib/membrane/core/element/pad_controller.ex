@@ -222,12 +222,12 @@ defmodule Membrane.Core.Element.PadController do
 
   defp resolve_demand_units(output_info, input_info) do
     output_demand_unit =
-      if output_info[:mode] == :push,
+      if output_info[:flow_control] == :push,
         do: nil,
         else: output_info[:demand_unit] || input_info[:demand_unit] || :buffers
 
     input_demand_unit =
-      if input_info[:mode] == :push,
+      if input_info[:flow_control] == :push,
         do: nil,
         else: input_info[:demand_unit] || output_info[:demand_unit] || :buffers
 
@@ -267,11 +267,11 @@ defmodule Membrane.Core.Element.PadController do
     data = struct!(Membrane.Element.PadData, data)
     state = put_in(state, [:pads_data, endpoint.pad_ref], data)
 
-    if data.demand_mode == :auto do
+    if data.flow_control == :auto do
       state =
         state.pads_data
         |> Map.values()
-        |> Enum.filter(&(&1.direction != data.direction and &1.demand_mode == :auto))
+        |> Enum.filter(&(&1.direction != data.direction and &1.flow_control == :auto))
         |> Enum.reduce(state, fn other_data, state ->
           PadModel.update_data!(state, other_data.ref, :associated_pads, &[data.ref | &1])
         end)
@@ -296,7 +296,7 @@ defmodule Membrane.Core.Element.PadController do
     do: %{demand_unit: metadata.output_demand_unit, other_demand_unit: metadata.input_demand_unit}
 
   defp init_pad_mode_data(
-         %{mode: :pull, direction: :input, demand_mode: :manual} = data,
+         %{direction: :input, flow_control: :manual} = data,
          props,
          other_info,
          metadata,
@@ -304,7 +304,7 @@ defmodule Membrane.Core.Element.PadController do
        ) do
     %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: this_demand_unit} = data
 
-    enable_toilet? = other_info.mode == :push
+    enable_toilet? = other_info.flow_control == :push
 
     input_queue =
       InputQueue.init(%{
@@ -322,7 +322,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp init_pad_mode_data(
-         %{mode: :pull, direction: :output, demand_mode: :manual},
+         %{direction: :output, flow_control: :manual},
          _props,
          _other_info,
          _metadata,
@@ -332,7 +332,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp init_pad_mode_data(
-         %{mode: :pull, demand_mode: :auto, direction: direction},
+         %{flow_control: :auto, direction: direction},
          props,
          other_info,
          metadata,
@@ -341,11 +341,11 @@ defmodule Membrane.Core.Element.PadController do
     associated_pads =
       state.pads_data
       |> Map.values()
-      |> Enum.filter(&(&1.direction != direction and &1.demand_mode == :auto))
+      |> Enum.filter(&(&1.direction != direction and &1.flow_control == :auto))
       |> Enum.map(& &1.ref)
 
     toilet =
-      if direction == :input and other_info.mode == :push do
+      if direction == :input and other_info.flow_control == :push do
         metadata.toilet
       else
         nil
@@ -369,12 +369,13 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp init_pad_mode_data(
-         %{mode: :push, direction: :output},
+         %{flow_control: :push, direction: :output},
          _props,
-         %{mode: :pull},
+         %{flow_control: other_flow_control},
          metadata,
          _state
-       ) do
+       )
+       when other_flow_control in [:auto, :manual] do
     %{toilet: metadata.toilet}
   end
 
@@ -401,7 +402,7 @@ defmodule Membrane.Core.Element.PadController do
   @spec remove_pad_associations(Pad.ref_t(), State.t()) :: State.t()
   def remove_pad_associations(pad_ref, state) do
     case PadModel.get_data!(state, pad_ref) do
-      %{mode: :pull, demand_mode: :auto} = pad_data ->
+      %{flow_control: :auto} = pad_data ->
         state =
           Enum.reduce(pad_data.associated_pads, state, fn pad, state ->
             PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))

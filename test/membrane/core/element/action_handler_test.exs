@@ -25,15 +25,14 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             struct(Membrane.Element.PadData,
               direction: :input,
               pid: self(),
-              mode: :pull,
-              demand_mode: :manual,
+              flow_control: :manual,
               demand: 0
             ),
           input_push:
             struct(Membrane.Element.PadData,
               direction: :input,
               pid: self(),
-              mode: :push
+              flow_control: :push
             )
         }
       )
@@ -82,8 +81,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             other_demand_unit: :bytes,
             start_of_stream?: true,
             end_of_stream?: false,
-            mode: :push,
-            demand_mode: nil
+            flow_control: :push
           },
           input: %{
             direction: :input,
@@ -92,8 +90,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             stream_format: nil,
             start_of_stream?: true,
             end_of_stream?: false,
-            mode: :push,
-            demand_mode: nil
+            flow_control: :push
           }
         }
       )
@@ -450,8 +447,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad works in pull mode", %{state: state} do
       state =
         %{state | supplying_demand?: true, playback: :playing}
-        |> PadModel.set_data!(:output, :mode, :pull)
-        |> PadModel.set_data!(:output, :demand_mode, :manual)
+        |> PadModel.set_data!(:output, :flow_control, :manual)
 
       new_state =
         @module.handle_action(
@@ -477,8 +473,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           output: %{
             direction: :output,
             pid: self(),
-            mode: :pull,
-            demand_mode: :manual,
+            flow_control: :manual,
             demand: 0
           }
         },

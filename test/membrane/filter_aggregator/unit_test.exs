@@ -34,10 +34,9 @@ defmodule Membrane.FilterAggregator.UnitTest do
     pad_description_template = %{
       availability: :always,
       stream_format: :any,
-      demand_mode: :auto,
+      flow_control: :auto,
       demand_unit: :buffers,
       direction: nil,
-      mode: :pull,
       name: nil,
       options: nil
     }
@@ -123,7 +122,9 @@ defmodule Membrane.FilterAggregator.UnitTest do
     pads_descriptions = apply(FilterA, :membrane_pads, [])
 
     FilterA
-    |> expect(:membrane_pads, fn -> put_in(pads_descriptions, [:input, :demand_mode], :manual) end)
+    |> expect(:membrane_pads, fn ->
+      put_in(pads_descriptions, [:input, :flow_control], :manual)
+    end)
 
     assert_raise RuntimeError, fn -> FilterAggregator.handle_init(%{}, ctx.stage_opts) end
   end
@@ -163,7 +164,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
       assert pad_data.direction == pad
       assert pad_data.start_of_stream? == false
       assert pad_data.end_of_stream? == false
-      assert pad_data.mode == :pull
+      assert pad_data.flow_control in [:auto, :manual]
       assert pad_data.name == pad
       assert pad_data.ref == pad
       # private fields

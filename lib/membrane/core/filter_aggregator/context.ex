@@ -47,7 +47,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
     }
   end
 
-  defp ensure_auto_demands!(%{name: name, mode: :pull, demand_mode: mode}, module)
+  defp ensure_auto_demands!(%{name: name, flow_control: mode}, module)
        when mode != :auto do
     raise """
     `Membrane.FilterAggregator` supports only filters with demands in `:auto` mode.

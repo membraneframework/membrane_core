@@ -28,7 +28,7 @@ defmodule Membrane.Core.Child.PadModel do
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
           direction: Pad.direction_t(),
-          mode: Pad.mode_t(),
+          flow_control: Pad.flow_control_t(),
           name: Pad.name_t(),
           ref: Pad.ref_t(),
           demand_unit: Membrane.Buffer.Metric.unit_t() | nil,
@@ -39,7 +39,6 @@ defmodule Membrane.Core.Child.PadModel do
           input_queue: Membrane.Core.Element.InputQueue.t() | nil,
           options: %{optional(atom) => any},
           toilet: Membrane.Core.Element.Toilet.t() | nil,
-          demand_mode: :auto | :manual | nil,
           auto_demand_size: pos_integer() | nil,
           associated_pads: [Pad.ref_t()] | nil,
           sticky_events: [Membrane.Event.t()]
@@ -52,11 +51,10 @@ defmodule Membrane.Core.Child.PadModel do
   @type pad_info_t :: %{
           required(:availability) => Pad.availability_t(),
           required(:direction) => Pad.direction_t(),
-          required(:mode) => Pad.mode_t(),
           required(:name) => Pad.name_t(),
+          optional(:flow_control) => Pad.flow_control_t(),
           optional(:demand_unit) => Membrane.Buffer.Metric.unit_t(),
-          optional(:other_demand_unit) => Membrane.Buffer.Metric.unit_t(),
-          optional(:demand_mode) => :auto | :manual
+          optional(:other_demand_unit) => Membrane.Buffer.Metric.unit_t()
         }
 
   @type pads_info_t :: %{Pad.name_t() => pad_info_t}

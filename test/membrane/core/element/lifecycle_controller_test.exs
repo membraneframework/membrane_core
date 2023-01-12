@@ -43,7 +43,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
               ref: :input,
               direction: :input,
               pid: self(),
-              mode: :pull,
+              flow_control: :manual,
               start_of_stream?: true,
               end_of_stream?: false,
               input_queue: input_queue,

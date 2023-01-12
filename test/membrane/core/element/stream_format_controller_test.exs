@@ -39,7 +39,7 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
               direction: :input,
               name: :input,
               pid: self(),
-              mode: :pull,
+              flow_control: :manual,
               input_queue: input_queue,
               demand: 0
             )

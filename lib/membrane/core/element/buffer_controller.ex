@@ -56,7 +56,7 @@ defmodule Membrane.Core.Element.BufferController do
 
   @spec do_handle_buffer(Pad.ref_t(), PadModel.pad_data_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
           State.t()
-  defp do_handle_buffer(pad_ref, %{mode: :pull, demand_mode: :auto} = data, buffers, state) do
+  defp do_handle_buffer(pad_ref, %{flow_control: :auto} = data, buffers, state) do
     %{demand: demand, demand_unit: demand_unit} = data
 
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
@@ -65,7 +65,8 @@ defmodule Membrane.Core.Element.BufferController do
     exec_buffer_callback(pad_ref, buffers, state)
   end
 
-  defp do_handle_buffer(pad_ref, %{mode: :pull} = data, buffers, state) do
+  defp do_handle_buffer(pad_ref, %{flow_control: flow_control} = data, buffers, state)
+       when flow_control in [:auto, :manual] do
     %{input_queue: old_input_queue} = data
     input_queue = InputQueue.store(old_input_queue, buffers)
     state = PadModel.set_data!(state, pad_ref, :input_queue, input_queue)

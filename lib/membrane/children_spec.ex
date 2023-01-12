@@ -517,15 +517,15 @@ defmodule Membrane.ChildrenSpec do
   in a queue called a toilet. If the toilet size grows above its capacity, it overflows by raising an error.
   - `target_queue_size` - The size of the queue of the input pad that Membrane will try to maintain. That allows for fulfilling
   the demands of the element by taking data from the queue while the actual sending of demands is done asynchronously,
-  smoothing the processing. Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0`
-  and `t:Membrane.Pad.demand_mode_t/0` for more info.
+  smoothing the processing. Used only for pads working in `:manual` flow control mode. See `t:Membrane.Pad.flow_control_t/0` for
+  more information.
   - `min_demand_factor` - A factor used to calculate `minimal demand` (`minimal_demand = target_queue_size * min_demand_factor`).
   Membrane won't send smaller demand than `minimal demand`, to reduce demands' overhead. However, the user will always receive
   as many buffers, as demanded, all excess buffers will be queued internally.
-  Used only for pads working in pull mode with manual demands. See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0`
+  Used only for pads working in `:manual` flow control mode. See `t:Membrane.Pad.flow_control_t/0`
   for more info. Defaults to `#{Membrane.Core.Element.InputQueue.default_min_demand_factor()}` (the default may change in the future).
-  - `auto_demand_size` - Size of automatically generated demands. Used only for pads working in pull mode with automatic demands.
-    See `t:Membrane.Pad.mode_t/0` and `t:Membrane.Pad.demand_mode_t/0` for more info.
+  - `auto_demand_size` - Size of automatically generated demands. Used only for pads working in `:auto` flow control mode.
+    See `t:Membrane.Pad.flow_control_t/0`  for more info.
   - `throttling_factor` - an integer specifying how frequently should a sender update the number of buffers in the `Toilet`. Defaults to 1,
     meaning, that the sender will update the toilet with each buffer being sent. Setting that factor for elements,
     which are running on the same node, does not have an impact of performance. However, once the sending element and the receiving element are put on different nodes,

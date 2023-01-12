@@ -202,20 +202,9 @@ defmodule Membrane.Core.Child.PadsSpecs do
                   end,
                 options: [default: nil]
               ) do
-      mode = if config[:flow_control] in [:auto, :manual], do: :pull, else: :push
-      demand_mode = if config[:flow_control] in [:auto, :manual], do: config.flow_control
-
       config
       |> Map.put(:direction, direction)
       |> Map.put(:name, name)
-      |> then(
-        &if component == :element,
-          do:
-            Map.put(&1, :mode, mode)
-            |> Map.put(:demand_mode, demand_mode)
-            |> Map.delete(:flow_control),
-          else: &1
-      )
       ~> {:ok, {name, &1}}
     else
       spec: spec -> {:error, {:invalid_pad_spec, spec}}
@@ -267,7 +256,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     """
 
     config_doc =
-      [:direction, :availability, :mode, :demand_mode, :demand_unit]
+      [:direction, :availability, :flow_control, :demand_unit]
       |> Enum.filter(&Map.has_key?(config, &1))
       |> Enum.map_join("\n", &generate_pad_property_doc(&1, Map.fetch!(config, &1)))
 

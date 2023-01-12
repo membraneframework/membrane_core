@@ -45,7 +45,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
               ref: :input,
               direction: :input,
               pid: self(),
-              mode: :pull,
+              flow_control: :manual,
               start_of_stream?: false,
               end_of_stream?: false,
               input_queue: input_queue,
