@@ -23,7 +23,7 @@ defmodule Membrane.Core.Element.DemandController do
       %{direction: :output, flow_control: flow_control} = data
 
       if flow_control == :push,
-        do: raise("Flow control mode :push is not applicable in this context.")
+        do: raise("Pad with :push control mode cannot handle demand.")
 
       do_handle_demand(pad_ref, size, data, state)
     else
