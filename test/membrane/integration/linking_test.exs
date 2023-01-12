@@ -13,11 +13,13 @@ defmodule Membrane.Integration.LinkingTest do
     use Membrane.Endpoint
 
     def_input_pad :input,
+      flow_control: :manual,
       availability: :on_request,
       accepted_format: _any,
       demand_unit: :buffers
 
     def_output_pad :output,
+      flow_control: :manual,
       availability: :on_request,
       accepted_format: _any,
       demand_unit: :buffers
@@ -290,7 +292,7 @@ defmodule Membrane.Integration.LinkingTest do
   defmodule SlowSetupSink do
     use Membrane.Sink
 
-    def_input_pad :input, accepted_format: _any, demand_mode: :auto
+    def_input_pad :input, accepted_format: _any, flow_control: :auto
 
     def_options setup_delay: [spec: non_neg_integer()]
 
@@ -446,12 +448,12 @@ defmodule Membrane.Integration.LinkingTest do
 
       def_input_pad :input,
         accepted_format: _any,
-        demand_mode: :auto
+        flow_control: :auto
 
       def_output_pad :output,
         availability: :on_request,
         accepted_format: _any,
-        demand_mode: :auto
+        flow_control: :auto
 
       @impl true
       def handle_buffer(_input, buffer, _ctx, state) do

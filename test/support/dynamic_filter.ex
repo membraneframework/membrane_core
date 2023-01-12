@@ -8,8 +8,8 @@ defmodule Membrane.Support.Element.DynamicFilter do
   use Bunch
   use Membrane.Filter
 
-  def_input_pad :input, accepted_format: _any, availability: :on_request, demand_mode: :auto
-  def_output_pad :output, accepted_format: _any, availability: :on_request, demand_mode: :auto
+  def_input_pad :input, accepted_format: _any, availability: :on_request, flow_control: :auto
+  def_output_pad :output, accepted_format: _any, availability: :on_request, flow_control: :auto
 
   @impl true
   def handle_init(_ctx, _options) do

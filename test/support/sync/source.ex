@@ -2,7 +2,7 @@ defmodule Membrane.Support.Sync.Source do
   @moduledoc false
   use Membrane.Source
 
-  def_output_pad :output, accepted_format: _any
+  def_output_pad :output, flow_control: :manual, accepted_format: _any
 
   def_options tick_interval: [spec: Membrane.Time.t()],
               test_process: [spec: pid()]

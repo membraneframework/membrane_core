@@ -42,6 +42,7 @@ defmodule Membrane.Pad do
   @type direction_t :: :output | :input
 
   @typedoc """
+  # TOCHANGE
   Describes how an element sends and receives data.
   Modes are strictly related to pad directions:
 
@@ -59,22 +60,8 @@ defmodule Membrane.Pad do
   be raised whenever too many buffers accumulate on the input pad, waiting to be
   processed.
 
-  For more information on transfering data and demands, see `t:demand_mode_t/0`,
-  `Membrane.Source`, `Membrane.Filter`, `Membrane.Endpoint`, `Membrane.Sink`.
   """
-  @type mode_t :: :push | :pull
-
-  @typedoc """
-  Defines the mode of handling and requesting demand on pads.
-
-  - `:manual` - demand is manually handled and requested. See `Membrane.Element.Action.demand_t`,
-  `Membrane.Element.Action.redemand_t`, `c:Membrane.Element.WithOutputPads.handle_demand/5`
-  - `:auto` - demand is managed automatically: the core ensures that there's demand
-  on each input pad (that has `demand_mode` set to `:auto`) whenever there's demand on all
-  output pads (that have `demand_mode` set to `:auto`). Currently works only for
-  `Membrane.Filter`s.
-  """
-  @type demand_mode_t :: :manual | :auto
+  @type flow_control_t :: :auto | :manual | :push
 
   @typedoc """
   Values used when defining pad availability:
@@ -127,7 +114,6 @@ defmodule Membrane.Pad do
           {name_t(),
            availability: availability_t(),
            accepted_format: accepted_format_t(),
-           mode: mode_t(),
            options: Keyword.t()}
 
   @typedoc """
@@ -137,9 +123,8 @@ defmodule Membrane.Pad do
           {name_t(),
            availability: availability_t(),
            accepted_format: accepted_format_t(),
-           mode: mode_t(),
+           flow_control: flow_control_t(),
            options: Keyword.t(),
-           demand_mode: demand_mode_t(),
            demand_unit: Buffer.Metric.unit_t()}
 
   @typedoc """
@@ -147,13 +132,12 @@ defmodule Membrane.Pad do
   """
   @type description_t :: %{
           :availability => availability_t(),
-          :mode => mode_t(),
+          optional(:flow_control) => flow_control_t(),
           :name => name_t(),
           :accepted_formats_str => [String.t()],
           optional(:demand_unit) => Buffer.Metric.unit_t() | nil,
           :direction => direction_t(),
-          :options => nil | Keyword.t(),
-          optional(:demand_mode) => demand_mode_t()
+          :options => nil | Keyword.t()
         }
 
   @doc """

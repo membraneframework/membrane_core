@@ -11,7 +11,7 @@ defmodule Membrane.Support.AcceptedFormatTest.RestrictiveSource do
   def_output_pad :output,
     accepted_format: %StreamFormat{format: StreamFormat.AcceptedByAll},
     availability: :always,
-    mode: :push
+    flow_control: :push
 
   def_options test_pid: [type: :pid],
               stream_format: [type: :any]

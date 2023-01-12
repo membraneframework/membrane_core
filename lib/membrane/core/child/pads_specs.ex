@@ -178,17 +178,12 @@ defmodule Membrane.Core.Child.PadsSpecs do
               |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
                 accepted_formats_str: [],
-                mode: [in: [:pull, :push], default: :pull],
-                demand_mode:
-                  &if &1.mode == :pull do
-                    [
-                      in: [:auto, :manual],
-                      default: :manual
-                    ]
-                  end,
+                flow_control: fn _config ->
+                  if component == :element, do: [in: [:auto, :manual, :push]]
+                end,
                 demand_unit:
                   &cond do
-                    component == :bin or &1[:demand_mode] != :manual ->
+                    component == :bin or &1[:flow_control] != :manual ->
                       nil
 
                     direction == :input ->
@@ -207,11 +202,20 @@ defmodule Membrane.Core.Child.PadsSpecs do
                   end,
                 options: [default: nil]
               ) do
-      config = if component == :bin, do: Map.delete(config, :demand_mode), else: config
+      mode = if config[:flow_control] in [:auto, :manual], do: :pull, else: :push
+      demand_mode = if config[:flow_control] in [:auto, :manual], do: config.flow_control
 
       config
       |> Map.put(:direction, direction)
       |> Map.put(:name, name)
+      |> then(
+        &if component == :element,
+          do:
+            Map.put(&1, :mode, mode)
+            |> Map.put(:demand_mode, demand_mode)
+            |> Map.delete(:flow_control),
+          else: Map.put(&1, :mode, nil)
+      )
       ~> {:ok, {name, &1}}
     else
       spec: spec -> {:error, {:invalid_pad_spec, spec}}

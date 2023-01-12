@@ -5,9 +5,9 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Filter
 
-    def_output_pad :output, accepted_format: _any
+    def_output_pad :output, flow_control: :manual, accepted_format: _any
 
-    def_input_pad :input, demand_unit: :buffers, accepted_format: _any
+    def_input_pad :input, flow_control: :manual, demand_unit: :buffers, accepted_format: _any
 
     @impl true
     def handle_info({:notify_parent, notif}, _ctx, state),
@@ -25,9 +25,16 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Filter
 
-    def_output_pad :output, accepted_format: _any, availability: :on_request
+    def_output_pad :output,
+      flow_control: :manual,
+      accepted_format: _any,
+      availability: :on_request
 
-    def_input_pad :input, demand_unit: :buffers, accepted_format: _any, availability: :on_request
+    def_input_pad :input,
+      flow_control: :manual,
+      demand_unit: :buffers,
+      accepted_format: _any,
+      availability: :on_request
 
     @impl true
     def handle_info({:notify_parent, notif}, _ctx, state),
@@ -245,8 +252,8 @@ defmodule Membrane.Support.Bin.TestBins do
     @moduledoc false
     use Membrane.Filter
 
-    def_input_pad :input, demand_unit: :buffers, accepted_format: _any
-    def_output_pad :output, accepted_format: _any
+    def_input_pad :input, flow_control: :manual, demand_unit: :buffers, accepted_format: _any
+    def_output_pad :output, flow_control: :manual, accepted_format: _any
 
     @impl true
     def handle_init(_ctx, _opts) do

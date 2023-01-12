@@ -12,7 +12,7 @@ defmodule Membrane.Support.AcceptedFormatTest.Sink do
   def_input_pad :input,
     accepted_format: StreamFormat,
     availability: :always,
-    mode: :push
+    flow_control: :push
 
   def_options test_pid: [type: :pid]
 

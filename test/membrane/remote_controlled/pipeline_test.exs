@@ -12,8 +12,13 @@ defmodule Membrane.RCPipelineTest do
     use Membrane.Filter
     alias Membrane.Buffer
 
-    def_output_pad :output, accepted_format: _any, availability: :always
-    def_input_pad :input, demand_unit: :buffers, accepted_format: _any, availability: :always
+    def_output_pad :output, flow_control: :manual, accepted_format: _any, availability: :always
+
+    def_input_pad :input,
+      flow_control: :manual,
+      demand_unit: :buffers,
+      accepted_format: _any,
+      availability: :always
 
     @impl true
     def handle_init(_ctx, _opts) do
