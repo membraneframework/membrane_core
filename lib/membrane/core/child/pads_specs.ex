@@ -214,7 +214,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
             Map.put(&1, :mode, mode)
             |> Map.put(:demand_mode, demand_mode)
             |> Map.delete(:flow_control),
-          else: Map.put(&1, :mode, nil)
+          else: &1
       )
       ~> {:ok, {name, &1}}
     else

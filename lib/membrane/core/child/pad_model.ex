@@ -18,9 +18,7 @@ defmodule Membrane.Core.Child.PadModel do
           spec_ref: Membrane.Core.Parent.ChildLifeController.spec_ref_t(),
           availability: Pad.availability_t(),
           direction: Pad.direction_t(),
-          mode: Pad.mode_t(),
-          name: Pad.name_t(),
-          demand_unit: Membrane.Buffer.Metric.unit_t() | nil
+          name: Pad.name_t()
         }
 
   @type element_pad_data_t :: %Membrane.Element.PadData{
