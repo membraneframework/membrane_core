@@ -6,10 +6,10 @@ defmodule Membrane.Element.PadData do
     - `:availability` - see `t:Membrane.Pad.availability_t/0`
     - `:stream_format` - the most recent `t:Membrane.StreamFormat.t/0` that have been sent (output) or received (input)
       on the pad. May be `nil` if not yet set.
-    - `:demand` - current demand requested on the pad working in pull mode.
+    - `:demand` - current demand requested on the pad working in `:auto` or `:manual` flow control mode.
     - `:direction` - see `t:Membrane.Pad.direction_t/0`
     - `:end_of_stream?` - flag determining whether the stream processing via the pad has been finished
-    - `:mode` - see `t:Membrane.Pad.mode_t/0`.
+    - `:flow_control` - see `t:Membrane.Pad.flow_control_t/0`.
     - `:name` - see `t:Membrane.Pad.name_t/0`. Do not mistake with `:ref`
     - `:options` - options passed in `Membrane.ParentSpec` when linking pad
     - `:ref` - see `t:Membrane.Pad.ref_t/0`
@@ -30,7 +30,7 @@ defmodule Membrane.Element.PadData do
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
           direction: Pad.direction_t(),
-          mode: Pad.mode_t(),
+          flow_control: Pad.flow_control_t(),
           name: Pad.name_t(),
           ref: Pad.ref_t(),
           options: %{optional(atom) => any},
@@ -39,7 +39,6 @@ defmodule Membrane.Element.PadData do
           other_ref: private_field,
           input_queue: private_field,
           demand: integer() | nil,
-          demand_mode: private_field,
           demand_unit: private_field,
           other_demand_unit: private_field,
           auto_demand_size: private_field,
@@ -53,7 +52,7 @@ defmodule Membrane.Element.PadData do
     :availability,
     :stream_format,
     :direction,
-    :mode,
+    :flow_control,
     :name,
     :ref,
     :options,
@@ -65,7 +64,6 @@ defmodule Membrane.Element.PadData do
               [
                 input_queue: nil,
                 demand: nil,
-                demand_mode: nil,
                 demand_unit: nil,
                 start_of_stream?: false,
                 end_of_stream?: false,

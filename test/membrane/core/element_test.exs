@@ -10,7 +10,7 @@ defmodule Membrane.Core.ElementTest do
 
   defmodule SomeElement do
     use Membrane.Source
-    def_output_pad :output, accepted_format: _any
+    def_output_pad :output, flow_control: :manual, accepted_format: _any
 
     def_options test_pid: [spec: pid | nil, default: nil]
 
@@ -23,9 +23,10 @@ defmodule Membrane.Core.ElementTest do
   defmodule Filter do
     use Membrane.Filter
 
-    def_output_pad :output, accepted_format: _any
+    def_output_pad :output, flow_control: :manual, accepted_format: _any
 
     def_input_pad :dynamic_input,
+      flow_control: :manual,
       accepted_format: _any,
       demand_unit: :buffers,
       availability: :on_request
@@ -79,7 +80,7 @@ defmodule Membrane.Core.ElementTest do
           },
           %{
             initiator: :sibling,
-            other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
+            other_info: %{direction: :input, flow_control: :manual, demand_unit: :buffers},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
             stream_format_validation_params: []
           }
@@ -109,7 +110,7 @@ defmodule Membrane.Core.ElementTest do
           %Endpoint{pad_spec: :output, pad_ref: :output, pid: self(), child: :other},
           %{
             initiator: :sibling,
-            other_info: %{direction: :output, mode: :pull},
+            other_info: %{direction: :output, flow_control: :manual},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
             stream_format_validation_params: []
           }
@@ -222,9 +223,8 @@ defmodule Membrane.Core.ElementTest do
                    initiator: :sibling,
                    other_info: %{
                      direction: :input,
-                     mode: :pull,
                      demand_unit: :buffers,
-                     demand_mode: :manual
+                     flow_control: :manual
                    },
                    link_metadata: %{observability_metadata: %{}},
                    stream_format_validation_params: []
@@ -237,9 +237,8 @@ defmodule Membrane.Core.ElementTest do
     assert {%{child: :this, pad_props: %{options: []}, pad_ref: :output},
             %{
               availability: :always,
-              demand_mode: :manual,
+              flow_control: :manual,
               direction: :output,
-              mode: :pull,
               name: :output,
               options: nil
             },

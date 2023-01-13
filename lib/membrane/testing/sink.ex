@@ -33,6 +33,7 @@ defmodule Membrane.Testing.Sink do
   alias Membrane.Testing.Notification
 
   def_input_pad :input,
+    flow_control: :manual,
     demand_unit: :buffers,
     accepted_format: _any
 

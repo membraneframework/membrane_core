@@ -103,7 +103,8 @@ defmodule Membrane.Core.Element.DemandHandler do
           [Buffer.t()],
           State.t()
         ) :: State.t()
-  def handle_outgoing_buffers(pad_ref, %{mode: :pull} = data, buffers, state) do
+  def handle_outgoing_buffers(pad_ref, %{flow_control: flow_control} = data, buffers, state)
+      when flow_control in [:auto, :manual] do
     %{other_demand_unit: other_demand_unit, demand: demand} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
     PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
@@ -112,7 +113,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   def handle_outgoing_buffers(
         pad_ref,
         %{
-          mode: :push,
+          flow_control: :push,
           toilet: toilet
         } = data,
         buffers,

@@ -6,5 +6,5 @@ defmodule Membrane.Support.Element.TrivialSource do
   use Bunch
   use Membrane.Source
 
-  def_output_pad :output, accepted_format: _any
+  def_output_pad :output, flow_control: :manual, accepted_format: _any
 end

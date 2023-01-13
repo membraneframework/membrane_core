@@ -383,40 +383,40 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp supply_demand(pad_ref, size, state) do
-    with %{direction: :input, mode: :pull, demand_mode: :manual} <-
+    with %{direction: :input, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
       DemandHandler.supply_demand(pad_ref, size, state)
     else
       %{direction: :output} ->
         raise PadDirectionError, action: :demand, direction: :output, pad: pad_ref
 
-      %{mode: :push} ->
+      %{flow_control: :push} ->
         raise ElementError,
-              "Tried to request a demand on pad #{inspect(pad_ref)} working in push mode"
+              "Tried to request a demand on pad #{inspect(pad_ref)} working in push flow control mode"
 
-      %{demand_mode: :auto} ->
+      %{flow_control: :auto} ->
         raise ElementError,
-              "Tried to request a demand on pad #{inspect(pad_ref)} that has demand mode set to auto"
+              "Tried to request a demand on pad #{inspect(pad_ref)} that has flow control mode set to auto"
     end
   end
 
   @spec handle_redemand(Pad.ref_t(), State.t()) :: State.t()
   defp handle_redemand(pad_ref, %{type: type} = state)
        when type in [:source, :filter, :endpoint] do
-    with %{direction: :output, mode: :pull, demand_mode: :manual} <-
+    with %{direction: :output, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
       DemandHandler.handle_redemand(pad_ref, state)
     else
       %{direction: :input} ->
         raise ElementError, "Tried to make a redemand on input pad #{inspect(pad_ref)}"
 
-      %{mode: :push} ->
+      %{flow_control: :push} ->
         raise ElementError,
-              "Tried to make a redemand on pad #{inspect(pad_ref)} working in push mode"
+              "Tried to make a redemand on pad #{inspect(pad_ref)} working in push flow control mode"
 
-      %{demand_mode: :auto} ->
+      %{flow_control: :auto} ->
         raise ElementError,
-              "Tried to make a redemand on pad #{inspect(pad_ref)} that has demand mode set to auto"
+              "Tried to make a redemand on pad #{inspect(pad_ref)} that has flow control mode set to auto"
     end
   end
 

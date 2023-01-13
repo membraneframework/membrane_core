@@ -40,7 +40,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
                  },
                  %{
                    initiator: :sibling,
-                   other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
+                   other_info: %{direction: :input, flow_control: :manual, demand_unit: :buffers},
                    link_metadata: %{toilet: make_ref(), observability_metadata: %{}},
                    stream_format_validation_params: []
                  },

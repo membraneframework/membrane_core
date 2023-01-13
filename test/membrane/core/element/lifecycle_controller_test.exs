@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
 
   defmodule DummyElement do
     use Membrane.Filter
-    def_output_pad :output, accepted_format: _any
+    def_output_pad :output, flow_control: :manual, accepted_format: _any
 
     @impl true
     def handle_terminate_request(_ctx, state) do
@@ -43,7 +43,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
               ref: :input,
               direction: :input,
               pid: self(),
-              mode: :pull,
+              flow_control: :manual,
               start_of_stream?: true,
               end_of_stream?: false,
               input_queue: input_queue,

@@ -20,7 +20,11 @@ defmodule Membrane.Core.Element.DemandController do
   def handle_demand(pad_ref, size, state) do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
-      %{direction: :output, mode: :pull} = data
+      %{direction: :output, flow_control: flow_control} = data
+
+      if flow_control == :push,
+        do: raise("Pad with :push control mode cannot handle demand.")
+
       do_handle_demand(pad_ref, size, data, state)
     else
       pad: {:error, :unknown_pad} ->
@@ -32,7 +36,7 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
-  defp do_handle_demand(pad_ref, size, %{demand_mode: :auto} = data, state) do
+  defp do_handle_demand(pad_ref, size, %{flow_control: :auto} = data, state) do
     %{demand: old_demand, associated_pads: associated_pads} = data
 
     state = PadModel.set_data!(state, pad_ref, :demand, old_demand + size)
@@ -44,7 +48,7 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
-  defp do_handle_demand(pad_ref, size, %{demand_mode: :manual} = data, state) do
+  defp do_handle_demand(pad_ref, size, %{flow_control: :manual} = data, state) do
     demand = data.demand + size
     data = %{data | demand: demand}
     state = PadModel.set_data!(state, pad_ref, data)

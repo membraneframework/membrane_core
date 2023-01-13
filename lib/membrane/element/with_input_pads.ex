@@ -80,7 +80,8 @@ defmodule Membrane.Element.WithInputPads do
 
   @doc PadsSpecs.def_pad_docs(:input, :element)
   defmacro def_input_pad(name, spec) do
-    PadsSpecs.def_pad(name, :input, spec, :element)
+    element_type = Module.get_attribute(__CALLER__.module, :__membrane_element_type__)
+    PadsSpecs.def_pad(name, :input, spec, element_type)
   end
 
   defmacro __using__(_) do

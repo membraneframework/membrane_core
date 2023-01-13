@@ -10,7 +10,7 @@ defmodule Membrane.Support.Distributed do
     @moduledoc false
     use Membrane.Source
 
-    def_output_pad :output, accepted_format: _any, mode: :push
+    def_output_pad :output, accepted_format: _any, flow_control: :push
     def_options output: [spec: list(any())]
 
     @impl true
@@ -44,7 +44,7 @@ defmodule Membrane.Support.Distributed do
 
     use Membrane.Sink
 
-    def_input_pad :input, accepted_format: _any, demand_unit: :buffers, mode: :pull
+    def_input_pad :input, flow_control: :manual, accepted_format: _any, demand_unit: :buffers
 
     @impl true
     def handle_playing(_ctx, state) do

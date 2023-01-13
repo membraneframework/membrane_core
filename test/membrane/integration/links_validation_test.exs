@@ -19,7 +19,7 @@ defmodule Membrane.LinksValidationTest do
       def_input_pad :input,
         accepted_format: _any,
         availability: :always,
-        mode: :push
+        flow_control: :push
     end
 
     defmodule Source do
@@ -28,7 +28,7 @@ defmodule Membrane.LinksValidationTest do
       def_output_pad :output,
         accepted_format: _any,
         availability: :always,
-        mode: :push
+        flow_control: :push
 
       @impl true
       def handle_playing(_ctx, state) do
@@ -45,7 +45,7 @@ defmodule Membrane.LinksValidationTest do
       def_input_pad :input,
         accepted_format: _any,
         availability: :on_request,
-        mode: :push
+        flow_control: :push
     end
 
     defmodule Source do
@@ -54,7 +54,7 @@ defmodule Membrane.LinksValidationTest do
       def_output_pad :output,
         accepted_format: _any,
         availability: :on_request,
-        mode: :push
+        flow_control: :push
 
       @impl true
       def handle_playing(_ctx, state) do

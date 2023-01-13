@@ -9,9 +9,11 @@ defmodule Membrane.Testing.Endpoint do
           (state :: any(), buffers_cnt :: pos_integer -> {[Action.t()], state :: any()})
 
   def_output_pad :output,
+    flow_control: :manual,
     accepted_format: _any
 
   def_input_pad :input,
+    flow_control: :manual,
     accepted_format: _any,
     demand_unit: :buffers
 

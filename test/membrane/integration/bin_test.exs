@@ -202,7 +202,10 @@ defmodule Membrane.Core.BinTest do
     defmodule ClockElement do
       use Membrane.Source
 
-      def_output_pad :output, accepted_format: _any, availability: :on_request
+      def_output_pad :output,
+        flow_control: :manual,
+        accepted_format: _any,
+        availability: :on_request
 
       def_clock()
     end

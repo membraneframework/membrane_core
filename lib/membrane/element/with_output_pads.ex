@@ -15,7 +15,7 @@ defmodule Membrane.Element.WithOutputPads do
   @doc """
   Callback called when buffers should be emitted by a source, filter or endpoint.
 
-  It is called only for output pads in the pull mode, as in their case demand
+  It is called only for output pads in the `:manual` flow control mode, as in their case demand
   is triggered by the input pad of the subsequent element.
 
   In sources and endpoint, appropriate amount of data should be sent here.
@@ -43,7 +43,8 @@ defmodule Membrane.Element.WithOutputPads do
 
   @doc PadsSpecs.def_pad_docs(:output, :element)
   defmacro def_output_pad(name, spec) do
-    PadsSpecs.def_pad(name, :output, spec, :element)
+    element_type = Module.get_attribute(__CALLER__.module, :__membrane_element_type__)
+    PadsSpecs.def_pad(name, :output, spec, element_type)
   end
 
   defmacro __using__(_) do

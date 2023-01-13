@@ -12,6 +12,7 @@
  * All Membrane Elements can be compatible till now on - pads working in `:pull` mode, handling different `demand_units`, can be now linked.
  * Output pads working in `:pull` mode should have their `demand_unit` specified. If case it's not available, it's assumed that the pad handles demands in both `:bytes` and `:buffers` units.
  * Rename callbacks `handle_process/4` and `handle_write/4` to `handle_buffer/4` in [#506](https://github.com/membraneframework/membrane_core/pull/506)
+ * The flow control of the pad is now set with a single `:flow_control` option instead of `:mode` and `:demand_mode` options.
 
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)

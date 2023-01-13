@@ -21,8 +21,7 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
 
     def_output_pad :output,
       accepted_format: _any,
-      mode: :pull,
-      demand_mode: :manual,
+      flow_control: :manual,
       demand_unit: :buffers
 
     @impl true
@@ -52,8 +51,7 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
 
     def_output_pad :output,
       accepted_format: _any,
-      mode: :pull,
-      demand_mode: :manual,
+      flow_control: :manual,
       demand_unit: :bytes
 
     @impl true
@@ -81,7 +79,7 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
   defmodule PushSource do
     use Membrane.Source
 
-    def_output_pad :output, accepted_format: _any, mode: :push
+    def_output_pad :output, accepted_format: _any, flow_control: :push
 
     @impl true
     def handle_init(_ctx, _opts) do
@@ -103,13 +101,11 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
 
     def_input_pad :input,
       accepted_format: _any,
-      mode: :pull,
-      demand_mode: :auto
+      flow_control: :auto
 
     def_output_pad :output,
       accepted_format: _any,
-      mode: :pull,
-      demand_mode: :auto
+      flow_control: :auto
 
     @impl true
     def handle_init(_ctx, _opts) do
@@ -143,8 +139,7 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
 
     def_input_pad :input,
       accepted_format: _any,
-      mode: :pull,
-      demand_mode: :manual,
+      flow_control: :manual,
       demand_unit: :buffers
 
     def_options test_pid: [spec: pid()]
@@ -193,8 +188,7 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
 
     def_input_pad :input,
       accepted_format: _any,
-      mode: :pull,
-      demand_mode: :manual,
+      flow_control: :manual,
       demand_unit: :bytes
 
     def_options test_pid: [spec: pid()]

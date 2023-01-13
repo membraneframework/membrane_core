@@ -11,7 +11,7 @@ defmodule Membrane.Support.AcceptedFormatTest.Source do
   def_output_pad :output,
     accepted_format: StreamFormat,
     availability: :always,
-    mode: :push
+    flow_control: :push
 
   def_options test_pid: [type: :pid],
               stream_format: [type: :any]

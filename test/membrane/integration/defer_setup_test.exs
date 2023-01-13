@@ -12,13 +12,11 @@ defmodule Membrane.Integration.DeferSetupTest do
 
     def_input_pad :input,
       accepted_format: _any,
-      availability: :on_request,
-      demand_mode: :manual
+      availability: :on_request
 
     def_output_pad :output,
       accepted_format: _any,
-      availability: :on_request,
-      demand_mode: :manual
+      availability: :on_request
 
     def_options defer_play: [spec: boolean(), default: true],
                 specs_list: [spec: list(), default: []]

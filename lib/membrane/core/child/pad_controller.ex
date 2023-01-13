@@ -36,11 +36,12 @@ defmodule Membrane.Core.Child.PadController do
   end
 
   defp do_validate_pad_mode!(
-         {from, %{direction: :output, mode: :pull}},
-         {to, %{direction: :input, mode: :push}}
-       ) do
+         {from, %{direction: :output, flow_control: from_flow_control}},
+         {to, %{direction: :input, flow_control: :push}}
+       )
+       when from_flow_control in [:auto, :manual] do
     raise LinkError,
-          "Cannot connect pull output #{inspect(from)} to push input #{inspect(to)}"
+          "Cannot connect #{inspect(from_flow_control)} output #{inspect(from)} to push input #{inspect(to)}"
   end
 
   defp do_validate_pad_mode!(_pad, _other_pad) do

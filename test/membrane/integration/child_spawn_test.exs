@@ -24,6 +24,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
     use Membrane.Sink
 
     def_input_pad :input,
+      flow_control: :manual,
       demand_unit: :buffers,
       accepted_format: _any
 
@@ -37,6 +38,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
     use Membrane.Sink
 
     def_input_pad :input,
+      flow_control: :manual,
       demand_unit: :buffers,
       accepted_format: _any,
       availability: :on_request

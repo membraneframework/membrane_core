@@ -34,7 +34,12 @@ defmodule Membrane.Core.Child.PadsSpecs do
   @doc """
   Returns AST inserted into element's or bin's module defining a pad
   """
-  @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t(), :element | :bin) :: Macro.t()
+  @spec def_pad(
+          Pad.name_t(),
+          Pad.direction_t(),
+          Macro.t(),
+          :filter | :endpoint | :source | :sink | :bin
+        ) :: Macro.t()
   def def_pad(pad_name, direction, specs, component) do
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
 
@@ -150,7 +155,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   @spec parse_pad_specs!(
           specs :: Pad.spec_t(),
           direction :: Pad.direction_t(),
-          :element | :bin,
+          :filter | :endpoint | :source | :sink | :bin,
           declaration_env :: Macro.Env.t()
         ) :: {Pad.name_t(), Pad.description_t()}
   def parse_pad_specs!(specs, direction, component, env) do
@@ -168,8 +173,13 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  @spec parse_pad_specs(Pad.spec_t(), Pad.direction_t(), :element | :bin) ::
+  @spec parse_pad_specs(
+          Pad.spec_t(),
+          Pad.direction_t(),
+          :filter | :endpoint | :source | :sink | :bin
+        ) ::
           {Pad.name_t(), Pad.description_t()} | {:error, reason :: any}
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   def parse_pad_specs(spec, direction, component) do
     withl spec: {name, config} when Pad.is_pad_name(name) and is_list(config) <- spec,
           config:
@@ -178,17 +188,16 @@ defmodule Membrane.Core.Child.PadsSpecs do
               |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
                 accepted_formats_str: [],
-                mode: [in: [:pull, :push], default: :pull],
-                demand_mode:
-                  &if &1.mode == :pull do
-                    [
-                      in: [:auto, :manual],
-                      default: :manual
-                    ]
-                  end,
+                flow_control: fn _config ->
+                  case component do
+                    :bin -> nil
+                    :filter -> [in: [:auto, :manual, :push], default: :auto]
+                    _non_filter_element -> [in: [:auto, :manual, :push]]
+                  end
+                end,
                 demand_unit:
                   &cond do
-                    component == :bin or &1[:demand_mode] != :manual ->
+                    component == :bin or &1[:flow_control] != :manual ->
                       nil
 
                     direction == :input ->
@@ -207,8 +216,6 @@ defmodule Membrane.Core.Child.PadsSpecs do
                   end,
                 options: [default: nil]
               ) do
-      config = if component == :bin, do: Map.delete(config, :demand_mode), else: config
-
       config
       |> Map.put(:direction, direction)
       |> Map.put(:name, name)
@@ -263,7 +270,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     """
 
     config_doc =
-      [:direction, :availability, :mode, :demand_mode, :demand_unit]
+      [:direction, :availability, :flow_control, :demand_unit]
       |> Enum.filter(&Map.has_key?(config, &1))
       |> Enum.map_join("\n", &generate_pad_property_doc(&1, Map.fetch!(config, &1)))
 

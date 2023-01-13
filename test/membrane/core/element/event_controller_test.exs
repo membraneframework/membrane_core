@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
   defmodule MockEventHandlingElement do
     use Membrane.Filter
 
-    def_output_pad :output, accepted_format: _any
+    def_output_pad :output, flow_control: :manual, accepted_format: _any
 
     @impl true
     def handle_event(_pad, %Membrane.Event.Underrun{}, _ctx, state) do
@@ -45,7 +45,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
               ref: :input,
               direction: :input,
               pid: self(),
-              mode: :pull,
+              flow_control: :manual,
               start_of_stream?: false,
               end_of_stream?: false,
               input_queue: input_queue,

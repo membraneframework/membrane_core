@@ -14,8 +14,7 @@ defmodule Membrane.Support.AcceptedFormatTest.InnerSinkBin do
   def_input_pad :input,
     accepted_format:
       %StreamFormat{format: format} when format in [AcceptedByAll, AcceptedByInnerBins],
-    availability: :always,
-    mode: :push
+    availability: :always
 
   def_options test_pid: [type: :pid]
 
