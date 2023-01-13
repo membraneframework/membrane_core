@@ -8,8 +8,8 @@ defmodule Membrane.Integration.AutoDemandsTest do
   defmodule AutoDemandFilter do
     use Membrane.Filter
 
-    def_input_pad :input, accepted_format: _any, flow_control: :auto
-    def_output_pad :output, accepted_format: _any, flow_control: :auto
+    def_input_pad :input, accepted_format: _any
+    def_output_pad :output, accepted_format: _any
 
     def_options factor: [default: 1], direction: [default: :up]
 
@@ -37,8 +37,8 @@ defmodule Membrane.Integration.AutoDemandsTest do
   defmodule AutoDemandTee do
     use Membrane.Filter
 
-    def_input_pad :input, accepted_format: _any, flow_control: :auto
-    def_output_pad :output, accepted_format: _any, flow_control: :auto, availability: :on_request
+    def_input_pad :input, accepted_format: _any
+    def_output_pad :output, accepted_format: _any, availability: :on_request
 
     @impl true
     def handle_buffer(:input, buffer, _ctx, state), do: {[forward: buffer], state}

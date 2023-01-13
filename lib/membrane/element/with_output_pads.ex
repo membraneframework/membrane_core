@@ -44,7 +44,7 @@ defmodule Membrane.Element.WithOutputPads do
   @doc PadsSpecs.def_pad_docs(:output, :element)
   defmacro def_output_pad(name, spec) do
     element_type = Module.get_attribute(__CALLER__.module, :__membrane_element_type__)
-    PadsSpecs.def_pad(name, :output, spec, {:element, element_type})
+    PadsSpecs.def_pad(name, :output, spec, element_type)
   end
 
   defmacro __using__(_) do

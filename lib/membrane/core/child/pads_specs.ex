@@ -155,7 +155,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   @spec parse_pad_specs!(
           specs :: Pad.spec_t(),
           direction :: Pad.direction_t(),
-          {:element, :filter | :endpoint | :source | :sink} | :bin,
+          :filter | :endpoint | :source | :sink | :bin,
           declaration_env :: Macro.Env.t()
         ) :: {Pad.name_t(), Pad.description_t()}
   def parse_pad_specs!(specs, direction, component, env) do
@@ -176,9 +176,10 @@ defmodule Membrane.Core.Child.PadsSpecs do
   @spec parse_pad_specs(
           Pad.spec_t(),
           Pad.direction_t(),
-          {:element, :filter | :endpoint | :source | :sink} | :bin
+          :filter | :endpoint | :source | :sink | :bin
         ) ::
           {Pad.name_t(), Pad.description_t()} | {:error, reason :: any}
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   def parse_pad_specs(spec, direction, component) do
     withl spec: {name, config} when Pad.is_pad_name(name) and is_list(config) <- spec,
           config:
@@ -189,9 +190,9 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 accepted_formats_str: [],
                 flow_control: fn _config ->
                   case component do
-                    {:element, :filter} -> [in: [:auto, :manual, :push], default: :auto]
-                    {:element, _} -> [in: [:auto, :manual, :push]]
-                    _bin -> nil
+                    :bin -> nil
+                    :filter -> [in: [:auto, :manual, :push], default: :auto]
+                    _non_filter_element -> [in: [:auto, :manual, :push]]
                   end
                 end,
                 demand_unit:
