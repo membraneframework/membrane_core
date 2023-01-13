@@ -17,7 +17,7 @@ defmodule Membrane.Time do
             native_units: 1, native_unit: 0, nanoseconds: 1, nanosecond: 0, second: 0, seconds: 1}
 
   @type t :: integer
-  @type non_neg_t :: non_neg_integer
+  @type non_neg :: non_neg_integer
 
   @units [
     %{plural: :days, singular: :day, abbrev: "d", duration: 86_400_000_000_000},

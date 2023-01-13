@@ -15,31 +15,31 @@ defmodule Membrane.Core.Bin.State do
   alias Membrane.Core.Timer
 
   @type t :: %__MODULE__{
-          internal_state: Membrane.Bin.state_t() | nil,
+          internal_state: Membrane.Bin.state() | nil,
           module: module,
-          children: ChildrenModel.children_t(),
+          children: ChildrenModel.children(),
           subprocess_supervisor: pid(),
-          name: Membrane.Bin.name_t() | nil,
-          pads_info: PadModel.pads_info_t() | nil,
-          pads_data: PadModel.pads_data_t() | nil,
+          name: Membrane.Bin.name() | nil,
+          pads_info: PadModel.pads_info() | nil,
+          pads_data: PadModel.pads_data() | nil,
           parent_pid: pid,
           links: %{Link.id() => Link.t()},
-          crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},
+          crash_groups: %{CrashGroup.name() => CrashGroup.t()},
           synchronization: %{
-            timers: %{Timer.id_t() => Timer.t()},
+            timers: %{Timer.id() => Timer.t()},
             parent_clock: Clock.t(),
-            latency: Membrane.Time.non_neg_t(),
+            latency: Membrane.Time.non_neg(),
             stream_sync: Sync.t(),
             clock: Clock.t() | nil,
             clock_proxy: Clock.t(),
             clock_provider: %{
               clock: Clock.t() | nil,
-              provider: Child.name_t() | nil,
+              provider: Child.name() | nil,
               choice: :auto | :manual
             }
           },
           children_log_metadata: Keyword.t(),
-          pending_specs: ChildLifeController.pending_specs_t(),
+          pending_specs: ChildLifeController.pending_specs(),
           playback: Membrane.Playback.t(),
           initialized?: boolean(),
           terminating?: boolean(),

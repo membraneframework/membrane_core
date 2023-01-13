@@ -28,8 +28,8 @@ defmodule Membrane.RCMessage do
     """
     @type t :: %__MODULE__{
             from: pid(),
-            element: Membrane.Element.name_t(),
-            pad: Membrane.Pad.name_t()
+            element: Membrane.Element.name(),
+            pad: Membrane.Pad.name()
           }
 
     @enforce_keys [:from, :element, :pad]
@@ -42,8 +42,8 @@ defmodule Membrane.RCMessage do
     """
     @type t :: %__MODULE__{
             from: pid(),
-            element: Membrane.Element.name_t(),
-            pad: Membrane.Pad.name_t()
+            element: Membrane.Element.name(),
+            pad: Membrane.Pad.name()
           }
 
     @enforce_keys [:from, :element, :pad]
@@ -56,7 +56,7 @@ defmodule Membrane.RCMessage do
     """
     @type t :: %__MODULE__{
             from: pid(),
-            element: Membrane.Element.name_t(),
+            element: Membrane.Element.name(),
             data: Membrane.ParentNotification.t()
           }
 

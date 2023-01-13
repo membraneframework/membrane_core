@@ -10,12 +10,12 @@ defmodule Membrane.Element do
   Defines options that can be received in `c:Membrane.Element.Base.handle_init/2`
   callback.
   """
-  @type options_t :: struct | nil
+  @type options :: struct | nil
 
   @typedoc """
   Type that defines an element name by which it is identified.
   """
-  @type name_t :: tuple() | atom()
+  @type name :: tuple() | atom()
 
   @typedoc """
   Defines possible element types:
@@ -24,12 +24,12 @@ defmodule Membrane.Element do
   - endpoint, producing and consuming buffers
   - sink, consuming buffers
   """
-  @type type_t :: :source | :filter | :endpoint | :sink
+  @type type :: :source | :filter | :endpoint | :sink
 
   @typedoc """
   Type of user-managed state of element.
   """
-  @type state_t :: any()
+  @type state :: any()
 
   @doc """
   Checks whether module is an element.

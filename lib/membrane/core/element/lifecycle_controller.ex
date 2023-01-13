@@ -17,7 +17,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   @doc """
   Performs initialization tasks and executes `handle_init` callback.
   """
-  @spec handle_init(Element.options_t(), State.t()) :: State.t()
+  @spec handle_init(Element.options(), State.t()) :: State.t()
   def handle_init(options, %State{module: module} = state) do
     Membrane.Logger.debug(
       "Initializing element: #{inspect(module)}, options: #{inspect(options)}"

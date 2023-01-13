@@ -166,7 +166,7 @@ defmodule Membrane.RCPipeline do
     Pipeline.await_start_of_stream(pipeline, :element_id)
     ```
   """
-  @spec await_start_of_stream(pid(), Membrane.Element.name_t()) ::
+  @spec await_start_of_stream(pid(), Membrane.Element.name()) ::
           Membrane.RCMessage.StartOfStream.t()
   def await_start_of_stream(pipeline, element) do
     do_await(pipeline, StartOfStream, element: element)
@@ -184,7 +184,7 @@ defmodule Membrane.RCPipeline do
     Pipeline.await_start_of_stream(pipeline, :element_id, :pad_id)
     ```
   """
-  @spec await_start_of_stream(pid(), Membrane.Element.name_t(), Membrane.Pad.name_t()) ::
+  @spec await_start_of_stream(pid(), Membrane.Element.name(), Membrane.Pad.name()) ::
           Membrane.RCMessage.StartOfStream.t()
   def await_start_of_stream(pipeline, element, pad) do
     do_await(pipeline, StartOfStream, element: element, pad: pad)
@@ -219,7 +219,7 @@ defmodule Membrane.RCPipeline do
     Pipeline.await_end_of_stream(pipeline, :element_id)
     ```
   """
-  @spec await_end_of_stream(pid(), Membrane.Element.name_t()) ::
+  @spec await_end_of_stream(pid(), Membrane.Element.name()) ::
           Membrane.RCMessage.EndOfStream.t()
   def await_end_of_stream(pipeline, element) do
     do_await(pipeline, EndOfStream, element: element)
@@ -237,7 +237,7 @@ defmodule Membrane.RCPipeline do
     Pipeline.await_end_of_stream(pipeline, :element_id, :pad_id)
     ```
   """
-  @spec await_end_of_stream(pid(), Membrane.Element.name_t(), Membrane.Pad.name_t()) ::
+  @spec await_end_of_stream(pid(), Membrane.Element.name(), Membrane.Pad.name()) ::
           Membrane.RCMessage.EndOfStream.t()
   def await_end_of_stream(pipeline, element, pad) do
     do_await(pipeline, EndOfStream, element: element, pad: pad)

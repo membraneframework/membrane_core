@@ -19,7 +19,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   require Membrane.Core.Message
   require Membrane.Logger
 
-  @spec handle_setup(Parent.state_t()) :: Parent.state_t()
+  @spec handle_setup(Parent.state()) :: Parent.state()
   def handle_setup(state) do
     Membrane.Logger.debug("Setup")
 
@@ -37,7 +37,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec handle_playing(Parent.state_t()) :: Parent.state_t()
+  @spec handle_playing(Parent.state()) :: Parent.state()
   def handle_playing(state) do
     Membrane.Logger.debug("Parent play")
 
@@ -62,7 +62,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec handle_terminate_request(Parent.state_t()) :: Parent.state_t()
+  @spec handle_terminate_request(Parent.state()) :: Parent.state()
   def handle_terminate_request(%{terminating?: true} = state) do
     state
   end
@@ -79,7 +79,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec handle_terminate(Parent.state_t()) :: {:continue | :stop, Parent.state_t()}
+  @spec handle_terminate(Parent.state()) :: {:continue | :stop, Parent.state()}
   def handle_terminate(state) do
     if Enum.empty?(state.children) do
       {:stop, state}
@@ -103,8 +103,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec handle_child_notification(Child.name_t(), ChildNotification.t(), Parent.state_t()) ::
-          Parent.state_t()
+  @spec handle_child_notification(Child.name(), ChildNotification.t(), Parent.state()) ::
+          Parent.state()
   def handle_child_notification(from, notification, state) do
     Membrane.Logger.debug_verbose(
       "Received notification #{inspect(notification)} from #{inspect(from)}"
@@ -121,7 +121,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     )
   end
 
-  @spec handle_info(any, Parent.state_t()) :: Parent.state_t()
+  @spec handle_info(any, Parent.state()) :: Parent.state()
   def handle_info(message, state) do
     CallbackHandler.exec_and_handle_callback(
       :handle_info,
@@ -134,10 +134,10 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   @spec handle_stream_management_event(
           Membrane.Event.t(),
-          Child.name_t(),
-          Pad.ref_t(),
-          Parent.state_t()
-        ) :: Parent.state_t()
+          Child.name(),
+          Pad.ref(),
+          Parent.state()
+        ) :: Parent.state()
   def handle_stream_management_event(%event_type{}, element_name, pad_ref, state)
       when event_type in [Events.StartOfStream, Events.EndOfStream] do
     callback =

@@ -116,7 +116,7 @@ defmodule Membrane.Testing.Pipeline do
   @type options ::
           [
             module: :default,
-            spec: [ChildrenSpec.builder_t()],
+            spec: [ChildrenSpec.builder()],
             test_process: pid(),
             name: Pipeline.name()
           ]
@@ -204,7 +204,7 @@ defmodule Membrane.Testing.Pipeline do
 
       message_child(pipeline, :sink, {:message, "to handle"})
   """
-  @spec message_child(pid(), Element.name_t(), any()) :: :ok
+  @spec message_child(pid(), Element.name(), any()) :: :ok
   def message_child(pipeline, child, message) do
     send(pipeline, {:for_element, child, message})
     :ok
@@ -237,7 +237,7 @@ defmodule Membrane.Testing.Pipeline do
    * `{:ok, child_pid}`, if a child was succesfully found
    * `{:error, reason}`, if, for example, pipeline is not alive or children path is invalid
   """
-  @spec get_child_pid(pid(), child_ref_path :: Child.ref_t() | [Child.ref_t()]) ::
+  @spec get_child_pid(pid(), child_ref_path :: Child.ref() | [Child.ref()]) ::
           {:ok, pid()} | {:error, reason :: term()}
   def get_child_pid(pipeline, [_head | _tail] = child_ref_path) do
     do_get_child_pid(pipeline, child_ref_path)
@@ -253,7 +253,7 @@ defmodule Membrane.Testing.Pipeline do
   Works as get_child_pid/2, but raises an error instead of returning
   `{:error, reason}` tuple.
   """
-  @spec get_child_pid!(pid(), child_ref_path :: Child.ref_t() | [Child.ref_t()]) :: pid()
+  @spec get_child_pid!(pid(), child_ref_path :: Child.ref() | [Child.ref()]) :: pid()
   def get_child_pid!(parent_pid, child_ref_path) do
     {:ok, child_pid} = get_child_pid(parent_pid, child_ref_path)
     child_pid

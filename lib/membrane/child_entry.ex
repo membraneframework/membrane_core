@@ -14,7 +14,7 @@ defmodule Membrane.ChildEntry do
   use Bunch.Access
 
   @type t :: %__MODULE__{
-          name: Membrane.Child.name_t(),
+          name: Membrane.Child.name(),
           module: module,
           options: struct | nil,
           component_type: :element | :bin,
@@ -22,7 +22,7 @@ defmodule Membrane.ChildEntry do
           clock: Membrane.Clock.t(),
           sync: Membrane.Sync.t(),
           terminating?: boolean(),
-          group: Membrane.Child.group_t()
+          group: Membrane.Child.group()
         }
 
   defstruct [

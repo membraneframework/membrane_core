@@ -29,7 +29,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
   """
   @spec start_component(
           supervisor_pid,
-          name :: Membrane.Child.name_t(),
+          name :: Membrane.Child.name(),
           (supervisor_pid, parent_supervisor_pid -> {:ok, child_pid} | {:error, reason :: any()})
         ) ::
           {:ok, child_pid} | {:error, reason :: any()}

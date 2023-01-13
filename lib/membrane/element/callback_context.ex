@@ -16,10 +16,10 @@ defmodule Membrane.Element.CallbackContext do
   `c:Membrane.Element.WithInputPads.handle_stream_format/4`.
   """
   @type t :: %{
-          :pads => %{Membrane.Pad.ref_t() => Membrane.Element.PadData.t()},
+          :pads => %{Membrane.Pad.ref() => Membrane.Element.PadData.t()},
           :clock => Membrane.Clock.t() | nil,
           :parent_clock => Membrane.Clock.t() | nil,
-          :name => Membrane.Element.name_t(),
+          :name => Membrane.Element.name(),
           :playback => Membrane.Playback.t(),
           :resource_guard => Membrane.ResourceGuard.t(),
           :utility_supervisor => Membrane.UtilitySupervisor.t(),

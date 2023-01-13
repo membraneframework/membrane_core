@@ -20,20 +20,20 @@ defmodule Membrane.Bin do
   require Membrane.Core.Message
   require Membrane.Logger
 
-  @type state_t :: any()
+  @type state :: any()
 
-  @type callback_return_t :: {[Action.t()], state_t()}
+  @type callback_return :: {[Action.t()], state()}
 
   @typedoc """
   Defines options that can be passed to `start_link/3` and received
   in `c:handle_init/2` callback.
   """
-  @type options_t :: struct | nil
+  @type options :: struct | nil
 
   @typedoc """
   Type that defines a bin name by which it is identified.
   """
-  @type name_t :: tuple() | atom()
+  @type name :: tuple() | atom()
 
   @doc """
   Callback invoked on initialization of bin.
@@ -44,8 +44,8 @@ defmodule Membrane.Bin do
   while `handle_init` should be used for things like parsing options, initializing state or
   spawning children.
   """
-  @callback handle_init(context :: CallbackContext.t(), options :: options_t) ::
-              callback_return_t()
+  @callback handle_init(context :: CallbackContext.t(), options :: options) ::
+              callback_return()
 
   @doc """
   Callback that is called when new pad has been added to bin. Executed
@@ -54,10 +54,10 @@ defmodule Membrane.Bin do
   Context passed to this callback contains additional field `:pad_options`.
   """
   @callback handle_pad_added(
-              pad :: Pad.ref_t(),
+              pad :: Pad.ref(),
               context :: CallbackContext.t(),
-              state :: state_t
-            ) :: callback_return_t
+              state :: state
+            ) :: callback_return
 
   @doc """
   Callback that is called when some pad of the bin has been removed. Executed
@@ -66,10 +66,10 @@ defmodule Membrane.Bin do
   Context passed to this callback contains additional field `:pad_options`.
   """
   @callback handle_pad_removed(
-              pad :: Pad.ref_t(),
+              pad :: Pad.ref(),
               context :: CallbackContext.t(),
-              state :: state_t
-            ) :: callback_return_t
+              state :: state
+            ) :: callback_return
 
   @doc """
   Callback invoked on bin startup, right after `c:handle_init/2`.
@@ -78,27 +78,27 @@ defmodule Membrane.Bin do
   """
   @callback handle_setup(
               context :: CallbackContext.t(),
-              state :: state_t
-            ) :: callback_return_t
+              state :: state
+            ) :: callback_return
 
   @doc """
   Callback invoked when bin switches the playback to `:playing`.
   """
   @callback handle_playing(
               context :: CallbackContext.t(),
-              state :: state_t
+              state :: state
             ) ::
-              callback_return_t
+              callback_return
 
   @doc """
   Callback invoked when a notification comes in from an element.
   """
   @callback handle_child_notification(
               notification :: Membrane.ChildNotification.t(),
-              element :: Child.name_t(),
+              element :: Child.name(),
               context :: CallbackContext.t(),
-              state :: state_t
-            ) :: callback_return_t
+              state :: state
+            ) :: callback_return
 
   @doc """
   Callback invoked when a notification comes in from an parent.
@@ -106,8 +106,8 @@ defmodule Membrane.Bin do
   @callback handle_parent_notification(
               notification :: Membrane.ParentNotification.t(),
               context :: CallbackContext.t(),
-              state :: state_t
-            ) :: callback_return_t
+              state :: state
+            ) :: callback_return
 
   @doc """
   Callback invoked when bin receives a message that is not recognized
@@ -118,58 +118,58 @@ defmodule Membrane.Bin do
   @callback handle_info(
               message :: any,
               context :: CallbackContext.t(),
-              state :: state_t
-            ) :: callback_return_t
+              state :: state
+            ) :: callback_return
 
   @doc """
   Callback invoked when a child element starts processing stream via given pad.
   """
   @callback handle_element_start_of_stream(
-              child :: Child.name_t(),
-              pad :: Pad.ref_t(),
+              child :: Child.name(),
+              pad :: Pad.ref(),
               context :: CallbackContext.t(),
-              state :: state_t
-            ) :: callback_return_t
+              state :: state
+            ) :: callback_return
 
   @doc """
   Callback invoked when a child element finishes processing stream via given pad.
   """
   @callback handle_element_end_of_stream(
-              child :: Child.name_t(),
-              pad :: Pad.ref_t(),
+              child :: Child.name(),
+              pad :: Pad.ref(),
               context :: CallbackContext.t(),
-              state :: state_t
-            ) :: callback_return_t
+              state :: state
+            ) :: callback_return
 
   @doc """
   Callback invoked when children of `Membrane.ChildrenSpec` are started.
   """
   @callback handle_spec_started(
-              children :: [Child.name_t()],
+              children :: [Child.name()],
               context :: CallbackContext.t(),
-              state :: state_t
-            ) :: callback_return_t
+              state :: state
+            ) :: callback_return
 
   @doc """
-  Callback invoked upon each timer tick. A timer can be started with `t:Membrane.Bin.Action.start_timer_t/0`
+  Callback invoked upon each timer tick. A timer can be started with `t:Membrane.Bin.Action.start_timer/0`
   action.
   """
   @callback handle_tick(
               timer_id :: any,
               context :: CallbackContext.t(),
-              state :: state_t
-            ) :: callback_return_t
+              state :: state
+            ) :: callback_return
 
   @doc """
   A callback invoked when the bin is being removed by its parent.
 
-  By default it returns `t:Membrane.Bin.Action.terminate_t/0` with reason `:normal`.
+  By default it returns `t:Membrane.Bin.Action.terminate/0` with reason `:normal`.
   """
   @callback handle_terminate_request(
               context :: CallbackContext.t(),
-              state_t
+              state
             ) ::
-              callback_return_t()
+              callback_return()
 
   @optional_callbacks handle_init: 2,
                       handle_pad_added: 3,

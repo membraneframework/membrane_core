@@ -14,13 +14,13 @@ defmodule Membrane.Core.Element.StreamFormatController do
   require Membrane.Core.Telemetry
   require Membrane.Logger
 
-  @type stream_format_validation_param_t() :: {module(), Pad.name_t()}
-  @type stream_format_validation_params_t() :: [stream_format_validation_param_t()]
+  @type stream_format_validation_param() :: {module(), Pad.name()}
+  @type stream_format_validation_params() :: [stream_format_validation_param()]
 
   @doc """
   Handles incoming stream format: either stores it in InputQueue, or executes element callback.
   """
-  @spec handle_stream_format(Pad.ref_t(), StreamFormat.t(), State.t()) :: State.t()
+  @spec handle_stream_format(Pad.ref(), StreamFormat.t(), State.t()) :: State.t()
   def handle_stream_format(pad_ref, stream_format, state) do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
@@ -49,7 +49,7 @@ defmodule Membrane.Core.Element.StreamFormatController do
     end
   end
 
-  @spec exec_handle_stream_format(Pad.ref_t(), StreamFormat.t(), params :: map, State.t()) ::
+  @spec exec_handle_stream_format(Pad.ref(), StreamFormat.t(), params :: map, State.t()) ::
           State.t()
   def exec_handle_stream_format(pad_ref, stream_format, params \\ %{}, state) do
     %{
@@ -80,8 +80,8 @@ defmodule Membrane.Core.Element.StreamFormatController do
   end
 
   @spec validate_stream_format!(
-          Pad.direction_t(),
-          stream_format_validation_params_t(),
+          Pad.direction(),
+          stream_format_validation_params(),
           StreamFormat.t()
         ) :: :ok
   def validate_stream_format!(direction, params, stream_format) do

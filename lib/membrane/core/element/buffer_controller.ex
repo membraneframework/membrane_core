@@ -30,7 +30,7 @@ defmodule Membrane.Core.Element.BufferController do
   callback. Also calls `Membrane.Core.Element.DemandHandler.supply_demand/2`
   to check if there are any unsupplied demands.
   """
-  @spec handle_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
+  @spec handle_buffer(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
   def handle_buffer(pad_ref, buffers, state) do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
@@ -54,7 +54,7 @@ defmodule Membrane.Core.Element.BufferController do
     end
   end
 
-  @spec do_handle_buffer(Pad.ref_t(), PadModel.pad_data_t(), [Buffer.t()] | Buffer.t(), State.t()) ::
+  @spec do_handle_buffer(Pad.ref(), PadModel.pad_data(), [Buffer.t()] | Buffer.t(), State.t()) ::
           State.t()
   defp do_handle_buffer(pad_ref, %{flow_control: :auto} = data, buffers, state) do
     %{demand: demand, demand_unit: demand_unit} = data
@@ -86,7 +86,7 @@ defmodule Membrane.Core.Element.BufferController do
   Executes `handle_buffers_batch` callback.
   """
   @spec exec_buffer_callback(
-          Pad.ref_t(),
+          Pad.ref(),
           [Buffer.t()] | Buffer.t(),
           State.t()
         ) :: State.t()

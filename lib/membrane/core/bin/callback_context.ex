@@ -1,9 +1,9 @@
 defmodule Membrane.Core.Bin.CallbackContext do
   @moduledoc false
 
-  @type optional_fields_t :: [pad_options: map()]
+  @type optional_fields :: [pad_options: map()]
 
-  @spec from_state(Membrane.Core.Bin.State.t(), optional_fields_t()) ::
+  @spec from_state(Membrane.Core.Bin.State.t(), optional_fields()) ::
           Membrane.Bin.CallbackContext.t()
   def from_state(state, optional_fields \\ []) do
     Map.new(optional_fields)

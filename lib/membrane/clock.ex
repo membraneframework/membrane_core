@@ -3,7 +3,7 @@ defmodule Membrane.Clock do
   Clock is a Membrane utility that allows elements to measure time according to
   a particular clock, which can be e.g. a soundcard hardware clock.
 
-  Internally, Clock is a GenServer process that can receive _updates_ (see `t:update_message_t/0`),
+  Internally, Clock is a GenServer process that can receive _updates_ (see `t:update_message/0`),
   which are messages containing amount of time until the next update.
   For example, a sink playing audio to the sound card can send an update before
   each write to the sound card buffer (for practical reasons that can be done every
@@ -11,12 +11,12 @@ defmodule Membrane.Clock do
   the time passed, in practice the described approach turns out to be more convenient,
   as it simplifies the first update.
 
-  Basing on updates, Clock calculates the `t:ratio_t/0` of its time to the reference
+  Basing on updates, Clock calculates the `t:ratio/0` of its time to the reference
   time. The reference time can be configured with `:time_provider` option. The ratio
-  is broadcasted (see `t:ratio_message_t/0`) to _subscribers_ (see `subscribe/2`)
+  is broadcasted (see `t:ratio_message/0`) to _subscribers_ (see `subscribe/2`)
   - processes willing to synchronize to the custom clock. Subscribers can adjust
   their timers according to received ratio - timers started with
-  `t:Membrane.Element.Action.start_timer_t/0` action in elements do it automatically.
+  `t:Membrane.Element.Action.start_timer/0` action in elements do it automatically.
   Initial ratio is equal to 1, which means that if no updates are received,
   Clock is synchronized to the reference time.
 
@@ -37,24 +37,24 @@ defmodule Membrane.Clock do
   @typedoc """
   Ratio of the Clock time to the reference time.
   """
-  @type ratio_t :: Ratio.t()
+  @type ratio :: Ratio.t()
 
   @typedoc """
   Update message received by the Clock. It should contain the time till the next
   update.
   """
-  @type update_message_t ::
+  @type update_message ::
           {:membrane_clock_update,
            milliseconds ::
              non_neg_integer
-             | ratio_t
+             | ratio
              | {numerator :: non_neg_integer, denominator :: pos_integer()}}
 
   @typedoc """
   Ratio message sent by the Clock to all its subscribers. It contains the ratio
   of the custom clock time to the reference time.
   """
-  @type ratio_message_t :: {:membrane_clock_ratio, clock :: pid, ratio_t}
+  @type ratio_message :: {:membrane_clock_ratio, clock :: pid, ratio}
 
   @typedoc """
   Options accepted by `start_link/2` and `start/2` functions.
@@ -66,23 +66,23 @@ defmodule Membrane.Clock do
 
   Check the moduledoc for more details.
   """
-  @type option_t ::
+  @type option ::
           {:time_provider, (() -> Time.t())}
           | {:proxy, boolean}
           | {:proxy_for, pid | nil}
 
-  @spec start_link([option_t], GenServer.options()) :: GenServer.on_start()
+  @spec start_link([option], GenServer.options()) :: GenServer.on_start()
   def start_link(options \\ [], gen_server_options \\ []) do
     GenServer.start_link(__MODULE__, options, gen_server_options)
   end
 
-  @spec start([option_t], GenServer.options()) :: GenServer.on_start()
+  @spec start([option], GenServer.options()) :: GenServer.on_start()
   def start(options \\ [], gen_server_options \\ []) do
     GenServer.start(__MODULE__, options, gen_server_options)
   end
 
   @doc """
-  Subscribes `pid` for receiving `t:ratio_message_t/0` messages from the clock.
+  Subscribes `pid` for receiving `t:ratio_message/0` messages from the clock.
 
   This function can be called multiple times from the same process. To unsubscribe,
   `unsubscribe/2` should be called the same amount of times. The subscribed pid
@@ -94,7 +94,7 @@ defmodule Membrane.Clock do
   end
 
   @doc """
-  Unsubscribes `pid` from receiving `t:ratio_message_t/0` messages from the clock.
+  Unsubscribes `pid` from receiving `t:ratio_message/0` messages from the clock.
 
   For unsubscription to take effect, `unsubscribe/2` should be called the same
   amount of times as `subscribe/2`.

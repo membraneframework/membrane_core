@@ -16,7 +16,7 @@ defmodule Membrane.Core.Element.DemandController do
   @doc """
   Handles demand coming on an output pad. Updates demand value and executes `handle_demand` callback.
   """
-  @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) :: State.t()
+  @spec handle_demand(Pad.ref(), non_neg_integer, State.t()) :: State.t()
   def handle_demand(pad_ref, size, state) do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
@@ -81,7 +81,7 @@ defmodule Membrane.Core.Element.DemandController do
   Also, the `demand_decrease` argument can be passed, decreasing the size of the
   demand on the input pad before proceeding to the rest of the function logic.
   """
-  @spec send_auto_demand_if_needed(Pad.ref_t(), integer, State.t()) :: State.t()
+  @spec send_auto_demand_if_needed(Pad.ref(), integer, State.t()) :: State.t()
   def send_auto_demand_if_needed(pad_ref, demand_decrease \\ 0, state) do
     data = PadModel.get_data!(state, pad_ref)
 

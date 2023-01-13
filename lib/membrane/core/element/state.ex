@@ -15,18 +15,18 @@ defmodule Membrane.Core.Element.State do
 
   @type t :: %__MODULE__{
           module: module,
-          type: Element.type_t(),
-          name: Element.name_t(),
-          internal_state: Element.state_t() | nil,
-          pads_info: PadModel.pads_info_t() | nil,
-          pads_data: PadModel.pads_data_t() | nil,
+          type: Element.type(),
+          name: Element.name(),
+          internal_state: Element.state() | nil,
+          pads_info: PadModel.pads_info() | nil,
+          pads_data: PadModel.pads_data() | nil,
           parent_pid: pid,
           supplying_demand?: boolean(),
-          delayed_demands: MapSet.t({Pad.ref_t(), :supply | :redemand}),
+          delayed_demands: MapSet.t({Pad.ref(), :supply | :redemand}),
           synchronization: %{
-            timers: %{Timer.id_t() => Timer.t()},
+            timers: %{Timer.id() => Timer.t()},
             parent_clock: Clock.t(),
-            latency: Membrane.Time.non_neg_t(),
+            latency: Membrane.Time.non_neg(),
             stream_sync: Sync.t(),
             clock: Clock.t() | nil
           },
@@ -65,7 +65,7 @@ defmodule Membrane.Core.Element.State do
   """
   @spec new(%{
           module: module,
-          name: Element.name_t(),
+          name: Element.name(),
           parent_clock: Clock.t(),
           sync: Sync.t(),
           parent: pid,

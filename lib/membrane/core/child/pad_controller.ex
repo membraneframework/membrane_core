@@ -7,11 +7,11 @@ defmodule Membrane.Core.Child.PadController do
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
 
-  @type state_t :: Membrane.Core.Bin.State.t() | Membrane.Core.Element.State.t()
+  @type state :: Membrane.Core.Bin.State.t() | Membrane.Core.Element.State.t()
 
   @spec validate_pad_being_linked!(
-          Pad.direction_t(),
-          PadModel.pad_info_t()
+          Pad.direction(),
+          PadModel.pad_info()
         ) :: :ok
   def validate_pad_being_linked!(direction, info) do
     if info.direction != direction do
@@ -26,8 +26,8 @@ defmodule Membrane.Core.Child.PadController do
   end
 
   @spec validate_pad_mode!(
-          {Pad.ref_t(), info :: PadModel.pad_info_t() | PadModel.pad_data_t()},
-          {Pad.ref_t(), other_info :: PadModel.pad_info_t() | PadModel.pad_data_t()}
+          {Pad.ref(), info :: PadModel.pad_info() | PadModel.pad_data()},
+          {Pad.ref(), other_info :: PadModel.pad_info() | PadModel.pad_data()}
         ) :: :ok
   def validate_pad_mode!(this, that) do
     :ok = do_validate_pad_mode!(this, that)
@@ -48,7 +48,7 @@ defmodule Membrane.Core.Child.PadController do
     :ok
   end
 
-  @spec parse_pad_options!(Pad.name_t(), Membrane.ChildrenSpec.pad_options_t(), state_t()) ::
+  @spec parse_pad_options!(Pad.name(), Membrane.ChildrenSpec.pad_options(), state()) ::
           map | no_return
   def parse_pad_options!(pad_name, options, state) do
     {_pad_name, pad_spec} =
@@ -70,7 +70,7 @@ defmodule Membrane.Core.Child.PadController do
     end
   end
 
-  @spec assert_all_static_pads_linked!(state_t) :: :ok
+  @spec assert_all_static_pads_linked!(state) :: :ok
   def assert_all_static_pads_linked!(state) do
     linked_pads_names = state.pads_data |> Map.values() |> MapSet.new(& &1.name)
 

@@ -8,15 +8,15 @@ defmodule Membrane.Core.Parent.CrashGroup do
 
   use Bunch.Access
 
-  @type name_t() :: any()
+  @type name() :: any()
 
   @type t :: %__MODULE__{
-          name: name_t(),
+          name: name(),
           mode: :temporary,
-          members: [Membrane.Child.name_t()],
+          members: [Membrane.Child.name()],
           alive_members_pids: [pid()],
           triggered?: boolean(),
-          crash_initiator: Membrane.Child.name_t()
+          crash_initiator: Membrane.Child.name()
         }
 
   @enforce_keys [:name, :mode]

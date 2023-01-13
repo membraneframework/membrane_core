@@ -8,18 +8,18 @@ defmodule Membrane.Core.Parent.SpecificationParser do
 
   require Membrane.Logger
 
-  @type raw_link_t :: %Link{from: raw_endpoint_t(), to: raw_endpoint_t()}
+  @type raw_link :: %Link{from: raw_endpoint(), to: raw_endpoint()}
 
-  @type raw_endpoint_t :: %Endpoint{
-          child: Element.name_t() | {Membrane.Bin, :itself},
-          pad_spec: Pad.name_t() | Pad.ref_t(),
-          pad_ref: Pad.ref_t() | nil,
+  @type raw_endpoint :: %Endpoint{
+          child: Element.name() | {Membrane.Bin, :itself},
+          pad_spec: Pad.name() | Pad.ref(),
+          pad_ref: Pad.ref() | nil,
           pid: pid() | nil,
           pad_props: map()
         }
 
-  @spec parse([ChildrenSpec.builder_t()]) ::
-          {[ChildrenSpec.Builder.child_spec_t()], [raw_link_t]} | no_return
+  @spec parse([ChildrenSpec.builder()]) ::
+          {[ChildrenSpec.Builder.child_spec()], [raw_link]} | no_return
   def parse(specifications) when is_list(specifications) do
     {children, links} =
       specifications
@@ -65,7 +65,7 @@ defmodule Membrane.Core.Parent.SpecificationParser do
 
   def parse(specification), do: from_spec_error([specification])
 
-  @spec from_spec_error([ChildrenSpec.builder_t()]) :: no_return
+  @spec from_spec_error([ChildrenSpec.builder()]) :: no_return
   defp from_spec_error(specifications) do
     raise ParentError, """
     Invalid specifications: #{inspect(specifications)}. The link lacks it destination.

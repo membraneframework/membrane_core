@@ -21,30 +21,30 @@ defmodule Membrane.Element.WithInputPads do
   Context passed to this callback contains additional field `:old_stream_format`.
   """
   @callback handle_stream_format(
-              pad :: Pad.ref_t(),
+              pad :: Pad.ref(),
               stream_format :: Membrane.StreamFormat.t(),
               context :: CallbackContext.t(),
-              state :: Element.state_t()
-            ) :: Membrane.Element.Base.callback_return_t()
+              state :: Element.state()
+            ) :: Membrane.Element.Base.callback_return()
 
   @doc """
   Callback invoked when element receives `Membrane.Event.StartOfStream` event.
   """
   @callback handle_start_of_stream(
-              pad :: Pad.ref_t(),
+              pad :: Pad.ref(),
               context :: CallbackContext.t(),
-              state :: Element.state_t()
-            ) :: Membrane.Element.Base.callback_return_t()
+              state :: Element.state()
+            ) :: Membrane.Element.Base.callback_return()
 
   @doc """
   Callback invoked when the previous element has finished processing via the pad,
   and it cannot be used anymore.
   """
   @callback handle_end_of_stream(
-              pad :: Pad.ref_t(),
+              pad :: Pad.ref(),
               context :: CallbackContext.t(),
-              state :: Element.state_t()
-            ) :: Membrane.Element.Base.callback_return_t()
+              state :: Element.state()
+            ) :: Membrane.Element.Base.callback_return()
 
   @doc """
   Callback that is called when buffer should be processed by the Element.
@@ -57,11 +57,11 @@ defmodule Membrane.Element.WithInputPads do
   For pads in push mode it is invoked when buffers arrive.
   """
   @callback handle_buffers_batch(
-              pad :: Pad.ref_t(),
+              pad :: Pad.ref(),
               buffers :: list(Buffer.t()),
               context :: CallbackContext.t(),
-              state :: Element.state_t()
-            ) :: Membrane.Element.Base.callback_return_t()
+              state :: Element.state()
+            ) :: Membrane.Element.Base.callback_return()
 
   @doc """
   Callback that is called when buffer should be processed by the Element. In contrast
@@ -70,11 +70,11 @@ defmodule Membrane.Element.WithInputPads do
   Called by default implementation of `c:handle_buffers_batch/4`.
   """
   @callback handle_buffer(
-              pad :: Pad.ref_t(),
+              pad :: Pad.ref(),
               buffer :: Buffer.t(),
               context :: CallbackContext.t(),
-              state :: Element.state_t()
-            ) :: Membrane.Element.Base.callback_return_t()
+              state :: Element.state()
+            ) :: Membrane.Element.Base.callback_return()
 
   @optional_callbacks handle_buffer: 4, handle_stream_format: 4
 

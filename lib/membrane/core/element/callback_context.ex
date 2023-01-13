@@ -1,12 +1,12 @@
 defmodule Membrane.Core.Element.CallbackContext do
   @moduledoc false
 
-  @type optional_fields_t ::
+  @type optional_fields ::
           [incoming_demand: non_neg_integer()]
           | [pad_options: map()]
           | [old_stream_format: Membrane.StreamFormat.t()]
 
-  @spec from_state(Membrane.Core.Element.State.t(), optional_fields_t()) ::
+  @spec from_state(Membrane.Core.Element.State.t(), optional_fields()) ::
           Membrane.Element.CallbackContext.t()
   def from_state(state, optional_fields \\ []) do
     Map.new(optional_fields)

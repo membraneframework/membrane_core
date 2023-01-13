@@ -35,7 +35,7 @@ defmodule Membrane.Filter do
       use Membrane.Element.WithInputPads
 
       @doc false
-      @spec membrane_element_type() :: Membrane.Element.type_t()
+      @spec membrane_element_type() :: Membrane.Element.type()
       def membrane_element_type, do: :filter
 
       @impl true

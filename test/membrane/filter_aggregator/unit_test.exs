@@ -10,7 +10,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
   alias Membrane.StreamFormat.Mock, as: MockStreamFormat
 
   defmodule ElementWithMembranePads do
-    @callback membrane_pads() :: [{Membrane.Pad.name_t(), Membrane.Pad.description_t()}]
+    @callback membrane_pads() :: [{Membrane.Pad.name(), Membrane.Pad.description()}]
   end
 
   setup_all do

@@ -36,15 +36,15 @@ defmodule Membrane.Core.Element do
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
-  @type options_t :: %{
+  @type options :: %{
           module: module,
-          name: Membrane.Element.name_t(),
+          name: Membrane.Element.name(),
           node: node | nil,
-          user_options: Membrane.Element.options_t(),
+          user_options: Membrane.Element.options(),
           sync: Sync.t(),
           parent: pid,
           parent_clock: Clock.t(),
-          parent_path: Membrane.ComponentPath.path_t(),
+          parent_path: Membrane.ComponentPath.path(),
           log_metadata: Logger.metadata(),
           subprocess_supervisor: pid(),
           parent_supervisor: pid()
@@ -56,14 +56,14 @@ defmodule Membrane.Core.Element do
 
   Calls `GenServer.start_link/3` underneath.
   """
-  @spec start_link(options_t) :: GenServer.on_start()
+  @spec start_link(options) :: GenServer.on_start()
   def start_link(options),
     do: do_start(:start_link, options)
 
   @doc """
   Works similarly to `start_link/3`, but does not link to the current process.
   """
-  @spec start(options_t) :: GenServer.on_start()
+  @spec start(options) :: GenServer.on_start()
   def start(options),
     do: do_start(:start, options)
 

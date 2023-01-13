@@ -25,7 +25,7 @@ defmodule Membrane.Core.Child.PadSpecHandler do
     }
   end
 
-  @spec get_pads(Child.state_t()) :: [{Pad.name_t(), Pad.description_t()}]
+  @spec get_pads(Child.state()) :: [{Pad.name(), Pad.description()}]
   def get_pads(%Bin.State{module: module}) do
     module.membrane_pads()
   end
