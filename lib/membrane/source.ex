@@ -33,7 +33,7 @@ defmodule Membrane.Source do
       use Membrane.Element.WithOutputPads
 
       @doc false
-      @spec membrane_element_type() :: Membrane.Element.type_t()
+      @spec membrane_element_type() :: Membrane.Element.type()
       def membrane_element_type, do: :source
     end
   end

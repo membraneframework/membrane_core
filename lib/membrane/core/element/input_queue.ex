@@ -21,9 +21,9 @@ defmodule Membrane.Core.Element.InputQueue do
 
   @non_buf_types [:event, :stream_format]
 
-  @type output_value_t ::
+  @type output_value ::
           {:event | :stream_format, any} | {:buffers, list, pos_integer, pos_integer}
-  @type output_t :: {:empty | :value, [output_value_t]}
+  @type output :: {:empty | :value, [output_value]}
 
   @type t :: %__MODULE__{
           q: @qe.t(),
@@ -57,10 +57,10 @@ defmodule Membrane.Core.Element.InputQueue do
   def default_min_demand_factor, do: 0.25
 
   @spec init(%{
-          inbound_demand_unit: Buffer.Metric.unit_t(),
-          outbound_demand_unit: Buffer.Metric.unit_t(),
+          inbound_demand_unit: Buffer.Metric.unit(),
+          outbound_demand_unit: Buffer.Metric.unit(),
           demand_pid: pid(),
-          demand_pad: Pad.ref_t(),
+          demand_pad: Pad.ref(),
           log_tag: String.t(),
           toilet?: boolean(),
           target_size: pos_integer() | nil,
@@ -158,7 +158,7 @@ defmodule Membrane.Core.Element.InputQueue do
     }
   end
 
-  @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref_t()) :: {output_t(), t()}
+  @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref()) :: {output(), t()}
   def take_and_demand(
         %__MODULE__{} = input_queue,
         count,
@@ -292,7 +292,7 @@ defmodule Membrane.Core.Element.InputQueue do
     end
   end
 
-  @spec send_demands(t(), pid(), Pad.ref_t()) :: t()
+  @spec send_demands(t(), pid(), Pad.ref()) :: t()
   defp send_demands(
          %__MODULE__{
            toilet?: false,

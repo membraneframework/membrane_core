@@ -22,14 +22,14 @@ defmodule Membrane.Core.Bin do
   require Membrane.Core.Telemetry
   require Membrane.Logger
 
-  @type options_t :: %{
+  @type options :: %{
           name: atom,
           module: module,
           node: node | nil,
           parent: pid,
-          user_options: Membrane.Bin.options_t(),
+          user_options: Membrane.Bin.options(),
           parent_clock: Membrane.Clock.t(),
-          parent_path: Membrane.ComponentPath.path_t(),
+          parent_path: Membrane.ComponentPath.path(),
           log_metadata: Logger.metadata(),
           sync: :membrane_no_sync,
           subprocess_supervisor: pid(),
@@ -45,7 +45,7 @@ defmodule Membrane.Core.Bin do
 
   Returns the same values as `GenServer.start_link/3`.
   """
-  @spec start_link(options_t) :: GenServer.on_start()
+  @spec start_link(options) :: GenServer.on_start()
   def start_link(options),
     do: do_start(:start_link, options)
 
@@ -53,7 +53,7 @@ defmodule Membrane.Core.Bin do
   Works similarly to `start_link/3`, but does not link to the current process.
   """
 
-  @spec start(options_t()) :: GenServer.on_start()
+  @spec start(options()) :: GenServer.on_start()
   def start(options),
     do: do_start(:start, options)
 

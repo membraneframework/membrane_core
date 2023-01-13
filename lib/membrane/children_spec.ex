@@ -6,7 +6,7 @@ defmodule Membrane.ChildrenSpec do
   `t:t/0`. It consists of two parts - a children's specification and the children's specification options.
 
   The children's specification describes the desired topology and can be incorporated into a pipeline or a bin by returning
-  `t:Membrane.Pipeline.Action.spec_t/0` or `t:Membrane.Bin.Action.spec_t/0`
+  `t:Membrane.Pipeline.Action.spec/0` or `t:Membrane.Bin.Action.spec/0`
   action, respectively. This commonly happens within `c:Membrane.Pipeline.handle_init/2`
   and `c:Membrane.Bin.handle_init/2`, but can be done in any other callback also.
 
@@ -36,7 +36,7 @@ defmodule Membrane.ChildrenSpec do
   name and a random unique reference number, so that you will be able to distinguish between anonymous
   children i.e. in log prints.
 
-  In case you need to refer to an already existing child (which could be spawned, i.e. in the previous `spec_t` action),
+  In case you need to refer to an already existing child (which could be spawned, i.e. in the previous `spec` action),
   use `get_child/1` and `get_child/2` functions, as in the example below:
   ```
     spec = [get_child(:already_existing_source) |> child(:this_filter_will_be_spawned, Filter) |> get_child(:already_existing_sink)]
@@ -260,23 +260,23 @@ defmodule Membrane.ChildrenSpec do
 
     use Bunch.Access
 
-    @typep child_options_map_t :: %{get_if_exists: boolean}
+    @typep child_options_map :: %{get_if_exists: boolean}
 
-    @type child_spec_t ::
-            {{:child_name, Child.name_t()} | {:child_ref, Child.name_t()},
-             Membrane.ChildrenSpec.child_definition_t(), child_options_map_t()}
+    @type child_spec ::
+            {{:child_name, Child.name()} | {:child_ref, Child.name()},
+             Membrane.ChildrenSpec.child_definition(), child_options_map()}
 
-    @type status_t :: :from_pad | :to_pad | :done
+    @type status :: :from_pad | :to_pad | :done
 
     @type t :: %__MODULE__{
-            children: [child_spec_t()],
+            children: [child_spec()],
             links: [map],
-            status: status_t,
-            from_pad: Membrane.Pad.name_t() | Membrane.Pad.ref_t() | nil,
+            status: status,
+            from_pad: Membrane.Pad.name() | Membrane.Pad.ref() | nil,
             from_pad_props: %{} | nil,
-            to_pad: Membrane.Pad.name_t() | Membrane.Pad.ref_t() | nil,
+            to_pad: Membrane.Pad.name() | Membrane.Pad.ref() | nil,
             to_pad_props: %{} | nil,
-            link_starting_child: Child.name_t()
+            link_starting_child: Child.name()
           }
 
     defstruct children: [],
@@ -288,7 +288,7 @@ defmodule Membrane.ChildrenSpec do
               to_pad_props: nil,
               link_starting_child: nil
 
-    @spec finish_link(t(), Child.name_t()) :: t()
+    @spec finish_link(t(), Child.name()) :: t()
     def finish_link(%__MODULE__{status: :to_pad} = builder, child_name) do
       new_link = %{
         from: builder.link_starting_child,
@@ -308,20 +308,20 @@ defmodule Membrane.ChildrenSpec do
     end
   end
 
-  @opaque builder_t :: Builder.t()
+  @opaque builder :: Builder.t()
 
-  @type pad_options_t :: Keyword.t()
+  @type pad_options :: Keyword.t()
 
-  @type child_definition_t :: struct() | module()
+  @type child_definition :: struct() | module()
 
-  @type child_options_t :: [get_if_exists: boolean]
+  @type child_options :: [get_if_exists: boolean]
   @default_child_options [get_if_exists: [default: false]]
 
-  @type children_spec_options_t :: [
-          group: Child.group_t(),
-          crash_group_mode: Membrane.CrashGroup.mode_t() | nil,
-          stream_sync: :sinks | [[Child.name_t()]],
-          clock_provider: Child.name_t() | nil,
+  @type children_spec_options :: [
+          group: Child.group(),
+          crash_group_mode: Membrane.CrashGroup.mode() | nil,
+          stream_sync: :sinks | [[Child.name()]],
+          clock_provider: Child.name() | nil,
           node: node() | nil,
           log_metadata: Keyword.t()
         ]
@@ -329,14 +329,14 @@ defmodule Membrane.ChildrenSpec do
   @typedoc """
   Used to describe the inner topology of the pipeline/bin.
   """
-  @type t :: builder_t() | [t()] | {t(), children_spec_options_t()}
+  @type t :: builder() | [t()] | {t(), children_spec_options()}
 
   @doc """
   Used to refer to an existing child at a beginning of a link specification.
 
   See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec get_child(Child.name_t()) :: builder_t()
+  @spec get_child(Child.name()) :: builder()
   def get_child(child_name) do
     do_get_child(child_name)
   end
@@ -346,7 +346,7 @@ defmodule Membrane.ChildrenSpec do
 
   See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec get_child(builder_t(), Child.name_t()) :: builder_t()
+  @spec get_child(builder(), Child.name()) :: builder()
   def get_child(%Builder{} = builder, child_ref) do
     do_get_child(builder, child_ref)
   end
@@ -369,7 +369,7 @@ defmodule Membrane.ChildrenSpec do
 
   See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec child(child_definition_t()) :: builder_t()
+  @spec child(child_definition()) :: builder()
   def child(child_definition) do
     child_module = get_module(child_definition)
     child_name = {child_module, make_ref()}
@@ -382,9 +382,9 @@ defmodule Membrane.ChildrenSpec do
 
   See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec child(Child.name_t(), child_definition_t()) :: builder_t()
-  @spec child(builder_t(), child_definition_t()) :: builder_t()
-  @spec child(child_definition_t(), child_options_t()) :: builder_t()
+  @spec child(Child.name(), child_definition()) :: builder()
+  @spec child(builder(), child_definition()) :: builder()
+  @spec child(child_definition(), child_options()) :: builder()
   def child(child_name, child_definition) when is_child_name?(child_name) do
     do_child(child_name, child_definition, [])
   end
@@ -407,9 +407,9 @@ defmodule Membrane.ChildrenSpec do
 
   See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec child(builder_t(), Child.name_t(), child_definition_t()) :: builder_t()
-  @spec child(builder_t(), child_definition_t(), child_options_t()) :: builder_t()
-  @spec child(Child.name_t(), child_definition_t(), child_options_t()) :: builder_t()
+  @spec child(builder(), Child.name(), child_definition()) :: builder()
+  @spec child(builder(), child_definition(), child_options()) :: builder()
+  @spec child(Child.name(), child_definition(), child_options()) :: builder()
   def child(first_arg, second_arg, third_arg)
 
   def child(%Builder{} = builder, child_name, child_definition)
@@ -436,7 +436,7 @@ defmodule Membrane.ChildrenSpec do
 
   See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec child(builder_t(), Child.name_t(), child_definition_t(), child_options_t()) :: builder_t()
+  @spec child(builder(), Child.name(), child_definition(), child_options()) :: builder()
   def child(builder, child_name, child_definition, opts) do
     do_child(builder, child_name, child_definition, opts)
   end
@@ -469,7 +469,7 @@ defmodule Membrane.ChildrenSpec do
 
   See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec bin_input(Pad.name_t() | Pad.ref_t()) :: builder_t() | no_return
+  @spec bin_input(Pad.name() | Pad.ref()) :: builder() | no_return
   def bin_input(pad \\ :input) do
     :ok = validate_pad_name(pad)
 
@@ -482,7 +482,7 @@ defmodule Membrane.ChildrenSpec do
 
   See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec bin_output(builder_t(), Pad.name_t() | Pad.ref_t()) :: builder_t() | no_return
+  @spec bin_output(builder(), Pad.name() | Pad.ref()) :: builder() | no_return
   def bin_output(builder, pad \\ :output)
 
   def bin_output(%Builder{status: :to_pad}, pad) do
@@ -517,15 +517,15 @@ defmodule Membrane.ChildrenSpec do
   in a queue called a toilet. If the toilet size grows above its capacity, it overflows by raising an error.
   - `target_queue_size` - The size of the queue of the input pad that Membrane will try to maintain. That allows for fulfilling
   the demands of the element by taking data from the queue while the actual sending of demands is done asynchronously,
-  smoothing the processing. Used only for pads working in `:manual` flow control mode. See `t:Membrane.Pad.flow_control_t/0` for
+  smoothing the processing. Used only for pads working in `:manual` flow control mode. See `t:Membrane.Pad.flow_control/0` for
   more information.
   - `min_demand_factor` - A factor used to calculate `minimal demand` (`minimal_demand = target_queue_size * min_demand_factor`).
   Membrane won't send smaller demand than `minimal demand`, to reduce demands' overhead. However, the user will always receive
   as many buffers, as demanded, all excess buffers will be queued internally.
-  Used only for pads working in `:manual` flow control mode. See `t:Membrane.Pad.flow_control_t/0`
+  Used only for pads working in `:manual` flow control mode. See `t:Membrane.Pad.flow_control/0`
   for more info. Defaults to `#{Membrane.Core.Element.InputQueue.default_min_demand_factor()}` (the default may change in the future).
   - `auto_demand_size` - Size of automatically generated demands. Used only for pads working in `:auto` flow control mode.
-    See `t:Membrane.Pad.flow_control_t/0`  for more info.
+    See `t:Membrane.Pad.flow_control/0`  for more info.
   - `throttling_factor` - an integer specifying how frequently should a sender update the number of buffers in the `Toilet`. Defaults to 1,
     meaning, that the sender will update the toilet with each buffer being sent. Setting that factor for elements,
     which are running on the same node, does not have an impact of performance. However, once the sending element and the receiving element are put on different nodes,
@@ -535,14 +535,14 @@ defmodule Membrane.ChildrenSpec do
 
   See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec via_in(builder_t(), Pad.name_t() | Pad.ref_t(),
-          options: pad_options_t(),
+  @spec via_in(builder(), Pad.name() | Pad.ref(),
+          options: pad_options(),
           toilet_capacity: number | nil,
           target_queue_size: number | nil,
           min_demand_factor: number | nil,
           auto_demand_size: number | nil,
           throttling_factor: number | nil
-        ) :: builder_t() | no_return
+        ) :: builder() | no_return
   def via_in(builder, pad, props \\ [])
 
   def via_in(%Builder{status: :to_pad}, pad, _props) do
@@ -594,8 +594,8 @@ defmodule Membrane.ChildrenSpec do
 
   See the _Children's specification_ section of the moduledoc for more information.
   """
-  @spec via_out(builder_t(), Pad.name_t() | Pad.ref_t(), options: pad_options_t()) ::
-          builder_t() | no_return
+  @spec via_out(builder(), Pad.name() | Pad.ref(), options: pad_options()) ::
+          builder() | no_return
   def via_out(builder, pad, props \\ [])
 
   def via_out(%Builder{status: :from_pad}, pad, _props) do

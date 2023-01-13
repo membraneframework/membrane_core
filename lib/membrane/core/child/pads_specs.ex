@@ -13,12 +13,12 @@ defmodule Membrane.Core.Child.PadsSpecs do
   @doc """
   Returns documentation string common for both input and output pads
   """
-  @spec def_pad_docs(Pad.direction_t(), :bin | :element) :: String.t()
+  @spec def_pad_docs(Pad.direction(), :bin | :element) :: String.t()
   def def_pad_docs(direction, component) do
     {entity, pad_type_spec} =
       case component do
-        :bin -> {"bin", "bin_spec_t/0"}
-        :element -> {"element", "element_spec_t/0"}
+        :bin -> {"bin", "bin_spec/0"}
+        :element -> {"element", "element_spec/0"}
       end
 
     """
@@ -35,8 +35,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
   Returns AST inserted into element's or bin's module defining a pad
   """
   @spec def_pad(
-          Pad.name_t(),
-          Pad.direction_t(),
+          Pad.name(),
+          Pad.direction(),
           Macro.t(),
           :filter | :endpoint | :source | :sink | :bin
         ) :: Macro.t()
@@ -98,7 +98,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
       unless Module.defines?(__MODULE__, {:membrane_stream_format_match?, 2}) do
         @doc false
-        @spec membrane_stream_format_match?(Membrane.Pad.name_t(), Membrane.StreamFormat.t()) ::
+        @spec membrane_stream_format_match?(Membrane.Pad.name(), Membrane.StreamFormat.t()) ::
                 boolean()
       end
 
@@ -132,7 +132,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
     quote do
       @doc false
-      @spec membrane_pads() :: [{unquote(Pad).name_t(), unquote(Pad).description_t()}]
+      @spec membrane_pads() :: [{unquote(Pad).name(), unquote(Pad).description()}]
       def membrane_pads() do
         unquote(pads |> Macro.escape())
       end
@@ -140,7 +140,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   @spec validate_pads!(
-          pads :: [{Pad.name_t(), Pad.description_t()}],
+          pads :: [{Pad.name(), Pad.description()}],
           env :: Macro.Env.t()
         ) :: :ok
   defp validate_pads!(pads, env) do
@@ -153,11 +153,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   @spec parse_pad_specs!(
-          specs :: Pad.spec_t(),
-          direction :: Pad.direction_t(),
+          specs :: Pad.spec(),
+          direction :: Pad.direction(),
           :filter | :endpoint | :source | :sink | :bin,
           declaration_env :: Macro.Env.t()
-        ) :: {Pad.name_t(), Pad.description_t()}
+        ) :: {Pad.name(), Pad.description()}
   def parse_pad_specs!(specs, direction, component, env) do
     with {:ok, specs} <- parse_pad_specs(specs, direction, component) do
       specs
@@ -174,11 +174,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   @spec parse_pad_specs(
-          Pad.spec_t(),
-          Pad.direction_t(),
+          Pad.spec(),
+          Pad.direction(),
           :filter | :endpoint | :source | :sink | :bin
         ) ::
-          {Pad.name_t(), Pad.description_t()} | {:error, reason :: any}
+          {Pad.name(), Pad.description()} | {:error, reason :: any}
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   def parse_pad_specs(spec, direction, component) do
     withl spec: {name, config} when Pad.is_pad_name(name) and is_list(config) <- spec,
@@ -229,7 +229,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   @doc """
   Generates docs describing pads based on pads specification.
   """
-  @spec generate_docs_from_pads_specs([{Pad.name_t(), Pad.description_t()}]) :: Macro.t()
+  @spec generate_docs_from_pads_specs([{Pad.name(), Pad.description()}]) :: Macro.t()
   def generate_docs_from_pads_specs([]) do
     quote do
       """

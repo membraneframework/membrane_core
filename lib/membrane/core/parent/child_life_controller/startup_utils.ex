@@ -10,7 +10,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   require Membrane.Core.Message
   require Membrane.Logger
 
-  @spec check_if_children_names_unique([ChildEntryParser.raw_child_entry_t()], Parent.state_t()) ::
+  @spec check_if_children_names_unique([ChildEntryParser.raw_child_entry()], Parent.state()) ::
           :ok | no_return
   def check_if_children_names_unique(children, state) do
     %{children: state_children} = state
@@ -28,8 +28,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     end
   end
 
-  @spec setup_syncs([ChildEntryParser.raw_child_entry_t()], :sinks | [[Membrane.Child.name_t()]]) ::
-          %{Membrane.Child.name_t() => Sync.t()}
+  @spec setup_syncs([ChildEntryParser.raw_child_entry()], :sinks | [[Membrane.Child.name()]]) ::
+          %{Membrane.Child.name() => Sync.t()}
   def setup_syncs(children, :sinks) do
     sinks =
       children
@@ -65,13 +65,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   end
 
   @spec start_children(
-          [ChildEntryParser.raw_child_entry_t()],
+          [ChildEntryParser.raw_child_entry()],
           node() | nil,
           parent_clock :: Clock.t(),
-          syncs :: %{Membrane.Child.name_t() => pid()},
+          syncs :: %{Membrane.Child.name() => pid()},
           log_metadata :: Keyword.t(),
           supervisor :: pid,
-          group :: Membrane.Child.group_t()
+          group :: Membrane.Child.group()
         ) :: [ChildEntry.t()]
   def start_children(
         children,
@@ -94,7 +94,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, supervisor, group))
   end
 
-  @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, Parent.state_t()) ::
+  @spec maybe_activate_syncs(%{Membrane.Child.name() => Sync.t()}, Parent.state()) ::
           :ok | {:error, :bad_activity_request}
   def maybe_activate_syncs(syncs, %{playback: :playing}) do
     syncs |> MapSet.new(&elem(&1, 1)) |> Bunch.Enum.try_each(&Sync.activate/1)
@@ -104,7 +104,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     :ok
   end
 
-  @spec exec_handle_spec_started([Membrane.Child.name_t()], Parent.state_t()) :: Parent.state_t()
+  @spec exec_handle_spec_started([Membrane.Child.name()], Parent.state()) :: Parent.state()
   def exec_handle_spec_started(children_names, state) do
     action_handler = Component.action_handler(state)
 
@@ -118,8 +118,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   end
 
   @spec check_if_children_names_and_children_groups_ids_are_unique(
-          ChildLifeController.children_spec_canonical_form_t(),
-          Parent.state_t()
+          ChildLifeController.children_spec_canonical_form(),
+          Parent.state()
         ) :: :ok
   def check_if_children_names_and_children_groups_ids_are_unique(children_definitions, state) do
     state_children_groups =

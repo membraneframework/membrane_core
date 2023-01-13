@@ -5,7 +5,7 @@ defmodule Membrane.ComponentPath do
   Information is being stored in a process dictionary and can be set/appended to.
   """
 
-  @type path_t :: list(String.t())
+  @type path :: list(String.t())
 
   @key :membrane_path
 
@@ -14,7 +14,7 @@ defmodule Membrane.ComponentPath do
 
   If path had already existed then replaces it.
   """
-  @spec set(path_t) :: :ok
+  @spec set(path) :: :ok
   def set(path) do
     Process.put(@key, path)
     :ok
@@ -23,7 +23,7 @@ defmodule Membrane.ComponentPath do
   @doc """
   Returns formatted string of given path's names.
   """
-  @spec format(path_t()) :: String.t()
+  @spec format(path()) :: String.t()
   def format(path) do
     Enum.join(path)
   end

@@ -55,7 +55,7 @@ defmodule Membrane.Core.OptionsSpecs do
     end
   end
 
-  @spec def_pad_options(Pad.name_t(), nil | Keyword.t()) :: {Macro.t(), Macro.t()}
+  @spec def_pad_options(Pad.name(), nil | Keyword.t()) :: {Macro.t(), Macro.t()}
   def def_pad_options(_pad_name, nil) do
     no_code =
       quote do
@@ -66,7 +66,7 @@ defmodule Membrane.Core.OptionsSpecs do
 
   def def_pad_options(pad_name, options) do
     {opt_typespecs, escaped_opts} = parse_opts(options)
-    pad_opts_type_name = "#{pad_name}_pad_opts_t" |> String.to_atom()
+    pad_opts_type_name = "#{pad_name}_pad_opts" |> String.to_atom()
 
     type_definiton =
       quote do

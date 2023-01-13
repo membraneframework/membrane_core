@@ -93,7 +93,7 @@ defmodule Membrane.Pipeline do
       for example. Actions are a tuple of `{type, arguments}`, so may be written in the
       form a keyword list. See `Membrane.Pipeline.Action` for more info.
   """
-  @type callback_return_t ::
+  @type callback_return ::
           {[Action.t()], state}
 
   @doc """
@@ -105,15 +105,15 @@ defmodule Membrane.Pipeline do
   children.
   """
   @callback handle_init(context :: CallbackContext.t(), options :: pipeline_options) ::
-              callback_return_t()
+              callback_return()
 
   @doc """
   Callback invoked when pipeline is requested to terminate with `terminate/2`.
 
-  By default it returns `t:Membrane.Pipeline.Action.terminate_t/0` with reason `:normal`.
+  By default it returns `t:Membrane.Pipeline.Action.terminate/0` with reason `:normal`.
   """
   @callback handle_terminate_request(context :: CallbackContext.t(), state) ::
-              callback_return_t()
+              callback_return()
 
   @doc """
   Callback invoked on pipeline startup, right after `c:handle_init/2`.
@@ -124,7 +124,7 @@ defmodule Membrane.Pipeline do
               context :: CallbackContext.t(),
               state
             ) ::
-              callback_return_t
+              callback_return
 
   @doc """
   Callback invoked when pipeline switches the playback to `:playing`.
@@ -133,17 +133,17 @@ defmodule Membrane.Pipeline do
               context :: CallbackContext.t(),
               state
             ) ::
-              callback_return_t
+              callback_return
 
   @doc """
   Callback invoked when a notification comes in from an element.
   """
   @callback handle_child_notification(
               notification :: Membrane.ChildNotification.t(),
-              element :: Child.name_t(),
+              element :: Child.name(),
               context :: CallbackContext.t(),
               state
-            ) :: callback_return_t
+            ) :: callback_return
 
   @doc """
   Callback invoked when pipeline receives a message that is not recognized
@@ -156,46 +156,46 @@ defmodule Membrane.Pipeline do
               context :: CallbackContext.t(),
               state
             ) ::
-              callback_return_t
+              callback_return
 
   @doc """
   Callback invoked when a child element starts processing stream via given pad.
   """
   @callback handle_element_start_of_stream(
-              child :: Child.name_t(),
-              pad :: Pad.ref_t(),
+              child :: Child.name(),
+              pad :: Pad.ref(),
               context :: CallbackContext.t(),
               state
-            ) :: callback_return_t
+            ) :: callback_return
 
   @doc """
   Callback invoked when a child element finishes processing stream via given pad.
   """
   @callback handle_element_end_of_stream(
-              child :: Child.name_t(),
-              pad :: Pad.ref_t(),
+              child :: Child.name(),
+              pad :: Pad.ref(),
               context :: CallbackContext.t(),
               state
-            ) :: callback_return_t
+            ) :: callback_return
 
   @doc """
   Callback invoked when children of `Membrane.ChildrenSpec` are started.
   """
   @callback handle_spec_started(
-              children :: [Child.name_t()],
+              children :: [Child.name()],
               context :: CallbackContext.t(),
               state
-            ) :: callback_return_t
+            ) :: callback_return
 
   @doc """
-  Callback invoked upon each timer tick. A timer can be started with `Membrane.Pipeline.Action.start_timer_t`
+  Callback invoked upon each timer tick. A timer can be started with `Membrane.Pipeline.Action.start_timer`
   action.
   """
   @callback handle_tick(
               timer_id :: any,
               context :: CallbackContext.t(),
               state
-            ) :: callback_return_t
+            ) :: callback_return
 
   @doc """
   Callback invoked when crash of the crash group happens.
@@ -203,10 +203,10 @@ defmodule Membrane.Pipeline do
   Context passed to this callback contains 2 additional fields: `:members` and `:crash_initiator`.
   """
   @callback handle_crash_group_down(
-              group_name :: Child.group_t(),
+              group_name :: Child.group(),
               context :: CallbackContext.t(),
               state
-            ) :: callback_return_t
+            ) :: callback_return
 
   @doc """
   Callback invoked when pipeline is called using a synchronous call.
@@ -218,7 +218,7 @@ defmodule Membrane.Pipeline do
               context :: CallbackContext.t(),
               state
             ) ::
-              callback_return_t
+              callback_return
 
   @optional_callbacks handle_init: 2,
                       handle_setup: 2,

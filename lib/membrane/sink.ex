@@ -10,7 +10,7 @@ defmodule Membrane.Sink do
   data on such pad and consume it (write to a soundcard, send through TCP etc.).
   If the pad works in pull mode (with `:auto` or `:manual` flow control), which is
   the most common case, then element is also responsible for requesting demands when
-  it is able and willing to consume data (for more details, see `t:Membrane.Element.Action.demand_t/0`).
+  it is able and willing to consume data (for more details, see `t:Membrane.Element.Action.demand/0`).
   Sinks, like all elements, can of course have multiple pads if needed to
   provide more complex solutions.
   """
@@ -31,7 +31,7 @@ defmodule Membrane.Sink do
       use Membrane.Element.WithInputPads
 
       @doc false
-      @spec membrane_element_type() :: Membrane.Element.type_t()
+      @spec membrane_element_type() :: Membrane.Element.type()
       def membrane_element_type, do: :sink
     end
   end

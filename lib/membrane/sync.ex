@@ -34,7 +34,7 @@ defmodule Membrane.Sync do
   @no_sync :membrane_no_sync
 
   @type t :: pid | :membrane_no_sync
-  @type status_t :: :registered | :sync
+  @type status :: :registered | :sync
 
   @doc """
   Starts a Sync process linked to the current process.

@@ -3,15 +3,15 @@ defmodule Membrane.Core.Parent.ChildEntryParser do
 
   alias Membrane.{ChildEntry, ChildrenSpec, ParentError}
 
-  @type raw_child_entry_t :: %ChildEntry{
-          name: Membrane.Child.name_t(),
+  @type raw_child_entry :: %ChildEntry{
+          name: Membrane.Child.name(),
           module: module,
           options: struct | nil,
           component_type: :element | :bin
         }
 
-  @spec parse([ChildrenSpec.Builder.child_spec_t()]) ::
-          [raw_child_entry_t] | no_return
+  @spec parse([ChildrenSpec.Builder.child_spec()]) ::
+          [raw_child_entry] | no_return
   def parse(children_spec) do
     Enum.map(children_spec, &parse_child/1)
   end

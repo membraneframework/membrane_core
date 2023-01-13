@@ -5,11 +5,11 @@ defmodule Membrane.Core.Parent.ClockHandler do
   alias Membrane.Core.Parent.ChildEntryParser
 
   @spec choose_clock(
-          [ChildEntryParser.raw_child_entry_t()],
-          Membrane.Child.name_t() | nil,
-          Core.Parent.state_t()
+          [ChildEntryParser.raw_child_entry()],
+          Membrane.Child.name() | nil,
+          Core.Parent.state()
         ) ::
-          Core.Parent.state_t() | no_return
+          Core.Parent.state() | no_return
   def choose_clock(children, provider, state) do
     %{synchronization: synchronization} = state
 
@@ -28,7 +28,7 @@ defmodule Membrane.Core.Parent.ClockHandler do
     end
   end
 
-  @spec reset_clock(Core.Parent.state_t()) :: Core.Parent.state_t()
+  @spec reset_clock(Core.Parent.state()) :: Core.Parent.state()
   def reset_clock(state),
     do: set_clock_provider(%{clock: nil, provider: nil, choice: :auto}, state)
 

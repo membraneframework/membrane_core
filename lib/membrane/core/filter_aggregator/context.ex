@@ -10,11 +10,11 @@ defmodule Membrane.Core.FilterAggregator.Context do
   @typedoc """
   Collection of states for encapsuled elements as kept in `Membrane.FilterAggregator` element
   """
-  @type states :: [{Element.name_t(), module(), t(), Element.state_t()}]
+  @type states :: [{Element.name(), module(), t(), Element.state()}]
 
   @type action :: Element.Action.t() | Membrane.Core.FilterAggregator.InternalAction.t()
 
-  @spec build_context!(Element.name_t(), module(), t()) :: t()
+  @spec build_context!(Element.name(), module(), t()) :: t()
   def build_context!(name, module, agg_ctx) do
     pad_descriptions = module.membrane_pads()
     pads = pad_descriptions |> MapSet.new(fn {k, _v} -> k end)

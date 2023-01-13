@@ -83,7 +83,7 @@ defmodule Membrane.Core.Element.Toilet do
 
   @spec new(
           pos_integer() | nil,
-          Membrane.Buffer.Metric.unit_t(),
+          Membrane.Buffer.Metric.unit(),
           Process.dest(),
           pos_integer()
         ) :: t
@@ -162,7 +162,7 @@ defmodule Membrane.Core.Element.Toilet do
     when storing data from output working in push mode. It means that some element in the pipeline
     processes the stream too slow or doesn't process it at all.
     To have control over amount of buffers being produced, consider using output in :auto or :manual
-    flow control mode. (see `Membrane.Pad.flow_control_t`).
+    flow control mode. (see `Membrane.Pad.flow_control`).
     You can also try changing the `toilet_capacity` in `Membrane.ChildrenSpec.via_in/3`.
     """)
 

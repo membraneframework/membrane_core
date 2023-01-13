@@ -29,7 +29,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     * If element isn't supplying demand at the moment and there's some unsupplied demand on the given
       output, `handle_demand` is invoked right away, so that the demand can be synchronously supplied.
   """
-  @spec handle_redemand(Pad.ref_t(), State.t()) :: State.t()
+  @spec handle_redemand(Pad.ref(), State.t()) :: State.t()
   def handle_redemand(pad_ref, %State{supplying_demand?: true} = state) do
     Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
   end
@@ -55,7 +55,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   before proceeding to supplying it.
   """
   @spec supply_demand(
-          Pad.ref_t(),
+          Pad.ref(),
           size :: non_neg_integer | (non_neg_integer() -> non_neg_integer()),
           State.t()
         ) :: State.t()
@@ -64,7 +64,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     supply_demand(pad_ref, state)
   end
 
-  @spec supply_demand(Pad.ref_t(), State.t()) :: State.t()
+  @spec supply_demand(Pad.ref(), State.t()) :: State.t()
   def supply_demand(pad_ref, %State{supplying_demand?: true} = state) do
     Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
   end
@@ -98,8 +98,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   overflow if the toilet is enabled.
   """
   @spec handle_outgoing_buffers(
-          Pad.ref_t(),
-          PadModel.pad_data_t(),
+          Pad.ref(),
+          PadModel.pad_data(),
           [Buffer.t()],
           State.t()
         ) :: State.t()
@@ -178,8 +178,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @spec handle_input_queue_output(
-          Pad.ref_t(),
-          [InputQueue.output_value_t()],
+          Pad.ref(),
+          [InputQueue.output_value()],
           State.t()
         ) :: State.t()
   defp handle_input_queue_output(pad_ref, data, state) do
@@ -189,8 +189,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @spec do_handle_input_queue_output(
-          Pad.ref_t(),
-          InputQueue.output_value_t(),
+          Pad.ref(),
+          InputQueue.output_value(),
           State.t()
         ) :: State.t()
   defp do_handle_input_queue_output(pad_ref, {:event, e}, state),

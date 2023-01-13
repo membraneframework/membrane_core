@@ -7,10 +7,10 @@ defmodule Membrane.Core.LifecycleController do
   require Membrane.Core.Message
   require Membrane.Logger
 
-  @type setup_operation_t :: :incomplete | :complete
+  @type setup_operation :: :incomplete | :complete
 
-  @spec handle_setup_operation(setup_operation_t(), Component.state_t()) ::
-          Component.state_t()
+  @spec handle_setup_operation(setup_operation(), Component.state()) ::
+          Component.state()
   def handle_setup_operation(operation, state) do
     :ok = assert_operation_allowed!(operation, state.setup_incomplete?)
 
@@ -24,7 +24,7 @@ defmodule Membrane.Core.LifecycleController do
     end
   end
 
-  @spec complete_setup(Component.state_t()) :: Component.state_t()
+  @spec complete_setup(Component.state()) :: Component.state()
   def complete_setup(state) do
     state = %{state | initialized?: true, setup_incomplete?: false}
     Membrane.Logger.debug("Component initialized")
@@ -39,7 +39,7 @@ defmodule Membrane.Core.LifecycleController do
     end
   end
 
-  @spec assert_operation_allowed!(setup_operation_t(), boolean()) :: :ok | no_return()
+  @spec assert_operation_allowed!(setup_operation(), boolean()) :: :ok | no_return()
   defp assert_operation_allowed!(:incomplete, true) do
     raise SetupError, """
     Action {:setup, :incomplete} was returned more than once

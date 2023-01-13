@@ -1,11 +1,11 @@
 defmodule Membrane.Core.Pipeline.CallbackContext do
   @moduledoc false
 
-  @type optional_fields_t ::
+  @type optional_fields ::
           [from: GenServer.from()]
-          | [members: [Membrane.Child.name_t()], crash_initiator: Membrane.Child.name_t()]
+          | [members: [Membrane.Child.name()], crash_initiator: Membrane.Child.name()]
 
-  @spec from_state(Membrane.Core.Pipeline.State.t(), optional_fields_t()) ::
+  @spec from_state(Membrane.Core.Pipeline.State.t(), optional_fields()) ::
           Membrane.Pipeline.CallbackContext.t()
   def from_state(state, optional_fields \\ []) do
     Map.new(optional_fields)

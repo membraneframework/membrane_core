@@ -274,7 +274,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec send_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
+  @spec send_buffer(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
   defp send_buffer(_pad_ref, [], state) do
     state
   end
@@ -330,7 +330,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     raise ElementError, "Tried to send an invalid buffer #{inspect(invalid_value)}"
   end
 
-  @spec send_stream_format(Pad.ref_t(), StreamFormat.t(), State.t()) :: State.t()
+  @spec send_stream_format(Pad.ref(), StreamFormat.t(), State.t()) :: State.t()
   def send_stream_format(pad_ref, stream_format, state) do
     Membrane.Logger.debug("""
     Sending stream format through pad #{inspect(pad_ref)}
@@ -367,8 +367,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @spec supply_demand(
-          Pad.ref_t(),
-          Action.demand_size_t(),
+          Pad.ref(),
+          Action.demand_size(),
           State.t()
         ) :: State.t()
   defp supply_demand(pad_ref, 0, state) do
@@ -400,7 +400,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec handle_redemand(Pad.ref_t(), State.t()) :: State.t()
+  @spec handle_redemand(Pad.ref(), State.t()) :: State.t()
   defp handle_redemand(pad_ref, %{type: type} = state)
        when type in [:source, :filter, :endpoint] do
     with %{direction: :output, flow_control: :manual} <-
@@ -420,7 +420,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec send_event(Pad.ref_t(), Event.t(), State.t()) :: State.t()
+  @spec send_event(Pad.ref(), Event.t(), State.t()) :: State.t()
   defp send_event(pad_ref, event, state) do
     Membrane.Logger.debug_verbose("""
     Sending event through pad #{inspect(pad_ref)}
@@ -438,7 +438,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.t()
+  @spec handle_event(Pad.ref(), Event.t(), State.t()) :: State.t()
   defp handle_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
       state = PadController.remove_pad_associations(pad_ref, state)

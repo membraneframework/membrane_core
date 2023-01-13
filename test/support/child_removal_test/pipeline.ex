@@ -16,7 +16,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   """
   use Membrane.Pipeline
 
-  @spec remove_child(pid(), Membrane.Child.name_t()) :: any()
+  @spec remove_child(pid(), Membrane.Child.name()) :: any()
   def remove_child(pid, child_name) do
     send(pid, {:remove_children, child_name})
   end

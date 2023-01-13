@@ -15,6 +15,6 @@ defmodule Membrane.Core.Parent.Link do
           from: Endpoint.t(),
           to: Endpoint.t(),
           linked?: boolean(),
-          spec_ref: Membrane.Core.Parent.ChildLifeController.spec_ref_t()
+          spec_ref: Membrane.Core.Parent.ChildLifeController.spec_ref()
         }
 end

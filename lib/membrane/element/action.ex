@@ -19,19 +19,19 @@ defmodule Membrane.Element.Action do
 
   Untils the setup lasts, the component won't enter `:playing` playback.
   """
-  @type setup_t :: {:setup, :incomplete | :complete}
+  @type setup :: {:setup, :incomplete | :complete}
 
   @typedoc """
   Sends a message to the parent.
   """
-  @type notify_parent_t :: {:notify_parent, ChildNotification.t()}
+  @type notify_parent :: {:notify_parent, ChildNotification.t()}
 
   @typedoc """
   Sends an event through a pad (input or output).
 
   Allowed only when playback is `playing`.
   """
-  @type event_t :: {:event, {Pad.ref_t(), Event.t()}}
+  @type event :: {:event, {Pad.ref(), Event.t()}}
 
   @typedoc """
   Allows to split callback execution into multiple applications of another callback
@@ -52,7 +52,7 @@ defmodule Membrane.Element.Action do
   `c:Membrane.WithInputPads.handle_buffers_batch/4` uses split action to invoke
   `c:Membrane.WithInputPads.handle_buffer/4` with each buffer)
   """
-  @type split_t :: {:split, {callback_name :: atom, args_list :: [[any]]}}
+  @type split :: {:split, {callback_name :: atom, args_list :: [[any]]}}
 
   @typedoc """
   Sends stream format through a pad.
@@ -61,7 +61,7 @@ defmodule Membrane.Element.Action do
 
   Allowed only when playback is `playing`.
   """
-  @type stream_format_t :: {:stream_format, {Pad.ref_t(), StreamFormat.t()}}
+  @type stream_format :: {:stream_format, {Pad.ref(), StreamFormat.t()}}
 
   @typedoc """
   Sends buffers through a pad.
@@ -70,7 +70,7 @@ defmodule Membrane.Element.Action do
 
   Allowed only when playback is playing.
   """
-  @type buffer_t :: {:buffer, {Pad.ref_t(), Buffer.t() | [Buffer.t()]}}
+  @type buffer :: {:buffer, {Pad.ref(), Buffer.t() | [Buffer.t()]}}
 
   @typedoc """
   Makes a demand on a pad.
@@ -88,8 +88,8 @@ defmodule Membrane.Element.Action do
 
   Allowed only when playback is playing.
   """
-  @type demand_t :: {:demand, {Pad.ref_t(), demand_size_t}}
-  @type demand_size_t :: pos_integer | (pos_integer() -> non_neg_integer())
+  @type demand :: {:demand, {Pad.ref(), demand_size}}
+  @type demand_size :: pos_integer | (pos_integer() -> non_neg_integer())
 
   @typedoc """
   Executes `c:Membrane.Element.WithOutputPads.handle_demand/5` callback
@@ -123,7 +123,7 @@ defmodule Membrane.Element.Action do
   ## Usage limitations
   Allowed only when playback is playing.
   """
-  @type redemand_t :: {:redemand, Pad.ref_t()}
+  @type redemand :: {:redemand, Pad.ref()}
 
   @typedoc """
   Sends buffers/stream format/event to all output pads of element (or to input pads when
@@ -144,7 +144,7 @@ defmodule Membrane.Element.Action do
   forward buffers, `c:Membrane.Element.WithInputPads.handle_stream_format/4` - stream formats
   and `c:Membrane.Element.Base.handle_event/4` - events.
   """
-  @type forward_t ::
+  @type forward ::
           {:forward, Buffer.t() | [Buffer.t()] | StreamFormat.t() | Event.t() | :end_of_stream}
 
   @typedoc """
@@ -152,53 +152,53 @@ defmodule Membrane.Element.Action do
   every `interval` according to the given `clock`.
 
   The timer's `id` is passed to the `c:Membrane.Element.Base.handle_tick/3`
-  callback and can be used for changing its interval via `t:timer_interval_t/0`
-  or stopping it via `t:stop_timer_t/0`.
+  callback and can be used for changing its interval via `t:timer_interval/0`
+  or stopping it via `t:stop_timer/0`.
 
   If `interval` is set to `:no_interval`, the timer won't issue any ticks until
-  the interval is set with `t:timer_interval_t/0` action.
+  the interval is set with `t:timer_interval/0` action.
 
   If no `clock` is passed, parent's clock is chosen.
 
   Timers use `Process.send_after/3` under the hood.
   """
-  @type start_timer_t ::
+  @type start_timer ::
           {:start_timer,
-           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval}
-           | {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval,
+           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg() | :no_interval}
+           | {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg() | :no_interval,
               clock :: Clock.t()}}
 
   @typedoc """
-  Changes interval of a timer started with `t:start_timer_t/0`.
+  Changes interval of a timer started with `t:start_timer/0`.
 
   Permitted only from `c:Membrane.Element.Base.handle_tick/3`, unless the interval
   was previously set to `:no_interval`.
 
   If the `interval` is `:no_interval`, the timer won't issue any ticks until
-  another `t:timer_interval_t/0` action. Otherwise, the timer will issue ticks every
+  another `t:timer_interval/0` action. Otherwise, the timer will issue ticks every
   new `interval`. The next tick after interval change is scheduled at
   `new_interval + previous_time`, where previous_time is the time of the latest
-  tick or the time of returning `t:start_timer_t/0` action if no tick has been
+  tick or the time of returning `t:start_timer/0` action if no tick has been
   sent yet. Note that if `current_time - previous_time > new_interval`, a burst
   of `div(current_time - previous_time, new_interval)` ticks is issued immediately.
   """
-  @type timer_interval_t ::
+  @type timer_interval ::
           {:timer_interval,
-           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg_t() | :no_interval}}
+           {timer_id :: any, interval :: Ratio.t() | Membrane.Time.non_neg() | :no_interval}}
 
   @typedoc """
-  Stops a timer started with `t:start_timer_t/0` action.
+  Stops a timer started with `t:start_timer/0` action.
 
   This action is atomic: stopping timer guarantees that no ticks will arrive from it.
   """
-  @type stop_timer_t :: {:stop_timer, timer_id :: any}
+  @type stop_timer :: {:stop_timer, timer_id :: any}
 
   @typedoc """
   This action sets the latency for the element.
 
   This action is not premitted in callback `c:Membrane.Element.Base.handle_init/2`.
   """
-  @type latency_t :: {:latency, latency :: Membrane.Time.non_neg_t()}
+  @type latency :: {:latency, latency :: Membrane.Time.non_neg()}
 
   @typedoc """
   Marks that processing via a pad (output) has been finished and the pad instance
@@ -207,7 +207,7 @@ defmodule Membrane.Element.Action do
   Triggers `end_of_stream/3` callback at the receiver element.
   Allowed only when playback is in playing state.
   """
-  @type end_of_stream_t :: {:end_of_stream, Pad.ref_t()}
+  @type end_of_stream :: {:end_of_stream, Pad.ref()}
 
   @typedoc """
   Terminates element with given reason.
@@ -217,7 +217,7 @@ defmodule Membrane.Element.Action do
     i.e. after `c:Membrane.Element.Base.handle_terminate_request/2` is called
   - If reason is neither `:normal`, `:shutdown` nor `{:shutdown, term}`, an error is logged
   """
-  @type terminate_t :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
+  @type terminate :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
 
   @typedoc """
   Type that defines a single action that may be returned from element callbacks.
@@ -226,19 +226,19 @@ defmodule Membrane.Element.Action do
   circumstances there may be different actions available.
   """
   @type t ::
-          setup_t
-          | event_t
-          | notify_parent_t
-          | split_t
-          | stream_format_t
-          | buffer_t
-          | demand_t
-          | redemand_t
-          | forward_t
-          | start_timer_t
-          | timer_interval_t
-          | stop_timer_t
-          | latency_t
-          | end_of_stream_t
-          | terminate_t
+          setup
+          | event
+          | notify_parent
+          | split
+          | stream_format
+          | buffer
+          | demand
+          | redemand
+          | forward
+          | start_timer
+          | timer_interval
+          | stop_timer
+          | latency
+          | end_of_stream
+          | terminate
 end

@@ -27,17 +27,17 @@ defmodule Membrane.Element.WithOutputPads do
 
   If a source or an endpoint is unable to produce enough buffers, or a filter
   underestimated returned demand, the `:redemand` action should be used (see
-  `t:Membrane.Element.Action.redemand_t/0`).
+  `t:Membrane.Element.Action.redemand/0`).
 
   Context passed to this callback contains additional field `:incoming_demand`.
   """
   @callback handle_demand(
-              pad :: Pad.ref_t(),
+              pad :: Pad.ref(),
               size :: non_neg_integer,
-              unit :: Buffer.Metric.unit_t(),
+              unit :: Buffer.Metric.unit(),
               context :: CallbackContext.t(),
-              state :: Element.state_t()
-            ) :: Membrane.Element.Base.callback_return_t()
+              state :: Element.state()
+            ) :: Membrane.Element.Base.callback_return()
 
   @optional_callbacks handle_demand: 5
 

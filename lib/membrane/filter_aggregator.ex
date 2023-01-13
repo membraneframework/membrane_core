@@ -21,7 +21,7 @@ defmodule Membrane.FilterAggregator do
   require Membrane.Logger
 
   def_options filters: [
-                spec: [{Membrane.Child.name_t(), module() | struct()}],
+                spec: [{Membrane.Child.name(), module() | struct()}],
                 description: "A list of filters applied to incoming stream"
               ]
 

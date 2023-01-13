@@ -26,33 +26,33 @@ defmodule Membrane.Core.Element.PadController do
   require Membrane.Logger
   require Membrane.Pad
 
-  @type link_call_props_t ::
+  @type link_call_props ::
           %{
             initiator: :parent,
             stream_format_validation_params:
-              StreamFormatController.stream_format_validation_params_t()
+              StreamFormatController.stream_format_validation_params()
           }
           | %{
               initiator: :sibling,
-              other_info: PadModel.pad_info_t() | nil,
+              other_info: PadModel.pad_info() | nil,
               link_metadata: %{toilet: Toilet.t() | nil},
               stream_format_validation_params:
-                StreamFormatController.stream_format_validation_params_t()
+                StreamFormatController.stream_format_validation_params()
             }
 
-  @type link_call_reply_props_t ::
-          {Endpoint.t(), PadModel.pad_info_t(), %{toilet: Toilet.t() | nil}}
+  @type link_call_reply_props ::
+          {Endpoint.t(), PadModel.pad_info(), %{toilet: Toilet.t() | nil}}
 
-  @type link_call_reply_t ::
-          :ok | {:ok, link_call_reply_props_t} | {:error, {:neighbor_dead, reason :: any}}
+  @type link_call_reply ::
+          :ok | {:ok, link_call_reply_props} | {:error, {:neighbor_dead, reason :: any}}
 
   @default_auto_demand_size_factor 4000
 
   @doc """
   Verifies linked pad, initializes it's data.
   """
-  @spec handle_link(Pad.direction_t(), Endpoint.t(), Endpoint.t(), link_call_props_t, State.t()) ::
-          {link_call_reply_t, State.t()}
+  @spec handle_link(Pad.direction(), Endpoint.t(), Endpoint.t(), link_call_props, State.t()) ::
+          {link_call_reply, State.t()}
   def handle_link(direction, endpoint, other_endpoint, link_props, state) do
     Membrane.Logger.debug(
       "Element handle link on pad #{inspect(endpoint.pad_ref)} with pad #{inspect(other_endpoint.pad_ref)} of child #{inspect(other_endpoint.child)}"
@@ -190,7 +190,7 @@ defmodule Membrane.Core.Element.PadController do
   Executes `handle_pad_removed` callback if the pad was dynamic.
   Note: it also flushes all buffers from PlaybackBuffer.
   """
-  @spec handle_unlink(Pad.ref_t(), State.t()) :: State.t()
+  @spec handle_unlink(Pad.ref(), State.t()) :: State.t()
   def handle_unlink(pad_ref, state) do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
       state = generate_eos_if_needed(pad_ref, state)
@@ -385,7 +385,7 @@ defmodule Membrane.Core.Element.PadController do
   Generates end of stream on the given input pad if it hasn't been generated yet
   and playback is `playing`.
   """
-  @spec generate_eos_if_needed(Pad.ref_t(), State.t()) :: State.t()
+  @spec generate_eos_if_needed(Pad.ref(), State.t()) :: State.t()
   def generate_eos_if_needed(pad_ref, state) do
     %{direction: direction, end_of_stream?: eos?} = PadModel.get_data!(state, pad_ref)
 
@@ -399,7 +399,7 @@ defmodule Membrane.Core.Element.PadController do
   @doc """
   Removes all associations between the given pad and any other_endpoint pads.
   """
-  @spec remove_pad_associations(Pad.ref_t(), State.t()) :: State.t()
+  @spec remove_pad_associations(Pad.ref(), State.t()) :: State.t()
   def remove_pad_associations(pad_ref, state) do
     case PadModel.get_data!(state, pad_ref) do
       %{flow_control: :auto} = pad_data ->
@@ -424,7 +424,7 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  @spec maybe_handle_pad_added(Pad.ref_t(), State.t()) :: State.t()
+  @spec maybe_handle_pad_added(Pad.ref(), State.t()) :: State.t()
   defp maybe_handle_pad_added(ref, state) do
     %{options: pad_opts, availability: availability} = PadModel.get_data!(state, ref)
 
@@ -443,7 +443,7 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  @spec maybe_handle_pad_removed(Pad.ref_t(), State.t()) :: State.t()
+  @spec maybe_handle_pad_removed(Pad.ref(), State.t()) :: State.t()
   defp maybe_handle_pad_removed(ref, state) do
     %{availability: availability} = PadModel.get_data!(state, ref)
 

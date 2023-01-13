@@ -22,34 +22,34 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
 
-  @type spec_ref_t :: reference()
+  @type spec_ref :: reference()
 
-  @type pending_spec_t :: %{
+  @type pending_spec :: %{
           status:
             :initializing
             | :linking_internally
             | :linked_internally
             | :linking_externally
             | :ready,
-          children_names: [Membrane.Child.name_t()],
+          children_names: [Membrane.Child.name()],
           links_ids: [Link.id()],
-          awaiting_responses: MapSet.t({Link.id(), Membrane.Pad.direction_t()}),
-          dependent_specs: MapSet.t(spec_ref_t)
+          awaiting_responses: MapSet.t({Link.id(), Membrane.Pad.direction()}),
+          dependent_specs: MapSet.t(spec_ref)
         }
 
-  @type pending_specs_t :: %{spec_ref_t() => pending_spec_t()}
+  @type pending_specs :: %{spec_ref() => pending_spec()}
 
-  @opaque parsed_children_spec_options_t :: %{
-            group: Membrane.Child.group_t(),
-            crash_group_mode: Membrane.CrashGroup.mode_t(),
-            stream_sync: :sinks | [[Membrane.Child.name_t()]],
-            clock_provider: Membrane.Child.name_t() | nil,
+  @opaque parsed_children_spec_options :: %{
+            group: Membrane.Child.group(),
+            crash_group_mode: Membrane.CrashGroup.mode(),
+            stream_sync: :sinks | [[Membrane.Child.name()]],
+            clock_provider: Membrane.Child.name() | nil,
             node: node() | nil,
             log_metadata: Keyword.t()
           }
 
-  @type children_spec_canonical_form_t :: [
-          {[Membrane.ChildrenSpec.builder_t()], parsed_children_spec_options_t()}
+  @type children_spec_canonical_form :: [
+          {[Membrane.ChildrenSpec.builder()], parsed_children_spec_options()}
         ]
 
   @spec_dependency_requiring_statuses [:initializing, :linking_internally]
@@ -100,7 +100,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   - Cleanup spec: remove it from `pending_specs` and all other specs' `dependent_specs` and try proceeding startup
     for all other pending specs that depended on the spec.
   """
-  @spec handle_spec(ChildrenSpec.t(), Parent.state_t()) :: Parent.state_t() | no_return()
+  @spec handle_spec(ChildrenSpec.t(), Parent.state()) :: Parent.state() | no_return()
   def handle_spec(spec, state) do
     spec_ref = make_ref()
     canonical_spec = make_canonical(spec)
@@ -196,8 +196,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  @spec make_canonical(Membrane.ChildrenSpec.t(), parsed_children_spec_options_t()) ::
-          children_spec_canonical_form_t()
+  @spec make_canonical(Membrane.ChildrenSpec.t(), parsed_children_spec_options()) ::
+          children_spec_canonical_form()
   defp make_canonical(spec, defaults \\ @default_children_spec_options)
 
   defp make_canonical({spec, options_keywords_list}, defaults) do
@@ -332,7 +332,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end)
   end
 
-  @spec proceed_spec_startup(spec_ref_t(), Parent.state_t()) :: Parent.state_t()
+  @spec proceed_spec_startup(spec_ref(), Parent.state()) :: Parent.state()
   def proceed_spec_startup(spec_ref, state) do
     withl spec_data: {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref),
           do: {spec_data, state} = do_proceed_spec_startup(spec_ref, spec_data, state),
@@ -450,8 +450,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {spec_data, state}
   end
 
-  @spec handle_link_response(Parent.Link.id(), Membrane.Pad.direction_t(), Parent.state_t()) ::
-          Parent.state_t()
+  @spec handle_link_response(Parent.Link.id(), Membrane.Pad.direction(), Parent.state()) ::
+          Parent.state()
   def handle_link_response(link_id, direction, state) do
     case Map.fetch(state.links, link_id) do
       {:ok, %Link{spec_ref: spec_ref}} ->
@@ -469,7 +469,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  @spec handle_child_initialized(Membrane.Child.name_t(), Parent.state_t()) :: Parent.state_t()
+  @spec handle_child_initialized(Membrane.Child.name(), Parent.state()) :: Parent.state()
   def handle_child_initialized(child, state) do
     %{spec_ref: spec_ref} = Parent.ChildrenModel.get_child_data!(state, child)
     state = put_in(state, [:children, child, :initialized?], true)
@@ -477,8 +477,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   @spec handle_notify_child(
-          {Membrane.Child.name_t(), Membrane.ParentNotification.t()},
-          Parent.state_t()
+          {Membrane.Child.name(), Membrane.ParentNotification.t()},
+          Parent.state()
         ) :: :ok
   def handle_notify_child({child_name, message}, state) do
     %{pid: pid} = Parent.ChildrenModel.get_child_data!(state, child_name)
@@ -487,12 +487,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   @spec handle_remove_children(
-          Membrane.Child.ref_t()
-          | [Membrane.Child.ref_t()]
-          | Membrane.Child.group_t()
-          | [Membrane.Child.group_t()],
-          Parent.state_t()
-        ) :: Parent.state_t()
+          Membrane.Child.ref()
+          | [Membrane.Child.ref()]
+          | Membrane.Child.group()
+          | [Membrane.Child.group()],
+          Parent.state()
+        ) :: Parent.state()
   def handle_remove_children(children_or_children_groups, state) do
     children_or_children_groups = Bunch.listify(children_or_children_groups)
 
@@ -526,8 +526,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     Parent.ChildrenModel.update_children!(state, refs, &%{&1 | terminating?: true})
   end
 
-  @spec handle_remove_link(Membrane.Child.name_t(), Pad.ref_t(), Parent.state_t()) ::
-          Parent.state_t()
+  @spec handle_remove_link(Membrane.Child.name(), Pad.ref(), Parent.state()) ::
+          Parent.state()
   def handle_remove_link(child_name, pad_ref, state) do
     LinkUtils.remove_link(child_name, pad_ref, state)
   end
@@ -539,10 +539,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   - handles crash group (if applicable)
   """
   @spec handle_child_death(
-          child_name :: Membrane.Child.name_t(),
+          child_name :: Membrane.Child.name(),
           reason :: any(),
-          state :: Parent.state_t()
-        ) :: {:stop | :continue, Parent.state_t()}
+          state :: Parent.state()
+        ) :: {:stop | :continue, Parent.state()}
   def handle_child_death(child_name, reason, state) do
     state = do_handle_child_death(child_name, reason, state)
 
@@ -654,8 +654,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   # called when process was a member of a crash group
-  @spec crash_all_group_members(CrashGroup.t(), Membrane.Child.name_t(), Parent.state_t()) ::
-          Parent.state_t()
+  @spec crash_all_group_members(CrashGroup.t(), Membrane.Child.name(), Parent.state()) ::
+          Parent.state()
   defp crash_all_group_members(
          %CrashGroup{triggered?: false} = crash_group,
          crash_initiator,

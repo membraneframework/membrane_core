@@ -31,7 +31,7 @@ defmodule Membrane.Testing.Endpoint do
                 description: """
                 If `output` is an enumerable with `t:Membrane.Payload.t/0` then
                 buffer containing those payloads will be sent through the
-                `:output` pad and followed by `t:Membrane.Element.Action.end_of_stream_t/0`.
+                `:output` pad and followed by `t:Membrane.Element.Action.end_of_stream/0`.
 
                 If `output` is a `{initial_state, function}` tuple then the
                 the function will be invoked each time `handle_demand` is called.
