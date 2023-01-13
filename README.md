@@ -23,7 +23,13 @@ This package provides core of the [Membrane Multimedia Framework](https://membra
 Add the following line to your `deps` in `mix.exs`. Run `mix deps.get`.
 
 ```elixir
-	{:membrane_core, "~> 0.11.0"}
+{:membrane_core, "~> 0.11.0"}
+```
+
+Or, if you'd like to try the latest release candidate, use this version:
+
+```elixir
+{:membrane_core, "~> 1.0.0-rc0"}
 ```
 
 ## Getting started
