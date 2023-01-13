@@ -27,6 +27,8 @@ defmodule Membrane.Filter do
   """
 
   defmacro __using__(options) do
+    Module.put_attribute(__CALLER__.module, :__membrane_element_type__, :filter)
+
     quote location: :keep do
       use Membrane.Element.Base, unquote(options)
       use Membrane.Element.WithOutputPads

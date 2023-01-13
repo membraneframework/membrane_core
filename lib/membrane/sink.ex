@@ -24,6 +24,8 @@ defmodule Membrane.Sink do
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
   """
   defmacro __using__(options) do
+    Module.put_attribute(__CALLER__.module, :__membrane_element_type__, :sink)
+
     quote location: :keep do
       use Membrane.Element.Base, unquote(options)
       use Membrane.Element.WithInputPads

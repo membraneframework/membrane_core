@@ -34,7 +34,12 @@ defmodule Membrane.Core.Child.PadsSpecs do
   @doc """
   Returns AST inserted into element's or bin's module defining a pad
   """
-  @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t(), :element | :bin) :: Macro.t()
+  @spec def_pad(
+          Pad.name_t(),
+          Pad.direction_t(),
+          Macro.t(),
+          {:element, :filter | :endpoint | :source | :sink} | :bin
+        ) :: Macro.t()
   def def_pad(pad_name, direction, specs, component) do
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
 
@@ -150,7 +155,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   @spec parse_pad_specs!(
           specs :: Pad.spec_t(),
           direction :: Pad.direction_t(),
-          :element | :bin,
+          {:element, :filter | :endpoint | :source | :sink} | :bin,
           declaration_env :: Macro.Env.t()
         ) :: {Pad.name_t(), Pad.description_t()}
   def parse_pad_specs!(specs, direction, component, env) do
@@ -168,7 +173,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  @spec parse_pad_specs(Pad.spec_t(), Pad.direction_t(), :element | :bin) ::
+  @spec parse_pad_specs(
+          Pad.spec_t(),
+          Pad.direction_t(),
+          {:element, :filter | :endpoint | :source | :sink} | :bin
+        ) ::
           {Pad.name_t(), Pad.description_t()} | {:error, reason :: any}
   def parse_pad_specs(spec, direction, component) do
     withl spec: {name, config} when Pad.is_pad_name(name) and is_list(config) <- spec,
@@ -179,7 +188,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 availability: [in: [:always, :on_request], default: :always],
                 accepted_formats_str: [],
                 flow_control: fn _config ->
-                  if component == :element, do: [in: [:auto, :manual, :push]]
+                  case component do
+                    {:element, :filter} -> [in: [:auto, :manual, :push], default: :auto]
+                    {:element, _} -> [in: [:auto, :manual, :push]]
+                    _bin -> nil
+                  end
                 end,
                 demand_unit:
                   &cond do

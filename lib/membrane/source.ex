@@ -26,6 +26,8 @@ defmodule Membrane.Source do
   alias Membrane.Core.DocsHelper
 
   defmacro __using__(options) do
+    Module.put_attribute(__CALLER__.module, :__membrane_element_type__, :source)
+
     quote location: :keep do
       use Membrane.Element.Base, unquote(options)
       use Membrane.Element.WithOutputPads
