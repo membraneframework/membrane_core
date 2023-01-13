@@ -392,11 +392,11 @@ defmodule Membrane.Core.Element.ActionHandler do
 
       %{flow_control: :push} ->
         raise ElementError,
-              "Tried to request a demand on pad #{inspect(pad_ref)} working in push mode"
+              "Tried to request a demand on pad #{inspect(pad_ref)} working in push flow control mode"
 
       %{flow_control: :auto} ->
         raise ElementError,
-              "Tried to request a demand on pad #{inspect(pad_ref)} that has demand mode set to auto"
+              "Tried to request a demand on pad #{inspect(pad_ref)} that has flow control mode set to auto"
     end
   end
 
@@ -412,11 +412,11 @@ defmodule Membrane.Core.Element.ActionHandler do
 
       %{flow_control: :push} ->
         raise ElementError,
-              "Tried to make a redemand on pad #{inspect(pad_ref)} working in push mode"
+              "Tried to make a redemand on pad #{inspect(pad_ref)} working in push flow control mode"
 
       %{flow_control: :auto} ->
         raise ElementError,
-              "Tried to make a redemand on pad #{inspect(pad_ref)} that has demand mode set to auto"
+              "Tried to make a redemand on pad #{inspect(pad_ref)} that has flow control mode set to auto"
     end
   end
 

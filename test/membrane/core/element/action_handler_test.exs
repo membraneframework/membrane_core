@@ -57,7 +57,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
       state = %{state | playback: :playing}
 
-      assert_raise ElementError, ~r/pad :input_push.*push mode/, fn ->
+      assert_raise ElementError, ~r/pad :input_push.*push flow control/, fn ->
         @module.handle_action({:demand, {:input_push, 10}}, :handle_info, %{}, state)
       end
     end
@@ -431,10 +431,10 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       end
     end
 
-    test "when pad works in push mode", %{state: state} do
+    test "when pad works in push flow control mode", %{state: state} do
       state = %{state | playback: :playing}
 
-      assert_raise ElementError, ~r/pad :output.*push mode/i, fn ->
+      assert_raise ElementError, ~r/pad :output.*push flow control/i, fn ->
         @module.handle_action(
           {:redemand, :output},
           :handle_info,
@@ -444,7 +444,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       end
     end
 
-    test "when pad works in pull mode", %{state: state} do
+    test "when pad works in auto or manual flow control mode", %{state: state} do
       state =
         %{state | supplying_demand?: true, playback: :playing}
         |> PadModel.set_data!(:output, :flow_control, :manual)

@@ -29,8 +29,8 @@ defmodule Membrane.Core.FilterAggregator.Context do
       """
     end
 
-    ensure_auto_demands!(pad_descriptions[:input], module)
-    ensure_auto_demands!(pad_descriptions[:output], module)
+    ensure_flow_auto!(pad_descriptions[:input], module)
+    ensure_flow_auto!(pad_descriptions[:output], module)
 
     pads_data =
       pad_descriptions
@@ -47,7 +47,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
     }
   end
 
-  defp ensure_auto_demands!(%{name: name, flow_control: mode}, module)
+  defp ensure_flow_auto!(%{name: name, flow_control: mode}, module)
        when mode != :auto do
     raise """
     `Membrane.FilterAggregator` supports only filters with demands in `:auto` mode.
@@ -55,7 +55,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
     """
   end
 
-  defp ensure_auto_demands!(_pad_description, _module) do
+  defp ensure_flow_auto!(_pad_description, _module) do
     :ok
   end
 

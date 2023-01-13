@@ -75,7 +75,7 @@ defmodule Membrane.Element.Action do
   @typedoc """
   Makes a demand on a pad.
 
-  The pad must have input direction and work in pull mode. This action does NOT
+  The pad must have input direction and work in `:manual` flow control mode. This action does NOT
   entail _sending_ demand through the pad, but just _requesting_ some amount
   of data from pad's internal queue, which _sends_ demands automatically when it
   runs out of data.

@@ -44,33 +44,25 @@ defmodule Membrane.Pad do
   @typedoc """
   Describes how an element sends and receives data.
 
-  That parameter is strictly connected with the concept of a pad mode.
-  Each of the element's pads can work in of two modes: pull mode and push mode.
-  Modes are strictly related to pad directions:
-  - push output pad - element can send data through such pad whenever it wants.
-  - push input pad - element has to deal with data whenever it comes through
-  such pad, and do it fast enough not to let data accumulate on such pad, what
-  may lead to overflow of element process erlang queue, which is highly unwanted.
-  - pull output pad - element can send data through such pad only if it have
-  already received demand on the pad.
-  - pull input pad - element receives through such pad only data that it has
-  previously demanded, so that no undemanded data can arrive.
-
-  Linking pads with different pad modes is possible, but only in case of output pad
-  working in push mode, and input in pull mode. In such case, however, error will
-  be raised whenever too many buffers accumulate on the input pad, waiting to be
-  processed.
-
-  The available values for `:flow_control` parameter are:
+  The available values for that field are:
   - `:manual` - meaning that the pad works in a pull mode and the demand is manually handled and requested.
-  For more info, see `Membrane.Element.Action.demand_t`, `Membrane.Element.Action.redemand_t`
-  and `c:Membrane.Element.WithOutputPads.handle_demand/5`.
+  An element with output `:manual` pad can send data through such a pad only if it has already received demand
+  on that pad. And element with input `:manual` pad receives data through such a pad only if it has been
+  previously demanded, so that no undemanded data can arrive For more info, see `Membrane.Element.Action.demand_t`,
+  `Membrane.Element.Action.redemand_t` and `c:Membrane.Element.WithOutputPads.handle_demand/5`.
   - `:auto` - meaning that the pad works in a pull mode and the demand is managed automatically:
-  the core ensures that there's demand on each input pad (that has `demand_mode` set to `:auto`)
-  whenever there's demand on all output pads (that have `demand_mode` set to `:auto`).
+  the core ensures that there's demand on each input pad (that has `flow_control` set to `:auto`)
+  whenever there's demand on all output pads (that have `flow_control` set to `:auto`).
   Currently works only for `Membrane.Filter`s.
-  - `:push` - meaning that the pad works in a push mode
+  - `:push` - meaning that the pad works in a push mode. An element with a `:push` output pad can send data
+  through that pad whenever it wants. An element with a `:push` input pad has to deal with data whenever it
+  comes through such a pad - note, that it needs to be done fast enough so that not to let data accumulate,
+  what may lead to overflow of element process erlang queue, which is highly unwanted.
 
+  Linking pads with different flow control is possible, but only in case of an output pad
+  working in a push mode, and an input pad in pull mode (that is - with `:manual` or `:auto` flow control).
+  In such case, however, an error will be raised whenever too many buffers accumulate on the input pad,
+  waiting to be processed.
   """
   @type flow_control_t :: :auto | :manual | :push
 

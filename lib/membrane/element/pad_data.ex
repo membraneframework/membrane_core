@@ -6,7 +6,7 @@ defmodule Membrane.Element.PadData do
     - `:availability` - see `t:Membrane.Pad.availability_t/0`
     - `:stream_format` - the most recent `t:Membrane.StreamFormat.t/0` that have been sent (output) or received (input)
       on the pad. May be `nil` if not yet set.
-    - `:demand` - current demand requested on the pad working in pull mode.
+    - `:demand` - current demand requested on the pad working in `:auto` or `:manual` flow control mode.
     - `:direction` - see `t:Membrane.Pad.direction_t/0`
     - `:end_of_stream?` - flag determining whether the stream processing via the pad has been finished
     - `:flow_control` - see `t:Membrane.Pad.flow_control_t/0`.

@@ -41,7 +41,7 @@ defmodule Membrane.Core.Child.PadController do
        )
        when from_flow_control in [:auto, :manual] do
     raise LinkError,
-          "Cannot connect pull output #{inspect(from)} to push input #{inspect(to)}"
+          "Cannot connect #{inspect(from_flow_control)} output #{inspect(from)} to push input #{inspect(to)}"
   end
 
   defp do_validate_pad_mode!(_pad, _other_pad) do

@@ -512,8 +512,8 @@ defmodule Membrane.ChildrenSpec do
   Additionally, the following properties can be used to adjust the flow control parameters. If set within a bin
   on an input that connects to the bin input, they will be overridden if set when linking to the bin in its parent.
 
-  - `toilet_capacity` - Used when a toilet is created, that is for pull input pads that have push output pads
-  linked to them. When a push output produces more buffers than the pull input can consume, the buffers are accumulated
+  - `toilet_capacity` - Used when a toilet is created, that is for pull input pads (with `:auto` or `:manual` flow control), that
+  have push output pads (with `:push` flow control) linked to them. When a push output produces more buffers than the pull input can consume, the buffers are accumulated
   in a queue called a toilet. If the toilet size grows above its capacity, it overflows by raising an error.
   - `target_queue_size` - The size of the queue of the input pad that Membrane will try to maintain. That allows for fulfilling
   the demands of the element by taking data from the queue while the actual sending of demands is done asynchronously,

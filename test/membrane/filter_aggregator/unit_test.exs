@@ -117,7 +117,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
 
   setup :verify_on_exit!
 
-  test "handle_init with unsupported pad demand mode", ctx do
+  test "handle_init with unsupported pad flow control mode", ctx do
     # use stub to get the default value
     pads_descriptions = apply(FilterA, :membrane_pads, [])
 
