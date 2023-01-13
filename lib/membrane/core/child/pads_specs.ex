@@ -38,7 +38,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
           Pad.name_t(),
           Pad.direction_t(),
           Macro.t(),
-          {:element, :filter | :endpoint | :source | :sink} | :bin
+          :filter | :endpoint | :source | :sink | :bin
         ) :: Macro.t()
   def def_pad(pad_name, direction, specs, component) do
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
