@@ -113,7 +113,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
     defmodule RemovalDeferSource do
       use Membrane.Source
 
-      def_output_pad :output, flow_control: :auto, accepted_format: _any
+      def_output_pad :output, flow_control: :push, accepted_format: _any
 
       @impl true
       def handle_init(_ctx, _opts) do

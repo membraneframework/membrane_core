@@ -190,9 +190,14 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 accepted_formats_str: [],
                 flow_control: fn _config ->
                   case component do
-                    :bin -> nil
-                    :filter -> [in: [:auto, :manual, :push], default: :auto]
-                    _non_filter_element -> [in: [:auto, :manual, :push]]
+                    :bin ->
+                      nil
+
+                    :source ->
+                      [in: [:manual, :push]]
+
+                    other when other in [:filter, :endpoint, :sink] ->
+                      [in: [:auto, :manual, :push], default: :auto]
                   end
                 end,
                 demand_unit:
