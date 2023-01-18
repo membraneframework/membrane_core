@@ -8,9 +8,9 @@ defmodule Membrane.Sink do
 
   Sink elements can define only input pads. Job of a usual sink is to receive some
   data on such pad and consume it (write to a soundcard, send through TCP etc.).
-  If the pad works in pull mode (with `:auto` or `:manual` flow control), which is
-  the most common case, then element is also responsible for requesting demands when
-  it is able and willing to consume data (for more details, see `t:Membrane.Element.Action.demand/0`).
+  If the pad has the flow control set to `:manual`, which is the most common case,
+  then element is also responsible for requesting demands when it is able and willing
+  to consume data (for more details, see `t:Membrane.Element.Action.demand/0`).
   Sinks, like all elements, can of course have multiple pads if needed to
   provide more complex solutions.
   """
