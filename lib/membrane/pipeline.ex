@@ -29,7 +29,7 @@ defmodule Membrane.Pipeline do
         use Membrane.Pipeline
 
         def start_link(options) do
-          Membrane.Pipeline.start_link(options, name: MyPipeline)
+          Membrane.Pipeline.start_link(__MODULE__, options, name: MyPipeline)
         end
 
         # ...
@@ -134,6 +134,20 @@ defmodule Membrane.Pipeline do
               state
             ) ::
               callback_return
+
+  @doc """
+  Callback invoked when a child removes its pad.
+
+  Removing child's pad due to return `t:Membrane.Bin.Action.remove_children()`
+  or `t:Membrane.Bin.Action.remove_link()` action from parent's callback does
+  not trigger this callback.
+  """
+  @callback handle_child_pad_removed(
+              child :: Child.name(),
+              pad :: Pad.ref(),
+              context :: CallbackContext.t(),
+              state :: state
+            ) :: callback_return
 
   @doc """
   Callback invoked when a notification comes in from an element.
@@ -471,6 +485,11 @@ defmodule Membrane.Pipeline do
       @impl true
       def handle_terminate_request(_ctx, state), do: {[terminate: :normal], state}
 
+      @impl true
+      def handle_child_pad_removed(child, pad, _ctx, _state) do
+        raise Membrane.ChildPadRemovedError, child: child, pad: pad, module: __MODULE__
+      end
+
       defoverridable child_spec: 1,
                      handle_init: 2,
                      handle_setup: 2,
@@ -482,7 +501,8 @@ defmodule Membrane.Pipeline do
                      handle_child_notification: 4,
                      handle_crash_group_down: 3,
                      handle_call: 3,
-                     handle_terminate_request: 2
+                     handle_terminate_request: 2,
+                     handle_child_pad_removed: 4
     end
   end
 end

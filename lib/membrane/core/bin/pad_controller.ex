@@ -80,6 +80,22 @@ defmodule Membrane.Core.Bin.PadController do
     state
   end
 
+  @spec remove_dynamic_pad(Pad.ref(), State.t()) :: State.t()
+  def remove_dynamic_pad(pad_ref, state) do
+    case pad_ref do
+      Pad.ref(_name, _id) ->
+        Message.send(state.parent_pid, :child_pad_removed, [state.name, pad_ref])
+        PadModel.delete_data!(state, pad_ref)
+
+      name when is_atom(name) and state.terminating? ->
+        state
+
+      name when is_atom(name) ->
+        raise Membrane.PadError,
+              "Tried to unlink bin static pad #{inspect(pad_ref)}. Static pads cannot be unlinked unless bin is terminating"
+    end
+  end
+
   @spec handle_linking_timeout(Pad.ref(), State.t()) :: :ok | no_return()
   def handle_linking_timeout(pad_ref, state) do
     case PadModel.get_data(state, pad_ref) do

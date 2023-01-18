@@ -33,22 +33,41 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     end)
   end
 
+  def handle_child_pad_removed(child, pad, state) do
+    {:ok, link} = get_link(state.links, child, pad)
+
+    opposite_endpoint(link, child)
+    |> case do
+      %Endpoint{child: {Membrane.Bin, :itself}} = bin_endpoint ->
+        PadController.remove_dynamic_pad(bin_endpoint.pad_ref, state)
+
+      %Endpoint{} = endpoint ->
+        Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+        state
+    end
+    |> delete_link(link.id)
+  end
+
   @spec remove_link(Membrane.Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
   def remove_link(child_name, pad_ref, state) do
-    Enum.find(state.links, fn {_id, link} ->
-      [link.from, link.to]
-      |> Enum.any?(&(&1.child == child_name and &1.pad_ref == pad_ref))
-    end)
-    |> case do
-      {_id, %Link{} = link} ->
+    with {:ok, link} <- get_link(state.links, child_name, pad_ref) do
+      if {Membrane.Bin, :itself} in [link.from.child, link.to.child] do
+        child_endpoint = opposite_endpoint(link, {Membrane.Bin, :itself})
+        Message.send(child_endpoint.pid, :handle_unlink, child_endpoint.pad_ref)
+
+        bin_endpoint = opposite_endpoint(link, child_endpoint.child)
+        state = PadController.remove_dynamic_pad(bin_endpoint.pad_ref, state)
+
+        delete_link(state, link.id)
+      else
         for endpoint <- [link.from, link.to] do
           Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
         end
 
-        links = Map.delete(state.links, link.id)
-        Map.put(state, :links, links)
-
-      nil ->
+        delete_link(state, link.id)
+      end
+    else
+      {:error, :not_found} ->
         with %{^child_name => _child_entry} <- state.children do
           raise ParentError, """
           Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but this child does not have this pad linked
@@ -63,20 +82,23 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   @spec unlink_element(Membrane.Child.name(), Parent.state()) :: Parent.state()
   def unlink_element(child_name, state) do
-    Map.update!(
-      state,
-      :links,
-      &Map.reject(&1, fn {_id, %Link{} = link} ->
-        case endpoint_to_unlink(child_name, link) do
-          %Endpoint{pid: pid, pad_ref: pad_ref} ->
-            Message.send(pid, :handle_unlink, pad_ref)
-            true
+    {dropped_links, links} =
+      state.links
+      |> Map.values()
+      |> Enum.split_with(&(child_name in [&1.from.child, &1.to.child]))
 
-          nil ->
-            false
-        end
-      end)
-    )
+    state = %{state | links: Map.new(links, &{&1.id, &1})}
+
+    Enum.reduce(dropped_links, state, fn link, state ->
+      case endpoint_to_unlink(child_name, link) do
+        %Endpoint{child: {Membrane.Bin, :itself}, pad_ref: pad_ref} ->
+          PadController.remove_dynamic_pad(pad_ref, state)
+
+        %Endpoint{pid: pid, pad_ref: pad_ref} ->
+          Message.send(pid, :handle_unlink, pad_ref)
+          state
+      end
+    end)
   end
 
   defp endpoint_to_unlink(child_name, %Link{from: %Endpoint{child: child_name}, to: to}), do: to
@@ -143,6 +165,26 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     :ok = validate_links(links, state)
 
     links
+  end
+
+  defp get_link(links, child, pad) do
+    Enum.find(links, fn {_id, link} ->
+      [link.from, link.to]
+      |> Enum.any?(&(&1.child == child and &1.pad_ref == pad))
+    end)
+    |> case do
+      {_id, %Link{} = link} -> {:ok, link}
+      nil -> {:error, :not_found}
+    end
+  end
+
+  defp opposite_endpoint(%Link{from: %Endpoint{child: child}, to: to}, child), do: to
+
+  defp opposite_endpoint(%Link{to: %Endpoint{child: child}, from: from}, child), do: from
+
+  defp delete_link(state, link_id) do
+    links = Map.delete(state.links, link_id)
+    Map.put(state, :links, links)
   end
 
   defp validate_links(links, state) do

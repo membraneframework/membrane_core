@@ -532,6 +532,24 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     LinkUtils.remove_link(child_name, pad_ref, state)
   end
 
+  @spec handle_child_pad_removed(Child.name(), Pad.ref(), PArent.state()) :: Parent.state()
+  def handle_child_pad_removed(child, pad, state) do
+    Membrane.Logger.debug_verbose("Child #{inspect(child)} removed pad #{inspect(pad)}")
+
+    Parent.ChildrenModel.assert_child_exists!(state, child)
+
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_child_pad_removed,
+        Component.action_handler(state),
+        %{context: &Component.context_from_state/1},
+        [child, pad],
+        state
+      )
+
+    LinkUtils.handle_child_pad_removed(child, pad, state)
+  end
+
   @doc """
   Handles death of a child:
   - removes it from state

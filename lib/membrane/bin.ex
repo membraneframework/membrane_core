@@ -91,6 +91,20 @@ defmodule Membrane.Bin do
               callback_return
 
   @doc """
+  Callback invoked when a child removes its pad.
+
+  Removing child's pad due to return `t:Membrane.Bin.Action.remove_children()`
+  or `t:Membrane.Bin.Action.remove_link()` action from parent's callback does
+  not trigger this callback.
+  """
+  @callback handle_child_pad_removed(
+              child :: Child.name(),
+              pad :: Pad.ref(),
+              context :: CallbackContext.t(),
+              state :: state
+            ) :: callback_return
+
+  @doc """
   Callback invoked when a notification comes in from an element.
   """
   @callback handle_child_notification(
@@ -168,8 +182,7 @@ defmodule Membrane.Bin do
   @callback handle_terminate_request(
               context :: CallbackContext.t(),
               state
-            ) ::
-              callback_return()
+            ) :: callback_return
 
   @optional_callbacks handle_init: 2,
                       handle_pad_added: 3,
@@ -326,6 +339,11 @@ defmodule Membrane.Bin do
       @impl true
       def handle_terminate_request(_ctx, state), do: {[terminate: :normal], state}
 
+      @impl true
+      def handle_child_pad_removed(child, pad, _ctx, _state) do
+        raise Membrane.ChildPadRemovedError, child: child, pad: pad, module: __MODULE__
+      end
+
       defoverridable handle_init: 2,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
@@ -337,7 +355,8 @@ defmodule Membrane.Bin do
                      handle_element_end_of_stream: 4,
                      handle_child_notification: 4,
                      handle_parent_notification: 3,
-                     handle_terminate_request: 2
+                     handle_terminate_request: 2,
+                     handle_child_pad_removed: 4
     end
   end
 
