@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   use Bunch
 
-  alias Membrane.ParentError
+  alias Membrane.Child
   alias Membrane.Core.{Bin, Message, Parent, Telemetry}
   alias Membrane.Core.Bin.PadController
 
@@ -18,6 +18,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError
   alias Membrane.Pad
+  alias Membrane.ParentError
 
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
@@ -33,6 +34,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     end)
   end
 
+  @spec handle_child_pad_removed(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
   def handle_child_pad_removed(child, pad, state) do
     {:ok, link} = get_link(state.links, child, pad)
 
@@ -48,7 +50,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     |> delete_link(link.id)
   end
 
-  @spec remove_link(Membrane.Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
+  @spec remove_link(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
   def remove_link(child_name, pad_ref, state) do
     with {:ok, link} <- get_link(state.links, child_name, pad_ref) do
       if {Membrane.Bin, :itself} in [link.from.child, link.to.child] do
@@ -80,7 +82,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     end
   end
 
-  @spec unlink_element(Membrane.Child.name(), Parent.state()) :: Parent.state()
+  @spec unlink_element(Child.name(), Parent.state()) :: Parent.state()
   def unlink_element(child_name, state) do
     {dropped_links, links} =
       state.links
