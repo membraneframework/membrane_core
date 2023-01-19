@@ -196,7 +196,8 @@ defmodule Membrane.Bin do
                       handle_child_notification: 4,
                       handle_parent_notification: 3,
                       handle_tick: 3,
-                      handle_terminate_request: 2
+                      handle_terminate_request: 2,
+                      handle_child_pad_removed: 4
 
   @doc PadsSpecs.def_pad_docs(:input, :bin)
   defmacro def_input_pad(name, spec) do
@@ -339,11 +340,6 @@ defmodule Membrane.Bin do
       @impl true
       def handle_terminate_request(_ctx, state), do: {[terminate: :normal], state}
 
-      @impl true
-      def handle_child_pad_removed(child, pad, _ctx, _state) do
-        raise Membrane.ChildPadRemovedError, child: child, pad: pad, module: __MODULE__
-      end
-
       defoverridable handle_init: 2,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
@@ -355,8 +351,7 @@ defmodule Membrane.Bin do
                      handle_element_end_of_stream: 4,
                      handle_child_notification: 4,
                      handle_parent_notification: 3,
-                     handle_terminate_request: 2,
-                     handle_child_pad_removed: 4
+                     handle_terminate_request: 2
     end
   end
 
