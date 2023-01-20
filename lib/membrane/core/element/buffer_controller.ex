@@ -65,8 +65,7 @@ defmodule Membrane.Core.Element.BufferController do
     exec_buffer_callback(pad_ref, buffers, state)
   end
 
-  defp do_handle_buffer(pad_ref, %{flow_control: flow_control} = data, buffers, state)
-       when flow_control in [:auto, :manual] do
+  defp do_handle_buffer(pad_ref, %{flow_control: :manual} = data, buffers, state) do
     %{input_queue: old_input_queue} = data
     input_queue = InputQueue.store(old_input_queue, buffers)
     state = PadModel.set_data!(state, pad_ref, :input_queue, input_queue)

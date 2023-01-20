@@ -53,7 +53,7 @@ defmodule Membrane.Pad do
   - `:auto` - meaning that the pad works in a pull mode and the demand is managed automatically:
   the core ensures that there's demand on each input pad (that has `flow_control` set to `:auto`)
   whenever there's demand on all output pads (that have `flow_control` set to `:auto`).
-  Currently works only for `Membrane.Filter`s.
+  Currently works for `Membrane.Filter`s, `Membrane.Endpoint`s and `Membrane.Sink`s.
   - `:push` - meaning that the pad works in a push mode. An element with a `:push` output pad can send data
   through that pad whenever it wants. An element with a `:push` input pad has to deal with data whenever it
   comes through such a pad - note, that it needs to be done fast enough so that not to let data accumulate,
