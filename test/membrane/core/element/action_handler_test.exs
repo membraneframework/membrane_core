@@ -163,7 +163,12 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = %{state | playback: :playing}
 
-      assert_raise MatchError, ~r/:unknown_pad/i, fn ->
+      expected_error_type =
+        if Version.match?(System.version(), ">= 1.14.0-dev"),
+          do: Membrane.UnknownPadError,
+          else: MatchError
+
+      assert_raise expected_error_type, ~r/unknown.*pad/i, fn ->
         @module.handle_action(
           buffer_action(:invalid_pad_ref),
           :handle_info,
@@ -286,7 +291,12 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = %{state | playback: :playing}
 
-      assert_raise MatchError, ~r/:unknown_pad/i, fn ->
+      expected_error_type =
+        if Version.match?(System.version(), ">= 1.14.0-dev"),
+          do: Membrane.UnknownPadError,
+          else: MatchError
+
+      assert_raise expected_error_type, ~r/unknown.*pad/i, fn ->
         @module.handle_action(
           event_action(:invalid_pad_ref),
           :handle_info,
@@ -357,7 +367,12 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = %{state | playback: :playing}
 
-      assert_raise MatchError, ~r/:unknown_pad/i, fn ->
+      expected_error_type =
+        if Version.match?(System.version(), ">= 1.14.0-dev"),
+          do: Membrane.UnknownPadError,
+          else: MatchError
+
+      assert_raise expected_error_type, ~r/unknown.*pad/i, fn ->
         @module.handle_action(
           stream_format_action(:invalid_pad_ref),
           :handle_info,
@@ -421,7 +436,12 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = %{state | playback: :playing}
 
-      assert_raise MatchError, ~r/:unknown_pad/i, fn ->
+      expected_error_type =
+        if Version.match?(System.version(), ">= 1.14.0-dev"),
+          do: Membrane.UnknownPadError,
+          else: MatchError
+
+      assert_raise expected_error_type, ~r/unknown.*pad/i, fn ->
         @module.handle_action(
           {:redemand, :invalid_pad_ref},
           :handle_info,

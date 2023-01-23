@@ -45,7 +45,12 @@ defmodule Membrane.Core.Child.PadModelTest do
     end
 
     test "is :unknown_pad when the pad is not present", ctx do
-      assert_raise MatchError, fn ->
+      expected_error_type =
+        if Version.match?(System.version(), ">= 1.14.0-dev"),
+          do: Membrane.UnknownPadError,
+          else: MatchError
+
+      assert_raise expected_error_type, fn ->
         PadModel.get_data!(ctx.state, :output, :demand)
       end
     end
@@ -76,7 +81,12 @@ defmodule Membrane.Core.Child.PadModelTest do
     end
 
     test "raises when the pad is not present", ctx do
-      assert_raise MatchError, fn ->
+      expected_error_type =
+        if Version.match?(System.version(), ">= 1.14.0-dev"),
+          do: Membrane.UnknownPadError,
+          else: MatchError
+
+      assert_raise expected_error_type, fn ->
         PadModel.set_data!(ctx.state, :other_input, :start_of_stream?, true)
       end
     end
@@ -105,7 +115,12 @@ defmodule Membrane.Core.Child.PadModelTest do
     end
 
     test "raises when the pad is not present", ctx do
-      assert_raise MatchError, fn ->
+      expected_error_type =
+        if Version.match?(System.version(), ">= 1.14.0-dev"),
+          do: Membrane.UnknownPadError,
+          else: MatchError
+
+      assert_raise expected_error_type, fn ->
         PadModel.update_data!(ctx.state, :other_input, :demand, &(&1 + 5))
       end
     end
