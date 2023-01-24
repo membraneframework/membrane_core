@@ -534,6 +534,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @spec handle_child_pad_removed(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
   def handle_child_pad_removed(child, pad, state) do
+    # TODO: when spec is not ready yet, delete specific link from it and trigger proceeding
     Membrane.Logger.debug_verbose("Child #{inspect(child)} removed pad #{inspect(pad)}")
 
     Parent.ChildrenModel.assert_child_exists!(state, child)

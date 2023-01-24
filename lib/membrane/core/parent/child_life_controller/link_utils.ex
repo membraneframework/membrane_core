@@ -44,10 +44,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
         PadController.remove_dynamic_pad(bin_endpoint.pad_ref, state)
 
       %Endpoint{} = endpoint ->
-        Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+        maybe_send_handle_unlink(endpoint, state)
         state
     end
-    |> delete_link(link.id)
+    |> delete_link(link)
   end
 
   @spec remove_link(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
@@ -55,18 +55,18 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     with {:ok, link} <- get_link(state.links, child_name, pad_ref) do
       if {Membrane.Bin, :itself} in [link.from.child, link.to.child] do
         child_endpoint = opposite_endpoint(link, {Membrane.Bin, :itself})
-        Message.send(child_endpoint.pid, :handle_unlink, child_endpoint.pad_ref)
+        maybe_send_handle_unlink(child_endpoint, state)
 
         bin_endpoint = opposite_endpoint(link, child_endpoint.child)
         state = PadController.remove_dynamic_pad(bin_endpoint.pad_ref, state)
 
-        delete_link(state, link.id)
+        delete_link(state, link)
       else
         for endpoint <- [link.from, link.to] do
-          Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+          maybe_send_handle_unlink(endpoint, state)
         end
 
-        delete_link(state, link.id)
+        delete_link(state, link)
       end
     else
       {:error, :not_found} ->
@@ -96,8 +96,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
         %Endpoint{child: {Membrane.Bin, :itself}, pad_ref: pad_ref} ->
           PadController.remove_dynamic_pad(pad_ref, state)
 
-        %Endpoint{pid: pid, pad_ref: pad_ref} ->
-          Message.send(pid, :handle_unlink, pad_ref)
+        %Endpoint{} = endpoint ->
+          maybe_send_handle_unlink(endpoint, state)
           state
       end
     end)
@@ -184,9 +184,19 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   defp opposite_endpoint(%Link{to: %Endpoint{child: child}, from: from}, child), do: from
 
-  defp delete_link(state, link_id) do
-    links = Map.delete(state.links, link_id)
-    Map.put(state, :links, links)
+  defp delete_link(state, link) do
+    links = Map.delete(state.links, link.id)
+    state = Map.put(state, :links, links)
+
+    spec_ref = link.spec_ref
+
+    with %{^spec_ref => spec_data} <- state.pending_specs do
+      new_links_ids = Enum.reject(spec_data.links_ids, &(&1 == link.id))
+      state = put_in(state, [:pending_specs, spec_ref, :links_ids], new_links_ids)
+      ChildLifeController.proceed_spec_startup(spec_ref, state)
+    else
+      _pending_specs -> state
+    end
   end
 
   defp validate_links(links, state) do
@@ -315,6 +325,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
           state
       end
+    end
+  end
+
+  defp maybe_send_handle_unlink(%Endpoint{child: child} = endpoint, state) do
+    with %{^child => %{terminating?: false}} <- state.children do
+      Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
     end
   end
 end
