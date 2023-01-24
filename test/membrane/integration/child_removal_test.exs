@@ -218,6 +218,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
       assert_receive {:DOWN, ^monitor, :process, _pid, :normal}
     end
 
+    @tag :target
     test "two linked elements, one in a bin that defers termination" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
@@ -277,6 +278,140 @@ defmodule Membrane.Integration.ChildRemovalTest do
       :source,
       {:pad_removed, {Membrane.Pad, :fifth, _ref}}
     )
+  end
+
+  defmodule DynamicElement do
+    use Membrane.Endpoint
+
+    def_input_pad :input, flow_control: :push, accepted_format: _any, availability: :on_request
+    def_output_pad :output, flow_control: :push, accepted_format: _any, availability: :on_request
+    def_options test_process: [spec: pid()]
+
+    #  await_on_pad_added: [spec: boolean(), default: false],
+    #  wait_on_pad_added: [spec: boolean(), default: true]
+
+    @impl true
+    def handle_init(ctx, opts) do
+      send(opts.test_process, {:init, ctx.name, self()})
+      {[], Map.from_struct(opts)}
+    end
+
+    @impl true
+    def handle_pad_added(_pad, ctx, state) do
+      # if state.await_on_pad_added do
+      #   receive do
+      #     :add_pad -> :ok
+      #   end
+      # end
+
+      send(state.test_process, {:pad_added, ctx.name, self()})
+      {[], state}
+    end
+
+    @impl true
+    def handle_pad_removed(_pad, ctx, state) do
+      send(state.test_process, {:pad_removed, ctx.name, self()})
+      {[], state}
+    end
+
+    @impl true
+    def handle_info({:terminate, reason}, _ctx, state) do
+      {[terminate: reason], state}
+    end
+
+    @impl true
+    def handle_terminate_request(ctx, state) do
+      send(state.test_process, {:terminate_request, ctx.name, self()})
+      {[], state}
+    end
+  end
+
+  defmodule InvalidBin do
+    use Membrane.Bin
+
+    def_output_pad :output, accepted_format: _any, availability: :on_request
+    def_options test_process: [spec: pid()]
+
+    @impl true
+    def handle_init(ctx, opts) do
+      send(opts.test_process, {:init, ctx.name, self()})
+      {[], Map.from_struct(opts)}
+    end
+
+    @impl true
+    def handle_pad_added(_pad, _ctx, state), do: {[], state}
+  end
+
+  describe "1 " do
+    import Membrane.ChildrenSpec
+    require Membrane.Child, as: Child
+
+    @tag :dupa
+    test "A" do
+
+      pipeline = Testing.Pipeline.start_link_supervised!(
+        spec:
+          child(:bin, %InvalidBin{test_process: self()})
+          |> child(:sink, %DynamicElement{test_process: self()})
+      )
+
+      assert_receive {:init, :sink, _sink_pid}
+      assert_receive {:init, :bin, bin_pid}
+
+      monitor_ref = Process.monitor(bin_pid)
+      Testing.Pipeline.execute_actions(pipeline, remove_children: :sink)
+
+      assert_receive {:terminate_request, :sink, _sink_pid}
+      refute_receive {:DOWN, ^monitor_ref, :process, ^bin_pid, _reason}, 500
+
+      Testing.Pipeline.terminate(pipeline, blocking?: true)
+    end
+
+    @tag :dupa
+    test "B" do
+      pipeline = Testing.Pipeline.start_link_supervised!(
+        spec:
+          child(:bin, %InvalidBin{test_process: self()})
+          |> child(:sink, %DynamicElement{test_process: self()})
+      )
+
+      assert_receive {:init, :sink, sink_pid}
+      assert_receive {:init, :bin, bin_pid}
+
+      monitor_ref = Process.monitor(bin_pid)
+      send(sink_pid, {:terminate, :normal})
+
+      refute_receive {:DOWN, ^monitor_ref, :process, ^bin_pid, _reason}, 500
+
+      Testing.Pipeline.terminate(pipeline, blocking?: true)
+    end
+
+
+    @tag :dupa
+    test "C" do
+      sink_ref = Child.ref(:sink, group: :group)
+
+      pipeline = Testing.Pipeline.start_link_supervised!(
+        spec: [
+          {child(:sink, %DynamicElement{test_process: self()}), group: :group, crash_group_mode: :temporary},
+          child(:bin, %InvalidBin{test_process: self()})
+          |> get_child(sink_ref)
+        ]
+      )
+
+      assert_receive {:init, ^sink_ref, sink_pid}
+      assert_receive {:init, :bin, bin_pid}
+
+      bin_monitor_ref = Process.monitor(bin_pid)
+      sink_monitor_ref = Process.monitor(sink_pid)
+
+      send(sink_pid, {:terminate, :reason})
+
+      assert_receive {:DOWN, ^sink_monitor_ref, :process, ^sink_pid, _reason}
+      refute_receive {:DOWN, ^bin_monitor_ref, :process, ^bin_pid, _reason}, 500
+
+      Testing.Pipeline.terminate(pipeline, blocking?: true)
+    end
   end
 
   #############

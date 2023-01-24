@@ -3,6 +3,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   use Bunch
 
   alias __MODULE__.{CrashGroupUtils, LinkUtils, StartupUtils}
+  alias Membrane.Child
   alias Membrane.ChildrenSpec
   alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
 
@@ -31,7 +32,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
             | :linked_internally
             | :linking_externally
             | :ready,
-          children_names: [Membrane.Child.name()],
+          children_names: [Child.name()],
           links_ids: [Link.id()],
           awaiting_responses: MapSet.t({Link.id(), Membrane.Pad.direction()}),
           dependent_specs: MapSet.t(spec_ref)
@@ -40,10 +41,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @type pending_specs :: %{spec_ref() => pending_spec()}
 
   @opaque parsed_children_spec_options :: %{
-            group: Membrane.Child.group(),
+            group: Child.group(),
             crash_group_mode: Membrane.CrashGroup.mode(),
-            stream_sync: :sinks | [[Membrane.Child.name()]],
-            clock_provider: Membrane.Child.name() | nil,
+            stream_sync: :sinks | [[Child.name()]],
+            clock_provider: Child.name() | nil,
             node: node() | nil,
             log_metadata: Keyword.t()
           }
@@ -261,7 +262,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp get_child_ref(child_name_or_ref, group) do
     case child_name_or_ref do
       # child name created with child(...)
-      {:child_name, child_name} -> Membrane.Child.ref(child_name, group: group)
+      {:child_name, child_name} -> Child.ref(child_name, group: group)
       # child name created with get_child(...), bin_input() and bin_output()
       {:child_ref, ref} -> ref
     end
@@ -330,6 +331,66 @@ defmodule Membrane.Core.Parent.ChildLifeController do
            options.get_if_exists and Map.has_key?(state_children, name)
        end), children_spec_options}
     end)
+  end
+
+  @spec remove_children_from_specs(Child.name() | [Child.name()], Parent.state()) ::
+          Parent.state()
+  def remove_children_from_specs(children, state) do
+    children = Bunch.listify(children)
+
+    specs_to_update =
+      Enum.map(children, fn child_name ->
+        %{spec_ref: spec_ref} = ChildrenModel.get_child_data!(state, child_name)
+        spec_ref
+      end)
+      |> Enum.uniq()
+      |> Enum.filter(&Map.has_key?(state.pending_specs, &1))
+
+    state =
+      Enum.reduce(specs_to_update, state, fn spec_ref, state ->
+        do_remove_children_from_spec(spec_ref, children, state)
+      end)
+
+    Enum.reduce(specs_to_update, state, fn spec_ref, state ->
+      proceed_spec_startup(spec_ref, state)
+    end)
+  end
+
+  defp do_remove_children_from_spec(spec_ref, children, state) do
+    with %{pending_specs: %{^spec_ref => spec_data}} <- state do
+      spec_data_children_names = Enum.reject(spec_data.children_names, &(&1 in children))
+
+      {rejected_links_ids, links_ids} =
+        Enum.split_with(spec_data.links_ids, fn link_id ->
+          %{^link_id => %Link{from: from, to: to}} = state.links
+          from.child in children or to.child in children
+        end)
+
+      awaiting_responses =
+        MapSet.reject(spec_data.awaiting_responses, fn {link_id, _direction} ->
+          link_id in rejected_links_ids
+        end)
+
+      removed_children_specs_refs =
+        MapSet.new(children, fn child_name ->
+          %{spec_ref: spec_ref} = ChildrenModel.get_child_data!(state, child_name)
+          spec_ref
+        end)
+
+      dependent_specs =
+        spec_data.dependent_specs
+        |> MapSet.difference(removed_children_specs_refs)
+
+      new_spec_data = %{
+        spec_data
+        | children_names: spec_data_children_names,
+          links_ids: links_ids,
+          awaiting_responses: awaiting_responses,
+          dependent_specs: dependent_specs
+      }
+
+      put_in(state, [:pending_specs, spec_ref], new_spec_data)
+    end
   end
 
   @spec proceed_spec_startup(spec_ref(), Parent.state()) :: Parent.state()
@@ -456,11 +517,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     case Map.fetch(state.links, link_id) do
       {:ok, %Link{spec_ref: spec_ref}} ->
         state =
-          update_in(
-            state,
-            [:pending_specs, spec_ref, :awaiting_responses],
-            &MapSet.delete(&1, {link_id, direction})
-          )
+          with {:ok, %{awaiting_responses: responses}} <- Map.fetch(state.pending_specs, spec_ref) do
+            put_in(
+              state,
+              [:pending_specs, spec_ref, :awaiting_responses],
+              MapSet.delete(responses, {link_id, direction})
+            )
+          else
+            :error -> state
+          end
 
         proceed_spec_startup(spec_ref, state)
 
@@ -469,7 +534,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  @spec handle_child_initialized(Membrane.Child.name(), Parent.state()) :: Parent.state()
+  @spec handle_child_initialized(Child.name(), Parent.state()) :: Parent.state()
   def handle_child_initialized(child, state) do
     %{spec_ref: spec_ref} = Parent.ChildrenModel.get_child_data!(state, child)
     state = put_in(state, [:children, child, :initialized?], true)
@@ -477,7 +542,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   @spec handle_notify_child(
-          {Membrane.Child.name(), Membrane.ParentNotification.t()},
+          {Child.name(), Membrane.ParentNotification.t()},
           Parent.state()
         ) :: :ok
   def handle_notify_child({child_name, message}, state) do
@@ -487,10 +552,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   @spec handle_remove_children(
-          Membrane.Child.ref()
-          | [Membrane.Child.ref()]
-          | Membrane.Child.group()
-          | [Membrane.Child.group()],
+          Child.ref() | [Child.ref()] | Child.group() | [Child.group()],
           Parent.state()
         ) :: Parent.state()
   def handle_remove_children(children_or_children_groups, state) do
@@ -522,11 +584,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       """)
     end
 
-    data |> Enum.filter(& &1.ready?) |> Enum.each(&Message.send(&1.pid, :terminate))
-    Parent.ChildrenModel.update_children!(state, refs, &%{&1 | terminating?: true})
+    # dupa: tutaj ostroznie
+    # data |> Enum.filter(& &1.ready?) |> Enum.each(&Message.send(&1.pid, :terminate))
+
+    Enum.each(data, &Message.send(&1.pid, :terminate))
+    state = Parent.ChildrenModel.update_children!(state, refs, &%{&1 | terminating?: true})
+    remove_children_from_specs(refs, state)
   end
 
-  @spec handle_remove_link(Membrane.Child.name(), Pad.ref(), Parent.state()) ::
+  @spec handle_remove_link(Child.name(), Pad.ref(), Parent.state()) ::
           Parent.state()
   def handle_remove_link(child_name, pad_ref, state) do
     LinkUtils.remove_link(child_name, pad_ref, state)
@@ -539,7 +605,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   - handles crash group (if applicable)
   """
   @spec handle_child_death(
-          child_name :: Membrane.Child.name(),
+          child_name :: Child.name(),
           reason :: any(),
           state :: Parent.state()
         ) :: {:stop | :continue, Parent.state()}
@@ -571,9 +637,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       if result == :removed do
         state =
           Enum.reduce(group.members, state, fn child_name, state ->
-            with {%{spec_ref: spec_ref}, state} <- pop_in(state, [:children, child_name]) do
+            with %{spec_ref: _spec_ref} <- get_in(state, [:children, child_name]) do
               state = LinkUtils.unlink_element(child_name, state)
-              cleanup_spec_startup(spec_ref, state)
+              remove_children_from_specs(child_name, state)
+              |> Map.update!(:children, &Map.delete(&1, child_name))
+              # cleanup_spec_startup(spec_ref, state)
             else
               {nil, state} -> state
             end
@@ -654,7 +722,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   # called when process was a member of a crash group
-  @spec crash_all_group_members(CrashGroup.t(), Membrane.Child.name(), Parent.state()) ::
+  @spec crash_all_group_members(CrashGroup.t(), Child.name(), Parent.state()) ::
           Parent.state()
   defp crash_all_group_members(
          %CrashGroup{triggered?: false} = crash_group,
