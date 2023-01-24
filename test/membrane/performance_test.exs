@@ -95,7 +95,6 @@ defmodule Membrane.PerformanceTest do
     end
   end
 
-
   defp prepare_spec(
          how_many_filters,
          number_of_buffers,
