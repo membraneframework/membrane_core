@@ -190,15 +190,15 @@ defmodule Membrane.Core.Element.PadController do
   Executes `handle_pad_removed` callback if the pad was dynamic.
   Note: it also flushes all buffers from PlaybackBuffer.
   """
-  @spec handle_unlink(Pad.ref(), State.t()) :: State.t()
-  def handle_unlink(pad_ref, state) do
+  @spec handle_unlink(Pad.ref(), :soft | :hard, State.t()) :: State.t()
+  def handle_unlink(pad_ref, mode, state) do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
       state = generate_eos_if_needed(pad_ref, state)
       state = maybe_handle_pad_removed(pad_ref, state)
       state = remove_pad_associations(pad_ref, state)
       PadModel.delete_data!(state, pad_ref)
     else
-      {:ok, %{availability: :always}} when state.terminating? ->
+      {:ok, %{availability: :always}} when state.terminating? or mode == :soft ->
         state
 
       {:ok, %{availability: :always}} ->

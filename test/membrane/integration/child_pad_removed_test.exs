@@ -128,7 +128,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
         # This sleep is executed to ensure, that spec has already been finished.
         # After fixing bug occuring, when parent returns :remove_link before
         # spec status is :ready, this sleep will become unneceassary.
-        Process.sleep(100)
+        # Process.sleep(100)
         execute_actions_in_bin(pipeline, bin_actions)
 
         receive do
@@ -157,7 +157,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
         # This sleep is executed to ensure, that spec has already been finished.
         # After fixing bug occuring, when parent returns :remove_link before
         # spec status is :ready, this sleep will become unneceassary.
-        Process.sleep(100)
+        # Process.sleep(100)
 
         sink_pid = Testing.Pipeline.get_child_pid!(pipeline, :sink)
         monitor_ref = Process.monitor(sink_pid)
@@ -184,7 +184,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
         # This sleep is executed to ensure, that spec has already been finished.
         # After fixing bug occuring, when parent returns :remove_link before
         # spec status is :ready, this sleep will become unneceassary.
-        Process.sleep(100)
+        # Process.sleep(100)
 
         sink_pid = Testing.Pipeline.get_child_pid!(pipeline, :sink)
         monitor_ref = Process.monitor(sink_pid)
