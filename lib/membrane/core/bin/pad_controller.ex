@@ -80,8 +80,8 @@ defmodule Membrane.Core.Bin.PadController do
     state
   end
 
-  @spec remove_dynamic_pad(Pad.ref(), State.t()) :: State.t()
-  def remove_dynamic_pad(pad_ref, state) do
+  @spec remove_dynamic_pad!(Pad.ref(), State.t()) :: State.t()
+  def remove_dynamic_pad!(pad_ref, state) do
     case pad_ref do
       Pad.ref(_name, _id) ->
         Message.send(state.parent_pid, :child_pad_removed, [state.name, pad_ref])
