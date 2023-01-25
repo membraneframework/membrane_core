@@ -1,6 +1,8 @@
 defmodule Membrane.Integration.ChildPadRemovedTest do
   use ExUnit.Case, async: false
 
+  import Membrane.Testing.Assertions
+
   alias Membrane.Testing
 
   require Membrane.Pad, as: Pad
@@ -14,6 +16,12 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
     use Membrane.Sink
     def_input_pad :input, flow_control: :push, availability: :on_request, accepted_format: _any
     def_options test_process: [spec: pid()]
+
+    @impl true
+    def handle_init(ctx, opts) do
+      send(opts.test_process, {:init, ctx.name})
+      {[], Map.from_struct(opts)}
+    end
 
     @impl true
     def handle_pad_added(_pad, ctx, state) do
@@ -32,6 +40,12 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
     use Membrane.Sink
     def_input_pad :input, flow_control: :push, accepted_format: _any
     def_options test_process: [spec: pid()]
+
+    @impl true
+    def handle_init(ctx, opts) do
+      send(opts.test_process, {:init, ctx.name})
+      {[], Map.from_struct(opts)}
+    end
   end
 
   defmodule DynamicBin do
@@ -125,10 +139,6 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
           ] do
         pipeline = start_link_pipeline!(DynamicBin, DynamicSink)
 
-        # This sleep is executed to ensure, that spec has already been finished.
-        # After fixing bug occuring, when parent returns :remove_link before
-        # spec status is :ready, this sleep will become unneceassary.
-        # Process.sleep(100)
         execute_actions_in_bin(pipeline, bin_actions)
 
         receive do
@@ -154,11 +164,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
           ] do
         pipeline = start_pipeline!(DynamicBin, StaticSink)
 
-        # This sleep is executed to ensure, that spec has already been finished.
-        # After fixing bug occuring, when parent returns :remove_link before
-        # spec status is :ready, this sleep will become unneceassary.
-        # Process.sleep(100)
-
+        assert_receive {:init, :sink}
         sink_pid = Testing.Pipeline.get_child_pid!(pipeline, :sink)
         monitor_ref = Process.monitor(sink_pid)
 
@@ -181,11 +187,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
           ] do
         pipeline = start_link_pipeline!(DynamicBin, StaticSink, remove_children: :sink)
 
-        # This sleep is executed to ensure, that spec has already been finished.
-        # After fixing bug occuring, when parent returns :remove_link before
-        # spec status is :ready, this sleep will become unneceassary.
-        # Process.sleep(100)
-
+        assert_receive {:init, :sink}
         sink_pid = Testing.Pipeline.get_child_pid!(pipeline, :sink)
         monitor_ref = Process.monitor(sink_pid)
 
