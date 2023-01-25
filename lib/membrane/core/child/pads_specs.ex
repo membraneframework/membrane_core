@@ -189,10 +189,15 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 availability: [in: [:always, :on_request], default: :always],
                 accepted_formats_str: [],
                 flow_control: fn _config ->
-                  case component do
-                    :bin -> nil
-                    :filter -> [in: [:auto, :manual, :push], default: :auto]
-                    _non_filter_element -> [in: [:auto, :manual, :push]]
+                  cond do
+                    component == :bin ->
+                      nil
+
+                    direction == :output and component != :filter ->
+                      [in: [:manual, :push]]
+
+                    direction == :input or component == :filter ->
+                      [in: [:auto, :manual, :push], default: :auto]
                   end
                 end,
                 demand_unit:
@@ -201,15 +206,10 @@ defmodule Membrane.Core.Child.PadsSpecs do
                       nil
 
                     direction == :input ->
-                      [
-                        in: [:buffers, :bytes]
-                      ]
+                      [in: [:buffers, :bytes]]
 
                     direction == :output ->
-                      [
-                        in: [:buffers, :bytes, nil],
-                        default: nil
-                      ]
+                      [in: [:buffers, :bytes, nil], default: nil]
 
                     true ->
                       nil

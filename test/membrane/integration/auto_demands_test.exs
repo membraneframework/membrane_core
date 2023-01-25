@@ -134,6 +134,56 @@ defmodule Membrane.Integration.AutoDemandsTest do
     end)
   end
 
+  defmodule NotifyingSink do
+    use Membrane.Sink
+
+    def_input_pad :input, accepted_format: _any, flow_control: :auto
+
+    @impl true
+    def handle_buffer(:input, buffer, _ctx, state) do
+      {[notify_parent: {:buffer_arrived, buffer}], state}
+    end
+  end
+
+  defmodule NotifyingEndpoint do
+    use Membrane.Endpoint
+
+    def_input_pad :input, accepted_format: _any, flow_control: :auto
+
+    @impl true
+    def handle_buffer(:input, buffer, _ctx, state) do
+      {[notify_parent: {:buffer_arrived, buffer}], state}
+    end
+  end
+
+  [
+    %{name: :sink, module: NotifyingSink},
+    %{name: :endpoint, module: NotifyingEndpoint}
+  ]
+  |> Enum.map(fn opts ->
+    test "buffers pass to auto-demand #{opts.name}" do
+      import Membrane.ChildrenSpec
+
+      %{name: name, module: module} = unquote(Macro.escape(opts))
+      payloads = Enum.map(1..1000, &inspect/1)
+
+      pipeline =
+        Pipeline.start_link_supervised!(
+          spec:
+            child(:source, %Source{output: payloads})
+            |> child(name, module)
+        )
+
+      for payload <- payloads do
+        assert_pipeline_notified(
+          pipeline,
+          name,
+          {:buffer_arrived, %Membrane.Buffer{payload: ^payload}}
+        )
+      end
+    end
+  end)
+
   defmodule PushSource do
     use Membrane.Source
 

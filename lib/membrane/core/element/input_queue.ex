@@ -1,7 +1,6 @@
 defmodule Membrane.Core.Element.InputQueue do
   @moduledoc false
-  # Queue that is attached to the `:input` pad when working in a `:auto` or `:manual`
-  # flow control mode.
+  # Queue that is attached to the `:input` pad when working in a `:manual` flow control mode.
 
   # It stores `Membrane.Buffer`, `Membrane.Event` and `Membrane.StreamFormat` structs and
   # prevents the situation where the data in a stream contains the discontinuities.
