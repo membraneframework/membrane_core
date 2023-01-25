@@ -73,7 +73,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   }
 
   @doc """
-  Handles `ChildrenSpec` returned with `spec` action.
+  Handles `Membrane.ChildrenSpec` returned with `spec` action.
 
   Handling a spec consists of the following steps:
   - Parse the spec

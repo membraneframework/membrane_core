@@ -41,7 +41,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     opposite_endpoint(link, child)
     |> case do
       %Endpoint{child: {Membrane.Bin, :itself}} = bin_endpoint ->
-        PadController.remove_dynamic_pad(bin_endpoint.pad_ref, state)
+        PadController.remove_dynamic_pad!(bin_endpoint.pad_ref, state)
 
       %Endpoint{} = endpoint ->
         Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
@@ -58,7 +58,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
         Message.send(child_endpoint.pid, :handle_unlink, child_endpoint.pad_ref)
 
         bin_endpoint = opposite_endpoint(link, child_endpoint.child)
-        state = PadController.remove_dynamic_pad(bin_endpoint.pad_ref, state)
+        state = PadController.remove_dynamic_pad!(bin_endpoint.pad_ref, state)
 
         delete_link(state, link)
       else
@@ -94,7 +94,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     Enum.reduce(dropped_links, state, fn link, state ->
       case endpoint_to_unlink(child_name, link) do
         %Endpoint{child: {Membrane.Bin, :itself}, pad_ref: pad_ref} ->
-          PadController.remove_dynamic_pad(pad_ref, state)
+          PadController.remove_dynamic_pad!(pad_ref, state)
 
         %Endpoint{} = endpoint ->
           Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
@@ -187,15 +187,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
   defp delete_link(state, link) do
     links = Map.delete(state.links, link.id)
     state = Map.put(state, :links, links)
-
     spec_ref = link.spec_ref
 
-    with %{^spec_ref => spec_data} <- state.pending_specs do
+    with {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref) do
       new_links_ids = Enum.reject(spec_data.links_ids, &(&1 == link.id))
       state = put_in(state, [:pending_specs, spec_ref, :links_ids], new_links_ids)
       ChildLifeController.proceed_spec_startup(spec_ref, state)
     else
-      _pending_specs -> state
+      :error -> state
     end
   end
 

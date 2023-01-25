@@ -140,7 +140,6 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
         end
 
         assert_receive {:child_pad_removed, :bin, Pad.ref(:output, _id)}
-
         assert_child_exists(pipeline, :bin)
         assert_child_exists(pipeline, :sink)
 
@@ -194,8 +193,8 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
 
         assert_receive {:child_pad_removed, :bin, Pad.ref(:output, _id)}
         assert_receive {:DOWN, ^monitor_ref, :process, ^sink_pid, _reason}
-
         assert_child_exists(pipeline, :bin)
+
         Pipeline.terminate(pipeline, blocking?: true)
       end
     end
