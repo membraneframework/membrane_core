@@ -34,7 +34,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           children_names: [Child.name()],
           links_ids: [Link.id()],
           awaiting_responses: MapSet.t({Link.id(), Membrane.Pad.direction()}),
-          dependent_specs: MapSet.t(spec_ref)
+          dependent_specs: %{spec_ref() => [Child.name()]}
         }
 
   @type pending_specs :: %{spec_ref() => pending_spec()}
@@ -145,12 +145,19 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = %{state | links: Map.merge(state.links, Map.new(resolved_links, &{&1.id, &1}))}
 
     dependent_specs =
+      # resolved_links
+      # |> Enum.flat_map(&[&1.from.child_spec_ref, &1.to.child_spec_ref])
+      # |> Enum.filter(fn spec_ref ->
+      #   get_in(state, [:pending_specs, spec_ref, :status]) in @spec_dependency_requiring_statuses
+      # end)
+      # |> MapSet.new()
       resolved_links
-      |> Enum.flat_map(&[&1.from.child_spec_ref, &1.to.child_spec_ref])
-      |> Enum.filter(fn spec_ref ->
+      |> Enum.flat_map(&[&1.from, &1.to])
+      |> Enum.map(& {&1.child_spec_ref, &1.child})
+      |> Enum.filter(fn {spec_ref, _child} ->
         get_in(state, [:pending_specs, spec_ref, :status]) in @spec_dependency_requiring_statuses
       end)
-      |> MapSet.new()
+      |> Enum.group_by(fn {spec_ref, _child} -> spec_ref end)
 
     state =
       put_in(state, [:pending_specs, spec_ref], %{
@@ -346,7 +353,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   defp do_proceed_spec_startup(spec_ref, %{status: :initializing} = spec_data, state) do
     Membrane.Logger.debug(
-      "Proceeding spec #{inspect(spec_ref)} startup: initializing, dependent specs: #{inspect(spec_data.dependent_specs)}"
+      "Proceeding spec #{inspect(spec_ref)} startup: initializing, dependent specs: #{inspect(Map.keys(spec_data.dependent_specs))}"
     )
 
     %{children: children} = state
@@ -642,9 +649,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp remove_spec_from_dependencies(spec_ref, state) do
     dependent_specs =
       state.pending_specs
-      |> Enum.filter(fn {_ref, data} -> spec_ref in data.dependent_specs end)
+      |> Enum.filter(fn {_ref, data} -> Map.has_key?(data.dependent_specs, spec_ref) end)
       |> Map.new(fn {ref, data} ->
-        {ref, Map.update!(data, :dependent_specs, &MapSet.delete(&1, spec_ref))}
+        {ref, Map.update!(data, :dependent_specs, &Map.delete(&1, spec_ref))}
       end)
 
     state = %{state | pending_specs: Map.merge(state.pending_specs, dependent_specs)}
