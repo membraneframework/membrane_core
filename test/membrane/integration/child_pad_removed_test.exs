@@ -1,8 +1,6 @@
 defmodule Membrane.Integration.ChildPadRemovedTest do
   use ExUnit.Case, async: false
 
-  import Membrane.Testing.Assertions
-
   alias Membrane.Testing
 
   require Membrane.Pad, as: Pad

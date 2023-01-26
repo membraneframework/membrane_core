@@ -144,16 +144,16 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     resolved_links = LinkUtils.resolve_links(links, spec_ref, state)
     state = %{state | links: Map.merge(state.links, Map.new(resolved_links, &{&1.id, &1}))}
 
+    # resolved_links
+    # |> Enum.flat_map(&[&1.from.child_spec_ref, &1.to.child_spec_ref])
+    # |> Enum.filter(fn spec_ref ->
+    #   get_in(state, [:pending_specs, spec_ref, :status]) in @spec_dependency_requiring_statuses
+    # end)
+    # |> MapSet.new()
     dependent_specs =
-      # resolved_links
-      # |> Enum.flat_map(&[&1.from.child_spec_ref, &1.to.child_spec_ref])
-      # |> Enum.filter(fn spec_ref ->
-      #   get_in(state, [:pending_specs, spec_ref, :status]) in @spec_dependency_requiring_statuses
-      # end)
-      # |> MapSet.new()
       resolved_links
       |> Enum.flat_map(&[&1.from, &1.to])
-      |> Enum.map(& {&1.child_spec_ref, &1.child})
+      |> Enum.map(&{&1.child_spec_ref, &1.child})
       |> Enum.filter(fn {spec_ref, _child} ->
         get_in(state, [:pending_specs, spec_ref, :status]) in @spec_dependency_requiring_statuses
       end)
@@ -494,10 +494,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   @spec handle_remove_children(
-          Child.ref()
-          | [Child.ref()]
-          | Child.group()
-          | [Child.group()],
+          Child.ref() | [Child.ref()] | Child.group() | [Child.group()],
           Parent.state()
         ) :: Parent.state()
   def handle_remove_children(children_or_children_groups, state) do
@@ -537,6 +534,110 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           Parent.state()
   def handle_remove_link(child_name, pad_ref, state) do
     LinkUtils.remove_link(child_name, pad_ref, state)
+  end
+
+  defp remove_children_from_specs(children, state) do
+    children = Bunch.listify(children)
+    children_set = MapSet.new(children)
+
+    children_links_ids_set =
+      state.links
+      |> Enum.filter(&(&1.from.child in children_set or &1.to.child in children_set))
+      |> MapSet.new(& &1.id)
+
+    affected_specs =
+      state.pending_specs
+      |> Enum.filter(fn {_ref, spec_data} ->
+        Enum.any?(spec_data.children, &(&1 in children_set)) or
+          Enum.any?(spec_data.links, &(&1 in children_links_ids_set))
+      end)
+
+    updated_specs =
+      affected_specs
+      |> Map.new(fn {spec_ref, spec_data} ->
+        children_names =
+          spec_data.children_names
+          |> Enum.reject(&(&1 in children_set))
+
+        links_ids = Enum.reject(spec_data.links_ids, &(&1 in children_links_ids_set))
+
+        awaiting_responses =
+          spec_data.awaiting_responses
+          |> Enum.reject(fn {link_id, _direction} -> link_id in children_links_ids_set end)
+          |> MapSet.new()
+
+        dependent_specs =
+          spec_data.dependent_specs
+          |> Enum.map(fn {ref, spec_children} ->
+            {ref, Enum.reject(spec_children, &(&1 in children_set))}
+          end)
+          |> Enum.reject(&match?({_ref, []}, &1))
+          |> Map.new()
+
+        spec_data = %{
+          spec_data
+          | children_names: children_names,
+            links_ids: links_ids,
+            awaiting_responses: awaiting_responses,
+            dependent_specs: dependent_specs
+        }
+
+        {spec_ref, spec_data}
+      end)
+
+    state = Map.update!(state, :pending_specs, &Map.merge(&1, updated_specs))
+
+    Enum.reduce(updated_specs, state, fn {spec_ref, _spec_data}, state ->
+      proceed_spec_startup(spec_ref, state)
+    end)
+  end
+
+  @spec remove_link_from_spec(Link.id(), Parent.state()) :: Parent.state()
+  def remove_link_from_spec(link_id, state) do
+    {:ok, removed_link} = Map.fetch(state.links, link_id)
+    spec_ref = removed_link.spec_ref
+
+    with {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref) do
+      links_ids = Enum.reject(spec_data.links_ids, &(&1 == link_id))
+
+      spec_links_endpoints =
+        Enum.flat_map(links_ids, fn id ->
+          link = state.links[id]
+          [link.from.child, link.to.child]
+        end)
+
+      dependent_specs =
+        [removed_link.from.child, removed_link.to.child]
+        |> Enum.filter(&(&1 not in spec_links_endpoints))
+        |> case do
+          [] ->
+            spec_data.dependent_specs
+
+          endpoints_to_remove ->
+            spec_data.dependent_specs
+            |> Enum.map(fn {spec_ref, spec_children} ->
+              {spec_ref, Enum.reject(spec_children, &(&1 in endpoints_to_remove))}
+            end)
+            |> Enum.reject(&match?({_ref, []}, &1))
+            |> Map.new()
+        end
+
+      awaiting_responses =
+        spec_data.awaiting_responses
+        |> MapSet.difference(MapSet.new([{link_id, :input}, {link_id, :output}]))
+
+      spec_data = %{
+        spec_data
+        | dependent_specs: dependent_specs,
+          links_ids: links_ids,
+          awaiting_responses: awaiting_responses
+      }
+
+      state = put_in(state, [:pending_specs, spec_ref], spec_data)
+      proceed_spec_startup(spec_ref, state)
+    else
+      :error -> state
+    end
   end
 
   @spec handle_child_pad_removed(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
