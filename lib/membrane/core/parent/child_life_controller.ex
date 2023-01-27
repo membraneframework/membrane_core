@@ -463,11 +463,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     case Map.fetch(state.links, link_id) do
       {:ok, %Link{spec_ref: spec_ref}} ->
         state =
-          update_in(
-            state,
-            [:pending_specs, spec_ref, :awaiting_responses],
-            &MapSet.delete(&1, {link_id, direction})
-          )
+          with %{pending_specs: %{^spec_ref => _spec_data}} <- state do
+            update_in(
+              state,
+              [:pending_specs, spec_ref, :awaiting_responses],
+              &MapSet.delete(&1, {link_id, direction})
+            )
+          end
 
         proceed_spec_startup(spec_ref, state)
 
@@ -526,7 +528,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       """)
     end
 
-    data |> Enum.filter(& &1.ready?) |> Enum.each(&Message.send(&1.pid, :terminate))
+    # data |> Enum.filter(& &1.ready?) |> Enum.each(&Message.send(&1.pid, :terminate))
+
+    Enum.each(data, &Message.send(&1.pid, :terminate))
+
+    children_names = Enum.map(data, & &1.name)
+    state = remove_children_from_specs(children_names, state)
+
     Parent.ChildrenModel.update_children!(state, refs, &%{&1 | terminating?: true})
   end
 
@@ -541,15 +549,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     children_set = MapSet.new(children)
 
     children_links_ids_set =
-      state.links
+      Map.values(state.links)
       |> Enum.filter(&(&1.from.child in children_set or &1.to.child in children_set))
       |> MapSet.new(& &1.id)
 
     affected_specs =
       state.pending_specs
       |> Enum.filter(fn {_ref, spec_data} ->
-        Enum.any?(spec_data.children, &(&1 in children_set)) or
-          Enum.any?(spec_data.links, &(&1 in children_links_ids_set))
+        Enum.any?(spec_data.children_names, &(&1 in children_set)) or
+          Enum.any?(spec_data.links_ids, &(&1 in children_links_ids_set))
       end)
 
     updated_specs =
