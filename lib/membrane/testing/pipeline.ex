@@ -482,8 +482,8 @@ defmodule Membrane.Testing.Pipeline do
 
   defp eval_injected_module_callback(callback, args, state)
 
-  defp eval_injected_module_callback(_callback, _args, %State{module: nil} = state),
-    do: {[], state}
+  defp eval_injected_module_callback(_callback, _args, %State{module: nil}),
+    do: {[], nil}
 
   defp eval_injected_module_callback(callback, args, state) do
     apply(state.module, callback, args ++ [state.custom_pipeline_state])
