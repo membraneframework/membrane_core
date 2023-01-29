@@ -92,26 +92,54 @@ defmodule Membrane.Core.Element.BufferController do
   def exec_buffer_callback(pad_ref, buffers, %State{type: :filter} = state) do
     Telemetry.report_metric("buffer", 1, inspect(pad_ref))
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_buffers_batch,
-      ActionHandler,
-      %{context: &CallbackContext.from_state/1},
-      [pad_ref, buffers],
+    buffers = List.wrap(buffers)
+    buffers_len = length(buffers)
+
+    start = System.monotonic_time(:nanosecond)
+
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_buffers_batch,
+        ActionHandler,
+        %{context: &CallbackContext.from_state/1},
+        [pad_ref, buffers],
+        state
+      )
+
+    diff = System.monotonic_time(:nanosecond) - start
+
+    %{
       state
-    )
+      | buffers_recv: state.buffers_recv + buffers_len,
+        buffers_proc_time: state.buffers_proc_time + diff
+    }
   end
 
   def exec_buffer_callback(pad_ref, buffers, %State{type: type} = state)
       when type in [:sink, :endpoint] do
-    Telemetry.report_metric(:buffer, length(List.wrap(buffers)))
+    buffers = List.wrap(buffers)
+    buffers_len = length(buffers)
+
+    Telemetry.report_metric(:buffer, buffers_len)
     Telemetry.report_bitrate(buffers)
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_buffers_batch,
-      ActionHandler,
-      %{context: &CallbackContext.from_state/1},
-      [pad_ref, buffers],
+    start = System.monotonic_time(:nanosecond)
+
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_buffers_batch,
+        ActionHandler,
+        %{context: &CallbackContext.from_state/1},
+        [pad_ref, buffers],
+        state
+      )
+
+    diff = System.monotonic_time(:nanosecond) - start
+
+    %{
       state
-    )
+      | buffers_recv: state.buffers_recv + buffers_len,
+        buffers_proc_time: state.buffers_proc_time + diff
+    }
   end
 end

@@ -143,7 +143,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
 
-      assert result == state
+      expected_state = %{state | buffers_sent: 1}
+
+      assert result == expected_state
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref)
     end
 
@@ -160,7 +162,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
 
-      assert result == state
+      expected_state = %{state | buffers_sent: 1}
+
+      assert result == expected_state
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref)
     end
 

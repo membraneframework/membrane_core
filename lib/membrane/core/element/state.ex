@@ -36,7 +36,10 @@ defmodule Membrane.Core.Element.State do
           resource_guard: Membrane.ResourceGuard.t(),
           subprocess_supervisor: pid,
           terminating?: boolean(),
-          setup_incomplete?: boolean()
+          setup_incomplete?: boolean(),
+          buffers_recv: non_neg_integer(),
+          buffers_sent: non_neg_integer(),
+          buffers_proc_time: non_neg_integer()
         }
 
   defstruct [
@@ -57,7 +60,10 @@ defmodule Membrane.Core.Element.State do
     :resource_guard,
     :subprocess_supervisor,
     :terminating?,
-    :setup_incomplete?
+    :setup_incomplete?,
+    buffers_recv: 0,
+    buffers_sent: 0,
+    buffers_proc_time: 0
   ]
 
   @doc """

@@ -143,6 +143,20 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
+  def handle_call(Message.new(:get_stats), _from, state) do
+    stats =
+      state.children
+      |> Enum.map(fn {child_name, %{pid: child_pid}} ->
+        Task.async(Membrane.Core.GetStatsTask, :run, [child_pid, child_name])
+      end)
+      |> Task.await_many(1000)
+      |> Enum.reject(fn stats -> stats == nil end)
+      |> Map.new()
+
+    {:reply, stats, state}
+  end
+
+  @impl GenServer
   def handle_call(message, from, state) do
     context = &CallbackContext.from_state(&1, from: from)
 

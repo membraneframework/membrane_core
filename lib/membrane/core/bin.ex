@@ -227,6 +227,21 @@ defmodule Membrane.Core.Bin do
     {:noreply, state}
   end
 
+  defp do_handle_info(Message.new(:get_stats, [from, ref]), state) do
+    stats =
+      state.children
+      |> Enum.map(fn {child_name, %{pid: child_pid}} ->
+        Task.async(Membrane.Core.GetStatsTask, :run, [child_pid, child_name])
+      end)
+      |> Task.await_many(1000)
+      |> Enum.reject(fn stats -> stats == nil end)
+      |> Map.new()
+
+    send(from, {:get_stats, ref, stats})
+
+    {:noreply, state}
+  end
+
   defp do_handle_info(Message.new(_type, _args, _opts) = message, _state) do
     raise Membrane.BinError, "Received invalid message #{inspect(message)}"
   end

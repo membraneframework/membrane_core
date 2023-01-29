@@ -310,6 +310,8 @@ defmodule Membrane.Core.Element.ActionHandler do
         DemandHandler.handle_outgoing_buffers(pad_ref, pad_data, buffers, state)
         |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
 
+      state = %{state | buffers_sent: state.buffers_sent + length(buffers)}
+
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
       state
     else

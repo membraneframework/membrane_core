@@ -294,6 +294,10 @@ defmodule Membrane.Pipeline do
     end
   end
 
+  def get_stats(pipeline) do
+    Membrane.Core.Message.call(pipeline, :get_stats)
+  end
+
   @doc """
   Gracefully terminates the pipeline.
 
