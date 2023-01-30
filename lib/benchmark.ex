@@ -1,13 +1,18 @@
-defmodule Membrane.PerformanceTest do
-  use ExUnit.Case
+defmodule Mix.Tasks.Benchmark do
+  @moduledoc "The hello mix task: `mix help hello`"
+  use Mix.Task
 
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  @max_random 10
+  @max_random 5
+  @number_of_filters 10
+  @number_of_buffers 500
+  @buffers_size 100_000_000
+
   defmodule Reductions do
     @function :erlang.date()
-    @n1 1_00
+    @n1 100
     @n2 1_000_000
     defp setup_process(n) do
       parent = self()
@@ -59,19 +64,27 @@ defmodule Membrane.PerformanceTest do
     def_output_pad :output, accepted_format: _any
 
     def_options number_of_reductions: [spec: integer()],
-                sleeping_time: [spec: integer()],
                 generator: [spec: (integer() -> integer())]
 
     @impl true
     def handle_init(_ctx, opts) do
-      reductions_func = Reductions.prepare_desired_function(opts.number_of_reductions)
-
-      workload_simulation = fn ->
-        Process.sleep(opts.sleeping_time)
-        reductions_func.()
-      end
+      workload_simulation = Reductions.prepare_desired_function(opts.number_of_reductions)
 
       state = %{buffers: [], workload_simulation: workload_simulation, generator: opts.generator}
+      {[], state}
+    end
+
+    @impl true
+    def handle_parent_notification({:get_memory, pid}, _ctx, state) do
+      send(
+        pid,
+        {:memory_description,
+         [
+           heap_size: :erlang.process_info(self())[:heap_size],
+           stack_size: :erlang.process_info(self())[:stack_size]
+         ]}
+      )
+
       {[], state}
     end
 
@@ -95,13 +108,12 @@ defmodule Membrane.PerformanceTest do
     end
   end
 
-  defp prepare_spec(
-         how_many_filters,
-         number_of_buffers,
-         buffers_size,
-         number_of_reductions,
-         sleeping_time
-       ) do
+  def prepare_spec(
+        how_many_filters,
+        number_of_buffers,
+        buffers_size,
+        number_of_reductions
+      ) do
     Enum.reduce(
       1..how_many_filters,
       child(%Membrane.Testing.Source{
@@ -119,10 +131,9 @@ defmodule Membrane.PerformanceTest do
              end
            end}
       }),
-      fn _n, acc ->
-        child(acc, %Filter{
+      fn n, acc ->
+        child(acc, String.to_atom("filter_#{n}"), %Filter{
           number_of_reductions: number_of_reductions,
-          sleeping_time: sleeping_time,
           generator: fn number_of_buffers ->
             how_many_needed = Enum.random(1..@max_random)
 
@@ -139,14 +150,78 @@ defmodule Membrane.PerformanceTest do
     |> child(:sink, %Membrane.Testing.Sink{autodemand: true})
   end
 
-  test "performance" do
+  defp meassure_memory_precisely(pipeline_pid) do
+    Enum.reduce(1..@number_of_filters, 0, fn n, acc ->
+      Membrane.Testing.Pipeline.execute_actions(pipeline_pid,
+        notify_child: {String.to_atom("filter_#{n}"), {:get_memory, self()}}
+      )
+
+      memory_description =
+        receive do
+          {:memory_description, memory_description} -> memory_description
+        end
+
+      acc + memory_description[:heap_size] + memory_description[:stack_size]
+    end)
+  end
+
+  defp meassure_memory() do
+    :erlang.memory(:processes)
+  end
+
+  defp perform_test(reductions_number) do
     start_time = :os.system_time(:milli_seconds)
 
-    {:ok, _suprvisor_pid, pid} =
-      Membrane.Testing.Pipeline.start_link(spec: prepare_spec(10, 50, 100, 100_000, 100))
+    {:ok, _suprvisor_pid, pipeline_pid} =
+      Membrane.Testing.Pipeline.start_link(
+        spec:
+          prepare_spec(
+            @number_of_filters,
+            @number_of_buffers,
+            @buffers_size,
+            reductions_number
+          )
+      )
 
-    assert_end_of_stream(pid, :sink, :input, 100_000)
-    test_time = :os.system_time(:milli_seconds) - start_time
-    assert test_time < 10_000
+    in_progress_memory = meassure_memory_precisely(pipeline_pid)
+
+    File.write(
+      "benchmark_results/in_progress_memory.txt",
+      "#{reductions_number}, #{in_progress_memory}\n",
+      [:append]
+    )
+
+    try do
+      assert_end_of_stream(pipeline_pid, :sink, :input, 600_000)
+    rescue
+      _error ->
+        File.write("benchmark_results/time.txt", "#{reductions_number}, :inf\n", [:append])
+
+        File.write("benchmark_results/final_memory.txt", "#{reductions_number}, :not_known\n", [
+          :append
+        ])
+    else
+      _works ->
+        processing_time = :os.system_time(:milli_seconds) - start_time
+        final_memory = meassure_memory_precisely(pipeline_pid)
+
+        File.write("benchmark_results/time.txt", "#{reductions_number}, #{processing_time}\n", [
+          :append
+        ])
+
+        File.write(
+          "benchmark_results/final_memory.txt",
+          "#{reductions_number}, #{final_memory}\n",
+          [:append]
+        )
+    end
+  end
+
+  @shortdoc "Simply calls the Hello.say/0 function."
+  def run(_) do
+    Mix.Task.run("app.start")
+
+    for number_of_reductions <- [10_000_000],
+        do: perform_test(number_of_reductions)
   end
 end
