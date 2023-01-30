@@ -150,8 +150,8 @@ defmodule Membrane.Core.Bin do
 
   @compile {:inline, do_handle_info: 2}
 
-  defp do_handle_info(Message.new(:handle_unlink, [pad_ref, mode]), state) do
-    state = PadController.handle_unlink(pad_ref, mode, state)
+  defp do_handle_info(Message.new(:handle_unlink, pad_ref), state) do
+    state = PadController.handle_unlink(pad_ref, state)
     {:noreply, state}
   end
 

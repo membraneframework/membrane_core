@@ -103,7 +103,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
       assert state.pads_data |> Map.has_key?(:output)
 
       assert_raise Membrane.PadError, fn ->
-        @module.handle_unlink(:output, :hard, state)
+        @module.handle_unlink(:output, state)
       end
     end
 
@@ -111,7 +111,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
       pad_ref = Pad.ref(:input, 0)
       state = prepare_dynamic_state(DynamicFilter, :element, :input, pad_ref)
       assert state.pads_data |> Map.has_key?(pad_ref)
-      state = @module.handle_unlink(pad_ref, :hard, state)
+      state = @module.handle_unlink(pad_ref, state)
       assert state.internal_state[:last_event] == nil
       assert state.internal_state.last_pad_removed == pad_ref
       refute state.pads_data |> Map.has_key?(pad_ref)

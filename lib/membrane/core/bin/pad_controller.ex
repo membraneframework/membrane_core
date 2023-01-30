@@ -266,15 +266,15 @@ defmodule Membrane.Core.Bin.PadController do
   @doc """
   Handles situation where the pad has been unlinked (e.g. when connected element has been removed from the pipeline)
   """
-  @spec handle_unlink(Pad.ref(), :soft | :hard, Core.Bin.State.t()) :: Core.Bin.State.t()
-  def handle_unlink(pad_ref, mode, state) do
+  @spec handle_unlink(Pad.ref(), Core.Bin.State.t()) :: Core.Bin.State.t()
+  def handle_unlink(pad_ref, state) do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
       state = maybe_handle_pad_removed(pad_ref, state)
       endpoint = PadModel.get_data!(state, pad_ref, :endpoint)
       {pad_data, state} = PadModel.pop_data!(state, pad_ref)
 
       if endpoint do
-        Message.send(endpoint.pid, :handle_unlink, [endpoint.pad_ref, mode])
+        Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
         ChildLifeController.proceed_spec_startup(pad_data.spec_ref, state)
       else
         Membrane.Logger.debug("""
@@ -285,7 +285,7 @@ defmodule Membrane.Core.Bin.PadController do
         state
       end
     else
-      {:ok, %{availability: :always}} when state.terminating? or mode == :soft ->
+      {:ok, %{availability: :always}} when state.terminating? ->
         state
 
       {:ok, %{availability: :always}} ->

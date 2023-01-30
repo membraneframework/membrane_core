@@ -190,15 +190,15 @@ defmodule Membrane.Core.Element.PadController do
   Executes `handle_pad_removed` callback if the pad was dynamic.
   Note: it also flushes all buffers from PlaybackBuffer.
   """
-  @spec handle_unlink(Pad.ref(), :soft | :hard, State.t()) :: State.t()
-  def handle_unlink(pad_ref, mode, state) do
+  @spec handle_unlink(Pad.ref(), State.t()) :: State.t()
+  def handle_unlink(pad_ref, state) do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
       state = generate_eos_if_needed(pad_ref, state)
       state = maybe_handle_pad_removed(pad_ref, state)
       state = remove_pad_associations(pad_ref, state)
       PadModel.delete_data!(state, pad_ref)
     else
-      {:ok, %{availability: :always}} when state.terminating? or mode == :soft ->
+      {:ok, %{availability: :always}} when state.terminating? ->
         state
 
       {:ok, %{availability: :always}} ->
@@ -207,7 +207,6 @@ defmodule Membrane.Core.Element.PadController do
 
       {:error, :unknown_pad} ->
         with false <- state.terminating?,
-             :hard <- mode,
              %{availability: :always} <- state.pads_info[Pad.name_by_ref(pad_ref)] do
           raise Membrane.PadError,
                 "Tried to unlink a static pad #{inspect(pad_ref)}, before it was linked. Static pads cannot be unlinked unless element is terminating"

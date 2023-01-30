@@ -200,8 +200,8 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(:handle_unlink, [pad_ref, mode]), state) do
-    state = PadController.handle_unlink(pad_ref, mode, state)
+  defp do_handle_info(Message.new(:handle_unlink, pad_ref), state) do
+    state = PadController.handle_unlink(pad_ref, state)
     {:noreply, state}
   end
 

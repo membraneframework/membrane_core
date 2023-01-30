@@ -45,7 +45,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
           PadController.remove_dynamic_pad!(bin_endpoint.pad_ref, state)
 
         %Endpoint{} = endpoint ->
-          send_handle_unlink(endpoint, state)
+          Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
           state
       end
 
@@ -60,13 +60,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
       state =
         if {Membrane.Bin, :itself} in [link.from.child, link.to.child] do
           child_endpoint = opposite_endpoint(link, {Membrane.Bin, :itself})
-          send_handle_unlink(child_endpoint, state)
+          Message.send(child_endpoint.pid, :handle_unlink, child_endpoint.pad_ref)
 
           bin_endpoint = opposite_endpoint(link, child_endpoint.child)
           PadController.remove_dynamic_pad!(bin_endpoint.pad_ref, state)
         else
           for endpoint <- [link.from, link.to] do
-            send_handle_unlink(endpoint, state)
+            Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
           end
 
           state
@@ -103,7 +103,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
           PadController.remove_dynamic_pad!(pad_ref, state)
 
         %Endpoint{} = endpoint ->
-          send_handle_unlink(endpoint, state)
+          Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
           state
       end
     end)
@@ -330,14 +330,5 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
           state
       end
     end
-  end
-
-  defp send_handle_unlink(%Endpoint{child: child} = endpoint, state) do
-    mode =
-      if state.children[child].terminating?,
-        do: :soft,
-        else: :hard
-
-    Message.send(endpoint.pid, :handle_unlink, [endpoint.pad_ref, mode])
   end
 end

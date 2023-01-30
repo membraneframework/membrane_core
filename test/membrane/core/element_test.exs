@@ -256,7 +256,7 @@ defmodule Membrane.Core.ElementTest do
   test "should handle unlinking pads" do
     assert {:noreply, state} =
              Element.handle_info(
-               Message.new(:handle_unlink, [:dynamic_input, :hard]),
+               Message.new(:handle_unlink, :dynamic_input),
                linked_state()
              )
 
