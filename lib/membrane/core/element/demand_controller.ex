@@ -29,6 +29,11 @@ defmodule Membrane.Core.Element.DemandController do
     %{demand: old_demand, associated_pads: associated_pads} = data
     state = PadModel.set_data!(state, pad_ref, :demand, old_demand + size)
 
+    :ets.insert(
+      :membrane_core_meas,
+      {{Membrane.ComponentPath.get(), {:output_demand, pad_ref}}, old_demand + size}
+    )
+
     if old_demand <= 0 do
       Enum.reduce(associated_pads, state, &send_auto_demand_if_needed/2)
     else

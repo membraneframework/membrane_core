@@ -97,11 +97,12 @@ defmodule Membrane.Core.Element.Toilet do
     {__MODULE__, toilet_ref, capacity, responsible_process, throttling_factor, 0}
   end
 
-  @spec fill(t, non_neg_integer) :: {:ok | :overflow, t}
+  # @spec fill(t, non_neg_integer) :: {:ok | :overflow, t}
   def fill(
         {__MODULE__, counter, capacity, responsible_process, throttling_factor,
          unrinsed_buffers_size},
-        amount
+        amount,
+        pad
       ) do
     if unrinsed_buffers_size + amount < throttling_factor do
       {:ok,
@@ -109,6 +110,7 @@ defmodule Membrane.Core.Element.Toilet do
         amount + unrinsed_buffers_size}}
     else
       size = DistributedCounter.add_get(counter, amount + unrinsed_buffers_size)
+      :ets.insert(:membrane_core_meas, {{Membrane.ComponentPath.get(), {:toilet, pad}}, size})
 
       if size > capacity do
         overflow(size, capacity, responsible_process)

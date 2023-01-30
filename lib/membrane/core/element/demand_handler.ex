@@ -106,6 +106,12 @@ defmodule Membrane.Core.Element.DemandHandler do
   def handle_outgoing_buffers(pad_ref, %{mode: :pull} = data, buffers, state) do
     %{other_demand_unit: other_demand_unit, demand: demand} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
+
+    :ets.insert(
+      :membrane_core_meas,
+      {{Membrane.ComponentPath.get(), {:output_demand, pad_ref}}, demand - buf_size}
+    )
+
     PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
   end
 
@@ -122,7 +128,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     %{other_demand_unit: other_demand_unit} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
 
-    case Toilet.fill(toilet, buf_size) do
+    case Toilet.fill(toilet, buf_size, pad_ref) do
       {:ok, toilet} ->
         PadModel.set_data!(state, pad_ref, :toilet, toilet)
 

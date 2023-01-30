@@ -14,6 +14,10 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def init({module, pipeline_options}) do
+    if :ets.whereis(:membrane_core_meas) == :undefined do
+      :ets.new(:membrane_core_meas, [:named_table, :public, write_concurrency: true])
+    end
+
     pipeline_name = "pipeline@#{:erlang.pid_to_list(self())}"
     :ok = Membrane.ComponentPath.set([pipeline_name])
     :ok = Membrane.Logger.set_prefix(pipeline_name)

@@ -1,0 +1,50 @@
+# Untitled notebook
+
+## Section
+
+## Section
+
+````elixir
+alias VegaLite, as: Vl
+
+start_time = System.monotonic_time()
+
+create_chart = fn {path, meas} ->
+  Kino.render(
+    Kino.Markdown.new("""
+    ## Element #{List.last(path)}
+    ```
+    #{Enum.join(path, "\n")}
+    ```
+    """)
+  )
+
+  Kino.render(Kino.Markdown.new("### Measurement: #{inspect(meas)}"))
+
+  Vl.new(width: 800, height: 400)
+  |> Vl.mark(:line)
+  |> Vl.encode_field(:x, "x", type: :quantitative)
+  |> Vl.encode_field(:y, "y", type: :quantitative)
+  |> Kino.VegaLite.new()
+  |> Kino.render()
+end
+
+Stream.iterate(%{}, fn charts ->
+  measurements = :ets.tab2list(:membrane_core_meas)
+
+  measurements
+  |> Enum.sort()
+  |> Enum.reduce(charts, fn {name, value}, charts ->
+    charts = Map.put_new_lazy(charts, name, fn -> create_chart.(name) end)
+
+    Kino.VegaLite.push(charts[name], %{
+      x: System.convert_time_unit(System.monotonic_time() - start_time, :native, :second),
+      y: value
+    })
+
+    charts
+  end)
+end)
+|> Stream.each(fn _ -> Process.sleep(1000) end)
+|> Stream.run()
+````
