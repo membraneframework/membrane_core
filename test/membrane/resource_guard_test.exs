@@ -79,7 +79,7 @@ defmodule Membrane.ResourceGuardTest do
 
     assert :ready = Membrane.Pipeline.call(pipeline, :setup_guard)
     monitor_ref = Process.monitor(:membrane_resource_guard_test_pipeline_resource)
-    Membrane.Pipeline.terminate(pipeline, blocking?: true)
+    Membrane.Pipeline.terminate(pipeline)
     assert_receive {:DOWN, ^monitor_ref, :process, _pid, :shutdown}
   end
 

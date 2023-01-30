@@ -61,7 +61,7 @@ defmodule Membrane.Pipeline do
   use Bunch
 
   alias __MODULE__.{Action, CallbackContext}
-  alias Membrane.{Child, Pad}
+  alias Membrane.{Child, Pad, PipelineTerminationError}
 
   require Membrane.Logger
   require Membrane.Core.Message, as: Message
@@ -295,41 +295,46 @@ defmodule Membrane.Pipeline do
   end
 
   @doc """
-  Gracefully terminates the pipeline.
+  Terminates the pipeline.
 
   Accepts two options:
-    * `blocking?` - tells whether to stop the pipeline synchronously
-    * `timeout` - if `blocking?` is set to true it tells how much
-      time (ms) to wait for pipeline to get terminated. Defaults to 5000.
+    * `timeout` - tells how much time (ms) to wait for pipeline to get gracefully
+      terminated. Defaults to 5000.
+    * `force?` - if set to `true` and pipeline is still alive after `timeout`,
+      pipeline will be killed using `Process.exit/2` with second argument set to
+      `:kill`, and function will return `{:error, :timeout}`. If set to `false` and
+      pipeline is still alive after `timeout`, function will raise an error.
+      Defaults to `false`.
   """
-  @spec terminate(pipeline :: pid, Keyword.t()) ::
+  @spec terminate(pipeline :: pid, timeout: non_neg_integer() | :infinity, force?: boolean()) ::
           :ok | {:error, :timeout}
   def terminate(pipeline, opts \\ []) do
-    blocking? = Keyword.get(opts, :blocking?, false)
     timeout = Keyword.get(opts, :timeout, 5000)
+    force? = Keyword.get(opts, :force?, false)
 
-    ref = if blocking?, do: Process.monitor(pipeline)
+    ref = Process.monitor(pipeline)
     Message.send(pipeline, :terminate)
 
-    if(blocking?,
-      do: wait_for_down(ref, timeout),
-      else: :ok
-    )
-  end
-
-  @spec call(pid, any, integer()) :: :ok
-  def call(pipeline, message, timeout \\ 5000) do
-    GenServer.call(pipeline, message, timeout)
-  end
-
-  defp wait_for_down(ref, timeout) do
     receive do
       {:DOWN, ^ref, _process, _pid, _reason} ->
         :ok
     after
       timeout ->
-        {:error, :timeout}
+        if force? do
+          Process.exit(pipeline, :kill)
+          {:error, :timeout}
+        else
+          raise PipelineTerminationError, """
+          Pipeline #{inspect(pipeline)} hasn't terminated within given timeout (#{inspect(timeout)} ms).
+          If you want to to kill it anyway, use `force?: true` option.
+          """
+        end
     end
+  end
+
+  @spec call(pid, any, integer()) :: :ok
+  def call(pipeline, message, timeout \\ 5000) do
+    GenServer.call(pipeline, message, timeout)
   end
 
   @doc """
