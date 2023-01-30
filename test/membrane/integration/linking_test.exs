@@ -510,6 +510,11 @@ defmodule Membrane.Integration.LinkingTest do
       def_output_pad :output,
         availability: :on_request,
         accepted_format: _any
+
+      @impl true
+      def handle_playing(_ctx, state) do
+        {[notify_parent: :playing], state}
+      end
     end
 
     defmodule Sink do
@@ -535,30 +540,30 @@ defmodule Membrane.Integration.LinkingTest do
       Testing.Pipeline.execute_actions(pipeline, remove_children: :sink)
 
       assert_receive {:DOWN, ^monitor_ref, :process, ^sink_pid, :normal}
-      assert_pipeline_play(pipeline)
+      assert_pipeline_notified(pipeline, :bin, :playing)
 
-      Testing.Pipeline.terminate(pipeline, blocking?: true)
+      assert :ok == Testing.Pipeline.terminate(pipeline, blocking?: true)
     end
 
-    @tag :dupa
     test "crashed child" do
+      sink_ref = Child.ref(:sink, group: :group)
+
       spec = [
         {child(:sink, Sink), group: :group, crash_group_mode: :temporary},
-        child(:bin, LazyBin) |> get_child(:sink)
+        child(:bin, LazyBin) |> get_child(sink_ref)
       ]
 
       pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
-      assert_pipeline_notified(pipeline, :sink, :init)
-      sink_pid = Testing.Pipeline.get_child_pid!(pipeline, :sink)
-      monitor_ref = Process.monitor(sink_pid)
+      assert_pipeline_notified(pipeline, sink_ref, :init)
 
-      Process.exit(sink_pid, :kill)
+      Testing.Pipeline.get_child_pid!(pipeline, sink_ref)
+      |> Process.exit(:kill)
 
-      assert_receive {:DOWN, ^monitor_ref, :process, ^sink_pid, :kill}
-      assert_pipeline_play(pipeline)
+      assert_pipeline_crash_group_down(pipeline, :group)
+      assert_pipeline_notified(pipeline, :bin, :playing)
 
-      Testing.Pipeline.terminate(pipeline, blocking?: true)
+      assert :ok == Testing.Pipeline.terminate(pipeline, blocking?: true)
     end
   end
 

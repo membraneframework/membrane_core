@@ -144,12 +144,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     resolved_links = LinkUtils.resolve_links(links, spec_ref, state)
     state = %{state | links: Map.merge(state.links, Map.new(resolved_links, &{&1.id, &1}))}
 
-    # resolved_links
-    # |> Enum.flat_map(&[&1.from.child_spec_ref, &1.to.child_spec_ref])
-    # |> Enum.filter(fn spec_ref ->
-    #   get_in(state, [:pending_specs, spec_ref, :status]) in @spec_dependency_requiring_statuses
-    # end)
-    # |> MapSet.new()
     dependent_specs =
       resolved_links
       |> Enum.flat_map(&[&1.from, &1.to])
@@ -528,8 +522,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       """)
     end
 
-    # data |> Enum.filter(& &1.ready?) |> Enum.each(&Message.send(&1.pid, :terminate))
-
     Enum.each(data, &Message.send(&1.pid, :terminate))
 
     children_names = Enum.map(data, & &1.name)
@@ -699,21 +691,18 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     %{pid: child_pid} = ChildrenModel.get_child_data!(state, child_name)
 
     with {:ok, group} <- CrashGroupUtils.get_group_by_member_pid(child_pid, state) do
+      existing_members =
+        group.members
+        |> Enum.filter(&Map.has_key?(state.children, &1))
+
+      state = remove_children_from_specs(existing_members, state)
+      state = Enum.reduce(existing_members, state, &LinkUtils.unlink_element/2)
+
       {result, state} =
         crash_all_group_members(group, child_name, state)
         |> remove_child_from_crash_group(group, child_pid)
 
       if result == :removed do
-        state =
-          Enum.reduce(group.members, state, fn child_name, state ->
-            with {%{spec_ref: spec_ref}, state} <- pop_in(state, [:children, child_name]) do
-              state = LinkUtils.unlink_element(child_name, state)
-              cleanup_spec_startup(spec_ref, state)
-            else
-              {nil, state} -> state
-            end
-          end)
-
         exec_handle_crash_group_down_callback(
           group.name,
           group.members,
@@ -723,6 +712,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       else
         state
       end
+      |> Bunch.Access.delete_in([:children, child_name])
     else
       {:error, :not_member} when reason == {:shutdown, :membrane_crash_group_kill} ->
         raise Membrane.PipelineError,
