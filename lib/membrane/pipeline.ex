@@ -326,7 +326,7 @@ defmodule Membrane.Pipeline do
         else
           raise PipelineTerminationError, """
           Pipeline #{inspect(pipeline)} hasn't terminated within given timeout (#{inspect(timeout)} ms).
-          If you want to to kill it anyway, use `force?: true` option.
+          If you want to kill it anyway, use `force?: true` option.
           """
         end
     end
