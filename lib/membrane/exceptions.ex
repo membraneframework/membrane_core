@@ -156,21 +156,3 @@ defmodule Membrane.PadDirectionError do
     }
   end
 end
-
-defmodule Membrane.ChildPadRemovedError do
-  defexception [:message]
-
-  @impl true
-  def exception(opts) do
-    child = Keyword.fetch!(opts, :child)
-    pad = Keyword.fetch!(opts, :pad)
-    module = Keyword.fetch!(opts, :module)
-
-    msg = """
-    Child #{inspect(child)} removed pad #{inspect(pad)}, but `handle_child_pad_removed/4`
-    is not implememnted in parent's module (#{inspect(module)})
-    """
-
-    %__MODULE__{message: msg}
-  end
-end
