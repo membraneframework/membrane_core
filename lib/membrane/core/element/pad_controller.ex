@@ -44,7 +44,9 @@ defmodule Membrane.Core.Element.PadController do
           {Endpoint.t(), PadModel.pad_info(), %{toilet: Toilet.t() | nil}}
 
   @type link_call_reply ::
-          :ok | {:ok, link_call_reply_props} | {:error, {:neighbor_dead, reason :: any}}
+          :ok
+          | {:ok, link_call_reply_props}
+          | {:error, {:neighbor_dead, reason :: any} | :unknown_pad}
 
   @default_auto_demand_size_factor 4000
 

@@ -297,23 +297,22 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     if {Membrane.Bin, :itself} in [from.child, to.child] do
       state
     else
-      from_availability = Pad.availability_mode(from.pad_info.availability)
-      to_availability = Pad.availability_mode(to.pad_info.availability)
       params = %{initiator: :parent, stream_format_validation_params: []}
 
       case Message.call(from.pid, :handle_link, [:output, from, to, params]) do
         :ok ->
           put_in(state, [:links, link.id, :linked?], true)
 
-        {:error, {:call_failure, _reason}} when to_availability == :static ->
-          Process.exit(to.pid, :kill)
+        {:error, {:unknown_pad, name, module, pad}} ->
+          Membrane.Logger.debug("""
+          Failed to establish link between #{inspect(from.pad_ref)} and #{inspect(to.pad_ref)}
+          because pad #{inspect(pad)} of component named #{inspect(name)} (#{inspect(module)})
+          is down.
+          """)
+
           state
 
-        {:error, {:neighbor_dead, _reason}} when from_availability == :static ->
-          Process.exit(from.pid, :kill)
-          state
-
-        {:error, {:call_failure, _reason}} when to_availability == :dynamic ->
+        {:error, {:call_failure, _reason}} ->
           Membrane.Logger.debug("""
           Failed to establish link between #{inspect(from.pad_ref)} and #{inspect(to.pad_ref)}
           because #{inspect(from.child)} is down.
@@ -321,7 +320,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
           state
 
-        {:error, {:neighbor_dead, _reason}} when from_availability == :dynamic ->
+        {:error, {:neighbor_dead, _reason}} ->
           Membrane.Logger.debug("""
           Failed to establish link between #{inspect(from.pad_ref)} and #{inspect(to.pad_ref)}
           because #{inspect(to.child)} is down.
