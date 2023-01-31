@@ -22,10 +22,21 @@ defmodule Membrane.Testing.PipelineTest do
     test "works with :default implementation" do
       elements = [elem: Elem, elem2: Elem]
       links = [get_child(:elem) |> get_child(:elem2)]
-      options = [module: :default, spec: elements ++ links, test_process: nil]
+
+      options = [
+        module: :default,
+        spec: elements ++ links,
+        test_process: nil,
+        raise_on_child_pad_removed?: false
+      ]
+
       assert {[spec: spec], state} = Pipeline.handle_init(%{}, options)
 
-      assert state == %Pipeline.State{module: nil, test_process: nil}
+      assert state == %Pipeline.State{
+               module: nil,
+               test_process: nil,
+               raise_on_child_pad_removed?: false
+             }
 
       assert spec == elements ++ links
     end
@@ -34,7 +45,12 @@ defmodule Membrane.Testing.PipelineTest do
       links = [child(:elem, Elem) |> child(:elem2, Elem)]
       options = [module: :default, spec: links, test_process: nil]
       assert {[spec: spec], state} = Pipeline.handle_init(%{}, options)
-      assert state == %Pipeline.State{module: nil, test_process: nil}
+
+      assert state == %Pipeline.State{
+               module: nil,
+               test_process: nil,
+               raise_on_child_pad_removed?: true
+             }
 
       assert spec == links
     end
@@ -47,7 +63,8 @@ defmodule Membrane.Testing.PipelineTest do
       assert state == %Pipeline.State{
                custom_pipeline_state: :state,
                module: MockPipeline,
-               test_process: nil
+               test_process: nil,
+               raise_on_child_pad_removed?: nil
              }
     end
   end
@@ -57,7 +74,12 @@ defmodule Membrane.Testing.PipelineTest do
       links = [child(:elem, Elem) |> child(:elem2, Elem)]
       options = [module: :default, spec: links, test_process: nil]
       assert {[spec: spec], state} = Pipeline.handle_init(%{}, options)
-      assert state == %Pipeline.State{module: nil, test_process: nil}
+
+      assert state == %Pipeline.State{
+               module: nil,
+               test_process: nil,
+               raise_on_child_pad_removed?: true
+             }
 
       assert spec == links
     end
@@ -85,7 +107,7 @@ defmodule Membrane.Testing.PipelineTest do
       end
     end
 
-    defmodule Bin do
+    defmodule TripleElementBin do
       use Membrane.Bin
 
       @impl true
@@ -116,9 +138,9 @@ defmodule Membrane.Testing.PipelineTest do
     end
 
     spec = [
-      child(:bin_1, Bin),
-      child(:bin_2, Bin),
-      child(:bin_3, Bin)
+      child(:bin_1, TripleElementBin),
+      child(:bin_2, TripleElementBin),
+      child(:bin_3, TripleElementBin)
     ]
 
     pipeline = Pipeline.start_supervised!(spec: spec)
