@@ -174,6 +174,17 @@ defmodule Membrane.Bin do
             ) :: callback_return
 
   @doc """
+  Callback invoked when crash of the crash group happens.
+
+  Context passed to this callback contains 2 additional fields: `:members` and `:crash_initiator`.
+  """
+  @callback handle_crash_group_down(
+              group_name :: Child.group(),
+              context :: CallbackContext.t(),
+              state
+            ) :: callback_return
+
+  @doc """
   A callback invoked when the bin is being removed by its parent.
 
   By default it returns `t:Membrane.Bin.Action.terminate/0` with reason `:normal`.
@@ -195,6 +206,7 @@ defmodule Membrane.Bin do
                       handle_child_notification: 4,
                       handle_parent_notification: 3,
                       handle_tick: 3,
+                      handle_crash_group_down: 3,
                       handle_terminate_request: 2,
                       handle_child_pad_removed: 4
 
@@ -337,6 +349,9 @@ defmodule Membrane.Bin do
       def handle_parent_notification(_notification, _ctx, state), do: {[], state}
 
       @impl true
+      def handle_crash_group_down(_group_name, _ctx, state), do: {[], state}
+
+      @impl true
       def handle_terminate_request(_ctx, state), do: {[terminate: :normal], state}
 
       defoverridable handle_init: 2,
@@ -350,6 +365,7 @@ defmodule Membrane.Bin do
                      handle_element_end_of_stream: 4,
                      handle_child_notification: 4,
                      handle_parent_notification: 3,
+                     handle_crash_group_down: 3,
                      handle_terminate_request: 2
     end
   end
