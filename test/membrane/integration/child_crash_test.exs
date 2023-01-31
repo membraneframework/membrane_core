@@ -279,7 +279,6 @@ defmodule Membrane.Integration.ChildCrashTest do
       Testing.Pipeline.terminate(pipeline)
     end
 
-    @tag :dupa
     test "spec is updated" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
@@ -304,6 +303,39 @@ defmodule Membrane.Integration.ChildCrashTest do
 
       assert_pipeline_notified(pipeline, :element, :playing)
       assert_pipeline_notified(pipeline, :second_bin, :playing)
+
+      Testing.Pipeline.terminate(pipeline)
+    end
+
+    test "another crash group from this same spec is still living" do
+      children_definitions =
+        child(:first_bin, %Bin{do_internal_link: false})
+        |> child(:second_bin, Bin)
+        |> child(:element, DynamicElement)
+
+      spec = [
+        {children_definitions, group: :a, crash_group_mode: :temporary},
+        {children_definitions, group: :b, crash_group_mode: :temporary}
+      ]
+
+      pipeline =
+        Testing.Pipeline.start_link_supervised!(
+          spec: spec,
+          raise_on_child_pad_removed?: false
+        )
+
+      assert_pipeline_notified(pipeline, Child.ref(:second_bin, group: :a), :handle_pad_added)
+
+      Testing.Pipeline.get_child_pid!(pipeline, Child.ref(:second_bin, group: :a))
+      |> Process.exit(:kill)
+
+      assert_pipeline_crash_group_down(pipeline, :a)
+      refute_pipeline_notified(pipeline, Child.ref(:second_bin, group: :b), :playing)
+
+      Testing.Pipeline.execute_actions(pipeline, remove_children: Child.ref(:first_bin, group: :b))
+
+      assert_pipeline_notified(pipeline, Child.ref(:second_bin, group: :b), :playing)
+      assert_pipeline_notified(pipeline, Child.ref(:element, group: :b), :playing)
 
       Testing.Pipeline.terminate(pipeline)
     end
