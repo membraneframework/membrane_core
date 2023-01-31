@@ -480,7 +480,7 @@ defmodule Membrane.Testing.Pipeline do
     if state.raise_on_child_pad_removed? do
       raise """
       Child #{inspect(child)} removed it's pad #{inspect(pad)}. If you want to
-      handle such a scenario, pass `raise_on_child_pad_removed?: true` option to
+      handle such a scenario, pass `raise_on_child_pad_removed?: false` option to
       `Membrane.Testing.Pipeline.start_*/2` or pass there a pipeline module
       implementing this callback via `:name` option.
       """
