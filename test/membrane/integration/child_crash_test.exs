@@ -4,7 +4,6 @@ defmodule Membrane.Integration.ChildCrashTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  alias Membrane.Testing.PipelineTest.DynamicElement
   alias Membrane.Support.ChildCrashTest
   alias Membrane.Testing
 
