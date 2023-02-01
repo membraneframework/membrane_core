@@ -225,7 +225,7 @@ defmodule Membrane.ChildrenSpec do
   #### Limitations
 
   At this moment crash groups are only useful for elements with dynamic pads.
-  Crash groups work only in pipelines and are not supported in bins.
+  Crash groups work in pipelines and bins as well.
 
   ### Log metadata
   `:log_metadata` field can be used to set the `Membrane.Logger` metadata for all children in the given children specification.
@@ -237,9 +237,8 @@ defmodule Membrane.ChildrenSpec do
   ```
   {[
     child(:a, A) |> child(:b, B),
-    {child(:c, C), crash_group:
-    {:second, :temporary}}
-  ], crash_group_mode: :temporary, group: :first, node: some_node}
+    {child(:c, C), group: :second, crash_group_mode: :temporary}
+  ], group: :first, crash_group_mode: :temporary, node: some_node}
   ```
 
   Child `:c` will be spawned in the `:second` crash group, while children `:a` and `:b` will be spawned in the `:first` crash group.
