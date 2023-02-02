@@ -297,7 +297,11 @@ defmodule Membrane.Pipeline do
   @doc """
   Terminates the pipeline.
 
-  Accepts two options:
+  Accepts three options:
+    * `asynchronous?` - if set to `true`, pipline termination won't be blocking and
+      will be executed in the process, which pid is returned as function result. If
+      set to `false`, pipeline termination will be blocking and will be executed in
+      the process, that called this function.
     * `timeout` - tells how much time (ms) to wait for pipeline to get gracefully
       terminated. Defaults to 5000.
     * `force?` - if set to `true` and pipeline is still alive after `timeout`,
@@ -305,10 +309,27 @@ defmodule Membrane.Pipeline do
       `:kill`, and function will return `{:error, :timeout}`. If set to `false` and
       pipeline is still alive after `timeout`, function will raise an error.
       Defaults to `false`.
+
+  Returns:
+    * `{:ok, pid}` - if option `asynchronous?: true` was passed.
+    * `:ok` - if pipeline was gracefully terminated within `timeout`.
+    * `{:error, :timeout}` - if pipeline was killed after a `timeout`.
   """
   @spec terminate(pipeline :: pid, timeout: non_neg_integer() | :infinity, force?: boolean()) ::
-          :ok | {:error, :timeout}
+          :ok | {:ok, pid()} | {:error, :timeout}
   def terminate(pipeline, opts \\ []) do
+    {asynchronous?, opts} = Keyword.pop(opts, :asynchronous?, false)
+
+    if asynchronous? do
+      Task.start(__MODULE__, :run_terminate, [pipeline, opts])
+    else
+      run_terminate(pipeline, opts)
+    end
+  end
+
+  @spec run_terminate(pipeline :: pid, timeout: non_neg_integer() | :infinity, force?: boolean()) ::
+          :ok | {:error, :timeout}
+  def run_terminate(pipeline, opts) do
     timeout = Keyword.get(opts, :timeout, 5000)
     force? = Keyword.get(opts, :force?, false)
 

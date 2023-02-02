@@ -193,7 +193,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
         )
 
       monitor = Process.monitor(pipeline)
-      spawn(fn -> Testing.Pipeline.terminate(pipeline, timeout: :infinity) end)
+      Testing.Pipeline.terminate(pipeline, asynchronous?: true)
       Process.sleep(100)
 
       assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
@@ -211,7 +211,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
         )
 
       monitor = Process.monitor(pipeline)
-      spawn(fn -> Testing.Pipeline.terminate(pipeline, timeout: :infinity) end)
+      Testing.Pipeline.terminate(pipeline, asynchronous?: true)
       Process.sleep(100)
 
       assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
@@ -231,7 +231,7 @@ defmodule Membrane.Integration.ChildRemovalTest do
         )
 
       pipeline_monitor = Process.monitor(pipeline)
-      spawn(fn -> Testing.Pipeline.terminate(pipeline, timeout: :infinity) end)
+      Testing.Pipeline.terminate(pipeline, asynchronous?: true)
       Process.sleep(100)
 
       assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
