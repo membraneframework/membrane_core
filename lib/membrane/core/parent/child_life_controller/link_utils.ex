@@ -44,7 +44,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
       opposite_endpoint(link, child)
       |> case do
         %Endpoint{child: {Membrane.Bin, :itself}} = bin_endpoint ->
-          PadController.remove_dynamic_pad!(bin_endpoint.pad_ref, state)
+          PadController.remove_pad!(bin_endpoint.pad_ref, state)
 
         %Endpoint{} = endpoint ->
           Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
@@ -95,7 +95,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
   end
 
   defp unlink_endpoint(%Endpoint{child: {Membrane.Bin, :itself}} = endpoint, state) do
-    PadController.remove_dynamic_pad!(endpoint.pad_ref, state)
+    PadController.remove_pad!(endpoint.pad_ref, state)
   end
 
   defp unlink_endpoint(%Endpoint{} = endpoint, state) do
