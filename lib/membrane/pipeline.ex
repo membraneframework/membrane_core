@@ -315,7 +315,7 @@ defmodule Membrane.Pipeline do
     * `:ok` - if pipeline was gracefully terminated within `timeout`.
     * `{:error, :timeout}` - if pipeline was killed after a `timeout`.
   """
-  @spec terminate(pipeline :: pid, timeout: non_neg_integer() | :infinity, force?: boolean()) ::
+  @spec terminate(pipeline :: pid, timeout: timeout(), force?: boolean()) ::
           :ok | {:ok, pid()} | {:error, :timeout}
   def terminate(pipeline, opts \\ []) do
     {asynchronous?, opts} = Keyword.pop(opts, :asynchronous?, false)
@@ -327,7 +327,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  @spec run_terminate(pipeline :: pid, timeout: non_neg_integer() | :infinity, force?: boolean()) ::
+  @spec run_terminate(pipeline :: pid, timeout: timeout(), force?: boolean()) ::
           :ok | {:error, :timeout}
   def run_terminate(pipeline, opts) do
     timeout = Keyword.get(opts, :timeout, 5000)
@@ -353,7 +353,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  @spec call(pid, any, integer()) :: :ok
+  @spec call(pid, any, timeout()) :: :ok
   def call(pipeline, message, timeout \\ 5000) do
     GenServer.call(pipeline, message, timeout)
   end
