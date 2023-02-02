@@ -451,7 +451,7 @@ defmodule Membrane.Testing.Assertions do
 
   @doc """
   Asserts that `Membrane.Testing.Pipeline` child with name `child` removed or is going to
-  remove it's pad with ref `pad` withing the `timeout` period specified in miliseconds.
+  remove it's pad with ref `pad` within the `timeout` period specified in milliseconds.
   """
   defmacro assert_child_pad_removed(
              pipeline,
