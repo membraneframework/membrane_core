@@ -164,8 +164,8 @@ defmodule Membrane.Pad do
                   (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == __MODULE__ and
                      term |> elem(1) |> is_atom)
 
-
   defguard is_static_pad_ref(term) when is_atom(term)
+
   defguard is_dynamic_pad_ref(term)
            when term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == __MODULE__ and
                   term |> elem(1) |> is_atom

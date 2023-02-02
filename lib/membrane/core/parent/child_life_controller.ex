@@ -569,11 +569,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         dependencies =
           spec_data.dependencies
           |> update_spec_dependencies(children_set)
-          # |> Enum.map(fn {ref, spec_children} ->
-          #   {ref, Enum.reject(spec_children, &(&1 in children_set))}
-          # end)
-          # |> Enum.reject(&match?({_ref, []}, &1))
-          # |> Map.new()
+
+        # |> Enum.map(fn {ref, spec_children} ->
+        #   {ref, Enum.reject(spec_children, &(&1 in children_set))}
+        # end)
+        # |> Enum.reject(&match?({_ref, []}, &1))
+        # |> Map.new()
 
         spec_data = %{
           spec_data
@@ -617,6 +618,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           endpoints_to_remove ->
             spec_data.dependencies
             |> update_spec_dependencies(endpoints_to_remove)
+
             # spec_data.dependencies
             # |> Enum.map(fn {spec_ref, spec_children} ->
             #   {spec_ref, Enum.reject(spec_children, &(&1 in endpoints_to_remove))}
