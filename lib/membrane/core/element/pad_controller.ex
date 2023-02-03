@@ -85,7 +85,18 @@ defmodule Membrane.Core.Element.PadController do
         nil
       end
 
-    do_handle_link(endpoint, other_endpoint, info, toilet, link_props, state)
+    meas =
+      if direction == :input do
+        %{
+          path: Membrane.ComponentPath.get(),
+          ref: endpoint.pad_ref,
+          awaiting_buffers: :atomics.new(1, [])
+        }
+      else
+        nil
+      end
+
+    do_handle_link(endpoint, other_endpoint, info, toilet, meas, link_props, state)
   end
 
   defp do_handle_link(
@@ -93,6 +104,7 @@ defmodule Membrane.Core.Element.PadController do
          other_endpoint,
          info,
          toilet,
+         meas,
          %{initiator: :parent} = props,
          state
        ) do
@@ -106,7 +118,8 @@ defmodule Membrane.Core.Element.PadController do
           other_info: info,
           link_metadata: %{
             toilet: toilet,
-            observability_metadata: Observability.setup_link(endpoint.pad_ref)
+            observability_metadata: Observability.setup_link(endpoint.pad_ref),
+            meas: meas
           },
           stream_format_validation_params: []
         }
@@ -144,6 +157,7 @@ defmodule Membrane.Core.Element.PadController do
          other_endpoint,
          info,
          toilet,
+         meas,
          %{initiator: :sibling} = link_props,
          state
        ) do
@@ -154,7 +168,12 @@ defmodule Membrane.Core.Element.PadController do
     } = link_props
 
     Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
-    link_metadata = %{link_metadata | toilet: link_metadata.toilet || toilet}
+
+    link_metadata = %{
+      link_metadata
+      | toilet: link_metadata.toilet || toilet,
+        meas: link_metadata.meas || meas
+    }
 
     :ok =
       Child.PadController.validate_pad_mode!(
@@ -231,7 +250,8 @@ defmodule Membrane.Core.Element.PadController do
         stream_format: nil,
         start_of_stream?: false,
         end_of_stream?: false,
-        associated_pads: []
+        associated_pads: [],
+        meas: metadata.meas
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, state))

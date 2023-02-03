@@ -195,6 +195,13 @@ defmodule Membrane.Core.Child.PadsSpecs do
               ) do
       config = if component == :bin, do: Map.delete(config, :demand_mode), else: config
 
+      config =
+        if config.mode == :pull do
+          Map.delete(%{config | mode: :push}, :demand_mode)
+        else
+          config
+        end
+
       config
       |> Map.put(:direction, direction)
       |> Map.put(:name, name)

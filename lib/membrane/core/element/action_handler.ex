@@ -371,8 +371,9 @@ defmodule Membrane.Core.Element.ActionHandler do
         raise PadDirectionError, action: :demand, direction: :output, pad: pad_ref
 
       %{mode: :push} ->
-        raise ElementError,
-              "Tried to request a demand on pad #{inspect(pad_ref)} working in push mode"
+        # raise ElementError,
+        #       "Tried to request a demand on pad #{inspect(pad_ref)} working in push mode"
+        state
 
       %{demand_mode: :auto} ->
         raise ElementError,
