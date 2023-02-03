@@ -30,7 +30,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     %CrashGroup{members: members_names} = crash_group
 
     Enum.reduce(members_names, state, fn member_name, state ->
-      unlink_element(member_name, state)
+      with %{children: %{^member_name => _data}} <- state do
+        unlink_element(member_name, state)
+      end
     end)
   end
 
@@ -42,7 +44,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
       opposite_endpoint(link, child)
       |> case do
         %Endpoint{child: {Membrane.Bin, :itself}} = bin_endpoint ->
-          PadController.remove_dynamic_pad!(bin_endpoint.pad_ref, state)
+          PadController.remove_pad!(bin_endpoint.pad_ref, state)
 
         %Endpoint{} = endpoint ->
           Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
@@ -58,19 +60,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
   def remove_link(child_name, pad_ref, state) do
     with {:ok, link} <- get_link(state.links, child_name, pad_ref) do
       state =
-        if {Membrane.Bin, :itself} in [link.from.child, link.to.child] do
-          child_endpoint = opposite_endpoint(link, {Membrane.Bin, :itself})
-          Message.send(child_endpoint.pid, :handle_unlink, child_endpoint.pad_ref)
-
-          bin_endpoint = opposite_endpoint(link, child_endpoint.child)
-          PadController.remove_dynamic_pad!(bin_endpoint.pad_ref, state)
-        else
-          for endpoint <- [link.from, link.to] do
-            Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
-          end
-
-          state
-        end
+        [link.to, link.from]
+        |> Enum.reduce(state, &unlink_endpoint/2)
 
       state = ChildLifeController.remove_link_from_spec(link.id, state)
       delete_link(link, state)
@@ -98,15 +89,18 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     state = %{state | links: Map.new(links, &{&1.id, &1})}
 
     Enum.reduce(dropped_links, state, fn link, state ->
-      case endpoint_to_unlink(child_name, link) do
-        %Endpoint{child: {Membrane.Bin, :itself}, pad_ref: pad_ref} ->
-          PadController.remove_dynamic_pad!(pad_ref, state)
-
-        %Endpoint{} = endpoint ->
-          Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
-          state
-      end
+      endpoint_to_unlink(child_name, link)
+      |> unlink_endpoint(state)
     end)
+  end
+
+  defp unlink_endpoint(%Endpoint{child: {Membrane.Bin, :itself}} = endpoint, state) do
+    PadController.remove_pad!(endpoint.pad_ref, state)
+  end
+
+  defp unlink_endpoint(%Endpoint{} = endpoint, state) do
+    Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+    state
   end
 
   defp endpoint_to_unlink(child_name, %Link{from: %Endpoint{child: child_name}, to: to}), do: to
