@@ -160,6 +160,12 @@ defmodule Membrane.Core.Element do
       :erlang.process_info(self(), :message_queue_len) |> elem(1)
     )
 
+    :ets.insert(
+      :membrane_core_meas,
+      {{:msg_queue_len, Membrane.ComponentPath.get(), nil},
+       :erlang.process_info(self(), :message_queue_len) |> elem(1)}
+    )
+
     do_handle_info(message, state)
   end
 

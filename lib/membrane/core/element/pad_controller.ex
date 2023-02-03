@@ -79,16 +79,27 @@ defmodule Membrane.Core.Element.PadController do
         nil
       end
 
-    do_handle_link(endpoint, other_endpoint, info, toilet, link_props, state)
+    meas =
+      if direction == :input do
+        %{
+          path: Membrane.ComponentPath.get(),
+          ref: endpoint.pad_ref,
+          awaiting_buffers: :atomics.new(1, [])
+        }
+      else
+        nil
+      end
+
+    do_handle_link(endpoint, other_endpoint, info, toilet, meas, link_props, state)
   end
 
-  defp do_handle_link(endpoint, other_endpoint, info, toilet, %{initiator: :parent}, state) do
+  defp do_handle_link(endpoint, other_endpoint, info, toilet, meas, %{initiator: :parent}, state) do
     handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
         Pad.opposite_direction(info.direction),
         other_endpoint,
         endpoint,
-        %{initiator: :sibling, other_info: info, link_metadata: %{toilet: toilet}}
+        %{initiator: :sibling, other_info: info, link_metadata: %{toilet: toilet, meas: meas}}
       ])
 
     case handle_link_response do
@@ -124,12 +135,17 @@ defmodule Membrane.Core.Element.PadController do
          other_endpoint,
          info,
          toilet,
+         meas,
          %{initiator: :sibling} = link_props,
          state
        ) do
     %{other_info: other_info, link_metadata: link_metadata} = link_props
 
-    link_metadata = %{link_metadata | toilet: link_metadata.toilet || toilet}
+    link_metadata = %{
+      link_metadata
+      | toilet: link_metadata.toilet || toilet,
+        meas: link_metadata.meas || meas
+    }
 
     :ok =
       Child.PadController.validate_pad_mode!(
@@ -204,7 +220,8 @@ defmodule Membrane.Core.Element.PadController do
         caps: nil,
         start_of_stream?: false,
         end_of_stream?: false,
-        associated_pads: []
+        associated_pads: [],
+        meas: metadata.meas
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))

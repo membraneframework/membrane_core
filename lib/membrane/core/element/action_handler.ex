@@ -303,6 +303,26 @@ defmodule Membrane.Core.Element.ActionHandler do
            other_ref: other_ref
          }
          when caps != nil <- pad_data do
+      buf_cnt = length(buffers)
+
+      [{_key, bufs_sent} | _] =
+        :ets.lookup(
+          :membrane_core_meas,
+          {:total_buffers_sent, Membrane.ComponentPath.get(), pad_ref}
+        ) ++ [{nil, 0}]
+
+      :ets.insert(
+        :membrane_core_meas,
+        {{:total_buffers_sent, Membrane.ComponentPath.get(), pad_ref}, bufs_sent + buf_cnt}
+      )
+
+      awaiting_buffers = :atomics.add_get(pad_data.meas.awaiting_buffers, 1, buf_cnt)
+
+      :ets.insert(
+        :membrane_core_meas,
+        {{:awaiting_buffers, pad_data.meas.path, pad_data.meas.ref}, awaiting_buffers}
+      )
+
       state =
         DemandHandler.handle_outgoing_buffers(pad_ref, pad_data, buffers, state)
         |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
@@ -379,8 +399,9 @@ defmodule Membrane.Core.Element.ActionHandler do
         raise PadDirectionError, action: :demand, direction: :output, pad: pad_ref
 
       %{mode: :push} ->
-        raise ElementError,
-              "Tried to request a demand on pad #{inspect(pad_ref)} working in push mode"
+        # raise ElementError,
+        #       "Tried to request a demand on pad #{inspect(pad_ref)} working in push mode"
+        state
 
       %{demand_mode: :auto} ->
         raise ElementError,
