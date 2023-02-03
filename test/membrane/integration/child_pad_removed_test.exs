@@ -133,7 +133,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
     test "sibling is unlinked" do
       for bin_actions <- [
             [remove_children: :source],
-            [remove_link: {:source, Pad.ref(:output, 1)}]
+            [remove_child_pad: {:source, Pad.ref(:output, 1)}]
           ] do
         pipeline = start_link_pipeline!(DynamicBin, DynamicSink)
 
@@ -158,7 +158,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
     test "sibling linked via static pad raises" do
       for actions <- [
             [remove_children: :source],
-            [remove_link: {:source, Pad.ref(:output, 1)}]
+            [remove_child_pad: {:source, Pad.ref(:output, 1)}]
           ] do
         pipeline = start_pipeline!(DynamicBin, StaticSink)
 
@@ -181,7 +181,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
     test "and sibling linked via static pad is removed, pipeline is not raising" do
       for bin_actions <- [
             [remove_children: :source],
-            [remove_link: {:source, Pad.ref(:output, 1)}]
+            [remove_child_pad: {:source, Pad.ref(:output, 1)}]
           ] do
         pipeline = start_link_pipeline!(DynamicBin, StaticSink, remove_children: :sink)
 

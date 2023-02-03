@@ -58,7 +58,7 @@ defmodule Membrane.Bin.Action do
 
   Removed link has to have dynamic pads on both ends.
   """
-  @type remove_link :: {:remove_link, {Child.name(), Pad.ref()}}
+  @type remove_child_pad :: {:remove_child_pad, {Child.name(), Pad.ref()}}
 
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Bin.handle_tick/3` callback
@@ -134,7 +134,7 @@ defmodule Membrane.Bin.Action do
           | notify_parent
           | spec
           | remove_children
-          | remove_link
+          | remove_child_pad
           | start_timer
           | timer_interval
           | stop_timer

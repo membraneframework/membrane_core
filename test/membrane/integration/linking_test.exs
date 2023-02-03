@@ -472,7 +472,7 @@ defmodule Membrane.Integration.LinkingTest do
     assert_start_of_stream(pipeline, :sink)
   end
 
-  test "Parent successfully unlinks children with dynamic pads using :remove_link action" do
+  test "Parent successfully unlinks children with dynamic pads using :remove_child_pad action" do
     spec =
       [
         child(:source, __MODULE__.Element),
@@ -490,8 +490,8 @@ defmodule Membrane.Integration.LinkingTest do
     for pad_id <- 1..10 do
       actions =
         if rem(pad_id, 2) == 0,
-          do: [remove_link: {:source, Pad.ref(:output, pad_id)}],
-          else: [remove_link: {:sink, Pad.ref(:input, pad_id)}]
+          do: [remove_child_pad: {:source, Pad.ref(:output, pad_id)}],
+          else: [remove_child_pad: {:sink, Pad.ref(:input, pad_id)}]
 
       Testing.Pipeline.execute_actions(pipeline, actions)
 

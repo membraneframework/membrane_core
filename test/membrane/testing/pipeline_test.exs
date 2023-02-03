@@ -234,8 +234,8 @@ defmodule Membrane.Testing.PipelineTest do
       end
 
       @impl true
-      def handle_parent_notification(:remove_link, _ctx, state) do
-        {[remove_link: {:element, Pad.ref(:output, 1)}], state}
+      def handle_parent_notification(:remove_child_pad, _ctx, state) do
+        {[remove_child_pad: {:element, Pad.ref(:output, 1)}], state}
       end
     end
 
@@ -248,7 +248,7 @@ defmodule Membrane.Testing.PipelineTest do
       monitor_ref = Process.monitor(pipeline)
 
       assert_pipeline_notified(pipeline, :sink, {:pad_added, _pad})
-      Pipeline.execute_actions(pipeline, notify_child: {:bin, :remove_link})
+      Pipeline.execute_actions(pipeline, notify_child: {:bin, :remove_child_pad})
 
       assert_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
     end
@@ -262,7 +262,7 @@ defmodule Membrane.Testing.PipelineTest do
       monitor_ref = Process.monitor(pipeline)
 
       assert_pipeline_notified(pipeline, :sink, {:pad_added, _pad})
-      Pipeline.execute_actions(pipeline, notify_child: {:bin, :remove_link})
+      Pipeline.execute_actions(pipeline, notify_child: {:bin, :remove_child_pad})
 
       refute_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
     end
