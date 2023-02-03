@@ -145,6 +145,23 @@ jobs:
       - run: mix dialyzer
       - save_plt_cache
 
+  test_performance: 
+    docker:
+      - image: membraneframeworklabs/docker_membrane
+        environment:
+          MIX_ENV: test
+      working_directory: ~/app
+
+    steps:
+      - attach_workspace:
+          at: .
+      - restore_build_cache:
+          env: test
+      - run: mix compile
+      - run: mix benchmark
+    
+
+
 workflows:
   version: 2
   build_and_test:
@@ -157,5 +174,10 @@ workflows:
           requires:
             - get_deps
       - lint:
+          requires:
+            - get_deps
+      - test_performance:
+          machine: true
+          resource_class: membraneframework/core-performance-test
           requires:
             - get_deps
