@@ -146,7 +146,8 @@ jobs:
       - save_plt_cache
 
   test_performance: 
-    machine: true
+    docker:
+      - image: membraneframeworklabs/docker_membrane
     resource_class: membraneframework/core-performance-test
     working_directory: ~/app
 
