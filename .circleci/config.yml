@@ -150,7 +150,8 @@ jobs:
       - image: membraneframeworklabs/docker_membrane
         environment:
           MIX_ENV: test
-      working_directory: ~/app
+
+    working_directory: ~/app
 
     steps:
       - attach_workspace:
