@@ -6,7 +6,7 @@ defmodule Membrane.Core.Parent.Link do
   alias __MODULE__.Endpoint
 
   @enforce_keys [:id, :from, :to]
-  defstruct @enforce_keys ++ [linked?: false, spec_ref: nil]
+  defstruct @enforce_keys ++ [linked?: false, spec_ref: nil, cut?: false]
 
   @type id :: reference()
 
@@ -15,6 +15,7 @@ defmodule Membrane.Core.Parent.Link do
           from: Endpoint.t(),
           to: Endpoint.t(),
           linked?: boolean(),
+          cut?: boolean(),
           spec_ref: Membrane.Core.Parent.ChildLifeController.spec_ref()
         }
 end

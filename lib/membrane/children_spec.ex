@@ -540,7 +540,8 @@ defmodule Membrane.ChildrenSpec do
           target_queue_size: number | nil,
           min_demand_factor: number | nil,
           auto_demand_size: number | nil,
-          throttling_factor: number | nil
+          throttling_factor: number | nil,
+          implicit_unlink?: boolean()
         ) :: builder() | no_return
   def via_in(builder, pad, props \\ [])
 
@@ -565,7 +566,8 @@ defmodule Membrane.ChildrenSpec do
         min_demand_factor: [default: nil],
         auto_demand_size: [default: nil],
         toilet_capacity: [default: nil],
-        throttling_factor: [default: 1]
+        throttling_factor: [default: 1],
+        implicit_unlink?: [default: true]
       )
       |> case do
         {:ok, props} ->
@@ -578,7 +580,7 @@ defmodule Membrane.ChildrenSpec do
     if builder.status == :from_pad do
       builder
     else
-      via_out(builder, :output)
+      builder |> via_out(:output)
     end
     |> then(&%Builder{&1 | status: :to_pad, to_pad: pad, to_pad_props: Enum.into(props, %{})})
   end

@@ -18,7 +18,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError
   alias Membrane.Pad
-  alias Membrane.ParentError
 
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
@@ -56,49 +55,63 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     delete_link(link, state)
   end
 
-  @spec remove_link(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
-  def remove_link(child_name, pad_ref, state) do
-    with {:ok, link} <- get_link(state.links, child_name, pad_ref) do
-      state =
-        [link.to, link.from]
-        |> Enum.reduce(state, &unlink_endpoint/2)
+  @spec remove_link!(Link.id(), Parent.state()) :: Parent.state()
+  def remove_link!(link_id, state) do
+    link = Map.fetch!(state.links, link_id)
 
-      state = ChildLifeController.remove_link_from_spec(link.id, state)
-      delete_link(link, state)
-    else
-      {:error, :not_found} ->
-        with %{^child_name => _child_entry} <- state.children do
-          raise ParentError, """
-          Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but this child does not have this pad linked
-          """
-        end
+    state =
+      [link.to, link.from]
+      |> Enum.reduce(state, &unlink_endpoint/2)
 
-        raise ParentError, """
-        Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but such a child does not exist
-        """
-    end
+    state = ChildLifeController.remove_link_from_spec(link_id, state)
+    delete_link(link, state)
   end
 
   @spec unlink_element(Child.name(), Parent.state()) :: Parent.state()
   def unlink_element(child_name, state) do
-    {dropped_links, links} =
+    grouped_links =
       state.links
       |> Map.values()
-      |> Enum.split_with(&(child_name in [&1.from.child, &1.to.child]))
+      |> Enum.group_by(fn
+        %Link{from: %{child: ^child_name}, to: %{pad_props: %{implicit_unlink?: false}}} ->
+          :cut_links
 
-    state = %{state | links: Map.new(links, &{&1.id, &1})}
+        %Link{from: %{child: ^child_name}} ->
+          :deleted_links
 
-    Enum.reduce(dropped_links, state, fn link, state ->
-      endpoint_to_unlink(child_name, link)
-      |> unlink_endpoint(state)
-    end)
+        %Link{to: %{child: ^child_name}} ->
+          :deleted_links
+
+        %Link{} ->
+          :unchanged_links
+      end)
+
+    deleted_links = Map.get(grouped_links, :deleted_links, [])
+    cut_links = Map.get(grouped_links, :cut_links, [])
+    unchanged_links = Map.get(grouped_links, :unchanged_links, [])
+
+    state =
+      Enum.reduce(deleted_links, state, fn link, state ->
+        case endpoint_to_unlink(child_name, link) do
+          %Endpoint{} = endpoint -> unlink_endpoint(endpoint, state)
+          nil -> state
+        end
+      end)
+
+    links =
+      Enum.map(cut_links, &%{&1 | from: nil, cut?: true})
+      |> Enum.concat(unchanged_links)
+      |> Map.new(&{&1.id, &1})
+
+    %{state | links: links}
   end
 
-  defp unlink_endpoint(%Endpoint{child: {Membrane.Bin, :itself}} = endpoint, state) do
+  @spec unlink_endpoint(Endpoint.t(), Parent.state()) :: Parent.state()
+  def unlink_endpoint(%Endpoint{child: {Membrane.Bin, :itself}} = endpoint, state) do
     PadController.remove_pad!(endpoint.pad_ref, state)
   end
 
-  defp unlink_endpoint(%Endpoint{} = endpoint, state) do
+  def unlink_endpoint(%Endpoint{} = endpoint, state) do
     Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
     state
   end

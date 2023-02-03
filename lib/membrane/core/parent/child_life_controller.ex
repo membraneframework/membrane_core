@@ -15,6 +15,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     SpecificationParser
   }
 
+  alias Membrane.Core.Parent.Link.Endpoint
+
   alias Membrane.Pad
   alias Membrane.ParentError
 
@@ -530,10 +532,44 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     Parent.ChildrenModel.update_children!(state, refs, &%{&1 | terminating?: true})
   end
 
-  @spec handle_remove_link(Child.name(), Pad.ref(), Parent.state()) ::
+  @spec handle_remove_child_pad(Child.name(), Pad.ref(), Parent.state()) ::
           Parent.state()
-  def handle_remove_link(child_name, pad_ref, state) do
-    LinkUtils.remove_link(child_name, pad_ref, state)
+  def handle_remove_child_pad(child, pad, state) do
+    Enum.find(state.links, fn {_id, link} ->
+      link_contanins_child_with_pad?(link, child, pad)
+    end)
+    |> case do
+      {_id,
+       %Link{
+         from: %Endpoint{child: ^child, pad_ref: ^pad},
+         to: %Endpoint{pad_props: %{implicit_unlink?: false}}
+       } = link} ->
+        # TODO: handle case when spec is not ready yet
+        LinkUtils.unlink_endpoint(link.from, state)
+        |> update_in([:links, link.id], &%{&1 | from: nil, cut?: true})
+
+      {_id, %Link{} = link} ->
+        LinkUtils.remove_link!(link.id, state)
+
+      nil ->
+        if Map.has_key?(state.children, child) do
+          raise ParentError, """
+          Attempted to unlink pad #{inspect(pad)} of child #{inspect(child)}, but this child does not have this pad linked
+          """
+        end
+
+        raise ParentError, """
+        Attempted to unlink pad #{inspect(pad)} of child #{inspect(child)}, but such a child does not exist
+        """
+    end
+  end
+
+  defp link_contanins_child_with_pad?(link, child, pad) do
+    case link do
+      %Link{from: %Endpoint{child: ^child, pad_ref: ^pad}} -> true
+      %Link{to: %Endpoint{child: ^child, pad_ref: ^pad}} -> true
+      %Link{} -> false
+    end
   end
 
   defp remove_children_from_specs(children, state) do
