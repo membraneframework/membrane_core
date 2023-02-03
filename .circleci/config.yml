@@ -146,11 +146,8 @@ jobs:
       - save_plt_cache
 
   test_performance: 
-    docker:
-      - image: membraneframeworklabs/docker_membrane
-        environment:
-          MIX_ENV: test
-
+    machine: true
+    resource_class: membraneframework/core-performance-test
     working_directory: ~/app
 
     steps:
@@ -178,7 +175,5 @@ workflows:
           requires:
             - get_deps
       - test_performance:
-          machine: true
-          resource_class: membraneframework/core-performance-test
           requires:
             - get_deps
