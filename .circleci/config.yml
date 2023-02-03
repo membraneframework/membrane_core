@@ -148,6 +148,8 @@ jobs:
   test_performance: 
     docker:
       - image: membraneframeworklabs/docker_membrane
+        environment:
+          MIX_ENV: test
     resource_class: membraneframework/core-performance-test
     working_directory: ~/app
 
