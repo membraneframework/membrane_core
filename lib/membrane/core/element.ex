@@ -166,7 +166,16 @@ defmodule Membrane.Core.Element do
        :erlang.process_info(self(), :message_queue_len) |> elem(1)}
     )
 
-    do_handle_info(message, state)
+    result = do_handle_info(message, state)
+
+    {:reductions, reds} = Process.info(self(), :reductions)
+
+    :ets.insert(
+      :membrane_core_meas,
+      {{:total_reductions, Membrane.ComponentPath.get(), nil}, reds}
+    )
+
+    result
   end
 
   @compile {:inline, do_handle_info: 2}
