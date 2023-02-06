@@ -166,7 +166,7 @@ defmodule Mix.Tasks.Benchmark do
           )
       )
 
-    do_loop(pipeline_pid, initial_time, initial_memory)
+    do_loop(pipeline_pid)
 
     time = :os.system_time(:milli_seconds) - initial_time
     memory = meassure_memory() - initial_memory
