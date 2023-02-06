@@ -159,8 +159,8 @@ jobs:
       - run: docker run -v ./:/root/app -w /root/app membraneframeworklabs/docker_membrane mix benchmark start ~/results.res
       - run: git checkout master
       - run: cp ~/benchmark.ex lib/
-      - run: docker run -v ./:/root/app -w /root/app membraneframeworklabs/docker_membrane benchmark start ~/results_ref.res
-      - run: docker run -v ./:/root/app -w /root/app membraneframeworklabs/docker_membrane compare ~/results.res ~/results_ref.res
+      - run: docker run -v ./:/root/app -w /root/app membraneframeworklabs/docker_membrane mix benchmark start ~/results_ref.res
+      - run: docker run -v ./:/root/app -w /root/app membraneframeworklabs/docker_membrane mix benchmark compare ~/results.res ~/results_ref.res
     
 
 
