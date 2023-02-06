@@ -24,11 +24,14 @@ defmodule Membrane.Core.Element.BufferController do
   def handle_buffer(pad_ref, buffers, state) do
     data = PadModel.get_data!(state, pad_ref)
     %{direction: :input} = data
-    awaiting_buffers = :atomics.sub_get(data.meas.awaiting_buffers, 1, length(buffers))
 
-    :ets.insert(
-      :membrane_core_meas,
-      {{:awaiting_buffers, data.meas.path, data.meas.ref}, awaiting_buffers}
+    require Membrane.Core.Metrics
+
+    Membrane.Core.Metrics.report(
+      :awaiting_buffers,
+      :atomics.sub_get(data.meas.awaiting_buffers, 1, length(buffers)),
+      component_path: data.meas.path,
+      id: data.meas.ref
     )
 
     do_handle_buffer(pad_ref, data, buffers, state)

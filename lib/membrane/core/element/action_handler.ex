@@ -303,24 +303,17 @@ defmodule Membrane.Core.Element.ActionHandler do
            other_ref: other_ref
          }
          when caps != nil <- pad_data do
-      buf_cnt = length(buffers)
+      require Membrane.Core.Metrics
 
-      [{_key, bufs_sent} | _] =
-        :ets.lookup(
-          :membrane_core_meas,
-          {:total_buffers_sent, Membrane.ComponentPath.get(), pad_ref}
-        ) ++ [{nil, 0}]
-
-      :ets.insert(
-        :membrane_core_meas,
-        {{:total_buffers_sent, Membrane.ComponentPath.get(), pad_ref}, bufs_sent + buf_cnt}
+      Membrane.Core.Metrics.report_update(:total_buffers_sent, 0, &(&1 + length(buffers)),
+        id: pad_ref
       )
 
-      awaiting_buffers = :atomics.add_get(pad_data.meas.awaiting_buffers, 1, buf_cnt)
-
-      :ets.insert(
-        :membrane_core_meas,
-        {{:awaiting_buffers, pad_data.meas.path, pad_data.meas.ref}, awaiting_buffers}
+      Membrane.Core.Metrics.report(
+        :awaiting_buffers,
+        :atomics.add_get(pad_data.meas.awaiting_buffers, 1, length(buffers)),
+        component_path: pad_data.meas.path,
+        id: pad_data.meas.ref
       )
 
       state =

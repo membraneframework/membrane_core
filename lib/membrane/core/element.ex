@@ -160,19 +160,18 @@ defmodule Membrane.Core.Element do
       :erlang.process_info(self(), :message_queue_len) |> elem(1)
     )
 
-    :ets.insert(
-      :membrane_core_meas,
-      {{:msg_queue_len, Membrane.ComponentPath.get(), nil},
-       :erlang.process_info(self(), :message_queue_len) |> elem(1)}
+    require Membrane.Core.Metrics
+
+    Membrane.Core.Metrics.report(
+      :msg_queue_len,
+      :erlang.process_info(self(), :message_queue_len) |> elem(1)
     )
 
     result = do_handle_info(message, state)
 
-    {:reductions, reds} = Process.info(self(), :reductions)
-
-    :ets.insert(
-      :membrane_core_meas,
-      {{:total_reductions, Membrane.ComponentPath.get(), nil}, reds}
+    Membrane.Core.Metrics.report(
+      :total_reductions,
+      :erlang.process_info(self(), :reductions) |> elem(1)
     )
 
     result
