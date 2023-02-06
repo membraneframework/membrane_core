@@ -472,7 +472,7 @@ defmodule Membrane.Integration.LinkingTest do
     assert_start_of_stream(pipeline, :sink)
   end
 
-  test "Parent successfully unlinks children with dynamic pads using :remove_link action" do
+  test "Parent successfully unlinks children with dynamic pads using :remove_child_pad action" do
     spec =
       [
         child(:source, __MODULE__.Element),
@@ -490,8 +490,8 @@ defmodule Membrane.Integration.LinkingTest do
     for pad_id <- 1..10 do
       actions =
         if rem(pad_id, 2) == 0,
-          do: [remove_link: {:source, Pad.ref(:output, pad_id)}],
-          else: [remove_link: {:sink, Pad.ref(:input, pad_id)}]
+          do: [remove_child_pad: {:source, Pad.ref(:output, pad_id)}],
+          else: [remove_child_pad: {:sink, Pad.ref(:input, pad_id)}]
 
       Testing.Pipeline.execute_actions(pipeline, actions)
 
@@ -500,6 +500,70 @@ defmodule Membrane.Integration.LinkingTest do
       for i <- (pad_id + 1)..10//1 do
         refute_link_removed(pipeline, i)
       end
+    end
+  end
+
+  describe "Spec shouldn't wait on links with" do
+    defmodule LazyBin do
+      use Membrane.Bin
+
+      def_output_pad :output,
+        availability: :on_request,
+        accepted_format: _any
+
+      @impl true
+      def handle_playing(_ctx, state) do
+        {[notify_parent: :playing], state}
+      end
+    end
+
+    defmodule Sink do
+      use Membrane.Sink
+
+      def_input_pad :input,
+        accepted_format: _any
+
+      @impl true
+      def handle_init(_ctx, _opts) do
+        {[notify_parent: :init], %{}}
+      end
+    end
+
+    test "removed child" do
+      spec = child(:bin, LazyBin) |> child(:sink, Sink)
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+
+      assert_pipeline_notified(pipeline, :sink, :init)
+      sink_pid = Testing.Pipeline.get_child_pid!(pipeline, :sink)
+      monitor_ref = Process.monitor(sink_pid)
+
+      Testing.Pipeline.execute_actions(pipeline, remove_children: :sink)
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^sink_pid, :normal}
+      assert_pipeline_notified(pipeline, :bin, :playing)
+
+      assert :ok == Testing.Pipeline.terminate(pipeline, blocking?: true)
+    end
+
+    test "crashed child" do
+      sink_ref = Child.ref(:sink, group: :group)
+
+      spec = [
+        {child(:sink, Sink), group: :group, crash_group_mode: :temporary},
+        child(:bin, LazyBin) |> get_child(sink_ref)
+      ]
+
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+
+      assert_pipeline_notified(pipeline, sink_ref, :init)
+
+      Testing.Pipeline.get_child_pid!(pipeline, sink_ref)
+      |> Process.exit(:kill)
+
+      assert_pipeline_crash_group_down(pipeline, :group)
+      assert_pipeline_notified(pipeline, :bin, :playing)
+
+      assert :ok == Testing.Pipeline.terminate(pipeline, blocking?: true)
     end
   end
 

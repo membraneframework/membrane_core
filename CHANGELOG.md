@@ -1,7 +1,7 @@
 # Changelog
 
 ## 1.0.0
- * Introduce `:remove_link` action in pipelines and bins.
+ * Introduce `:remove_child_pad` action in pipelines and bins.
  * Add children groups - a mechanism that allows refering to multiple children with a single identifier. 
  * Rename `remove_child` action into `remove_children` and allow for removing a children group with a single action.
  * Add an ability to spawn anonymous children.
@@ -15,6 +15,8 @@
  * The flow control of the pad is now set with a single `:flow_control` option instead of `:mode` and `:demand_mode` options.
  * Remove _t suffix from types [#509](https://github.com/membraneframework/membrane_core/pull/509)
  * Implement automatic demands in Membrane Sinks and Endpoints. [#512](https://github.com/membraneframework/membrane_core/pull/512)
+ * Add `handle_child_pad_removed/4` callback in Bins and Pipelines. [#513](https://github.com/membraneframework/membrane_core/pull/513)
+ * Introduce support for crash groups in Bins. [#521](https://github.com/membraneframework/membrane_core/pull/521)
 
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)

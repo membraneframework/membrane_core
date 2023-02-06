@@ -44,8 +44,8 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:remove_link, {child_name, pad_ref}}, _cb, _params, state) do
-    Parent.ChildLifeController.handle_remove_link(child_name, pad_ref, state)
+  def handle_action({:remove_child_pad, {child_name, pad_ref}}, _cb, _params, state) do
+    Parent.ChildLifeController.handle_remove_child_pad(child_name, pad_ref, state)
   end
 
   @impl CallbackHandler

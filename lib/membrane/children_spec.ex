@@ -225,7 +225,7 @@ defmodule Membrane.ChildrenSpec do
   #### Limitations
 
   At this moment crash groups are only useful for elements with dynamic pads.
-  Crash groups work only in pipelines and are not supported in bins.
+  Crash groups work in pipelines and bins as well.
 
   ### Log metadata
   `:log_metadata` field can be used to set the `Membrane.Logger` metadata for all children in the given children specification.
@@ -237,9 +237,8 @@ defmodule Membrane.ChildrenSpec do
   ```
   {[
     child(:a, A) |> child(:b, B),
-    {child(:c, C), crash_group:
-    {:second, :temporary}}
-  ], crash_group_mode: :temporary, group: :first, node: some_node}
+    {child(:c, C), group: :second, crash_group_mode: :temporary}
+  ], group: :first, crash_group_mode: :temporary, node: some_node}
   ```
 
   Child `:c` will be spawned in the `:second` crash group, while children `:a` and `:b` will be spawned in the `:first` crash group.
@@ -541,7 +540,8 @@ defmodule Membrane.ChildrenSpec do
           target_queue_size: number | nil,
           min_demand_factor: number | nil,
           auto_demand_size: number | nil,
-          throttling_factor: number | nil
+          throttling_factor: number | nil,
+          implicit_unlink?: boolean()
         ) :: builder() | no_return
   def via_in(builder, pad, props \\ [])
 
@@ -566,7 +566,8 @@ defmodule Membrane.ChildrenSpec do
         min_demand_factor: [default: nil],
         auto_demand_size: [default: nil],
         toilet_capacity: [default: nil],
-        throttling_factor: [default: 1]
+        throttling_factor: [default: 1],
+        implicit_unlink?: [default: true]
       )
       |> case do
         {:ok, props} ->
@@ -579,7 +580,7 @@ defmodule Membrane.ChildrenSpec do
     if builder.status == :from_pad do
       builder
     else
-      via_out(builder, :output)
+      builder |> via_out(:output)
     end
     |> then(&%Builder{&1 | status: :to_pad, to_pad: pad, to_pad_props: Enum.into(props, %{})})
   end

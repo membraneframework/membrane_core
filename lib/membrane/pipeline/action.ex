@@ -48,7 +48,7 @@ defmodule Membrane.Pipeline.Action do
 
   Removed link has to have dynamic pads on both ends.
   """
-  @type remove_link :: {:remove_link, {Child.name(), Pad.ref()}}
+  @type remove_child_pad :: {:remove_child_pad, {Child.name(), Pad.ref()}}
 
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Pipeline.handle_tick/3` callback
@@ -135,7 +135,7 @@ defmodule Membrane.Pipeline.Action do
           | notify_child
           | spec
           | remove_children
-          | remove_link
+          | remove_child_pad
           | start_timer
           | timer_interval
           | stop_timer

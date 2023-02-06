@@ -29,7 +29,7 @@ defmodule Membrane.Pipeline do
         use Membrane.Pipeline
 
         def start_link(options) do
-          Membrane.Pipeline.start_link(options, name: MyPipeline)
+          Membrane.Pipeline.start_link(__MODULE__, options, name: MyPipeline)
         end
 
         # ...
@@ -136,6 +136,19 @@ defmodule Membrane.Pipeline do
               callback_return
 
   @doc """
+  Callback invoked when a child removes its pad.
+
+  Removing child's pad due to return `t:Membrane.Bin.Action.remove_child_pad()`
+  from `Membrane.Pipeline` callbacks does not trigger this callback.
+  """
+  @callback handle_child_pad_removed(
+              child :: Child.name(),
+              pad :: Pad.ref(),
+              context :: CallbackContext.t(),
+              state :: state
+            ) :: callback_return
+
+  @doc """
   Callback invoked when a notification comes in from an element.
   """
   @callback handle_child_notification(
@@ -231,7 +244,8 @@ defmodule Membrane.Pipeline do
                       handle_tick: 3,
                       handle_crash_group_down: 3,
                       handle_call: 3,
-                      handle_terminate_request: 2
+                      handle_terminate_request: 2,
+                      handle_child_pad_removed: 4
 
   @doc """
   Starts the Pipeline based on given module and links it to the current

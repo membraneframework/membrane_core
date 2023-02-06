@@ -80,6 +80,22 @@ defmodule Membrane.Core.Bin.PadController do
     state
   end
 
+  @spec remove_pad!(Pad.ref(), State.t()) :: State.t()
+  def remove_pad!(pad_ref, state) do
+    cond do
+      state.terminating? ->
+        state
+
+      Pad.is_dynamic_pad_ref(pad_ref) ->
+        Message.send(state.parent_pid, :child_pad_removed, [state.name, pad_ref])
+        PadModel.delete_data!(state, pad_ref)
+
+      Pad.is_static_pad_ref(pad_ref) ->
+        raise Membrane.PadError,
+              "Tried to unlink bin static pad #{inspect(pad_ref)}. Static pads cannot be unlinked unless bin is terminating"
+    end
+  end
+
   @spec handle_linking_timeout(Pad.ref(), State.t()) :: :ok | no_return()
   def handle_linking_timeout(pad_ref, state) do
     case PadModel.get_data(state, pad_ref) do
@@ -193,58 +209,61 @@ defmodule Membrane.Core.Bin.PadController do
           Core.Bin.State.t()
         ) :: {Core.Element.PadController.link_call_reply(), Core.Bin.State.t()}
   def handle_link(direction, endpoint, other_endpoint, params, state) do
-    pad_data = PadModel.get_data!(state, endpoint.pad_ref)
-
     Membrane.Logger.debug("Handle link #{inspect(endpoint, pretty: true)}")
 
-    %{spec_ref: spec_ref, endpoint: child_endpoint, name: pad_name} = pad_data
+    with {:ok, pad_data} <- PadModel.get_data(state, endpoint.pad_ref) do
+      %{spec_ref: spec_ref, endpoint: child_endpoint, name: pad_name} = pad_data
 
-    pad_props =
-      Map.merge(endpoint.pad_props, child_endpoint.pad_props, fn key,
-                                                                 external_value,
-                                                                 internal_value ->
-        if key in [
-             :target_queue_size,
-             :min_demand_factor,
-             :auto_demand_size,
-             :toilet_capacity,
-             :throttling_factor
-           ] do
-          external_value || internal_value
-        else
-          internal_value
-        end
-      end)
+      pad_props =
+        Map.merge(endpoint.pad_props, child_endpoint.pad_props, fn key,
+                                                                   external_value,
+                                                                   internal_value ->
+          if key in [
+               :target_queue_size,
+               :min_demand_factor,
+               :auto_demand_size,
+               :toilet_capacity,
+               :throttling_factor
+             ] do
+            external_value || internal_value
+          else
+            internal_value
+          end
+        end)
 
-    child_endpoint = %{child_endpoint | pad_props: pad_props}
+      child_endpoint = %{child_endpoint | pad_props: pad_props}
 
-    if params.initiator == :sibling do
-      :ok =
-        Child.PadController.validate_pad_mode!(
-          {endpoint.pad_ref, pad_data},
-          {other_endpoint.pad_ref, params.other_info}
+      if params.initiator == :sibling do
+        :ok =
+          Child.PadController.validate_pad_mode!(
+            {endpoint.pad_ref, pad_data},
+            {other_endpoint.pad_ref, params.other_info}
+          )
+      end
+
+      params =
+        Map.update!(
+          params,
+          :stream_format_validation_params,
+          &[{state.module, pad_name} | &1]
         )
+
+      reply =
+        Message.call!(child_endpoint.pid, :handle_link, [
+          direction,
+          child_endpoint,
+          other_endpoint,
+          params
+        ])
+
+      state = PadModel.set_data!(state, endpoint.pad_ref, :linked?, true)
+      state = PadModel.set_data!(state, endpoint.pad_ref, :endpoint, child_endpoint)
+      state = ChildLifeController.proceed_spec_startup(spec_ref, state)
+      {reply, state}
+    else
+      {:error, :unknown_pad} ->
+        {{:error, {:unknown_pad, state.name, state.module, endpoint.pad_ref}}, state}
     end
-
-    params =
-      Map.update!(
-        params,
-        :stream_format_validation_params,
-        &[{state.module, pad_name} | &1]
-      )
-
-    reply =
-      Message.call!(child_endpoint.pid, :handle_link, [
-        direction,
-        child_endpoint,
-        other_endpoint,
-        params
-      ])
-
-    state = PadModel.set_data!(state, endpoint.pad_ref, :linked?, true)
-    state = PadModel.set_data!(state, endpoint.pad_ref, :endpoint, child_endpoint)
-    state = ChildLifeController.proceed_spec_startup(spec_ref, state)
-    {reply, state}
   end
 
   @doc """
@@ -258,6 +277,7 @@ defmodule Membrane.Core.Bin.PadController do
       {pad_data, state} = PadModel.pop_data!(state, pad_ref)
 
       if endpoint do
+        IO.inspect(endpoint, label: "ENDPOINT")
         Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
         ChildLifeController.proceed_spec_startup(pad_data.spec_ref, state)
       else

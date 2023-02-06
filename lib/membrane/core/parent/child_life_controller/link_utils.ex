@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   use Bunch
 
-  alias Membrane.ParentError
+  alias Membrane.Child
   alias Membrane.Core.{Bin, Message, Parent, Telemetry}
   alias Membrane.Core.Bin.PadController
 
@@ -29,54 +29,92 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     %CrashGroup{members: members_names} = crash_group
 
     Enum.reduce(members_names, state, fn member_name, state ->
-      unlink_element(member_name, state)
+      with %{children: %{^member_name => _data}} <- state do
+        unlink_element(member_name, state)
+      end
     end)
   end
 
-  @spec remove_link(Membrane.Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
-  def remove_link(child_name, pad_ref, state) do
-    Enum.find(state.links, fn {_id, link} ->
-      [link.from, link.to]
-      |> Enum.any?(&(&1.child == child_name and &1.pad_ref == pad_ref))
-    end)
-    |> case do
-      {_id, %Link{} = link} ->
-        for endpoint <- [link.from, link.to] do
+  @spec handle_child_pad_removed(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
+  def handle_child_pad_removed(child, pad, state) do
+    {:ok, link} = get_link(state.links, child, pad)
+
+    state =
+      opposite_endpoint(link, child)
+      |> case do
+        %Endpoint{child: {Membrane.Bin, :itself}} = bin_endpoint ->
+          PadController.remove_pad!(bin_endpoint.pad_ref, state)
+
+        %Endpoint{} = endpoint ->
           Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
-        end
+          state
+      end
 
-        links = Map.delete(state.links, link.id)
-        Map.put(state, :links, links)
+    state = ChildLifeController.remove_link_from_spec(link.id, state)
 
-      nil ->
-        with %{^child_name => _child_entry} <- state.children do
-          raise ParentError, """
-          Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but this child does not have this pad linked
-          """
-        end
-
-        raise ParentError, """
-        Attempted to unlink pad #{inspect(pad_ref)} of child #{inspect(child_name)}, but such a child does not exist
-        """
-    end
+    delete_link(link, state)
   end
 
-  @spec unlink_element(Membrane.Child.name(), Parent.state()) :: Parent.state()
-  def unlink_element(child_name, state) do
-    Map.update!(
-      state,
-      :links,
-      &Map.reject(&1, fn {_id, %Link{} = link} ->
-        case endpoint_to_unlink(child_name, link) do
-          %Endpoint{pid: pid, pad_ref: pad_ref} ->
-            Message.send(pid, :handle_unlink, pad_ref)
-            true
+  @spec remove_link!(Link.id(), Parent.state()) :: Parent.state()
+  def remove_link!(link_id, state) do
+    link = Map.fetch!(state.links, link_id)
 
-          nil ->
-            false
+    state =
+      [link.from, link.to]
+      |> Enum.reject(&(&1 == nil))
+      |> Enum.reduce(state, &unlink_endpoint/2)
+
+    state = ChildLifeController.remove_link_from_spec(link_id, state)
+    delete_link(link, state)
+  end
+
+  @spec unlink_element(Child.name(), Parent.state()) :: Parent.state()
+  def unlink_element(child_name, state) do
+    grouped_links =
+      state.links
+      |> Map.values()
+      |> Enum.group_by(fn
+        %Link{from: %{child: ^child_name}, to: %{pad_props: %{implicit_unlink?: false}}} ->
+          :cut_links
+
+        %Link{from: %{child: ^child_name}} ->
+          :deleted_links
+
+        %Link{to: %{child: ^child_name}} ->
+          :deleted_links
+
+        %Link{} ->
+          :unchanged_links
+      end)
+
+    cut_links = Map.get(grouped_links, :cut_links, [])
+    deleted_links = Map.get(grouped_links, :deleted_links, [])
+    unchanged_links = Map.get(grouped_links, :unchanged_links, [])
+
+    state =
+      Enum.reduce(deleted_links, state, fn link, state ->
+        case endpoint_to_unlink(child_name, link) do
+          %Endpoint{} = endpoint -> unlink_endpoint(endpoint, state)
+          nil -> state
         end
       end)
-    )
+
+    links =
+      Enum.map(cut_links, &%{&1 | from: nil, cut?: true})
+      |> Enum.concat(unchanged_links)
+      |> Map.new(&{&1.id, &1})
+
+    %{state | links: links}
+  end
+
+  @spec unlink_endpoint(Endpoint.t(), Parent.state()) :: Parent.state()
+  def unlink_endpoint(%Endpoint{child: {Membrane.Bin, :itself}} = endpoint, state) do
+    PadController.remove_pad!(endpoint.pad_ref, state)
+  end
+
+  def unlink_endpoint(%Endpoint{} = endpoint, state) do
+    Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+    state
   end
 
   defp endpoint_to_unlink(child_name, %Link{from: %Endpoint{child: child_name}, to: to}), do: to
@@ -143,6 +181,34 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     :ok = validate_links(links, state)
 
     links
+  end
+
+  defp get_link(links, child, pad) do
+    Enum.find(links, fn {_id, link} ->
+      [link.from, link.to]
+      |> Enum.any?(&(&1.child == child and &1.pad_ref == pad))
+    end)
+    |> case do
+      {_id, %Link{} = link} -> {:ok, link}
+      nil -> {:error, :not_found}
+    end
+  end
+
+  defp opposite_endpoint(%Link{from: %Endpoint{child: child}, to: to}, child), do: to
+
+  defp opposite_endpoint(%Link{to: %Endpoint{child: child}, from: from}, child), do: from
+
+  defp delete_link(link, state) do
+    {_link, state} = pop_in(state, [:links, link.id])
+    spec_ref = link.spec_ref
+
+    with {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref) do
+      new_links_ids = Enum.reject(spec_data.links_ids, &(&1 == link.id))
+      state = put_in(state, [:pending_specs, spec_ref, :links_ids], new_links_ids)
+      ChildLifeController.proceed_spec_startup(spec_ref, state)
+    else
+      :error -> state
+    end
   end
 
   defp validate_links(links, state) do
@@ -239,23 +305,22 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     if {Membrane.Bin, :itself} in [from.child, to.child] do
       state
     else
-      from_availability = Pad.availability_mode(from.pad_info.availability)
-      to_availability = Pad.availability_mode(to.pad_info.availability)
       params = %{initiator: :parent, stream_format_validation_params: []}
 
       case Message.call(from.pid, :handle_link, [:output, from, to, params]) do
         :ok ->
           put_in(state, [:links, link.id, :linked?], true)
 
-        {:error, {:call_failure, _reason}} when to_availability == :static ->
-          Process.exit(to.pid, :kill)
+        {:error, {:unknown_pad, name, module, pad}} ->
+          Membrane.Logger.debug("""
+          Failed to establish link between #{inspect(from.pad_ref)} and #{inspect(to.pad_ref)}
+          because pad #{inspect(pad)} of component named #{inspect(name)} (#{inspect(module)})
+          is down.
+          """)
+
           state
 
-        {:error, {:neighbor_dead, _reason}} when from_availability == :static ->
-          Process.exit(from.pid, :kill)
-          state
-
-        {:error, {:call_failure, _reason}} when to_availability == :dynamic ->
+        {:error, {:call_failure, _reason}} ->
           Membrane.Logger.debug("""
           Failed to establish link between #{inspect(from.pad_ref)} and #{inspect(to.pad_ref)}
           because #{inspect(from.child)} is down.
@@ -263,7 +328,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
           state
 
-        {:error, {:neighbor_dead, _reason}} when from_availability == :dynamic ->
+        {:error, {:neighbor_dead, _reason}} ->
           Membrane.Logger.debug("""
           Failed to establish link between #{inspect(from.pad_ref)} and #{inspect(to.pad_ref)}
           because #{inspect(to.child)} is down.
