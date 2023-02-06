@@ -60,7 +60,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     link = Map.fetch!(state.links, link_id)
 
     state =
-      [link.to, link.from]
+      [link.from, link.to]
+      |> Enum.reject(&(&1 == nil))
       |> Enum.reduce(state, &unlink_endpoint/2)
 
     state = ChildLifeController.remove_link_from_spec(link_id, state)
@@ -86,8 +87,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
           :unchanged_links
       end)
 
-    deleted_links = Map.get(grouped_links, :deleted_links, [])
     cut_links = Map.get(grouped_links, :cut_links, [])
+    deleted_links = Map.get(grouped_links, :deleted_links, [])
     unchanged_links = Map.get(grouped_links, :unchanged_links, [])
 
     state =
