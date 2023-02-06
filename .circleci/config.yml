@@ -159,7 +159,12 @@ jobs:
       - restore_build_cache:
           env: test
       - run: mix compile
-      - run: mix benchmark
+      - run: cp lib/benchmark.ex ~
+      - run: mix benchmark start ~/results.res
+      - run: git checkout master
+      - run: cp ~/benchmark.ex lib/
+      - run: mix benchmark start ~/results_ref.res
+      - run: mix benchmark compare ~/results.res ~/results_ref.res
     
 
 
