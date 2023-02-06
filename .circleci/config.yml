@@ -155,7 +155,6 @@ jobs:
           at: .
       - restore_build_cache:
           env: test
-      - run: mix compile
       - run: cp lib/benchmark.ex ~
       - run: docker run -v ./:/root/app -w /root/app membraneframeworklabs/docker_membrane mix benchmark start ~/results.res
       - run: git checkout master

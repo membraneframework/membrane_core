@@ -1,9 +1,11 @@
 defmodule Mix.Tasks.Benchmark do
   alias ExUnit.FailuresManifest
   use Mix.Task
-
+  require Logger
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
+
+  @how_many_tries 3
 
   @max_random 1
   @number_of_filters 20
@@ -45,7 +47,7 @@ defmodule Mix.Tasks.Benchmark do
     def prepare_desired_function(how_many_reductions) do
       {r1, r2} = calculate()
       n = trunc((how_many_reductions - r2) / (r2 - r1) * (@n2 - @n1) + @n2)
-      fn -> Enum.map(1..n, fn _x -> @function end) end
+      fn -> Enum.each(1..n, fn _x -> @function end) end
     end
   end
 
@@ -63,20 +65,6 @@ defmodule Mix.Tasks.Benchmark do
       workload_simulation = Reductions.prepare_desired_function(opts.number_of_reductions)
       Process.send_after(self(), :collect, 10_000)
       state = %{buffers: [], workload_simulation: workload_simulation, generator: opts.generator}
-      {[], state}
-    end
-
-    @impl true
-    def handle_parent_notification({:get_memory, pid}, _ctx, state) do
-      send(
-        pid,
-        {:memory_description,
-         [
-           heap_size: :erlang.process_info(self())[:heap_size],
-           stack_size: :erlang.process_info(self())[:stack_size]
-         ]}
-      )
-
       {[], state}
     end
 
@@ -152,41 +140,20 @@ defmodule Mix.Tasks.Benchmark do
     end
   end
 
-  defp meassure_memory_precisely(pipeline_pid) do
-    Enum.reduce(1..@number_of_filters, 0, fn n, acc ->
-      Membrane.Testing.Pipeline.execute_actions(pipeline_pid,
-        notify_child: {String.to_atom("filter_#{n}"), {:get_memory, self()}}
-      )
+  defp meassure_memory(), do: :erlang.memory(:total)
 
-      memory_description =
-        receive do
-          {:memory_description, memory_description} -> memory_description
-        end
-      IO.inspect("RECEIVED")
-      acc + memory_description[:heap_size] + memory_description[:stack_size]
-    end)
-  end
-
-  defp meassure_memory_generaly() do
-    :erlang.memory(:processes)
-  end
-
-  defp meassure_memory([mode: {:precise, pid}]), do: meassure_memory_precisely(pid)
-  defp meassure_memory([mode: :general]), do: meassure_memory_generaly()
-
-  defp do_loop(pipeline_pid, initial_time, initial_memory) do
-    time = :os.system_time(:milli_seconds) - initial_time
-    memory = meassure_memory(mode: :general) - initial_memory
+  defp do_loop(pipeline_pid) do
     if is_finished?(pipeline_pid) do
       :ok
     else
       Process.sleep(1000)
-      do_loop(pipeline_pid, initial_time, initial_memory)
+      do_loop(pipeline_pid)
     end
   end
+
   defp perform_test(reductions_number) do
     initial_time = :os.system_time(:milli_seconds)
-    initial_memory = meassure_memory(mode: :general)
+    initial_memory = meassure_memory()
 
     {:ok, _suprvisor_pid, pipeline_pid} =
       Membrane.Testing.Pipeline.start_link(
@@ -201,13 +168,59 @@ defmodule Mix.Tasks.Benchmark do
 
     do_loop(pipeline_pid, initial_time, initial_memory)
 
+    time = :os.system_time(:milli_seconds) - initial_time
+    memory = meassure_memory() - initial_memory
+
     Membrane.Pipeline.terminate(pipeline_pid, blocking?: true)
+    {time, memory}
   end
 
+  @params_grid [10_000_000]
 
-  def run(_) do
+  def run(["start", output_filename]) do
     Mix.Task.run("app.start")
-    for number_of_reductions <- [10_000_000],
-        do: perform_test(number_of_reductions)
+
+    result_map =
+      Enum.reduce(@params_grid, %{}, fn params, results_map ->
+        results =
+          for _try_number <- 1..@how_many_tries do
+            perform_test(params)
+          end
+
+        avg_time = (Enum.unzip(results) |> elem(0) |> Enum.sum()) / length(results)
+        avg_memory = (Enum.unzip(results) |> elem(1) |> Enum.sum()) / length(results)
+        avg_memory_in_mb = avg_memory/1_000_000
+        Map.put(results_map, params, {avg_time, avg_memory_in_mb})
+      end)
+
+    File.write!(output_filename, :erlang.term_to_binary(result_map))
+  end
+
+  @worsening_factor 0.2
+
+  def run(["compare", results_filename, ref_results_filename]) do
+    results = File.read!(results_filename) |> :erlang.binary_to_term()
+    ref_results = File.read!(ref_results_filename) |> :erlang.binary_to_term()
+
+    if Map.keys(results) != Map.keys(ref_results),
+      do: raise("Incompatible performance test result files!")
+
+    Enum.each(Map.keys(results), fn params ->
+      {time, memory} = Map.get(results, params)
+      {time_ref, memory_ref} = Map.get(ref_results, params)
+      Logger.debug("PARAMS: #{inspect(params)} \n  time: #{time} ms vs #{time_ref} ms \n  memory: #{memory} MB vs #{memory_ref} MB")
+      if time > time_ref * (1 + @worsening_factor),
+        do:
+          raise(
+            "The time performance has got worse! For parameters: #{inspect(params)} the test
+             used to take: #{inspect(time_ref)} ms and now it takes: #{inspect(time)} ms"
+          )
+      if memory > memory_ref * (1 + @worsening_factor),
+      do:
+        raise(
+          "The memory performance has got worse! For parameters: #{inspect(params)} the test
+            used to take: #{inspect(memory_ref)} MB and now it takes: #{inspect(memory_ref)} MB"
+        )
+    end)
   end
 end
