@@ -1,18 +1,73 @@
 defmodule Mix.Tasks.Benchmark do
-  alias ExUnit.FailuresManifest
+  @moduledoc """
+  The module providing a mix task that allows to test performance of Membrane Core
+  and compare the results of tests.
+
+  ## Performing test
+  Performance test is done with the following command:
+  `mix benchmark start <result file path>`
+  Once performed, the results of the test will be saved as a binary file in the desired location.
+  The benchmark consists of multiple test cases. Each test case is parametrized with
+  the following parameters:
+  * `reductions` - number of reductions that will be performed during
+  * `max_random` -
+  * `number_of_filters` -
+  * `number_of_buffers` -
+  * `buffer_size` - size of each buffer, in bytes
+
+  Test cases are specified with the @params_grid module attribute.
+  Each test case is performed multiple times - the number of repetitions is specified with the
+  @how_many_tries module's attribute.
+
+  ## Comparing test results
+  Comparison of two test results is done with the following command:
+  `mix benchmark compare <result file> <reference result file>`
+  where the "result files" are the files generated with `mix benchmark start` command.
+  For information about the assertions that need to be fulfilled so that the test passes,
+  see `PerformanceAssertions` module.
+  """
   use Mix.Task
-  require Logger
+
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  @how_many_tries 3
+  require Logger
 
-  @max_random 1
-  @number_of_filters 20
-  @number_of_buffers 50
-  @buffers_size 100_000
+  @how_many_tries 3
+  @params_grid [
+    [
+      reductions: 100_000_000,
+      max_random: 1,
+      number_of_filters: 10,
+      number_of_buffers: 50,
+      buffer_size: 100_000
+    ],
+    [
+      reductions: 10_000_000,
+      max_random: 1,
+      number_of_filters: 10,
+      number_of_buffers: 500,
+      buffer_size: 100_000
+    ],
+    [
+      reductions: 10_000_000,
+      max_random: 1,
+      number_of_filters: 100,
+      number_of_buffers: 50,
+      buffer_size: 100_000
+    ],
+    [
+      reductions: 100_000_000,
+      max_random: 5,
+      number_of_filters: 10,
+      number_of_buffers: 50,
+      buffer_size: 1
+    ]
+  ]
 
   defmodule Reductions do
+    @moduledoc false
+
     @function :erlang.date()
     @n1 100
     @n2 1_000_000
@@ -20,7 +75,7 @@ defmodule Mix.Tasks.Benchmark do
       parent = self()
 
       spawn(fn ->
-        Enum.each(1..n, fn _ -> @function end)
+        Enum.each(1..n, fn _x -> @function end)
         send(parent, :erlang.process_info(self())[:reductions])
       end)
     end
@@ -52,6 +107,7 @@ defmodule Mix.Tasks.Benchmark do
   end
 
   defmodule Filter do
+    @moduledoc false
     use Membrane.Filter
 
     def_input_pad :input, accepted_format: _any
@@ -88,22 +144,18 @@ defmodule Mix.Tasks.Benchmark do
     end
   end
 
-  def prepare_spec(
-        how_many_filters,
-        number_of_buffers,
-        buffers_size,
-        number_of_reductions
-      ) do
+  defp prepare_spec(params) do
     Enum.reduce(
-      1..how_many_filters,
+      1..params[:number_of_filters],
       child(%Membrane.Testing.Source{
         output:
           {1,
            fn state, _size ->
-             if state < number_of_buffers do
+             if state < params[:number_of_buffers] do
                {[
                   buffer:
-                    {:output, %Membrane.Buffer{payload: :crypto.strong_rand_bytes(buffers_size)}},
+                    {:output,
+                     %Membrane.Buffer{payload: :crypto.strong_rand_bytes(params[:buffer_size])}},
                   redemand: :output
                 ], state + 1}
              else
@@ -113,12 +165,12 @@ defmodule Mix.Tasks.Benchmark do
       }),
       fn n, acc ->
         child(acc, String.to_atom("filter_#{n}"), %Filter{
-          number_of_reductions: number_of_reductions,
+          number_of_reductions: params[:reductions],
           generator: fn number_of_buffers ->
-            how_many_needed = Enum.random(1..@max_random)
+            how_many_needed = Enum.random(1..params[:max_random])
 
             if number_of_buffers >= how_many_needed do
-              how_many_to_output = Enum.random(1..@max_random)
+              how_many_to_output = Enum.random(1..params[:max_random])
               min(number_of_buffers, how_many_to_output)
             else
               0
@@ -151,20 +203,12 @@ defmodule Mix.Tasks.Benchmark do
     end
   end
 
-  defp perform_test(reductions_number) do
+  defp perform_test(params) do
     initial_time = :os.system_time(:milli_seconds)
     initial_memory = meassure_memory()
 
     {:ok, _suprvisor_pid, pipeline_pid} =
-      Membrane.Testing.Pipeline.start_link(
-        spec:
-          prepare_spec(
-            @number_of_filters,
-            @number_of_buffers,
-            @buffers_size,
-            reductions_number
-          )
-      )
+      Membrane.Testing.Pipeline.start_link(spec: prepare_spec(params))
 
     do_loop(pipeline_pid)
 
@@ -175,7 +219,8 @@ defmodule Mix.Tasks.Benchmark do
     {time, memory}
   end
 
-  @params_grid [10_000_000]
+  @spec run([String.t()]) :: :ok
+  def run(args_list)
 
   def run(["start", output_filename]) do
     Mix.Task.run("app.start")
@@ -189,14 +234,41 @@ defmodule Mix.Tasks.Benchmark do
 
         avg_time = (Enum.unzip(results) |> elem(0) |> Enum.sum()) / length(results)
         avg_memory = (Enum.unzip(results) |> elem(1) |> Enum.sum()) / length(results)
-        avg_memory_in_mb = avg_memory/1_000_000
+        avg_memory_in_mb = avg_memory / 1_000_000
         Map.put(results_map, params, {avg_time, avg_memory_in_mb})
       end)
 
     File.write!(output_filename, :erlang.term_to_binary(result_map))
+    :ok
   end
 
-  @worsening_factor 0.2
+  defmodule PerformanceAssertions do
+    @moduledoc """
+    The module that delivers functions defining the conditions that need to be met so that the test passes.
+
+    The following assertions are implemented:
+    * time assertion - the duration of the test might be no longer than 120% of the duration of the reference test.
+    * final memory assertion - the amount of memory used during the test, as meassured at the end of the test,
+    might be no greater than 120% of the memory used by the reference test.
+    """
+
+    @allowed_worsening_factor 0.2
+
+    @spec assert_time(number(), number(), keyword(number())) :: nil
+    def assert_time(time, time_ref, params) do
+      if time > time_ref * (1 + @allowed_worsening_factor),
+        do: raise("The time performance has got worse! For parameters: #{inspect(params)} the test
+           used to take: #{time_ref} ms and now it takes: #{time} ms")
+    end
+
+    @spec assert_final_memory(number(), number(), keyword(number())) :: nil
+    def assert_final_memory(memory, memory_ref, params) do
+      if memory > memory_ref * (1 + @allowed_worsening_factor),
+        do:
+          raise("The memory performance has got worse! For parameters: #{inspect(params)} the test
+          used to take: #{memory_ref} MB and now it takes: #{memory_ref} MB")
+    end
+  end
 
   def run(["compare", results_filename, ref_results_filename]) do
     results = File.read!(results_filename) |> :erlang.binary_to_term()
@@ -208,19 +280,15 @@ defmodule Mix.Tasks.Benchmark do
     Enum.each(Map.keys(results), fn params ->
       {time, memory} = Map.get(results, params)
       {time_ref, memory_ref} = Map.get(ref_results, params)
-      Logger.debug("PARAMS: #{inspect(params)} \n  time: #{time} ms vs #{time_ref} ms \n  memory: #{memory} MB vs #{memory_ref} MB")
-      if time > time_ref * (1 + @worsening_factor),
-        do:
-          raise(
-            "The time performance has got worse! For parameters: #{inspect(params)} the test
-             used to take: #{inspect(time_ref)} ms and now it takes: #{inspect(time)} ms"
-          )
-      if memory > memory_ref * (1 + @worsening_factor),
-      do:
-        raise(
-          "The memory performance has got worse! For parameters: #{inspect(params)} the test
-            used to take: #{inspect(memory_ref)} MB and now it takes: #{inspect(memory_ref)} MB"
-        )
+
+      Logger.debug(
+        "PARAMS: #{inspect(params)} \n  time: #{time} ms vs #{time_ref} ms \n  memory: #{memory} MB vs #{memory_ref} MB"
+      )
+
+      PerformanceAssertions.assert_time(time, time_ref, params)
+      PerformanceAssertions.assert_final_memory(memory, memory_ref, params)
     end)
+
+    :ok
   end
 end

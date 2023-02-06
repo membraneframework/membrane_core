@@ -161,7 +161,7 @@ jobs:
       - run: cp ~/benchmark.ex lib/
       - run: docker run -v ./:/root/app -v ~/results:/root/results -w /root/app membraneframeworklabs/docker_membrane mix benchmark start /root/results/results_ref.res
       - run: docker run -v ./:/root/app -v ~/results:/root/results -w /root/app membraneframeworklabs/docker_membrane mix benchmark compare /root/results/results.res /root/results/results_ref.res
-    
+      - run: rm ~/results/*
 
 
 workflows:
