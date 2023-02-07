@@ -29,9 +29,12 @@ defmodule Mix.Tasks.Benchmark do
   use Mix.Task
 
   import Membrane.ChildrenSpec
-  import Membrane.Testing.Assertions
+
+  alias Membrane.RCPipeline
+  alias Membrane.RCMessage
 
   require Logger
+  require Membrane.RCPipeline
 
   @how_many_tries 3
   @params_grid [
@@ -182,35 +185,18 @@ defmodule Mix.Tasks.Benchmark do
     |> child(:sink, %Membrane.Testing.Sink{autodemand: true})
   end
 
-  defp is_finished?(pipeline_pid) do
-    try do
-      assert_end_of_stream(pipeline_pid, :sink, :input, 0)
-    rescue
-      _error -> false
-    else
-      _finished -> true
-    end
-  end
-
   defp meassure_memory(), do: :erlang.memory(:total)
-
-  defp do_loop(pipeline_pid) do
-    if is_finished?(pipeline_pid) do
-      :ok
-    else
-      Process.sleep(1000)
-      do_loop(pipeline_pid)
-    end
-  end
 
   defp perform_test(params) do
     initial_time = :os.system_time(:milli_seconds)
     initial_memory = meassure_memory()
 
-    {:ok, _suprvisor_pid, pipeline_pid} =
-      Membrane.Testing.Pipeline.start_link(spec: prepare_spec(params))
+    pipeline_pid = Membrane.RCPipeline.start!()
+    RCPipeline.exec_actions(pipeline_pid, spec: prepare_spec(params))
 
-    do_loop(pipeline_pid)
+    RCPipeline.subscribe(pipeline_pid, %RCMessage.EndOfStream{element: :sink, pad: _, from: _})
+
+    RCPipeline.await_end_of_stream(pipeline_pid, :sink)
 
     time = :os.system_time(:milli_seconds) - initial_time
     memory = meassure_memory() - initial_memory
