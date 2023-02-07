@@ -260,6 +260,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     |> CrashGroupHandler.remove_crash_group_if_empty(group.name)
   end
 
+
   defp child_by_pid(pid, state) do
     case Enum.find(state.children, fn {_name, entry} -> entry.pid == pid end) do
       {child_name, _child_data} -> {:ok, child_name}
