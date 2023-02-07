@@ -51,9 +51,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
           state
       end
 
-    state = ChildLifeController.remove_link_from_spec(link.id, state)
-
-    delete_link(link, state)
+    ChildLifeController.remove_link_from_specs(link.id, state)
+    |> Map.update!(:links, &Map.delete(&1, link.id))
   end
 
   @spec remove_link(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
@@ -63,8 +62,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
         [link.to, link.from]
         |> Enum.reduce(state, &unlink_endpoint/2)
 
-      state = ChildLifeController.remove_link_from_spec(link.id, state)
-      delete_link(link, state)
+      ChildLifeController.remove_link_from_specs(link.id, state)
+      |> Map.update!(:links, &Map.delete(&1, link.id))
     else
       {:error, :not_found} ->
         with %{^child_name => _child_entry} <- state.children do
@@ -186,15 +185,16 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   defp delete_link(link, state) do
     {_link, state} = pop_in(state, [:links, link.id])
-    spec_ref = link.spec_ref
+    state
+    # spec_ref = link.spec_ref
 
-    with {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref) do
-      new_links_ids = Enum.reject(spec_data.links_ids, &(&1 == link.id))
-      state = put_in(state, [:pending_specs, spec_ref, :links_ids], new_links_ids)
-      ChildLifeController.proceed_spec_startup(spec_ref, state)
-    else
-      :error -> state
-    end
+    # with {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref) do
+    #   new_links_ids = Enum.reject(spec_data.links_ids, &(&1 == link.id))
+    #   state = put_in(state, [:pending_specs, spec_ref, :links_ids], new_links_ids)
+    #   ChildLifeController.proceed_spec_startup(spec_ref, state)
+    # else
+    #   :error -> state
+    # end
   end
 
   defp validate_links(links, state) do
