@@ -96,7 +96,7 @@ defmodule Membrane.Integration.LinkingTest do
       )
 
     on_exit(fn ->
-      Membrane.Pipeline.terminate(pipeline, blocking?: true)
+      assert :ok == Membrane.Pipeline.terminate(pipeline, blocking?: true)
     end)
 
     %{pipeline: pipeline}

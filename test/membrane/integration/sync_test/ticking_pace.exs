@@ -32,7 +32,7 @@ defmodule Membrane.Integration.SyncTest.TickingPace do
       Process.sleep(actual_report_interval)
     end
 
-    Testing.Pipeline.terminate(pipeline)
+    assert :ok == Testing.Pipeline.terminate(pipeline)
 
     ticks_amount = Sync.Helper.receive_ticks()
 

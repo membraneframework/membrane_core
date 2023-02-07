@@ -72,6 +72,6 @@ defmodule Membrane.FailWhenNoCapsAreSent do
     ref = Process.monitor(pipeline)
     assert_start_of_stream(pipeline, :sink)
     refute_receive {:DOWN, ^ref, :process, ^pipeline, {:shutdown, :child_crash}}
-    Pipeline.terminate(pipeline, blocking?: true)
+    assert :ok == Pipeline.terminate(pipeline, blocking?: true)
   end
 end

@@ -61,6 +61,8 @@ defmodule Membrane.Integration.ChildCrashTest do
     assert_pid_alive(pipeline_pid)
 
     assert_pipeline_crash_group_down(pipeline_pid, 1)
+
+    assert :ok == Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
   end
 
   test "Crash group consisting of bin crashes" do
@@ -113,6 +115,8 @@ defmodule Membrane.Integration.ChildCrashTest do
     assert_pid_alive(source_2_pid)
     assert_pid_alive(source_3_pid)
     assert_pid_alive(pipeline_pid)
+
+    assert :ok == Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
   end
 
   test "Crash two groups one after another" do
@@ -189,6 +193,45 @@ defmodule Membrane.Integration.ChildCrashTest do
     assert_pid_alive(pipeline_pid)
 
     assert_pipeline_crash_group_down(pipeline_pid, 2)
+
+    assert :ok == Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+  end
+
+  defmodule DynamicEndpoint do
+    use Membrane.Endpoint
+
+    def_input_pad :input, caps: :any, demand_mode: :auto, demand_unit: :buffers, availability: :on_request
+    def_output_pad :output, caps: :any, demand_mode: :auto, demand_unit: :buffers, availability: :on_request
+
+    @impl true
+    def handle_init(_opts) do
+      {{:ok, notify: {:child_pid, self()}}, %{}}
+    end
+  end
+
+  @tag :dupa
+  test "Crash group and termminate pipeilne" do
+    import Membrane.ParentSpec
+
+    {:ok, pipeline} = Testing.Pipeline.start_link(children: [element_1: DynamicEndpoint])
+
+    assert_pipeline_notified(pipeline, :element_1, {:child_pid, _child_pid})
+
+    spec = %Membrane.ParentSpec{
+      children: [element_2: DynamicEndpoint],
+      links: [link(:element_2) |> to(:element_1)],
+      crash_group: {:group, :temporary}
+    }
+
+    Testing.Pipeline.execute_actions(pipeline, spec: spec)
+
+    assert_pipeline_notified(pipeline, :element_2, {:child_pid, element_2_pid})
+
+    Process.exit(element_2_pid, :kill)
+    Process.sleep(1000)
+
+
+    assert :ok == Testing.Pipeline.terminate(pipeline, blocking?: true)
   end
 
   defp assert_pid_alive(pid) do
