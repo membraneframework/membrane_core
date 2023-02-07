@@ -33,31 +33,31 @@ defmodule Benchmark.Run do
 
   @params_grid [
     [
-      reductions: 100_000_000,
+      reductions: 10_000,
       max_random: 1,
       number_of_filters: 10,
-      number_of_buffers: 50,
+      number_of_buffers: 50000,
       buffer_size: 100_000
     ],
     [
-      reductions: 10_000_000,
-      max_random: 1,
-      number_of_filters: 10,
-      number_of_buffers: 500,
-      buffer_size: 100_000
-    ],
-    [
-      reductions: 10_000_000,
+      reductions: 10_000,
       max_random: 1,
       number_of_filters: 100,
+      number_of_buffers: 50000,
+      buffer_size: 100_000
+    ],
+    [
+      reductions: 10_000_000,
+      max_random: 1,
+      number_of_filters: 10,
       number_of_buffers: 50,
       buffer_size: 100_000
     ],
     [
-      reductions: 100_000_000,
+      reductions: 10_000,
       max_random: 5,
       number_of_filters: 10,
-      number_of_buffers: 50,
+      number_of_buffers: 50000,
       buffer_size: 1
     ]
   ]

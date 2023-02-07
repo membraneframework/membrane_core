@@ -27,7 +27,7 @@ defmodule Benchmark.Compare do
       if memory > memory_ref * (1 + @allowed_worsening_factor),
         do:
           raise("The memory performance has got worse! For parameters: #{inspect(params)} the test
-          used to take: #{memory_ref} MB and now it takes: #{memory_ref} MB")
+          used to take: #{memory_ref} MB and now it takes: #{memory} MB")
     end
   end
 
