@@ -155,10 +155,10 @@ jobs:
           at: .
       - restore_build_cache:
           env: test
-      - run: cp lib/benchmark.ex ~
+      - run: cp benchmark/* ~/benchmark_backup/
       - run: docker run -v ./:/root/app -v ~/results:/root/results -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/run.exs /root/results/results.res
       - run: git checkout master
-      - run: cp ~/benchmark.ex lib/
+      - run: cp  ~/benchmark_backup/* benchmark/
       - run: docker run -v ./:/root/app -v ~/results:/root/results -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/run.exs /root/results/results_ref.res
       - run: docker run -v ./:/root/app -v ~/results:/root/results -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/compare.exs /root/results/results.res /root/results/results_ref.res
       - run: rm ~/results/*
