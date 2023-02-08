@@ -230,8 +230,9 @@ defmodule Membrane.Integration.ChildCrashTest do
     Process.exit(element_2_pid, :kill)
     Process.sleep(1000)
 
-
+    ref = Process.monitor(pipeline)
     assert :ok == Testing.Pipeline.terminate(pipeline, blocking?: true)
+    assert_receive {:DOWN, ^ref, _process, _pid, _reason}
   end
 
   defp assert_pid_alive(pid) do
