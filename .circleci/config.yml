@@ -153,8 +153,6 @@ jobs:
     steps:
       - attach_workspace:
           at: .
-      - restore_build_cache:
-          env: test
       - run: cp benchmark/* ~/benchmark_backup/
       - run: docker run -v ./:/root/app -v ~/results:/root/results -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/run.exs /root/results/results.res
       - run: git checkout master
