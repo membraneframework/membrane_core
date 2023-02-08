@@ -79,9 +79,16 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def init(options) do
-    %{parent: parent, name: name, module: module, log_metadata: log_metadata} = options
+    %{
+      parent: parent,
+      name: name,
+      module: module,
+      log_metadata: log_metadata,
+      pipeline_pid: pipeline
+    } = options
 
     Process.monitor(parent)
+    :ok = Membrane.Core.Registry.register_pipeline_descendant(pipeline)
 
     name_str = if String.valid?(name), do: name, else: inspect(name)
     :ok = Membrane.Logger.set_prefix(name_str <> " bin")
@@ -98,6 +105,7 @@ defmodule Membrane.Core.Bin do
         module: module,
         name: name,
         parent_pid: options.parent,
+        pipeline_pid: pipeline,
         synchronization: %{
           parent_clock: options.parent_clock,
           timers: %{},

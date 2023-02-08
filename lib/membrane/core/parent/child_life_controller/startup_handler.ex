@@ -69,9 +69,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
           node() | nil,
           parent_clock :: Clock.t(),
           syncs :: %{Membrane.Child.name_t() => pid()},
-          log_metadata :: Keyword.t()
+          log_metadata :: Keyword.t(),
+          pipeline_pid :: pid()
         ) :: [ChildEntry.t()]
-  def start_children(children, node, parent_clock, syncs, log_metadata) do
+  def start_children(children, node, parent_clock, syncs, log_metadata, pipeline_pid) do
     # If the node is set to the current node, set it to nil, to avoid race conditions when
     # distribution changes
     node = if node == node(), do: nil, else: node
@@ -80,7 +81,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
       "Starting children: #{inspect(children)}#{if node, do: " on node #{node}"}"
     )
 
-    children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata))
+    children |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, pipeline_pid))
   end
 
   @spec add_children([ChildEntry.t()], Parent.state_t()) :: Parent.state_t()
@@ -147,7 +148,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
     end)
   end
 
-  defp start_child(child, node, parent_clock, syncs, log_metadata) do
+  defp start_child(child, node, parent_clock, syncs, log_metadata, pipeline_pid) do
     %ChildEntry{name: name, module: module, options: options} = child
     Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
     sync = syncs |> Map.get(name, Sync.no_sync())
@@ -165,7 +166,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
             user_options: options,
             parent_clock: parent_clock,
             sync: sync,
-            log_metadata: log_metadata
+            log_metadata: log_metadata,
+            pipeline_pid: pipeline_pid
           })
 
         :bin ->
@@ -182,7 +184,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupHandler do
             node: node,
             user_options: options,
             parent_clock: parent_clock,
-            log_metadata: log_metadata
+            log_metadata: log_metadata,
+            pipeline_pid: pipeline_pid
           })
       end
 

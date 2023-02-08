@@ -56,7 +56,8 @@ defmodule Membrane.Core.Element do
     do: do_start(:start, options)
 
   defp do_start(method, options) do
-    %{module: module, name: name, node: node, user_options: user_options} = options
+    %{module: module, name: name, node: node, user_options: user_options, pipeline_pid: _pipeline} =
+      options
 
     if Element.element?(options.module) do
       Membrane.Logger.debug("""
@@ -98,7 +99,9 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
-    %{parent: parent, name: name, log_metadata: log_metadata} = options
+    %{parent: parent, name: name, log_metadata: log_metadata, pipeline_pid: pipeline} = options
+
+    :ok = Membrane.Core.Registry.register_pipeline_descendant(pipeline)
 
     Process.monitor(parent)
     name_str = if String.valid?(name), do: name, else: inspect(name)

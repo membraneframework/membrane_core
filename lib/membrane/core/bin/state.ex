@@ -24,6 +24,7 @@ defmodule Membrane.Core.Bin.State do
           pads_info: PadModel.pads_info_t() | nil,
           pads_data: PadModel.pads_data_t() | nil,
           parent_pid: pid,
+          pipeline_pid: pid,
           links: [Link.t()],
           crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},
           synchronization: %{
@@ -54,6 +55,7 @@ defmodule Membrane.Core.Bin.State do
                 pads_info: nil,
                 pads_data: nil,
                 parent_pid: nil,
+                pipeline_pid: nil,
                 crash_groups: %{},
                 children_log_metadata: [],
                 links: [],

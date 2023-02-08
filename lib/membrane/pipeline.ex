@@ -292,6 +292,42 @@ defmodule Membrane.Pipeline do
       else: :ok
   end
 
+  @doc """
+  Brutally exits pipeline process with all descendant components.
+  It accpets two options:
+    * `blocking?` - tells whether to wait, untill all killed processed are
+      down. Defaluts to `false`.
+    * `timeout` - if `blocking?` is set to true it tells how much
+      time (ms) to wait for components to exit. Defaults to 5000.
+  """
+  @spec kill(pipeline :: pid, blocking?: true, timeout: timeout()) :: :ok | :error
+  def kill(pipeline, opts \\ []) do
+    blocking? = Keyword.get(opts, :blocking?, false)
+    timeout = Keyword.get(opts, :timeout, 5_000)
+    do_kill(pipeline, blocking?, timeout)
+  end
+
+  defp do_kill(pipeline, false, _timeout) do
+    Membrane.Core.Registry.kill_pipeline_descendants(pipeline)
+  end
+
+  defp do_kill(pipeline, true, timeout) do
+    monitors = Membrane.Core.Registry.monitor_pipeline_descendants(pipeline)
+    Membrane.Core.Registry.kill_pipeline_descendants(pipeline)
+
+    Enum.any?(monitors, fn ref ->
+      receive do
+        {:DOWN, ^ref, :process, _pid, _reason} -> false
+      after
+        timeout -> true
+      end
+    end)
+    |> case do
+      false -> :ok
+      true -> :error
+    end
+  end
+
   defp wait_for_down(ref, timeout) do
     receive do
       {:DOWN, ^ref, _process, _pid, _reason} ->
@@ -408,6 +444,14 @@ defmodule Membrane.Pipeline do
         """
         @spec terminate(pid, Keyword.t()) :: :ok
         defdelegate terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
+      end
+
+      unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:kill, &1})) do
+        @doc """
+        Brutally exits pipeline process with all descendant components.
+        """
+        @spec kill(pid, Keyword.t()) :: :ok
+        defdelegate kill(pipeline, opts \\ []), to: unquote(__MODULE__)
       end
 
       unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:stop_and_terminate, &1})) do

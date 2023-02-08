@@ -320,6 +320,7 @@ defmodule Membrane.Core.BinTest do
       module: TestBins.SimpleBin,
       node: nil,
       parent: pipeline,
+      pipeline_pid: pipeline,
       parent_clock: nil,
       log_metadata: [],
       user_options: %{

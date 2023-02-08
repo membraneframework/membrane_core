@@ -45,6 +45,7 @@ defmodule Membrane.Core.ElementTest do
         parent_clock: nil,
         sync: Membrane.Sync.no_sync(),
         parent: self(),
+        pipeline_pid: nil,
         log_metadata: []
       })
 
@@ -342,6 +343,7 @@ defmodule Membrane.Core.ElementTest do
       node: nil,
       user_options: %{},
       parent: pipeline,
+      pipeline_pid: pipeline,
       parent_clock: nil,
       sync: Membrane.Sync.no_sync(),
       log_metadata: []

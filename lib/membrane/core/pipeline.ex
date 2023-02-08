@@ -31,6 +31,8 @@ defmodule Membrane.Core.Pipeline do
       }
     }
 
+    :ok = Membrane.Core.Registry.register_pipeline_descendant(self())
+
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_init,

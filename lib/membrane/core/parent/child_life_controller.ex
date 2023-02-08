@@ -37,13 +37,20 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     :ok = StartupHandler.check_if_children_names_unique(children, state)
     syncs = StartupHandler.setup_syncs(children, spec.stream_sync)
 
+    pipeline_pid =
+      cond do
+        Component.is_pipeline?(state) -> self()
+        Component.is_bin?(state) -> state.pipeline_pid
+      end
+
     children =
       StartupHandler.start_children(
         children,
         spec.node,
         state.synchronization.clock_proxy,
         syncs,
-        spec.log_metadata
+        spec.log_metadata,
+        pipeline_pid
       )
 
     children_names = children |> Enum.map(& &1.name)
