@@ -1,20 +1,24 @@
-defmodule Membrane.RemoteControlled.PipelineTest do
+defmodule Membrane.RCPipelineTest do
   use ExUnit.Case
 
   import Membrane.ChildrenSpec
 
-  alias Membrane.ChildrenSpec
-  alias Membrane.RemoteControlled.Message
-  alias Membrane.RemoteControlled.Pipeline
+  alias Membrane.RCMessage
+  alias Membrane.RCPipeline
 
-  require Membrane.RemoteControlled.Pipeline
+  require Membrane.RCPipeline
 
   defmodule Filter do
     use Membrane.Filter
     alias Membrane.Buffer
 
-    def_output_pad :output, accepted_format: _any, availability: :always
-    def_input_pad :input, demand_unit: :buffers, accepted_format: _any, availability: :always
+    def_output_pad :output, flow_control: :manual, accepted_format: _any, availability: :always
+
+    def_input_pad :input,
+      flow_control: :manual,
+      demand_unit: :buffers,
+      accepted_format: _any,
+      availability: :always
 
     @impl true
     def handle_init(_ctx, _opts) do
@@ -22,7 +26,7 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     end
 
     @impl true
-    def handle_process(_input, buf, _ctx, state) do
+    def handle_buffer(_input, buf, _ctx, state) do
       state = %{state | buffer_count: state.buffer_count + 1}
 
       notification_actions =
@@ -41,113 +45,98 @@ defmodule Membrane.RemoteControlled.PipelineTest do
     end
   end
 
+  @pipeline_spec child(:a, %Membrane.Testing.Source{output: [0xA1, 0xB2, 0xC3, 0xD4]})
+                 |> child(:b, Filter)
+                 |> child(:c, Membrane.Testing.Sink)
+
   defp setup_pipeline(_context) do
-    {:ok, _supervisor, pipeline} = start_supervised({Pipeline, controller_pid: self()})
+    {:ok, _supervisor, pipeline} = start_supervised({RCPipeline, controller_pid: self()})
     Process.link(pipeline)
-
-    children = [
-      child(:a, %Membrane.Testing.Source{output: [0xA1, 0xB2, 0xC3, 0xD4]}),
-      child(:b, Filter),
-      child(:c, Membrane.Testing.Sink)
-    ]
-
-    links = [
-      ChildrenSpec.get_child(:a) |> ChildrenSpec.get_child(:b) |> ChildrenSpec.get_child(:c)
-    ]
-
-    actions = [{:spec, children ++ links}]
-    Pipeline.exec_actions(pipeline, actions)
 
     {:ok, pipeline: pipeline}
   end
 
-  describe "Membrane.RemoteControlled.Pipeline.subscribe/2" do
+  describe "Membrane.RCPipeline.subscribe/2" do
     setup :setup_pipeline
 
     test "testing process should receive all subscribed events", %{pipeline: pipeline} do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Playing{})
-      Pipeline.subscribe(pipeline, %Message.Notification{element: :b, data: %Membrane.Buffer{}})
-      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: :b, pad: :input})
+      RCPipeline.subscribe(pipeline, %RCMessage.Notification{
+        element: :b,
+        data: %Membrane.Buffer{}
+      })
+
+      RCPipeline.subscribe(pipeline, %RCMessage.StartOfStream{element: :b, pad: :input})
 
       # RUN
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      RCPipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      assert_receive %Message.Playing{from: ^pipeline}
-
-      assert_receive %Message.Notification{
+      assert_receive %RCMessage.Notification{
         from: ^pipeline,
         element: :b,
         data: %Membrane.Buffer{payload: "test"}
       }
 
-      assert_receive %Message.StartOfStream{from: ^pipeline, element: :b, pad: :input}
+      assert_receive %RCMessage.StartOfStream{from: ^pipeline, element: :b, pad: :input}
 
-      refute_receive %Message.Terminated{from: ^pipeline}
+      refute_receive %RCMessage.Terminated{from: ^pipeline}
     end
 
     test "should allow to use wildcards in subscription pattern", %{pipeline: pipeline} do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Playing{})
-      Pipeline.subscribe(pipeline, %Message.EndOfStream{})
+      RCPipeline.subscribe(pipeline, %RCMessage.EndOfStream{})
 
       # RUN
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      RCPipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      assert_receive %Message.Playing{from: ^pipeline}
+      assert_receive %RCMessage.EndOfStream{from: ^pipeline, element: :b, pad: :input}
 
-      assert_receive %Message.EndOfStream{from: ^pipeline, element: :b, pad: :input}
-
-      assert_receive %Message.EndOfStream{from: ^pipeline, element: :c, pad: :input}
+      assert_receive %RCMessage.EndOfStream{from: ^pipeline, element: :c, pad: :input}
 
       # STOP
-      Pipeline.terminate(pipeline, blocking?: true)
+      RCPipeline.terminate(pipeline, blocking?: true)
 
       # TEST
-      refute_receive %Message.Terminated{from: ^pipeline}
-      refute_receive %Message.Notification{from: ^pipeline}
-      refute_receive %Message.StartOfStream{from: ^pipeline, element: _, pad: _}
+      refute_receive %RCMessage.Terminated{from: ^pipeline}
+      refute_receive %RCMessage.Notification{from: ^pipeline}
+      refute_receive %RCMessage.StartOfStream{from: ^pipeline, element: _, pad: _}
     end
   end
 
-  describe "Membrane.RemoteControlled.Pipeline await_* functions" do
+  describe "Membrane.RCPipeline await_* functions" do
     setup :setup_pipeline
 
     test "should await for requested messages", %{pipeline: pipeline} do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Playing{})
-      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
-      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
-      Pipeline.subscribe(pipeline, %Message.Terminated{})
+      RCPipeline.subscribe(pipeline, %RCMessage.StartOfStream{element: _, pad: _})
+      RCPipeline.subscribe(pipeline, %RCMessage.Notification{element: _, data: _})
+      RCPipeline.subscribe(pipeline, %RCMessage.Terminated{})
 
       # RUN
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      RCPipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      Pipeline.await_playing(pipeline)
-
-      Pipeline.await_start_of_stream(pipeline, :c, :input)
-      Pipeline.await_notification(pipeline, :b)
+      RCPipeline.await_start_of_stream(pipeline, :c, :input)
+      RCPipeline.await_notification(pipeline, :b)
     end
 
     test "should await for requested messages with parts of message body not being specified", %{
       pipeline: pipeline
     } do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Playing{})
-      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
-      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+      RCPipeline.subscribe(pipeline, %RCMessage.StartOfStream{element: _, pad: _})
+      RCPipeline.subscribe(pipeline, %RCMessage.Notification{element: _, data: _})
 
       # RUN
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      RCPipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      Pipeline.await_start_of_stream(pipeline, :c)
-      msg = Pipeline.await_notification(pipeline, :b)
+      RCPipeline.await_start_of_stream(pipeline, :c)
+      msg = RCPipeline.await_notification(pipeline, :b)
 
-      assert msg == %Message.Notification{
+      assert msg == %RCMessage.Notification{
                from: pipeline,
                element: :b,
                data: %Membrane.Buffer{payload: "test"}
@@ -158,17 +147,15 @@ defmodule Membrane.RemoteControlled.PipelineTest do
       pipeline: pipeline
     } do
       # SETUP
-      Pipeline.subscribe(pipeline, %Message.Playing{})
-      Pipeline.subscribe(pipeline, %Message.StartOfStream{element: _, pad: _})
-      Pipeline.subscribe(pipeline, %Message.Notification{element: _, data: _})
+      RCPipeline.subscribe(pipeline, %RCMessage.StartOfStream{element: _, pad: _})
+      RCPipeline.subscribe(pipeline, %RCMessage.Notification{element: _, data: _})
       element = :c
 
       # START
-      Pipeline.exec_actions(pipeline, playback: :playing)
+      RCPipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      Pipeline.await_playing(pipeline)
-      Pipeline.await_start_of_stream(pipeline, element, :input)
+      RCPipeline.await_start_of_stream(pipeline, element, :input)
     end
   end
 end

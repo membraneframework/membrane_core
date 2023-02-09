@@ -24,7 +24,7 @@ defmodule Membrane.Integration.SyncTest do
     ]
 
     pipeline_opts = [
-      structure: links
+      spec: links
     ]
 
     for tries <- [100, 1000, 10_000] do
@@ -52,8 +52,8 @@ defmodule Membrane.Integration.SyncTest do
   end
 
   test "synchronize dynamically spawned elements" do
-    {structure, spec_options} = Membrane.Support.Sync.Pipeline.default_spec()
-    spec = {structure, Keyword.put(spec_options, :stream_sync, [[:sink_a, :sink_b]])}
+    {spec, spec_options} = Membrane.Support.Sync.Pipeline.default_spec()
+    spec = {spec, Keyword.put(spec_options, :stream_sync, [[:sink_a, :sink_b]])}
 
     options = [
       module: Membrane.Support.Sync.Pipeline,
@@ -70,8 +70,8 @@ defmodule Membrane.Integration.SyncTest do
   end
 
   test "synchronize selected groups" do
-    {structure, spec_options} = Membrane.Support.Sync.Pipeline.default_spec()
-    spec = {structure, Keyword.put(spec_options, :stream_sync, [[:sink_a, :sink_b]])}
+    {spec, spec_options} = Membrane.Support.Sync.Pipeline.default_spec()
+    spec = {spec, Keyword.put(spec_options, :stream_sync, [[:sink_a, :sink_b]])}
 
     options = [
       module: Membrane.Support.Sync.Pipeline,
@@ -87,8 +87,8 @@ defmodule Membrane.Integration.SyncTest do
   defmodule SimpleBin do
     use Membrane.Bin
 
-    def_input_pad :input, demand_unit: :buffers, accepted_format: _any
-    def_output_pad :output, accepted_format: _any, demand_unit: :buffers
+    def_input_pad :input, accepted_format: _any
+    def_output_pad :output, accepted_format: _any
 
     @impl true
     def handle_init(_ctx, _options) do
@@ -129,7 +129,7 @@ defmodule Membrane.Integration.SyncTest do
   test "synchronization inside a bin is possible" do
     children = [child(:bin, Sync.SyncBin)]
 
-    pipeline = Testing.Pipeline.start_link_supervised!(structure: children)
+    pipeline = Testing.Pipeline.start_link_supervised!(spec: children)
 
     assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_a})
     assert_pipeline_notified(pipeline, :bin, {:start_of_stream, :sink_b}, @sync_error_ms)

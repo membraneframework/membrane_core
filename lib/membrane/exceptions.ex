@@ -108,6 +108,10 @@ defmodule Membrane.ActionError do
   end
 end
 
+defmodule Membrane.SetupError do
+  defexception [:message]
+end
+
 defmodule Membrane.LinkError do
   defexception [:message]
 end

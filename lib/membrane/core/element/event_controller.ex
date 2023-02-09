@@ -8,15 +8,22 @@ defmodule Membrane.Core.Element.EventController do
   alias Membrane.{Event, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Events, Message, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, InputQueue, PadController, PlaybackQueue, State}
-  alias Membrane.Element.CallbackContext
+
+  alias Membrane.Core.Element.{
+    ActionHandler,
+    CallbackContext,
+    InputQueue,
+    PadController,
+    PlaybackQueue,
+    State
+  }
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
   require Membrane.Logger
 
-  @spec handle_start_of_stream(Pad.ref_t(), State.t()) :: State.t()
+  @spec handle_start_of_stream(Pad.ref(), State.t()) :: State.t()
   def handle_start_of_stream(pad_ref, state) do
     handle_event(pad_ref, %Events.StartOfStream{}, state)
   end
@@ -26,7 +33,7 @@ defmodule Membrane.Core.Element.EventController do
   Extra checks and tasks required by special events such as `:start_of_stream`
   or `:end_of_stream` are performed.
   """
-  @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.t()
+  @spec handle_event(Pad.ref(), Event.t(), State.t()) :: State.t()
   def handle_event(pad_ref, event, state) do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
@@ -52,7 +59,7 @@ defmodule Membrane.Core.Element.EventController do
     end
   end
 
-  @spec exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) :: State.t()
+  @spec exec_handle_event(Pad.ref(), Event.t(), params :: map, State.t()) :: State.t()
   def exec_handle_event(pad_ref, event, params \\ %{}, state) do
     case handle_special_event(pad_ref, event, state) do
       {:handle, state} ->
@@ -64,13 +71,11 @@ defmodule Membrane.Core.Element.EventController do
     end
   end
 
-  @spec do_exec_handle_event(Pad.ref_t(), Event.t(), params :: map, State.t()) :: State.t()
+  @spec do_exec_handle_event(Pad.ref(), Event.t(), params :: map, State.t()) :: State.t()
   defp do_exec_handle_event(pad_ref, %event_type{} = event, params, state)
        when event_type in [Events.StartOfStream, Events.EndOfStream] do
     data = PadModel.get_data!(state, pad_ref)
-    require CallbackContext.StreamManagement
-    context = CallbackContext.StreamManagement.from_state(state)
-
+    context = CallbackContext.from_state(state)
     callback = stream_event_to_callback(event)
     new_params = Map.put(params, :direction, data.direction)
     args = [pad_ref, context]
@@ -95,9 +100,10 @@ defmodule Membrane.Core.Element.EventController do
 
   defp do_exec_handle_event(pad_ref, event, params, state) do
     data = PadModel.get_data!(state, pad_ref)
-    require CallbackContext.Event
-    context = &CallbackContext.Event.from_state/1
-    params = %{context: context, direction: data.direction} |> Map.merge(params)
+
+    params =
+      %{context: &CallbackContext.from_state/1, direction: data.direction} |> Map.merge(params)
+
     args = [pad_ref, event]
     CallbackHandler.exec_and_handle_callback(:handle_event, ActionHandler, params, args, state)
   end
@@ -117,7 +123,7 @@ defmodule Membrane.Core.Element.EventController do
     :ok
   end
 
-  @spec handle_special_event(Pad.ref_t(), Event.t(), State.t()) ::
+  @spec handle_special_event(Pad.ref(), Event.t(), State.t()) ::
           {:handle | :ignore, State.t()}
   defp handle_special_event(pad_ref, %Events.StartOfStream{}, state) do
     Membrane.Logger.debug("received start of stream")

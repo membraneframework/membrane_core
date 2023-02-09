@@ -7,22 +7,24 @@ defmodule Membrane.Core.Element.DemandController do
 
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, PlaybackQueue, State, Toilet}
-  alias Membrane.Element.CallbackContext
+  alias Membrane.Core.Element.{ActionHandler, CallbackContext, PlaybackQueue, State, Toilet}
   alias Membrane.Pad
 
-  require CallbackContext.Demand
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
 
   @doc """
   Handles demand coming on an output pad. Updates demand value and executes `handle_demand` callback.
   """
-  @spec handle_demand(Pad.ref_t(), non_neg_integer, State.t()) :: State.t()
+  @spec handle_demand(Pad.ref(), non_neg_integer, State.t()) :: State.t()
   def handle_demand(pad_ref, size, state) do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
-      %{direction: :output, mode: :pull} = data
+      %{direction: :output, flow_control: flow_control} = data
+
+      if flow_control == :push,
+        do: raise("Pad with :push control mode cannot handle demand.")
+
       do_handle_demand(pad_ref, size, data, state)
     else
       pad: {:error, :unknown_pad} ->
@@ -34,8 +36,9 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
-  defp do_handle_demand(pad_ref, size, %{demand_mode: :auto} = data, state) do
+  defp do_handle_demand(pad_ref, size, %{flow_control: :auto} = data, state) do
     %{demand: old_demand, associated_pads: associated_pads} = data
+
     state = PadModel.set_data!(state, pad_ref, :demand, old_demand + size)
 
     if old_demand <= 0 do
@@ -45,14 +48,13 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
-  defp do_handle_demand(pad_ref, size, %{demand_mode: :manual} = data, state) do
+  defp do_handle_demand(pad_ref, size, %{flow_control: :manual} = data, state) do
     demand = data.demand + size
     data = %{data | demand: demand}
     state = PadModel.set_data!(state, pad_ref, data)
 
     if exec_handle_demand?(data) do
-      require CallbackContext.Demand
-      context = &CallbackContext.Demand.from_state(&1, incoming_demand: size)
+      context = &CallbackContext.from_state(&1, incoming_demand: size)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_demand,
@@ -61,7 +63,7 @@ defmodule Membrane.Core.Element.DemandController do
           split_continuation_arbiter: &exec_handle_demand?(PadModel.get_data!(&1, pad_ref)),
           context: context
         },
-        [pad_ref, demand, data.other_demand_unit],
+        [pad_ref, demand, data[:demand_unit]],
         state
       )
     else
@@ -79,7 +81,7 @@ defmodule Membrane.Core.Element.DemandController do
   Also, the `demand_decrease` argument can be passed, decreasing the size of the
   demand on the input pad before proceeding to the rest of the function logic.
   """
-  @spec send_auto_demand_if_needed(Pad.ref_t(), integer, State.t()) :: State.t()
+  @spec send_auto_demand_if_needed(Pad.ref(), integer, State.t()) :: State.t()
   def send_auto_demand_if_needed(pad_ref, demand_decrease \\ 0, state) do
     data = PadModel.get_data!(state, pad_ref)
 

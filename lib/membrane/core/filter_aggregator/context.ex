@@ -5,16 +5,16 @@ defmodule Membrane.Core.FilterAggregator.Context do
 
   require Membrane.Core.FilterAggregator.InternalAction, as: InternalAction
 
-  @type t :: Membrane.Core.Element.CallbackContext.default_fields()
+  @type t :: Element.CallbackContext.t()
 
   @typedoc """
   Collection of states for encapsuled elements as kept in `Membrane.FilterAggregator` element
   """
-  @type states :: [{Element.name_t(), module(), t(), Element.state_t()}]
+  @type states :: [{Element.name(), module(), t(), Element.state()}]
 
   @type action :: Element.Action.t() | Membrane.Core.FilterAggregator.InternalAction.t()
 
-  @spec build_context!(Element.name_t(), module(), t()) :: t()
+  @spec build_context!(Element.name(), module(), t()) :: t()
   def build_context!(name, module, agg_ctx) do
     pad_descriptions = module.membrane_pads()
     pads = pad_descriptions |> MapSet.new(fn {k, _v} -> k end)
@@ -29,8 +29,8 @@ defmodule Membrane.Core.FilterAggregator.Context do
       """
     end
 
-    ensure_auto_demands!(pad_descriptions[:input], module)
-    ensure_auto_demands!(pad_descriptions[:output], module)
+    ensure_flow_auto!(pad_descriptions[:input], module)
+    ensure_flow_auto!(pad_descriptions[:output], module)
 
     pads_data =
       pad_descriptions
@@ -47,7 +47,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
     }
   end
 
-  defp ensure_auto_demands!(%{name: name, mode: :pull, demand_mode: mode}, module)
+  defp ensure_flow_auto!(%{name: name, flow_control: mode}, module)
        when mode != :auto do
     raise """
     `Membrane.FilterAggregator` supports only filters with demands in `:auto` mode.
@@ -55,7 +55,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
     """
   end
 
-  defp ensure_auto_demands!(_pad_description, _module) do
+  defp ensure_flow_auto!(_pad_description, _module) do
     :ok
   end
 

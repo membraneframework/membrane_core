@@ -13,12 +13,12 @@ defmodule Membrane.Core.Child.PadsSpecs do
   @doc """
   Returns documentation string common for both input and output pads
   """
-  @spec def_pad_docs(Pad.direction_t(), :bin | :element) :: String.t()
+  @spec def_pad_docs(Pad.direction(), :bin | :element) :: String.t()
   def def_pad_docs(direction, component) do
     {entity, pad_type_spec} =
       case component do
-        :bin -> {"bin", "bin_spec_t/0"}
-        :element -> {"element", "#{direction}_spec_t/0"}
+        :bin -> {"bin", "bin_spec/0"}
+        :element -> {"element", "element_spec/0"}
       end
 
     """
@@ -34,7 +34,12 @@ defmodule Membrane.Core.Child.PadsSpecs do
   @doc """
   Returns AST inserted into element's or bin's module defining a pad
   """
-  @spec def_pad(Pad.name_t(), Pad.direction_t(), Macro.t(), :element | :bin) :: Macro.t()
+  @spec def_pad(
+          Pad.name(),
+          Pad.direction(),
+          Macro.t(),
+          :filter | :endpoint | :source | :sink | :bin
+        ) :: Macro.t()
   def def_pad(pad_name, direction, specs, component) do
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
 
@@ -93,7 +98,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
       unless Module.defines?(__MODULE__, {:membrane_stream_format_match?, 2}) do
         @doc false
-        @spec membrane_stream_format_match?(Membrane.Pad.name_t(), Membrane.StreamFormat.t()) ::
+        @spec membrane_stream_format_match?(Membrane.Pad.name(), Membrane.StreamFormat.t()) ::
                 boolean()
       end
 
@@ -127,7 +132,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
     quote do
       @doc false
-      @spec membrane_pads() :: [{unquote(Pad).name_t(), unquote(Pad).description_t()}]
+      @spec membrane_pads() :: [{unquote(Pad).name(), unquote(Pad).description()}]
       def membrane_pads() do
         unquote(pads |> Macro.escape())
       end
@@ -135,7 +140,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   @spec validate_pads!(
-          pads :: [{Pad.name_t(), Pad.description_t()}],
+          pads :: [{Pad.name(), Pad.description()}],
           env :: Macro.Env.t()
         ) :: :ok
   defp validate_pads!(pads, env) do
@@ -148,11 +153,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   @spec parse_pad_specs!(
-          specs :: Pad.spec_t(),
-          direction :: Pad.direction_t(),
-          :element | :bin,
+          specs :: Pad.spec(),
+          direction :: Pad.direction(),
+          :filter | :endpoint | :source | :sink | :bin,
           declaration_env :: Macro.Env.t()
-        ) :: {Pad.name_t(), Pad.description_t()}
+        ) :: {Pad.name(), Pad.description()}
   def parse_pad_specs!(specs, direction, component, env) do
     with {:ok, specs} <- parse_pad_specs(specs, direction, component) do
       specs
@@ -168,8 +173,13 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  @spec parse_pad_specs(Pad.spec_t(), Pad.direction_t(), :element | :bin) ::
-          {Pad.name_t(), Pad.description_t()} | {:error, reason :: any}
+  @spec parse_pad_specs(
+          Pad.spec(),
+          Pad.direction(),
+          :filter | :endpoint | :source | :sink | :bin
+        ) ::
+          {Pad.name(), Pad.description()} | {:error, reason :: any}
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   def parse_pad_specs(spec, direction, component) do
     withl spec: {name, config} when Pad.is_pad_name(name) and is_list(config) <- spec,
           config:
@@ -178,22 +188,34 @@ defmodule Membrane.Core.Child.PadsSpecs do
               |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
                 accepted_formats_str: [],
-                mode: [in: [:pull, :push], default: :pull],
-                demand_mode: [
-                  in: [:auto, :manual],
-                  default: :manual
-                ],
-                demand_unit: [
-                  in: [:buffers, :bytes],
-                  require_if:
-                    &(&1.mode == :pull and &1.demand_mode != :auto and
-                        (component == :bin or direction == :input)),
-                  default: :buffers
-                ],
+                flow_control: fn _config ->
+                  cond do
+                    component == :bin ->
+                      nil
+
+                    direction == :output and component != :filter ->
+                      [in: [:manual, :push]]
+
+                    direction == :input or component == :filter ->
+                      [in: [:auto, :manual, :push], default: :auto]
+                  end
+                end,
+                demand_unit:
+                  &cond do
+                    component == :bin or &1[:flow_control] != :manual ->
+                      nil
+
+                    direction == :input ->
+                      [in: [:buffers, :bytes]]
+
+                    direction == :output ->
+                      [in: [:buffers, :bytes, nil], default: nil]
+
+                    true ->
+                      nil
+                  end,
                 options: [default: nil]
               ) do
-      config = if component == :bin, do: Map.delete(config, :demand_mode), else: config
-
       config
       |> Map.put(:direction, direction)
       |> Map.put(:name, name)
@@ -207,7 +229,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   @doc """
   Generates docs describing pads based on pads specification.
   """
-  @spec generate_docs_from_pads_specs([{Pad.name_t(), Pad.description_t()}]) :: Macro.t()
+  @spec generate_docs_from_pads_specs([{Pad.name(), Pad.description()}]) :: Macro.t()
   def generate_docs_from_pads_specs([]) do
     quote do
       """
@@ -240,22 +262,25 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   defp generate_docs_from_pad_specs({name, config}) do
-    {pad_opts, config} = config |> Map.pop(:options)
+    config = config |> Map.delete(:name)
+
+    accepted_formats_doc = """
+    Accepted formats:
+    #{Enum.map_join(config.accepted_formats_str, "\n", &"```\n#{&1}\n```")}
+    """
 
     config_doc =
-      config
-      |> Enum.map(&generate_pad_property_doc/1)
-      |> Enum.map_join("\n", fn {k, v} ->
-        "<tr><td>#{k}</td> <td>#{v}</td></tr>"
-      end)
+      [:direction, :availability, :flow_control, :demand_unit]
+      |> Enum.filter(&Map.has_key?(config, &1))
+      |> Enum.map_join("\n", &generate_pad_property_doc(&1, Map.fetch!(config, &1)))
 
     options_doc =
-      if pad_opts != nil do
+      if config.options do
         quote do
           """
-          #{Bunch.Markdown.indent("Options:")}
+          Pad options:
 
-          #{unquote(OptionsSpecs.generate_opts_doc(pad_opts))}
+          #{unquote(OptionsSpecs.generate_opts_doc(config.options))}
           """
         end
       else
@@ -266,24 +291,15 @@ defmodule Membrane.Core.Child.PadsSpecs do
       """
       ### `#{inspect(unquote(name))}`
 
-      <table>
+      #{unquote(accepted_formats_doc)}
       #{unquote(config_doc)}
-      </table>
-      """ <> unquote(options_doc)
+      #{unquote(options_doc)}
+      """
     end
   end
 
-  defp generate_pad_property_doc({:accepted_formats_str, formats}) do
-    {
-      "Accepted formats",
-      Enum.map_join(formats, &"<p><code>#{&1}</code></p>")
-    }
-  end
-
-  defp generate_pad_property_doc({property, value}) do
-    {
-      property |> to_string() |> String.replace("_", " ") |> String.capitalize(),
-      "<code>#{inspect(value)}</code>"
-    }
+  defp generate_pad_property_doc(property, value) do
+    property_str = property |> to_string() |> String.replace("_", " ") |> String.capitalize()
+    "#{property_str}: | `#{inspect(value)}`"
   end
 end

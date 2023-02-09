@@ -5,17 +5,15 @@ defmodule Membrane.Core.Bin.PadController do
 
   use Bunch
 
-  alias Membrane.Bin.CallbackContext
   alias Membrane.{Core, LinkError, Pad}
-  alias Membrane.Core.Bin.{ActionHandler, State}
+  alias Membrane.Core.Bin.{ActionHandler, CallbackContext, State}
   alias Membrane.Core.{CallbackHandler, Child, Message}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.StreamFormatController
-  alias Membrane.Core.Parent.{ChildLifeController, Link, StructureParser}
+  alias Membrane.Core.Parent.{ChildLifeController, Link, SpecificationParser}
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
-  require Membrane.Bin.CallbackContext.{PadAdded, PadRemoved}
   require Membrane.Logger
   require Membrane.Pad
 
@@ -23,10 +21,10 @@ defmodule Membrane.Core.Bin.PadController do
   Handles a link request from the bin's parent.
   """
   @spec handle_external_link_request(
-          Pad.ref_t(),
-          Pad.direction_t(),
+          Pad.ref(),
+          Pad.direction(),
           Link.id(),
-          Membrane.ChildrenSpec.pad_options_t(),
+          Membrane.ChildrenSpec.pad_options(),
           State.t()
         ) :: State.t() | no_return
   def handle_external_link_request(pad_ref, direction, link_id, pad_options, state) do
@@ -82,7 +80,7 @@ defmodule Membrane.Core.Bin.PadController do
     state
   end
 
-  @spec handle_linking_timeout(Pad.ref_t(), State.t()) :: :ok | no_return()
+  @spec handle_linking_timeout(Pad.ref(), State.t()) :: :ok | no_return()
   def handle_linking_timeout(pad_ref, state) do
     case PadModel.get_data(state, pad_ref) do
       {:ok, %{endpoint: nil}} = pad_data ->
@@ -99,9 +97,9 @@ defmodule Membrane.Core.Bin.PadController do
   to a pad of one of its children.
   """
   @spec handle_internal_link_request(
-          Pad.ref_t(),
+          Pad.ref(),
           Link.Endpoint.t(),
-          ChildLifeController.spec_ref_t(),
+          ChildLifeController.spec_ref(),
           State.t()
         ) :: State.t()
   def handle_internal_link_request(pad_ref, child_endpoint, spec_ref, state) do
@@ -138,7 +136,7 @@ defmodule Membrane.Core.Bin.PadController do
   @doc """
   Sends link response to the parent for each of bin's pads involved in given spec.
   """
-  @spec respond_links(ChildLifeController.spec_ref_t(), State.t()) :: State.t()
+  @spec respond_links(ChildLifeController.spec_ref(), State.t()) :: State.t()
   def respond_links(spec_ref, state) do
     state.pads_data
     |> Map.values()
@@ -165,7 +163,7 @@ defmodule Membrane.Core.Bin.PadController do
   @doc """
   Returns true if all pads of given `spec_ref` are linked, false otherwise.
   """
-  @spec all_pads_linked?(ChildLifeController.spec_ref_t(), State.t()) :: boolean()
+  @spec all_pads_linked?(ChildLifeController.spec_ref(), State.t()) :: boolean()
   def all_pads_linked?(spec_ref, state) do
     state.pads_data
     |> Map.values()
@@ -177,23 +175,23 @@ defmodule Membrane.Core.Bin.PadController do
   Verifies linked pad and proxies the message to the proper child.
   """
   @spec handle_link(
-          Pad.direction_t(),
-          StructureParser.raw_endpoint_t(),
-          StructureParser.raw_endpoint_t(),
+          Pad.direction(),
+          SpecificationParser.raw_endpoint(),
+          SpecificationParser.raw_endpoint(),
           %{
             initiator: :parent,
             stream_format_validation_params:
-              StreamFormatController.stream_format_validation_params_t()
+              StreamFormatController.stream_format_validation_params()
           }
           | %{
               initiator: :sibling,
-              other_info: PadModel.pad_info_t() | nil,
+              other_info: PadModel.pad_info() | nil,
               link_metadata: map,
               stream_format_validation_params:
-                StreamFormatController.stream_format_validation_params_t()
+                StreamFormatController.stream_format_validation_params()
             },
           Core.Bin.State.t()
-        ) :: {Core.Element.PadController.link_call_reply_t(), Core.Bin.State.t()}
+        ) :: {Core.Element.PadController.link_call_reply(), Core.Bin.State.t()}
   def handle_link(direction, endpoint, other_endpoint, params, state) do
     pad_data = PadModel.get_data!(state, endpoint.pad_ref)
 
@@ -252,13 +250,24 @@ defmodule Membrane.Core.Bin.PadController do
   @doc """
   Handles situation where the pad has been unlinked (e.g. when connected element has been removed from the pipeline)
   """
-  @spec handle_unlink(Pad.ref_t(), Core.Bin.State.t()) :: Core.Bin.State.t()
+  @spec handle_unlink(Pad.ref(), Core.Bin.State.t()) :: Core.Bin.State.t()
   def handle_unlink(pad_ref, state) do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
       state = maybe_handle_pad_removed(pad_ref, state)
       endpoint = PadModel.get_data!(state, pad_ref, :endpoint)
-      Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
-      PadModel.delete_data!(state, pad_ref)
+      {pad_data, state} = PadModel.pop_data!(state, pad_ref)
+
+      if endpoint do
+        Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+        ChildLifeController.proceed_spec_startup(pad_data.spec_ref, state)
+      else
+        Membrane.Logger.debug("""
+        Tried to send :handle_unlink to the endpoint while unlinking #{inspect(pad_ref)},
+        but the endpoint is neither linked internally nor :handle_link was received yet
+        """)
+
+        state
+      end
     else
       {:ok, %{availability: :always}} when state.terminating? ->
         state
@@ -276,13 +285,12 @@ defmodule Membrane.Core.Bin.PadController do
     end
   end
 
-  @spec maybe_handle_pad_added(Pad.ref_t(), Core.Bin.State.t()) :: Core.Bin.State.t()
+  @spec maybe_handle_pad_added(Pad.ref(), Core.Bin.State.t()) :: Core.Bin.State.t()
   defp maybe_handle_pad_added(ref, state) do
-    %{options: pad_opts, direction: direction, availability: availability} =
-      PadModel.get_data!(state, ref)
+    %{options: pad_opts, availability: availability} = PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
-      context = &CallbackContext.PadAdded.from_state(&1, options: pad_opts, direction: direction)
+      context = &CallbackContext.from_state(&1, pad_options: pad_opts)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_added,
@@ -296,17 +304,15 @@ defmodule Membrane.Core.Bin.PadController do
     end
   end
 
-  @spec maybe_handle_pad_removed(Pad.ref_t(), Core.Bin.State.t()) :: Core.Bin.State.t()
+  @spec maybe_handle_pad_removed(Pad.ref(), Core.Bin.State.t()) :: Core.Bin.State.t()
   defp maybe_handle_pad_removed(ref, state) do
-    %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
+    %{availability: availability} = PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
-      context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
-
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
         ActionHandler,
-        %{context: context},
+        %{context: &CallbackContext.from_state/1},
         [ref],
         state
       )

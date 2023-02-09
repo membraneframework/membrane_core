@@ -12,11 +12,9 @@ defmodule Membrane.Support.AcceptedFormatTest.InnerSinkBin do
   alias Membrane.Support.AcceptedFormatTest.StreamFormat.{AcceptedByAll, AcceptedByInnerBins}
 
   def_input_pad :input,
-    demand_unit: :buffers,
     accepted_format:
       %StreamFormat{format: format} when format in [AcceptedByAll, AcceptedByInnerBins],
-    availability: :always,
-    mode: :push
+    availability: :always
 
   def_options test_pid: [type: :pid]
 

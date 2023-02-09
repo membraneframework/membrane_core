@@ -19,17 +19,17 @@ defmodule Membrane.Pad do
   @typedoc """
   Defines the term by which the pad instance is identified.
   """
-  @type ref_t :: name_t | {__MODULE__, name_t, dynamic_id_t}
+  @type ref :: name | {__MODULE__, name, dynamic_id}
 
   @typedoc """
   Possible id of dynamic pad
   """
-  @type dynamic_id_t :: any
+  @type dynamic_id :: any
 
   @typedoc """
   Defines the name of pad or group of dynamic pads
   """
-  @type name_t :: atom
+  @type name :: atom
 
   @typedoc """
   Defines possible pad directions:
@@ -39,42 +39,32 @@ defmodule Membrane.Pad do
 
   One cannot link two pads with the same direction.
   """
-  @type direction_t :: :output | :input
+  @type direction :: :output | :input
 
   @typedoc """
   Describes how an element sends and receives data.
-  Modes are strictly related to pad directions:
 
-  - `:push` output pad - element can send data through such pad whenever it wants.
-  - `:push` input pad - element has to deal with data whenever it comes through
-  such pad, and do it fast enough not to let data accumulate on such pad, what
-  may lead to overflow of element process erlang queue, which is highly unwanted.
-  - `:pull` output pad - element can send data through such pad only if it have
-  already received demand on the pad.
-  - `:pull` input pad - element receives through such pad only data that it has
-  previously demanded, so that no undemanded data can arrive.
+  The available values for that field are:
+  - `:manual` - meaning that the pad works in a pull mode and the demand is manually handled and requested.
+  An element with output `:manual` pad can send data through such a pad only if it has already received demand
+  on that pad. And element with input `:manual` pad receives data through such a pad only if it has been
+  previously demanded, so that no undemanded data can arrive For more info, see `Membrane.Element.Action.demand`,
+  `Membrane.Element.Action.redemand` and `c:Membrane.Element.WithOutputPads.handle_demand/5`.
+  - `:auto` - meaning that the pad works in a pull mode and the demand is managed automatically:
+  the core ensures that there's demand on each input pad (that has `flow_control` set to `:auto`)
+  whenever there's demand on all output pads (that have `flow_control` set to `:auto`).
+  Currently works for `Membrane.Filter`s, `Membrane.Endpoint`s and `Membrane.Sink`s.
+  - `:push` - meaning that the pad works in a push mode. An element with a `:push` output pad can send data
+  through that pad whenever it wants. An element with a `:push` input pad has to deal with data whenever it
+  comes through such a pad - note, that it needs to be done fast enough so that not to let data accumulate,
+  what may lead to overflow of element process erlang queue, which is highly unwanted.
 
-  Linking pads with different modes is possible, but only in case of output pad
-  working in push mode, and input in pull mode. In such case, however, error will
-  be raised whenever too many buffers accumulate on the input pad, waiting to be
-  processed.
-
-  For more information on transfering data and demands, see `t:demand_mode_t/0`,
-  `Membrane.Source`, `Membrane.Filter`, `Membrane.Endpoint`, `Membrane.Sink`.
+  Linking pads with different flow control is possible, but only in case of an output pad
+  working in a push mode, and an input pad in pull mode (that is - with `:manual` or `:auto` flow control).
+  In such case, however, an error will be raised whenever too many buffers accumulate on the input pad,
+  waiting to be processed.
   """
-  @type mode_t :: :push | :pull
-
-  @typedoc """
-  Defines the mode of handling and requesting demand on pads.
-
-  - `:manual` - demand is manually handled and requested. See `Membrane.Element.Action.demand_t`,
-  `Membrane.Element.Action.redemand_t`, `c:Membrane.Element.WithOutputPads.handle_demand/5`
-  - `:auto` - demand is managed automatically: the core ensures that there's demand
-  on each input pad (that has `demand_mode` set to `:auto`) whenever there's demand on all
-  output pads (that have `demand_mode` set to `:auto`). Currently works only for
-  `Membrane.Filter`s.
-  """
-  @type demand_mode_t :: :manual | :auto
+  @type flow_control :: :auto | :manual | :push
 
   @typedoc """
   Values used when defining pad availability:
@@ -85,7 +75,7 @@ defmodule Membrane.Pad do
   instances of the pad, and links each with another pad.
   """
 
-  @type availability_t :: unquote(Bunch.Typespec.enum_to_alternative(@availability_values))
+  @type availability :: unquote(Bunch.Typespec.enum_to_alternative(@availability_values))
 
   @typedoc """
   Type describing availability mode of a created pad:
@@ -95,7 +85,7 @@ defmodule Membrane.Pad do
   entails executing `handle_pad_added` and `handle_pad_removed` callbacks,
   respectively).
   """
-  @type availability_mode_t :: :static | :dynamic
+  @type availability_mode :: :static | :dynamic
 
   @typedoc """
   Describes pattern, that should be matched by stream format send by element on specific
@@ -110,57 +100,45 @@ defmodule Membrane.Pad do
   [:some, :enumeration])` will have this same effect, as `accepted_format: any_of(%My.Format{},
   %My.Another.Format{field: value} when value in [:some, :enumeration])`
   """
-  @type accepted_format_t :: module() | (pattern :: term())
+  @type accepted_format :: module() | (pattern :: term())
 
   @typedoc """
   Describes how a pad should be declared in element or bin.
   """
-  @type spec_t :: output_spec_t | input_spec_t | bin_spec_t
+  @type spec :: element_spec | bin_spec
 
   @typedoc """
-  For bins there are exactly the same options for both directions.
+  Describes how a pad should be declared inside a bin.
+
   Demand unit is derived from the first element inside the bin linked to the
   given input.
   """
-  @type bin_spec_t :: {name_t(), [common_spec_options_t]}
+  @type bin_spec ::
+          {name(),
+           availability: availability(), accepted_format: accepted_format(), options: Keyword.t()}
 
   @typedoc """
-  Describes how an output pad should be declared inside an element.
+  Describes how a pad should be declared inside an element.
   """
-  @type output_spec_t :: {name_t(), [common_spec_options_t | {:demand_mode, demand_mode_t()}]}
+  @type element_spec ::
+          {name(),
+           availability: availability(),
+           accepted_format: accepted_format(),
+           flow_control: flow_control(),
+           options: Keyword.t(),
+           demand_unit: Buffer.Metric.unit()}
 
   @typedoc """
-  Describes how an input pad should be declared inside an element.
+  Type describing a pad. Contains data parsed from `t:spec/0`
   """
-  @type input_spec_t ::
-          {name_t(),
-           [
-             common_spec_options_t
-             | {:demand_mode, demand_mode_t()}
-             | {:demand_unit, Buffer.Metric.unit_t()}
-           ]}
-
-  @typedoc """
-  Pad options used in `t:spec_t/0`
-  """
-  @type common_spec_options_t ::
-          {:availability, availability_t()}
-          | {:accepted_format, accepted_format_t()}
-          | {:mode, mode_t()}
-          | {:options, Keyword.t()}
-
-  @typedoc """
-  Type describing a pad. Contains data parsed from `t:spec_t/0`
-  """
-  @type description_t :: %{
-          :availability => availability_t(),
-          :mode => mode_t(),
-          :name => name_t(),
+  @type description :: %{
+          :availability => availability(),
+          optional(:flow_control) => flow_control(),
+          :name => name(),
           :accepted_formats_str => [String.t()],
-          optional(:demand_unit) => Buffer.Metric.unit_t(),
-          :direction => direction_t(),
-          :options => nil | Keyword.t(),
-          optional(:demand_mode) => demand_mode_t()
+          optional(:demand_unit) => Buffer.Metric.unit() | nil,
+          :direction => direction(),
+          :options => nil | Keyword.t()
         }
 
   @doc """
@@ -196,18 +174,18 @@ defmodule Membrane.Pad do
   @doc """
   Returns pad availability mode for given availability.
   """
-  @spec availability_mode(availability_t) :: availability_mode_t
+  @spec availability_mode(availability) :: availability_mode
   def availability_mode(:always), do: :static
   def availability_mode(:on_request), do: :dynamic
 
   @doc """
   Returns the name for the given pad reference
   """
-  @spec name_by_ref(ref_t()) :: name_t()
+  @spec name_by_ref(ref()) :: name()
   def name_by_ref(ref(name, _id)) when is_pad_name(name), do: name
   def name_by_ref(name) when is_pad_name(name), do: name
 
-  @spec opposite_direction(direction_t()) :: direction_t()
+  @spec opposite_direction(direction()) :: direction()
   def opposite_direction(:input), do: :output
   def opposite_direction(:output), do: :input
 end

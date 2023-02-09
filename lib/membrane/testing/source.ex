@@ -37,7 +37,7 @@ defmodule Membrane.Testing.Source do
   @type generator ::
           (state :: any(), buffers_cnt :: pos_integer -> {[Action.t()], state :: any()})
 
-  def_output_pad :output, accepted_format: _any
+  def_output_pad :output, flow_control: :manual, accepted_format: _any
 
   def_options output: [
                 spec: {initial_state :: any(), generator} | Enum.t(),
@@ -45,7 +45,7 @@ defmodule Membrane.Testing.Source do
                 description: """
                 If `output` is an enumerable with `t:Membrane.Payload.t/0` then
                 buffer containing those payloads will be sent through the
-                `:output` pad and followed by `t:Membrane.Element.Action.end_of_stream_t/0`.
+                `:output` pad and followed by `t:Membrane.Element.Action.end_of_stream/0`.
 
                 If `output` is a `{initial_state, function}` tuple then the
                 the function will be invoked each time `handle_demand` is called.

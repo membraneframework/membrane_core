@@ -9,9 +9,9 @@ defmodule Membrane.ElementTest do
   defmodule TestFilter do
     use Membrane.Filter
 
-    def_input_pad :input, accepted_format: _any, demand_unit: :buffers
+    def_input_pad :input, flow_control: :manual, accepted_format: _any, demand_unit: :buffers
 
-    def_output_pad :output, accepted_format: _any
+    def_output_pad :output, flow_control: :manual, accepted_format: _any
 
     def_options target: [spec: pid()]
 
@@ -60,7 +60,7 @@ defmodule Membrane.ElementTest do
     end
 
     @impl true
-    def handle_process(_pad, _buffer, _context, state), do: {[], state}
+    def handle_buffer(_pad, _buffer, _context, state), do: {[], state}
   end
 
   setup do
@@ -70,7 +70,7 @@ defmodule Membrane.ElementTest do
       |> child(:sink, Testing.Sink)
     ]
 
-    pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
+    pipeline = Testing.Pipeline.start_link_supervised!(spec: links)
 
     [pipeline: pipeline]
   end
@@ -99,6 +99,7 @@ defmodule Membrane.ElementTest do
   end
 
   describe "End of stream" do
+    @tag :target
     test "causes handle_end_of_stream/3 to be called", %{pipeline: pipeline} do
       assert_pipeline_play(pipeline)
 

@@ -12,11 +12,19 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
 
   use Membrane.Filter
 
-  def_output_pad :output, accepted_format: _any, availability: :on_request
+  def_output_pad :output, flow_control: :manual, accepted_format: _any, availability: :on_request
 
-  def_input_pad :input1, demand_unit: :buffers, accepted_format: _any, availability: :on_request
+  def_input_pad :input1,
+    flow_control: :manual,
+    demand_unit: :buffers,
+    accepted_format: _any,
+    availability: :on_request
 
-  def_input_pad :input2, demand_unit: :buffers, accepted_format: _any, availability: :on_request
+  def_input_pad :input2,
+    flow_control: :manual,
+    demand_unit: :buffers,
+    accepted_format: _any,
+    availability: :on_request
 
   def_options demand_generator: [
                 spec: (pos_integer -> non_neg_integer),
@@ -59,7 +67,7 @@ defmodule Membrane.Support.ChildRemovalTest.Filter do
   end
 
   @impl true
-  def handle_process(_input, buf, ctx, state) do
+  def handle_buffer(_input, buf, ctx, state) do
     buffers =
       ctx.pads
       |> Map.values()

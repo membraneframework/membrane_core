@@ -63,7 +63,16 @@ defmodule Membrane.ResourceGuard do
   end
 
   @doc """
-  Cleans up resource manually.
+  Executes all cleanup functions registered in the resource gurard.
+  """
+  @spec cleanup(t) :: :ok
+  def cleanup(resource_guard) do
+    Message.send(resource_guard, :cleanup_all)
+    :ok
+  end
+
+  @doc """
+  Executes cleanup functions registered with the specifc tag.
 
   If many cleanup functions are registered with the same tag, all of them are executed.
   """
@@ -99,11 +108,17 @@ defmodule Membrane.ResourceGuard do
   end
 
   @impl true
+  def handle_info(Message.new(:cleanup_all), state) do
+    do_cleanup_all(state.guards)
+    {:noreply, %{state | guards: []}}
+  end
+
+  @impl true
   def handle_info(Message.new(:cleanup, tag), state) do
     guards =
       Enum.reject(state.guards, fn
         {function, ^tag, timeout} ->
-          cleanup(function, tag, timeout)
+          do_cleanup(function, tag, timeout)
           true
 
         _other ->
@@ -115,7 +130,7 @@ defmodule Membrane.ResourceGuard do
 
   @impl true
   def handle_info({:DOWN, monitor, :process, _pid, _reason}, %{monitor: monitor} = state) do
-    Enum.each(state.guards, fn {function, tag, timeout} -> cleanup(function, tag, timeout) end)
+    do_cleanup_all(state.guards)
     {:stop, :normal, state}
   end
 
@@ -124,7 +139,13 @@ defmodule Membrane.ResourceGuard do
     {:noreply, state}
   end
 
-  defp cleanup(function, tag, timeout) do
+  defp do_cleanup_all(guards) do
+    for {function, tag, timeout} <- guards do
+      do_cleanup(function, tag, timeout)
+    end
+  end
+
+  defp do_cleanup(function, tag, timeout) do
     {:ok, task} = Task.start_link(function)
 
     receive do

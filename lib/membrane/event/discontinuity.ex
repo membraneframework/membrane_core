@@ -12,9 +12,9 @@ defmodule Membrane.Event.Discontinuity do
   """
   @derive Membrane.EventProtocol
 
-  @type duration_t :: Membrane.Time.t() | nil
+  @type duration :: Membrane.Time.t() | nil
 
   defstruct duration: nil
 
-  @type t :: %__MODULE__{duration: duration_t}
+  @type t :: %__MODULE__{duration: duration}
 end

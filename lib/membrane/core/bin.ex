@@ -4,7 +4,7 @@ defmodule Membrane.Core.Bin do
   use GenServer
 
   alias __MODULE__.{ActionHandler, PadController, State}
-  alias Membrane.Bin.CallbackContext
+  alias Membrane.Core.Bin.CallbackContext
 
   alias Membrane.Core.{
     CallbackHandler,
@@ -22,14 +22,14 @@ defmodule Membrane.Core.Bin do
   require Membrane.Core.Telemetry
   require Membrane.Logger
 
-  @type options_t :: %{
+  @type options :: %{
           name: atom,
           module: module,
           node: node | nil,
           parent: pid,
-          user_options: Membrane.Bin.options_t(),
+          user_options: Membrane.Bin.options(),
           parent_clock: Membrane.Clock.t(),
-          parent_path: Membrane.ComponentPath.path_t(),
+          parent_path: Membrane.ComponentPath.path(),
           log_metadata: Logger.metadata(),
           sync: :membrane_no_sync,
           subprocess_supervisor: pid(),
@@ -45,7 +45,7 @@ defmodule Membrane.Core.Bin do
 
   Returns the same values as `GenServer.start_link/3`.
   """
-  @spec start_link(options_t) :: GenServer.on_start()
+  @spec start_link(options) :: GenServer.on_start()
   def start_link(options),
     do: do_start(:start_link, options)
 
@@ -53,7 +53,7 @@ defmodule Membrane.Core.Bin do
   Works similarly to `start_link/3`, but does not link to the current process.
   """
 
-  @spec start(options_t()) :: GenServer.on_start()
+  @spec start(options()) :: GenServer.on_start()
   def start(options),
     do: do_start(:start, options)
 
@@ -125,13 +125,11 @@ defmodule Membrane.Core.Bin do
       }
       |> Child.PadSpecHandler.init_pads()
 
-    require CallbackContext.Init
-
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_init,
         ActionHandler,
-        %{context: &CallbackContext.Init.from_state/1},
+        %{context: &CallbackContext.from_state/1},
         [],
         %{state | internal_state: options.user_options}
       )
@@ -256,5 +254,17 @@ defmodule Membrane.Core.Bin do
   @impl GenServer
   def handle_call(Message.new(:get_clock), _from, state) do
     {:reply, state.synchronization.clock, state}
+  end
+
+  @impl GenServer
+  def handle_call(Message.new(:get_child_pid, child_ref), _from, state) do
+    reply =
+      with %State{children: %{^child_ref => %{pid: child_pid}}} <- state do
+        {:ok, child_pid}
+      else
+        _other -> {:error, :child_not_found}
+      end
+
+    {:reply, reply, state}
   end
 end

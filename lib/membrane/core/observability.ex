@@ -10,9 +10,9 @@ defmodule Membrane.Core.Observability do
                                         )
 
   @type config :: %{
-          optional(:parent_path) => ComponentPath.path_t(),
+          optional(:parent_path) => ComponentPath.path(),
           optional(:log_metadata) => Logger.metadata(),
-          name: term,
+          name: Membrane.Child.name(),
           component_type: :element | :bin | :pipeline,
           pid: pid()
         }
@@ -47,7 +47,9 @@ defmodule Membrane.Core.Observability do
 
     component_path = parent_path ++ [name_str]
     ComponentPath.set(component_path)
+
     Membrane.Logger.set_prefix(ComponentPath.format(component_path) <> utility_name)
+
     :ok
   end
 
@@ -69,7 +71,7 @@ defmodule Membrane.Core.Observability do
   Can be optionally turned on by setting `unsafely_name_processes_for_observer: :links` in
   config.exs.
   """
-  @spec setup_link(Membrane.Pad.ref_t(), metadata) :: metadata
+  @spec setup_link(Membrane.Pad.ref(), metadata) :: metadata
         when metadata: %{optional(:process_to_link) => pid()}
   if :links in @unsafely_name_processes_for_observer do
     def setup_link(pad_ref, observability_metadata \\ %{}) do

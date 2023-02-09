@@ -4,13 +4,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
 
   alias Membrane.{ChildEntry, Clock, Core, ParentError, Sync}
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent, SubprocessSupervisor}
-  alias Membrane.Core.Parent.ChildEntryParser
+  alias Membrane.Core.Parent.{ChildEntryParser, ChildLifeController}
 
   require Membrane.Core.Component
   require Membrane.Core.Message
   require Membrane.Logger
 
-  @spec check_if_children_names_unique([ChildEntryParser.raw_child_entry_t()], Parent.state_t()) ::
+  @spec check_if_children_names_unique([ChildEntryParser.raw_child_entry()], Parent.state()) ::
           :ok | no_return
   def check_if_children_names_unique(children, state) do
     %{children: state_children} = state
@@ -28,8 +28,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     end
   end
 
-  @spec setup_syncs([ChildEntryParser.raw_child_entry_t()], :sinks | [[Membrane.Child.name_t()]]) ::
-          %{Membrane.Child.name_t() => Sync.t()}
+  @spec setup_syncs([ChildEntryParser.raw_child_entry()], :sinks | [[Membrane.Child.name()]]) ::
+          %{Membrane.Child.name() => Sync.t()}
   def setup_syncs(children, :sinks) do
     sinks =
       children
@@ -65,12 +65,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   end
 
   @spec start_children(
-          [ChildEntryParser.raw_child_entry_t()],
+          [ChildEntryParser.raw_child_entry()],
           node() | nil,
           parent_clock :: Clock.t(),
-          syncs :: %{Membrane.Child.name_t() => pid()},
+          syncs :: %{Membrane.Child.name() => pid()},
           log_metadata :: Keyword.t(),
-          supervisor :: pid
+          supervisor :: pid,
+          group :: Membrane.Child.group()
         ) :: [ChildEntry.t()]
   def start_children(
         children,
@@ -78,21 +79,22 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
         parent_clock,
         syncs,
         log_metadata,
-        supervisor
+        supervisor,
+        group
       ) do
     # If the node is set to the current node, set it to nil, to avoid race conditions when
     # distribution changes
     node = if node == node(), do: nil, else: node
 
     Membrane.Logger.debug(
-      "Starting children: #{inspect(children)} #{if node, do: " on node #{node}"}"
+      "Starting children: #{inspect(children)} in children group: #{inspect(group)}#{if node, do: " on node #{node}"}"
     )
 
     children
-    |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, supervisor))
+    |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, supervisor, group))
   end
 
-  @spec maybe_activate_syncs(%{Membrane.Child.name_t() => Sync.t()}, Parent.state_t()) ::
+  @spec maybe_activate_syncs(%{Membrane.Child.name() => Sync.t()}, Parent.state()) ::
           :ok | {:error, :bad_activity_request}
   def maybe_activate_syncs(syncs, %{playback: :playing}) do
     syncs |> MapSet.new(&elem(&1, 1)) |> Bunch.Enum.try_each(&Sync.activate/1)
@@ -102,29 +104,91 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     :ok
   end
 
-  @spec exec_handle_spec_started([Membrane.Child.name_t()], Parent.state_t()) :: Parent.state_t()
+  @spec exec_handle_spec_started([Membrane.Child.name()], Parent.state()) :: Parent.state()
   def exec_handle_spec_started(children_names, state) do
-    context = Component.callback_context_generator(:parent, SpecStarted, state)
-
-    action_handler =
-      case state do
-        %Core.Pipeline.State{} -> Core.Pipeline.ActionHandler
-        %Core.Bin.State{} -> Core.Bin.ActionHandler
-      end
+    action_handler = Component.action_handler(state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_spec_started,
       action_handler,
-      %{context: context},
+      %{context: &Component.context_from_state/1},
       [children_names],
       state
     )
   end
 
-  defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor) do
+  @spec check_if_children_names_and_children_groups_ids_are_unique(
+          ChildLifeController.children_spec_canonical_form(),
+          Parent.state()
+        ) :: :ok
+  def check_if_children_names_and_children_groups_ids_are_unique(children_definitions, state) do
+    state_children_groups =
+      Enum.map(state.children, fn {_child_ref, child_entry} -> child_entry.group end)
+
+    new_children_groups =
+      Enum.map(children_definitions, fn {_children, options} -> options.group end)
+
+    state_children_names =
+      Map.keys(state.children)
+      |> Enum.map(fn child_ref ->
+        case child_ref do
+          {Membrane.Child, _group, child_name} -> child_name
+          child_name -> child_name
+        end
+      end)
+
+    new_children_names =
+      Enum.flat_map(children_definitions, fn {children, _options} ->
+        get_children_names(children)
+      end)
+
+    duplicated = Enum.filter(new_children_groups, &(&1 in state_children_names))
+
+    if duplicated != [],
+      do:
+        raise(
+          Membrane.ParentError,
+          "Cannot create children groups with ids: #{inspect(duplicated)} since
+    there are already children with such names."
+        )
+
+    duplicated = Enum.filter(new_children_names, &(&1 in state_children_groups))
+
+    if duplicated != [],
+      do:
+        raise(
+          Membrane.ParentError,
+          "Cannot spawn children with names: #{inspect(duplicated)} since
+    there are already children groups with such ids."
+        )
+
+    duplicated = Enum.filter(new_children_names, &(&1 in new_children_groups))
+
+    if duplicated != [],
+      do:
+        raise(
+          Membrane.ParentError,
+          "Cannot proceed, since the children group ids and children names created in this process are duplicating: #{inspect(duplicated)}"
+        )
+
+    :ok
+  end
+
+  defp get_children_names(children) do
+    Enum.map(children, fn {child_ref, _child_module, _options} ->
+      case child_ref do
+        {Membrane.Child, _group, child_name} -> child_name
+        child_name -> child_name
+      end
+    end)
+  end
+
+  defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor, group) do
     %ChildEntry{name: name, module: module, options: options} = child
 
-    Membrane.Logger.debug("Starting child: name: #{inspect(name)}, module: #{inspect(module)}")
+    Membrane.Logger.debug(
+      "Starting child: name: #{inspect(name)}, module: #{inspect(module)} in children group: #{inspect(group)}"
+    )
 
     sync = syncs |> Map.get(name, Sync.no_sync())
 
@@ -137,6 +201,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       parent_clock: parent_clock,
       sync: sync,
       parent_path: Membrane.ComponentPath.get(),
+      group: group,
       log_metadata: log_metadata
     }
 
@@ -171,7 +236,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
         child
         | pid: child_pid,
           clock: clock,
-          sync: sync
+          sync: sync,
+          group: group
       }
     else
       {:error, reason} ->

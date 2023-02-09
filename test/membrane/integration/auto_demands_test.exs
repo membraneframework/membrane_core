@@ -8,8 +8,8 @@ defmodule Membrane.Integration.AutoDemandsTest do
   defmodule AutoDemandFilter do
     use Membrane.Filter
 
-    def_input_pad :input, accepted_format: _any, demand_mode: :auto
-    def_output_pad :output, accepted_format: _any, demand_mode: :auto
+    def_input_pad :input, accepted_format: _any
+    def_output_pad :output, accepted_format: _any
 
     def_options factor: [default: 1], direction: [default: :up]
 
@@ -19,13 +19,13 @@ defmodule Membrane.Integration.AutoDemandsTest do
     end
 
     @impl true
-    def handle_process(:input, buffer, _ctx, %{direction: :up} = state) do
+    def handle_buffer(:input, buffer, _ctx, %{direction: :up} = state) do
       buffers = Enum.map(1..state.factor, fn _i -> buffer end)
       {[buffer: {:output, buffers}], state}
     end
 
     @impl true
-    def handle_process(:input, buffer, _ctx, %{direction: :down} = state) do
+    def handle_buffer(:input, buffer, _ctx, %{direction: :down} = state) do
       if state.counter < state.factor do
         {[], %{state | counter: state.counter + 1}}
       else
@@ -37,11 +37,11 @@ defmodule Membrane.Integration.AutoDemandsTest do
   defmodule AutoDemandTee do
     use Membrane.Filter
 
-    def_input_pad :input, accepted_format: _any, demand_mode: :auto
-    def_output_pad :output, accepted_format: _any, demand_mode: :auto, availability: :on_request
+    def_input_pad :input, accepted_format: _any
+    def_output_pad :output, accepted_format: _any, availability: :on_request
 
     @impl true
-    def handle_process(:input, buffer, _ctx, state), do: {[forward: buffer], state}
+    def handle_buffer(:input, buffer, _ctx, state), do: {[forward: buffer], state}
   end
 
   [
@@ -69,11 +69,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
       pipeline =
         Pipeline.start_link_supervised!(
-          structure: [
+          spec:
             child(:source, %Source{output: in_payloads})
             |> reduce_link(1..filters, &child(&1, {:filter, &2}, filter))
             |> child(:sink, Sink)
-          ]
         )
 
       assert_pipeline_play(pipeline)
@@ -93,7 +92,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     pipeline =
       Pipeline.start_link_supervised!(
-        structure: [
+        spec: [
           child(:source, %Source{output: 1..100_000}) |> child(:tee, AutoDemandTee),
           get_child(:tee) |> child(:left_sink, Sink),
           get_child(:tee) |> child(:right_sink, %Sink{autodemand: false})
@@ -118,7 +117,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     pipeline =
       Pipeline.start_link_supervised!(
-        structure: [
+        spec: [
           child(:source, %Source{output: 1..100_000}) |> child(:tee, AutoDemandTee),
           get_child(:tee) |> child(:left_sink, Sink),
           get_child(:tee) |> child(:right_sink, %Sink{autodemand: false})
@@ -127,7 +126,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     assert_pipeline_play(pipeline)
     Process.sleep(500)
-    Pipeline.execute_actions(pipeline, remove_child: :right_sink)
+    Pipeline.execute_actions(pipeline, remove_children: :right_sink)
 
     Enum.each(1..100_000, fn payload ->
       assert_sink_buffer(pipeline, :left_sink, buffer)
@@ -135,10 +134,60 @@ defmodule Membrane.Integration.AutoDemandsTest do
     end)
   end
 
+  defmodule NotifyingSink do
+    use Membrane.Sink
+
+    def_input_pad :input, accepted_format: _any, flow_control: :auto
+
+    @impl true
+    def handle_buffer(:input, buffer, _ctx, state) do
+      {[notify_parent: {:buffer_arrived, buffer}], state}
+    end
+  end
+
+  defmodule NotifyingEndpoint do
+    use Membrane.Endpoint
+
+    def_input_pad :input, accepted_format: _any, flow_control: :auto
+
+    @impl true
+    def handle_buffer(:input, buffer, _ctx, state) do
+      {[notify_parent: {:buffer_arrived, buffer}], state}
+    end
+  end
+
+  [
+    %{name: :sink, module: NotifyingSink},
+    %{name: :endpoint, module: NotifyingEndpoint}
+  ]
+  |> Enum.map(fn opts ->
+    test "buffers pass to auto-demand #{opts.name}" do
+      import Membrane.ChildrenSpec
+
+      %{name: name, module: module} = unquote(Macro.escape(opts))
+      payloads = Enum.map(1..1000, &inspect/1)
+
+      pipeline =
+        Pipeline.start_link_supervised!(
+          spec:
+            child(:source, %Source{output: payloads})
+            |> child(name, module)
+        )
+
+      for payload <- payloads do
+        assert_pipeline_notified(
+          pipeline,
+          name,
+          {:buffer_arrived, %Membrane.Buffer{payload: ^payload}}
+        )
+      end
+    end
+  end)
+
   defmodule PushSource do
     use Membrane.Source
 
-    def_output_pad :output, mode: :push, accepted_format: _any
+    def_output_pad :output, flow_control: :push, accepted_format: _any
 
     defmodule StreamFormat do
       defstruct []
@@ -160,11 +209,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     pipeline =
       Pipeline.start_link_supervised!(
-        structure: [
+        spec:
           child(:source, PushSource)
           |> child(:filter, AutoDemandFilter)
           |> child(:sink, Sink)
-        ]
       )
 
     assert_pipeline_play(pipeline)
@@ -190,11 +238,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     pipeline =
       Pipeline.start_supervised!(
-        structure: [
+        spec:
           child(:source, PushSource)
           |> child(:filter, AutoDemandFilter)
           |> child(:sink, %Sink{autodemand: false})
-        ]
       )
 
     Process.monitor(pipeline)

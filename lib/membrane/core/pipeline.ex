@@ -5,19 +5,23 @@ defmodule Membrane.Core.Pipeline do
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.{Clock, ResourceGuard}
   alias Membrane.Core.{CallbackHandler, SubprocessSupervisor}
+  alias Membrane.Core.Pipeline.CallbackContext
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
-  alias Membrane.Pipeline.CallbackContext
 
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
   require Membrane.Core.Component
-  require Membrane.Pipeline.CallbackContext.Call
 
   @impl GenServer
   def init(params) do
-    observability_config = %{name: params.name, component_type: :pipeline, pid: self()}
+    observability_config = %{
+      name: params.name,
+      component_type: :pipeline,
+      pid: self()
+    }
+
     Membrane.Core.Observability.setup(observability_config)
     SubprocessSupervisor.set_parent_component(params.subprocess_supervisor, observability_config)
 
@@ -43,13 +47,11 @@ defmodule Membrane.Core.Pipeline do
       resource_guard: resource_guard
     }
 
-    require CallbackContext.Init
-
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_init,
         ActionHandler,
-        %{context: &CallbackContext.Init.from_state/1},
+        %{context: &CallbackContext.from_state/1},
         [],
         %{state | internal_state: params.options}
       )
@@ -129,8 +131,20 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
+  def handle_call(Message.new(:get_child_pid, child_ref), _from, state) do
+    reply =
+      with %State{children: %{^child_ref => %{pid: child_pid}}} <- state do
+        {:ok, child_pid}
+      else
+        _other -> {:error, :child_not_found}
+      end
+
+    {:reply, reply, state}
+  end
+
+  @impl GenServer
   def handle_call(message, from, state) do
-    context = &CallbackContext.Call.from_state(&1, from: from)
+    context = &CallbackContext.from_state(&1, from: from)
 
     state =
       CallbackHandler.exec_and_handle_callback(

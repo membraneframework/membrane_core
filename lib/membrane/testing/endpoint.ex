@@ -9,9 +9,11 @@ defmodule Membrane.Testing.Endpoint do
           (state :: any(), buffers_cnt :: pos_integer -> {[Action.t()], state :: any()})
 
   def_output_pad :output,
+    flow_control: :manual,
     accepted_format: _any
 
   def_input_pad :input,
+    flow_control: :manual,
     accepted_format: _any,
     demand_unit: :buffers
 
@@ -29,7 +31,7 @@ defmodule Membrane.Testing.Endpoint do
                 description: """
                 If `output` is an enumerable with `t:Membrane.Payload.t/0` then
                 buffer containing those payloads will be sent through the
-                `:output` pad and followed by `t:Membrane.Element.Action.end_of_stream_t/0`.
+                `:output` pad and followed by `t:Membrane.Element.Action.end_of_stream/0`.
 
                 If `output` is a `{initial_state, function}` tuple then the
                 the function will be invoked each time `handle_demand` is called.
@@ -98,7 +100,7 @@ defmodule Membrane.Testing.Endpoint do
   end
 
   @impl true
-  def handle_write(:input, buf, _ctx, state) do
+  def handle_buffer(:input, buf, _ctx, state) do
     case state do
       %{autodemand: false} -> {notify({:buffer, buf}), state}
       %{autodemand: true} -> {[demand: :input] ++ notify({:buffer, buf}), state}

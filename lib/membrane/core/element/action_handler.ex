@@ -8,11 +8,20 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  alias Membrane.{ActionError, Buffer, ElementError, Event, Pad, PadDirectionError, StreamFormat}
+  alias Membrane.{
+    ActionError,
+    Buffer,
+    Core,
+    ElementError,
+    Event,
+    Pad,
+    PadDirectionError,
+    StreamFormat
+  }
+
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{DemandHandler, PadController, State, StreamFormatController}
-  alias Membrane.Core.{Events, Message, TimerController}
-  alias Membrane.Core.Telemetry
+  alias Membrane.Core.{Events, Message, Telemetry, TimerController}
   alias Membrane.Element.Action
 
   require Membrane.Core.Child.PadModel
@@ -48,6 +57,17 @@ defmodule Membrane.Core.Element.ActionHandler do
                :end_of_stream
              ] do
     raise ActionError, action: action, reason: {:invalid_component_playback, playback}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:setup, :incomplete} = action, cb, _params, _state)
+      when cb != :handle_setup do
+    raise ActionError, action: action, reason: {:invalid_callback, :handle_setup}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:setup, operation}, _cb, _params, state) do
+    Core.LifecycleController.handle_setup_operation(operation, state)
   end
 
   @impl CallbackHandler
@@ -117,7 +137,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       when cb in [
              :handle_stream_format,
              :handle_event,
-             :handle_process_list,
+             :handle_buffers_batch,
              :handle_end_of_stream
            ] do
     dir =
@@ -132,7 +152,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       action =
         case cb do
           :handle_event -> {:event, {pad, data}}
-          :handle_process_list -> {:buffer, {pad, data}}
+          :handle_buffers_batch -> {:buffer, {pad, data}}
           :handle_stream_format -> {:stream_format, {pad, data}}
           :handle_end_of_stream -> {:end_of_stream, pad}
         end
@@ -254,7 +274,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec send_buffer(Pad.ref_t(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
+  @spec send_buffer(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
   defp send_buffer(_pad_ref, [], state) do
     state
   end
@@ -310,7 +330,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     raise ElementError, "Tried to send an invalid buffer #{inspect(invalid_value)}"
   end
 
-  @spec send_stream_format(Pad.ref_t(), StreamFormat.t(), State.t()) :: State.t()
+  @spec send_stream_format(Pad.ref(), StreamFormat.t(), State.t()) :: State.t()
   def send_stream_format(pad_ref, stream_format, state) do
     Membrane.Logger.debug("""
     Sending stream format through pad #{inspect(pad_ref)}
@@ -347,8 +367,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @spec supply_demand(
-          Pad.ref_t(),
-          Action.demand_size_t(),
+          Pad.ref(),
+          Action.demand_size(),
           State.t()
         ) :: State.t()
   defp supply_demand(pad_ref, 0, state) do
@@ -363,44 +383,44 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp supply_demand(pad_ref, size, state) do
-    with %{direction: :input, mode: :pull, demand_mode: :manual} <-
+    with %{direction: :input, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
       DemandHandler.supply_demand(pad_ref, size, state)
     else
       %{direction: :output} ->
         raise PadDirectionError, action: :demand, direction: :output, pad: pad_ref
 
-      %{mode: :push} ->
+      %{flow_control: :push} ->
         raise ElementError,
-              "Tried to request a demand on pad #{inspect(pad_ref)} working in push mode"
+              "Tried to request a demand on pad #{inspect(pad_ref)} working in push flow control mode"
 
-      %{demand_mode: :auto} ->
+      %{flow_control: :auto} ->
         raise ElementError,
-              "Tried to request a demand on pad #{inspect(pad_ref)} that has demand mode set to auto"
+              "Tried to request a demand on pad #{inspect(pad_ref)} that has flow control mode set to auto"
     end
   end
 
-  @spec handle_redemand(Pad.ref_t(), State.t()) :: State.t()
+  @spec handle_redemand(Pad.ref(), State.t()) :: State.t()
   defp handle_redemand(pad_ref, %{type: type} = state)
        when type in [:source, :filter, :endpoint] do
-    with %{direction: :output, mode: :pull, demand_mode: :manual} <-
+    with %{direction: :output, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
       DemandHandler.handle_redemand(pad_ref, state)
     else
       %{direction: :input} ->
         raise ElementError, "Tried to make a redemand on input pad #{inspect(pad_ref)}"
 
-      %{mode: :push} ->
+      %{flow_control: :push} ->
         raise ElementError,
-              "Tried to make a redemand on pad #{inspect(pad_ref)} working in push mode"
+              "Tried to make a redemand on pad #{inspect(pad_ref)} working in push flow control mode"
 
-      %{demand_mode: :auto} ->
+      %{flow_control: :auto} ->
         raise ElementError,
-              "Tried to make a redemand on pad #{inspect(pad_ref)} that has demand mode set to auto"
+              "Tried to make a redemand on pad #{inspect(pad_ref)} that has flow control mode set to auto"
     end
   end
 
-  @spec send_event(Pad.ref_t(), Event.t(), State.t()) :: State.t()
+  @spec send_event(Pad.ref(), Event.t(), State.t()) :: State.t()
   defp send_event(pad_ref, event, state) do
     Membrane.Logger.debug_verbose("""
     Sending event through pad #{inspect(pad_ref)}
@@ -418,7 +438,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec handle_event(Pad.ref_t(), Event.t(), State.t()) :: State.t()
+  @spec handle_event(Pad.ref(), Event.t(), State.t()) :: State.t()
   defp handle_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
       state = PadController.remove_pad_associations(pad_ref, state)

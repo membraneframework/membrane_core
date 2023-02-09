@@ -55,7 +55,7 @@ defmodule Membrane.Element.Base do
   @typedoc """
   Type that defines all valid return values from most callbacks.
   """
-  @type callback_return_t :: {[Action.t()], Element.state_t()}
+  @type callback_return :: {[Action.t()], Element.state()}
 
   @doc """
   Callback invoked on initialization of element.
@@ -65,8 +65,8 @@ defmodule Membrane.Element.Base do
   For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
   while `handle_init` should be used for things like parsing options or initializing state.
   """
-  @callback handle_init(context :: CallbackContext.Init.t(), options :: Element.options_t()) ::
-              callback_return_t
+  @callback handle_init(context :: CallbackContext.t(), options :: Element.options()) ::
+              callback_return
 
   @doc """
   Callback invoked on element startup, right after `c:handle_init/2`.
@@ -74,9 +74,9 @@ defmodule Membrane.Element.Base do
   Any long-lasting or complex initialization should happen here.
   """
   @callback handle_setup(
-              context :: CallbackContext.Setup.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
+              context :: CallbackContext.t(),
+              state :: Element.state()
+            ) :: callback_return
 
   @doc """
   Callback invoked when bin switches the playback to `:playing`.
@@ -85,9 +85,9 @@ defmodule Membrane.Element.Base do
   through its pads.
   """
   @callback handle_playing(
-              context :: CallbackContext.Playing.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
+              context :: CallbackContext.t(),
+              state :: Element.state()
+            ) :: callback_return
 
   @doc """
   Callback invoked when element receives a message that is not recognized
@@ -97,29 +97,33 @@ defmodule Membrane.Element.Base do
   """
   @callback handle_info(
               message :: any(),
-              context :: CallbackContext.Info.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
+              context :: CallbackContext.t(),
+              state :: Element.state()
+            ) :: callback_return
 
   @doc """
   Callback that is called when new pad has beed added to element. Executed
   ONLY for dynamic pads.
+
+  Context passed to this callback contains additional field `:pad_options`.
   """
   @callback handle_pad_added(
-              pad :: Pad.ref_t(),
-              context :: CallbackContext.PadAdded.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
+              pad :: Pad.ref(),
+              context :: CallbackContext.t(),
+              state :: Element.state()
+            ) :: callback_return
 
   @doc """
   Callback that is called when some pad of the element has beed removed. Executed
   ONLY for dynamic pads.
+
+  Context passed to this callback contains additional field `:pad_options`.
   """
   @callback handle_pad_removed(
-              pad :: Pad.ref_t(),
-              context :: CallbackContext.PadRemoved.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
+              pad :: Pad.ref(),
+              context :: CallbackContext.t(),
+              state :: Element.state()
+            ) :: callback_return
 
   @doc """
   Callback that is called when event arrives.
@@ -128,41 +132,41 @@ defmodule Membrane.Element.Base do
   forwarded to all output and input pads, respectively.
   """
   @callback handle_event(
-              pad :: Pad.ref_t(),
+              pad :: Pad.ref(),
               event :: Event.t(),
-              context :: CallbackContext.Event.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
+              context :: CallbackContext.t(),
+              state :: Element.state()
+            ) :: callback_return
 
   @doc """
-  Callback invoked upon each timer tick. A timer can be started with `Membrane.Element.Action.start_timer_t`
+  Callback invoked upon each timer tick. A timer can be started with `Membrane.Element.Action.start_timer`
   action.
   """
   @callback handle_tick(
               timer_id :: any,
-              context :: CallbackContext.Tick.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
+              context :: CallbackContext.t(),
+              state :: Element.state()
+            ) :: callback_return
 
   @doc """
   Callback invoked when a message from the parent is received.
   """
   @callback handle_parent_notification(
               notification :: Membrane.ParentNotification.t(),
-              context :: Membrane.Element.CallbackContext.ParentNotification.t(),
-              state :: Element.state_t()
-            ) :: callback_return_t
+              context :: CallbackContext.t(),
+              state :: Element.state()
+            ) :: callback_return
 
   @doc """
   Callback invoked when element is removed by its parent.
 
-  By default it returns `t:Membrane.Element.Action.terminate_t/0` with reason `:normal`.
+  By default it returns `t:Membrane.Element.Action.terminate/0` with reason `:normal`.
   """
   @callback handle_terminate_request(
-              context :: CallbackContext.TerminateRequest.t(),
-              state :: Element.state_t()
+              context :: CallbackContext.t(),
+              state :: Element.state()
             ) ::
-              callback_return_t()
+              callback_return()
 
   @doc """
   A callback for constructing struct. Will be defined by `def_options/1` if used.

@@ -10,7 +10,7 @@ defmodule Membrane.Core.ElementTest do
 
   defmodule SomeElement do
     use Membrane.Source
-    def_output_pad :output, accepted_format: _any
+    def_output_pad :output, flow_control: :manual, accepted_format: _any
 
     def_options test_pid: [spec: pid | nil, default: nil]
 
@@ -23,9 +23,10 @@ defmodule Membrane.Core.ElementTest do
   defmodule Filter do
     use Membrane.Filter
 
-    def_output_pad :output, accepted_format: _any
+    def_output_pad :output, flow_control: :manual, accepted_format: _any
 
     def_input_pad :dynamic_input,
+      flow_control: :manual,
       accepted_format: _any,
       demand_unit: :buffers,
       availability: :on_request
@@ -57,7 +58,8 @@ defmodule Membrane.Core.ElementTest do
         parent_path: [],
         log_metadata: [],
         subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
-        parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!()
+        parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
+        group: nil
       })
 
     state
@@ -73,11 +75,12 @@ defmodule Membrane.Core.ElementTest do
             pad_spec: :dynamic_input,
             pad_ref: :dynamic_input,
             pid: self(),
-            child: :other
+            child: :other,
+            pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
           },
           %{
             initiator: :sibling,
-            other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
+            other_info: %{direction: :input, flow_control: :manual, demand_unit: :buffers},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
             stream_format_validation_params: []
           }
@@ -107,7 +110,7 @@ defmodule Membrane.Core.ElementTest do
           %Endpoint{pad_spec: :output, pad_ref: :output, pid: self(), child: :other},
           %{
             initiator: :sibling,
-            other_info: %{direction: :output, mode: :pull},
+            other_info: %{direction: :output, flow_control: :manual},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
             stream_format_validation_params: []
           }
@@ -210,11 +213,20 @@ defmodule Membrane.Core.ElementTest do
                    pad_props: %{options: [], toilet_capacity: nil},
                    child: :this
                  },
-                 %{pad_ref: :dynamic_input, pid: pid, child: :other},
+                 %{
+                   pad_ref: :dynamic_input,
+                   pid: pid,
+                   child: :other,
+                   pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
+                 },
                  %{
                    initiator: :sibling,
-                   other_info: %{direction: :input, mode: :pull, demand_unit: :buffers},
-                   link_metadata: %{toilet: nil, observability_metadata: %{}},
+                   other_info: %{
+                     direction: :input,
+                     demand_unit: :buffers,
+                     flow_control: :manual
+                   },
+                   link_metadata: %{observability_metadata: %{}},
                    stream_format_validation_params: []
                  }
                ]),
@@ -225,13 +237,14 @@ defmodule Membrane.Core.ElementTest do
     assert {%{child: :this, pad_props: %{options: []}, pad_ref: :output},
             %{
               availability: :always,
-              demand_mode: :manual,
-              demand_unit: :buffers,
+              flow_control: :manual,
               direction: :output,
-              mode: :pull,
               name: :output,
               options: nil
-            }, %{toilet: nil}} = reply
+            },
+            %{toilet: toilet, output_demand_unit: :buffers, input_demand_unit: :buffers}} = reply
+
+    assert toilet != nil
 
     assert %Membrane.Element.PadData{
              pid: ^pid,
@@ -258,9 +271,10 @@ defmodule Membrane.Core.ElementTest do
     {:ok, clock} = Membrane.Clock.start_link()
     state = Membrane.Core.TimerController.start_timer(:timer, 1000, clock, get_state())
 
-    assert {:noreply, state} = Element.handle_info({:membrane_clock_ratio, clock, 123}, state)
+    assert {:noreply, state} =
+             Element.handle_info({:membrane_clock_ratio, clock, Ratio.new(123)}, state)
 
-    assert state.synchronization.timers.timer.ratio == 123
+    assert state.synchronization.timers.timer.ratio == Ratio.new(123)
   end
 
   test "should set stream sync" do
@@ -332,7 +346,8 @@ defmodule Membrane.Core.ElementTest do
       parent_path: [],
       log_metadata: [],
       subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
-      parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!()
+      parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
+      group: nil
     }
   end
 end

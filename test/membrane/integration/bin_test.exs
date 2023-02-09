@@ -25,7 +25,7 @@ defmodule Membrane.Core.BinTest do
         |> child(:sink, Testing.Sink)
       ]
 
-      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: links)
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -46,7 +46,7 @@ defmodule Membrane.Core.BinTest do
         |> child(:sink, Testing.Sink)
       ]
 
-      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: links)
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -66,7 +66,7 @@ defmodule Membrane.Core.BinTest do
         |> child(:sink, Testing.Sink)
       ]
 
-      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: links)
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -89,7 +89,7 @@ defmodule Membrane.Core.BinTest do
         |> child(:sink, Testing.Sink)
       ]
 
-      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: links)
 
       assert_data_flows_through(pipeline, buffers)
     end
@@ -97,14 +97,13 @@ defmodule Membrane.Core.BinTest do
     test "when pipeline has only one element being a padless bin" do
       buffers = ['a', 'b', 'c']
 
-      children = [
+      children =
         child(:test_bin, %TestBins.TestPadlessBin{
           source: %Testing.Source{output: buffers},
           sink: Testing.Sink
         })
-      ]
 
-      pipeline = Testing.Pipeline.start_link_supervised!(structure: children)
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: children)
 
       assert_pipeline_play(pipeline)
 
@@ -126,7 +125,7 @@ defmodule Membrane.Core.BinTest do
         })
       ]
 
-      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: links)
 
       assert_pipeline_play(pipeline)
 
@@ -188,7 +187,7 @@ defmodule Membrane.Core.BinTest do
         |> child(:sink, Testing.Sink)
       ]
 
-      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: links)
 
       Process.sleep(2000)
       assert_data_flows_through(pipeline, buffers)
@@ -203,7 +202,10 @@ defmodule Membrane.Core.BinTest do
     defmodule ClockElement do
       use Membrane.Source
 
-      def_output_pad :output, accepted_format: _any
+      def_output_pad :output,
+        flow_control: :manual,
+        accepted_format: _any,
+        availability: :on_request
 
       def_clock()
     end
@@ -261,13 +263,12 @@ defmodule Membrane.Core.BinTest do
     test "handle_parent_notification/3 works for Bin" do
       buffers = ['a', 'b', 'c']
 
-      links = [
+      links =
         child(:source, %Testing.Source{output: buffers})
         |> child(:test_bin, TestBins.NotifyingParentBin)
         |> child(:sink, Testing.Sink)
-      ]
 
-      pipeline = Testing.Pipeline.start_link_supervised!(structure: links)
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: links)
 
       Testing.Pipeline.execute_actions(pipeline, notify_child: {:test_bin, "Some notification"})
       assert_pipeline_notified(pipeline, :test_bin, msg)
@@ -311,7 +312,8 @@ defmodule Membrane.Core.BinTest do
         filter2: TestFilter
       },
       subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
-      parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!()
+      parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
+      group: nil
     }
   end
 end

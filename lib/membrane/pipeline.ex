@@ -62,7 +62,6 @@ defmodule Membrane.Pipeline do
 
   alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad}
-  alias Membrane.CrashGroup
 
   require Membrane.Logger
   require Membrane.Core.Message, as: Message
@@ -94,7 +93,7 @@ defmodule Membrane.Pipeline do
       for example. Actions are a tuple of `{type, arguments}`, so may be written in the
       form a keyword list. See `Membrane.Pipeline.Action` for more info.
   """
-  @type callback_return_t ::
+  @type callback_return ::
           {[Action.t()], state}
 
   @doc """
@@ -105,16 +104,16 @@ defmodule Membrane.Pipeline do
   while `handle_init` should be used for things like parsing options, initializing state or spawning
   children.
   """
-  @callback handle_init(context :: CallbackContext.Init.t(), options :: pipeline_options) ::
-              callback_return_t()
+  @callback handle_init(context :: CallbackContext.t(), options :: pipeline_options) ::
+              callback_return()
 
   @doc """
   Callback invoked when pipeline is requested to terminate with `terminate/2`.
 
-  By default it returns `t:Membrane.Pipeline.Action.terminate_t/0` with reason `:normal`.
+  By default it returns `t:Membrane.Pipeline.Action.terminate/0` with reason `:normal`.
   """
-  @callback handle_terminate_request(context :: CallbackContext.TerminateRequest.t(), state) ::
-              callback_return_t()
+  @callback handle_terminate_request(context :: CallbackContext.t(), state) ::
+              callback_return()
 
   @doc """
   Callback invoked on pipeline startup, right after `c:handle_init/2`.
@@ -122,29 +121,29 @@ defmodule Membrane.Pipeline do
   Any long-lasting or complex initialization should happen here.
   """
   @callback handle_setup(
-              context :: CallbackContext.Setup.t(),
+              context :: CallbackContext.t(),
               state
             ) ::
-              callback_return_t
+              callback_return
 
   @doc """
   Callback invoked when pipeline switches the playback to `:playing`.
   """
   @callback handle_playing(
-              context :: CallbackContext.Playing.t(),
+              context :: CallbackContext.t(),
               state
             ) ::
-              callback_return_t
+              callback_return
 
   @doc """
   Callback invoked when a notification comes in from an element.
   """
   @callback handle_child_notification(
               notification :: Membrane.ChildNotification.t(),
-              element :: Child.name_t(),
-              context :: CallbackContext.ChildNotification.t(),
+              element :: Child.name(),
+              context :: CallbackContext.t(),
               state
-            ) :: callback_return_t
+            ) :: callback_return
 
   @doc """
   Callback invoked when pipeline receives a message that is not recognized
@@ -154,68 +153,72 @@ defmodule Membrane.Pipeline do
   """
   @callback handle_info(
               message :: any,
-              context :: CallbackContext.Info.t(),
+              context :: CallbackContext.t(),
               state
             ) ::
-              callback_return_t
+              callback_return
 
   @doc """
   Callback invoked when a child element starts processing stream via given pad.
   """
   @callback handle_element_start_of_stream(
-              child :: Child.name_t(),
-              pad :: Pad.ref_t(),
-              context :: CallbackContext.StreamManagement.t(),
+              child :: Child.name(),
+              pad :: Pad.ref(),
+              context :: CallbackContext.t(),
               state
-            ) :: callback_return_t
+            ) :: callback_return
 
   @doc """
   Callback invoked when a child element finishes processing stream via given pad.
   """
   @callback handle_element_end_of_stream(
-              child :: Child.name_t(),
-              pad :: Pad.ref_t(),
-              context :: CallbackContext.StreamManagement.t(),
+              child :: Child.name(),
+              pad :: Pad.ref(),
+              context :: CallbackContext.t(),
               state
-            ) :: callback_return_t
+            ) :: callback_return
 
   @doc """
   Callback invoked when children of `Membrane.ChildrenSpec` are started.
   """
   @callback handle_spec_started(
-              children :: [Child.name_t()],
-              context :: CallbackContext.SpecStarted.t(),
+              children :: [Child.name()],
+              context :: CallbackContext.t(),
               state
-            ) :: callback_return_t
+            ) :: callback_return
 
   @doc """
-  Callback invoked upon each timer tick. A timer can be started with `Membrane.Pipeline.Action.start_timer_t`
+  Callback invoked upon each timer tick. A timer can be started with `Membrane.Pipeline.Action.start_timer`
   action.
   """
   @callback handle_tick(
               timer_id :: any,
-              context :: CallbackContext.Tick.t(),
+              context :: CallbackContext.t(),
               state
-            ) :: callback_return_t
+            ) :: callback_return
 
   @doc """
   Callback invoked when crash of the crash group happens.
+
+  Context passed to this callback contains 2 additional fields: `:members` and `:crash_initiator`.
   """
   @callback handle_crash_group_down(
-              group_name :: CrashGroup.name_t(),
-              context :: CallbackContext.CrashGroupDown.t(),
+              group_name :: Child.group(),
+              context :: CallbackContext.t(),
               state
-            ) :: callback_return_t
+            ) :: callback_return
 
   @doc """
   Callback invoked when pipeline is called using a synchronous call.
+
+  Context passed to this callback contains additional field `:from`.
   """
   @callback handle_call(
               message :: any,
-              context :: CallbackContext.Call.t(),
+              context :: CallbackContext.t(),
               state
             ) ::
-              callback_return_t
+              callback_return
 
   @optional_callbacks handle_init: 2,
                       handle_setup: 2,
@@ -338,12 +341,6 @@ defmodule Membrane.Pipeline do
   end
 
   @doc false
-  # Credo was disabled there, since it was complaining about too high CC of the following macro, which in fact does not look too complex.
-  # The change which lead to CC increase was making the default definition of function call another function, instead of delegating to that function.
-  # It was necessary, since delegating to the deprecated function led to a deprecation warning being printed once 'use Membrane.Pipeline' was done,
-  # despite the fact that the deprecated function wasn't called. In the future releases we will remove deprecated functions and we will also remove that
-  # credo disable instruction so this can be seen just as a temporary solution.
-  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defmacro __before_compile__(_env) do
     quote do
       unless Enum.any?(0..2, &Module.defines?(__MODULE__, {:start_link, &1})) do

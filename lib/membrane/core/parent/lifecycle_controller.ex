@@ -3,7 +3,14 @@ defmodule Membrane.Core.Parent.LifecycleController do
   use Bunch
 
   alias Membrane.{Child, ChildNotification, Core, Pad, Sync}
-  alias Membrane.Core.{CallbackHandler, Component, Message, Parent}
+
+  alias Membrane.Core.{
+    CallbackHandler,
+    Component,
+    Message,
+    Parent,
+    TimerController
+  }
 
   alias Membrane.Core.Events
   alias Membrane.Core.Parent.{ChildLifeController}
@@ -12,36 +19,25 @@ defmodule Membrane.Core.Parent.LifecycleController do
   require Membrane.Core.Message
   require Membrane.Logger
 
-  @spec handle_setup(Parent.state_t()) :: Parent.state_t()
+  @spec handle_setup(Parent.state()) :: Parent.state()
   def handle_setup(state) do
     Membrane.Logger.debug("Setup")
-    context = Component.callback_context_generator(:parent, Setup, state)
 
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_setup,
         Component.action_handler(state),
-        %{context: context},
+        %{context: &Component.context_from_state/1},
         [],
         state
       )
 
-    state = %{state | initialized?: true}
-
-    case state do
-      %Core.Pipeline.State{playing_requested?: true} ->
-        handle_playing(state)
-
-      %Core.Bin.State{} ->
-        Message.send(state.parent_pid, :initialized, state.name)
-        state
-
-      state ->
-        state
+    with %{setup_incomplete?: false} <- state do
+      Membrane.Core.LifecycleController.complete_setup(state)
     end
   end
 
-  @spec handle_playing(Parent.state_t()) :: Parent.state_t()
+  @spec handle_playing(Parent.state()) :: Parent.state()
   def handle_playing(state) do
     Membrane.Logger.debug("Parent play")
 
@@ -56,36 +52,34 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end)
 
     state = %{state | playback: :playing}
-    context = Component.callback_context_generator(:parent, Playing, state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_playing,
       Component.action_handler(state),
-      %{context: context},
+      %{context: &Component.context_from_state/1},
       [],
       state
     )
   end
 
-  @spec handle_terminate_request(Parent.state_t()) :: Parent.state_t()
+  @spec handle_terminate_request(Parent.state()) :: Parent.state()
   def handle_terminate_request(%{terminating?: true} = state) do
     state
   end
 
   def handle_terminate_request(state) do
     state = %{state | terminating?: true}
-    context = Component.callback_context_generator(:parent, TerminateRequest, state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_terminate_request,
       Component.action_handler(state),
-      %{context: context},
+      %{context: &Component.context_from_state/1},
       [],
       state
     )
   end
 
-  @spec handle_terminate(Parent.state_t()) :: {:continue | :stop, Parent.state_t()}
+  @spec handle_terminate(Parent.state()) :: {:continue | :stop, Parent.state()}
   def handle_terminate(state) do
     if Enum.empty?(state.children) do
       {:stop, state}
@@ -96,6 +90,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
         |> Enum.reject(& &1.terminating?)
         |> Enum.map(& &1.name)
         |> ChildLifeController.handle_remove_children(state)
+        |> TimerController.stop_all_timers()
 
       zombie_module =
         case state do
@@ -108,33 +103,30 @@ defmodule Membrane.Core.Parent.LifecycleController do
     end
   end
 
-  @spec handle_child_notification(Child.name_t(), ChildNotification.t(), Parent.state_t()) ::
-          Parent.state_t()
+  @spec handle_child_notification(Child.name(), ChildNotification.t(), Parent.state()) ::
+          Parent.state()
   def handle_child_notification(from, notification, state) do
     Membrane.Logger.debug_verbose(
       "Received notification #{inspect(notification)} from #{inspect(from)}"
     )
 
     Parent.ChildrenModel.assert_child_exists!(state, from)
-    context = Component.callback_context_generator(:parent, ChildNotification, state)
 
     CallbackHandler.exec_and_handle_callback(
       :handle_child_notification,
       Component.action_handler(state),
-      %{context: context},
+      %{context: &Component.context_from_state/1},
       [notification, from],
       state
     )
   end
 
-  @spec handle_info(any, Parent.state_t()) :: Parent.state_t()
+  @spec handle_info(any, Parent.state()) :: Parent.state()
   def handle_info(message, state) do
-    context = Component.callback_context_generator(:parent, Info, state)
-
     CallbackHandler.exec_and_handle_callback(
       :handle_info,
       Component.action_handler(state),
-      %{context: context},
+      %{context: &Component.context_from_state/1},
       [message],
       state
     )
@@ -142,14 +134,12 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   @spec handle_stream_management_event(
           Membrane.Event.t(),
-          Child.name_t(),
-          Pad.ref_t(),
-          Parent.state_t()
-        ) :: Parent.state_t()
+          Child.name(),
+          Pad.ref(),
+          Parent.state()
+        ) :: Parent.state()
   def handle_stream_management_event(%event_type{}, element_name, pad_ref, state)
       when event_type in [Events.StartOfStream, Events.EndOfStream] do
-    context = Component.callback_context_generator(:parent, StreamManagement, state)
-
     callback =
       case event_type do
         Events.StartOfStream -> :handle_element_start_of_stream
@@ -159,7 +149,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
     CallbackHandler.exec_and_handle_callback(
       callback,
       Component.action_handler(state),
-      %{context: context},
+      %{context: &Component.context_from_state/1},
       [element_name, pad_ref],
       state
     )

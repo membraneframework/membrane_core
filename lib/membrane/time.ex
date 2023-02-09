@@ -11,11 +11,13 @@ defmodule Membrane.Time do
   that do not touch hardware clock, you should use Membrane units for consistency.
   """
 
+  require Ratio
+
   @compile {:inline,
             native_units: 1, native_unit: 0, nanoseconds: 1, nanosecond: 0, second: 0, seconds: 1}
 
   @type t :: integer
-  @type non_neg_t :: non_neg_integer
+  @type non_neg :: non_neg_integer
 
   @units [
     %{plural: :days, singular: :day, abbrev: "d", duration: 86_400_000_000_000},
@@ -30,7 +32,7 @@ defmodule Membrane.Time do
   # Difference between 01.01.1900 (start of NTP epoch) and 01.01.1970 (start of Unix epoch) in seconds
   @ntp_unix_epoch_diff 2_208_988_800
 
-  @two_to_pow_32 Ratio.pow(2, 32)
+  @two_to_pow_32 Ratio.pow(Ratio.new(2, 1), 32) |> Ratio.trunc()
 
   @doc """
   Checks whether a value is `Membrane.Time.t`.
@@ -227,16 +229,16 @@ defmodule Membrane.Time do
   end
 
   @doc """
-  Returns timestamp in timebase units. Rounded to the nearest integer.
+  Divides timestamp by a timebase. The result is rounded to the nearest integer.
 
   ## Examples:
       iex> timestamp = 10 |> Membrane.Time.seconds()
       iex> timebase = Ratio.new(Membrane.Time.second(), 30)
-      iex> Membrane.Time.round_to_timebase(timestamp, timebase)
+      iex> Membrane.Time.divide_by_timebase(timestamp, timebase)
       300
   """
-  @spec round_to_timebase(number | Ratio.t(), number | Ratio.t()) :: integer
-  def round_to_timebase(timestamp, timebase) do
+  @spec divide_by_timebase(number | Ratio.t(), number | Ratio.t()) :: integer
+  def divide_by_timebase(timestamp, timebase) do
     Ratio.new(timestamp, timebase) |> round_rational()
   end
 
@@ -260,35 +262,27 @@ defmodule Membrane.Time do
     end
 
     # credo:disable-for-next-line Credo.Check.Readability.Specs
-    def unquote(unit.plural)(number) do
-      if not Ratio.is_rational?(number) do
-        raise "Only integers and rationals can be converted with Membrane.Time.#{unquote(unit.plural)}"
-      end
-
-      Ratio.*(number, unquote(unit.duration))
+    def unquote(unit.plural)(number) when Ratio.is_rational(number) do
+      Ratio.mult(number, Ratio.new(unquote(unit.duration)))
       |> round_rational()
-    end
-
-    round_to_fun_name = :"round_to_#{unit.plural}"
-
-    @doc """
-    Returns time in #{unit.plural}. Rounded to the nearest integer.
-    """
-    @spec unquote(round_to_fun_name)(t) :: integer
-    # credo:disable-for-next-line Credo.Check.Readability.Specs
-    def unquote(round_to_fun_name)(time) when is_time(time) do
-      Ratio.new(time, unquote(unit.duration)) |> round_rational()
     end
 
     as_fun_name = :"as_#{unit.plural}"
 
     @doc """
-    Returns time in #{unit.plural}, represented as a rational number.
+    Returns time in #{unit.plural}.
+
+    If the `mode` argument is set to `:exact` (default), the result is
+    represented as a rational number. Otherwise, if the `mode` is
+    `:round`, the result is rounded to the nearest integer.
     """
-    @spec unquote(as_fun_name)(t) :: integer | Ratio.t()
+    @spec unquote(as_fun_name)(t, mode :: :round | :exact) :: integer | Ratio.t()
     # credo:disable-for-next-line Credo.Check.Readability.Specs
-    def unquote(as_fun_name)(time) when is_time(time) do
-      Ratio./(time, unquote(unit.duration))
+    def unquote(as_fun_name)(time, mode \\ :exact) when is_time(time) do
+      case mode do
+        :exact -> Ratio.new(time, unquote(unit.duration))
+        :round -> Ratio.new(time, unquote(unit.duration)) |> round_rational()
+      end
     end
   end)
 
@@ -298,7 +292,6 @@ defmodule Membrane.Time do
   end
 
   defp round_rational(ratio) do
-    ratio = make_rational(ratio)
     trunced = Ratio.trunc(ratio)
 
     if 2 * sign_of_rational(ratio) *
@@ -306,14 +299,6 @@ defmodule Membrane.Time do
          ratio.denominator,
        do: trunced + sign_of_rational(ratio),
        else: trunced
-  end
-
-  defp make_rational(number) do
-    if Ratio.is_rational?(number) do
-      number
-    else
-      %Ratio{numerator: number, denominator: 1}
-    end
   end
 
   defp sign_of_rational(ratio) do

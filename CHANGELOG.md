@@ -1,17 +1,34 @@
 # Changelog
 
+## 1.0.0
+ * Introduce `:remove_link` action in pipelines and bins.
+ * Add children groups - a mechanism that allows refering to multiple children with a single identifier. 
+ * Rename `remove_child` action into `remove_children` and allow for removing a children group with a single action.
+ * Add an ability to spawn anonymous children.
+ * Replace `Membrane.Time.round_to_<unit_name>` with `Membrane.Time.as_<unit_name>/2` with second argument equal `:round`. Rename `Membrane.Time.round_to_timebase` to `Membrane.Time.divide_by_timebase/2`. [#494](https://github.com/membraneframework/membrane_core/pull/494)
+ * Remove `:playback` action. Introduce `:setup` action. [#496](https://github.com/membraneframework/membrane_core/pull/496)
+ * Add `Membrane.Testing.Pipeline.get_child_pid/2`. [#497](https://github.com/membraneframework/membrane_core/pull/497)
+ * Make callback contexts to be maps. [#504](https://github.com/membraneframework/membrane_core/pull/504)
+ * All Membrane Elements can be compatible till now on - pads working in `:pull` mode, handling different `demand_units`, can be now linked.
+ * Output pads working in `:pull` mode should have their `demand_unit` specified. If case it's not available, it's assumed that the pad handles demands in both `:bytes` and `:buffers` units.
+ * Rename callbacks `handle_process/4` and `handle_write/4` to `handle_buffer/4` in [#506](https://github.com/membraneframework/membrane_core/pull/506)
+ * The flow control of the pad is now set with a single `:flow_control` option instead of `:mode` and `:demand_mode` options.
+ * Remove _t suffix from types [#509](https://github.com/membraneframework/membrane_core/pull/509)
+ * Implement automatic demands in Membrane Sinks and Endpoints. [#512](https://github.com/membraneframework/membrane_core/pull/512)
+
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
  * Refine communication between parent and its children [#270](https://github.com/membraneframework/membrane_core/issues/270)
  * Add `handle_call/3` callback in the pipeline, as well as a `:reply` and `:reply_to` actions. Rename `handle_other/3` callback into `handle_info/3` [#334](https://github.com/membraneframework/membrane_core/issues/334)
  * Add `Membrane.FilterAggregator` that allows to run multiple filters sequentially within one process. [#355](https://github.com/membraneframework/membrane_core/pull/355)
  * Log info about element's playback state change as debug, not as debug_verbose. [#430](https://github.com/membraneframework/membrane_core/pull/430)
- * Rename `Membrane.Time.to_<unit name>/1` into `Membrane.Time.round_to_<unit name>/1` to indicate that the result will be rounded. Make `Membrane.Time.<plural unit name>/1` accept `%Ratio{}` as an argument. Add `Membrane.Time.round_to_timebase/2` function.
+ * Rename `Membrane.Time.to_<unit name>/1` into `Membrane.Time.round_to_<unit name>/1` to indicate that the result will be rounded. Make `Membrane.Time.<plural unit name>/1` accept `%Ratio{}` as an argument. Add `Membrane.Time.round_to_timebase` function.
  * New `spec` action syntax - the structure of pipeline is now defined with the use of `Membrane.ChildrenSpec`
  * Rename `:caps` to `:stream_format`.
  * Use Elixir patterns as `:accepted_format` in pad definition.
  * Delete `:ok` from tuples returned from callbacks 
  * Remove `:type` from specs passed to `def_options/1` macro in bins and elements.  
+ * Add `Membrane.Testing.MockResourceGuard`
 
 ## 0.10.0
  * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
