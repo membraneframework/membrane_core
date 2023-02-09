@@ -61,7 +61,7 @@ defmodule Membrane.Pipeline do
   use Bunch
 
   alias __MODULE__.{Action, CallbackContext}
-  alias Membrane.{Child, Pad, PipelineTerminationError}
+  alias Membrane.{Child, Pad, PipelineError}
 
   require Membrane.Logger
   require Membrane.Core.Message, as: Message
@@ -301,37 +301,43 @@ defmodule Membrane.Pipeline do
     * `asynchronous?` - if set to `true`, pipline termination won't be blocking and
       will be executed in the process, which pid is returned as function result. If
       set to `false`, pipeline termination will be blocking and will be executed in
-      the process, that called this function.
+      the process that called this function. Defaults to `false`.
     * `timeout` - tells how much time (ms) to wait for pipeline to get gracefully
       terminated. Defaults to 5000.
     * `force?` - if set to `true` and pipeline is still alive after `timeout`,
-      pipeline will be killed using `Process.exit/2` with second argument set to
-      `:kill`, and function will return `{:error, :timeout}`. If set to `false` and
-      pipeline is still alive after `timeout`, function will raise an error.
-      Defaults to `false`.
+      pipeline will be killed using `Process.exit/2` with reason `:kill`, and function
+      will return `{:error, :timeout}`. If set to `false` and pipeline is still alive
+      after `timeout`, function will raise an error. Defaults to `false`.
 
   Returns:
     * `{:ok, pid}` - if option `asynchronous?: true` was passed.
     * `:ok` - if pipeline was gracefully terminated within `timeout`.
     * `{:error, :timeout}` - if pipeline was killed after a `timeout`.
   """
-  @spec terminate(pipeline :: pid, timeout: timeout(), force?: boolean()) ::
+  @spec terminate(pipeline :: pid, timeout: timeout(), force?: boolean(), asynchronous?: boolean()) ::
           :ok | {:ok, pid()} | {:error, :timeout}
   def terminate(pipeline, opts \\ []) do
-    {asynchronous?, opts} = Keyword.pop(opts, :asynchronous?, false)
+    [asynchronous?: asynchronous?] ++ opts =
+      Keyword.validate!(opts,
+        asynchronous?: false,
+        force?: false,
+        timeout: 5000
+      )
+      |> Enum.sort()
 
     if asynchronous? do
-      Task.start(__MODULE__, :run_terminate, [pipeline, opts])
+      Task.start(__MODULE__, :do_terminate, [pipeline, opts])
     else
-      run_terminate(pipeline, opts)
+      do_terminate(pipeline, opts)
     end
   end
 
-  @spec run_terminate(pipeline :: pid, timeout: timeout(), force?: boolean()) ::
+  @doc false
+  @spec do_terminate(pipeline :: pid, timeout: timeout(), force?: boolean()) ::
           :ok | {:error, :timeout}
-  def run_terminate(pipeline, opts) do
-    timeout = Keyword.get(opts, :timeout, 5000)
-    force? = Keyword.get(opts, :force?, false)
+  def do_terminate(pipeline, opts) do
+    timeout = Keyword.get(opts, :timeout)
+    force? = Keyword.get(opts, :force?)
 
     ref = Process.monitor(pipeline)
     Message.send(pipeline, :terminate)
@@ -345,7 +351,7 @@ defmodule Membrane.Pipeline do
           Process.exit(pipeline, :kill)
           {:error, :timeout}
         else
-          raise PipelineTerminationError, """
+          raise PipelineError, """
           Pipeline #{inspect(pipeline)} hasn't terminated within given timeout (#{inspect(timeout)} ms).
           If you want to kill it anyway, use `force?: true` option.
           """
