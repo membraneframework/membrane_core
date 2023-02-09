@@ -63,7 +63,7 @@ defmodule PipelineSynchronousCallTest do
         child(:source, %Membrane.Testing.Source{output: [1, 2, 3]})
         |> child(:sink, Membrane.Testing.Sink)
 
-      {[spec: spec, playback: :playing, reply: nil], state}
+      {[spec: spec, reply: nil], state}
     end
   end
 
