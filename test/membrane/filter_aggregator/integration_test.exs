@@ -12,11 +12,11 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
   defmodule FilterA do
     use Membrane.Filter
 
-    def_input_pad :input, demand_unit: :buffers, demand_mode: :auto, accepted_format: RemoteStream
-    def_output_pad :output, demand_mode: :auto, accepted_format: RemoteStream
+    def_input_pad :input, flow_control: :auto, accepted_format: RemoteStream
+    def_output_pad :output, flow_control: :auto, accepted_format: RemoteStream
 
     @impl true
-    def handle_process(:input, %Buffer{payload: <<idx, payload::binary>>}, _ctx, state) do
+    def handle_buffer(:input, %Buffer{payload: <<idx, payload::binary>>}, _ctx, state) do
       payload = for <<i <- payload>>, into: <<>>, do: <<i - 2>>
       {[buffer: {:output, %Buffer{payload: <<idx, payload::binary>>}}], state}
     end
@@ -25,11 +25,11 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
   defmodule FilterB do
     use Membrane.Filter
 
-    def_input_pad :input, demand_unit: :buffers, demand_mode: :auto, accepted_format: RemoteStream
-    def_output_pad :output, demand_mode: :auto, accepted_format: RemoteStream
+    def_input_pad :input, flow_control: :auto, accepted_format: RemoteStream
+    def_output_pad :output, flow_control: :auto, accepted_format: RemoteStream
 
     @impl true
-    def handle_process_list(:input, buffers, _ctx, state) do
+    def handle_buffers_batch(:input, buffers, _ctx, state) do
       buffers =
         buffers
         |> Enum.map(fn %Buffer{payload: <<idx, payload::binary>>} ->
@@ -57,7 +57,7 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
       |> child(:sink, Sink)
     ]
 
-    pid = Pipeline.start_link_supervised!(structure: links)
+    pid = Pipeline.start_link_supervised!(spec: links)
     assert_start_of_stream(pid, :sink)
     assert_sink_stream_format(pid, :sink, %RemoteStream{})
 

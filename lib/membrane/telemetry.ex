@@ -11,19 +11,19 @@ defmodule Membrane.Telemetry do
   The following events are published by Membrane's Core with following measurement types and metadata:
 
     * `[:membrane, :metric, :value]` - used to report metrics, such as input buffer's size inside functions, incoming events and received stream format
-        * Measurement: `t:metric_event_value_t/0`
+        * Measurement: `t:metric_event_value/0`
         * Metadata: `%{}`
 
     * `[:membrane, :link, :new]` - to report new link connection being initialized in pipeline.
-        * Measurement: `t:link_event_value_t/0`
+        * Measurement: `t:link_event_value/0`
         * Metadata: `%{}`
 
     * `[:membrane, :pipeline | :bin | :element, :init]` - to report pipeline/element/bin initialization
-        * Measurement: `t:init_or_terminate_event_value_t/0`
+        * Measurement: `t:init_or_terminate_event_value/0`
         * Metadata: `%{log_metadata: keyword()}`, includes Logger's metadata of created component
 
     * `[:membrane, :pipeline | :bin | :element, :terminate]` - to report pipeline/element/bin termination
-        * Measurement: `t:init_or_terminate_event_value_t/0`
+        * Measurement: `t:init_or_terminate_event_value/0`
         * Metadata: `%{}`
 
 
@@ -61,14 +61,14 @@ defmodule Membrane.Telemetry do
   * `:take_and_demand` - reports the current size of a input buffer when taking buffers and making a new demand
   """
 
-  @type event_name_t :: [atom(), ...]
+  @type event_name :: [atom(), ...]
 
   @typedoc """
   * component_path - element's or bin's path
   * metric - metric's name
   * value - metric's value
   """
-  @type metric_event_value_t :: %{
+  @type metric_event_value :: %{
           component_path: String.t(),
           metric: String.t(),
           value: integer()
@@ -77,8 +77,8 @@ defmodule Membrane.Telemetry do
   @typedoc """
   * path - element's path
   """
-  @type init_or_terminate_event_value_t :: %{
-          path: Membrane.ComponentPath.path_t()
+  @type init_or_terminate_event_value :: %{
+          path: Membrane.ComponentPath.path()
         }
 
   @typedoc """
@@ -88,7 +88,7 @@ defmodule Membrane.Telemetry do
   * pad_from - from's pad name
   * pad_to - to's pad name
   """
-  @type link_event_value_t :: %{
+  @type link_event_value :: %{
           parent_path: String.t(),
           from: String.t(),
           to: String.t(),

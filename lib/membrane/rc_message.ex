@@ -1,6 +1,6 @@
-defmodule Membrane.RemoteControlled.Message do
+defmodule Membrane.RCMessage do
   @moduledoc """
-  An abstract module aggregating all the messages that can be sent by the `RemoteControlled.Pipeline`.
+  An abstract module aggregating all the messages that can be sent by the `RCPipeline`.
 
   Check `t:t/0` for available messages.
   """
@@ -28,8 +28,8 @@ defmodule Membrane.RemoteControlled.Message do
     """
     @type t :: %__MODULE__{
             from: pid(),
-            element: Membrane.Element.name_t(),
-            pad: Membrane.Pad.name_t()
+            element: Membrane.Element.name(),
+            pad: Membrane.Pad.name()
           }
 
     @enforce_keys [:from, :element, :pad]
@@ -42,8 +42,8 @@ defmodule Membrane.RemoteControlled.Message do
     """
     @type t :: %__MODULE__{
             from: pid(),
-            element: Membrane.Element.name_t(),
-            pad: Membrane.Pad.name_t()
+            element: Membrane.Element.name(),
+            pad: Membrane.Pad.name()
           }
 
     @enforce_keys [:from, :element, :pad]
@@ -56,7 +56,7 @@ defmodule Membrane.RemoteControlled.Message do
     """
     @type t :: %__MODULE__{
             from: pid(),
-            element: Membrane.Element.name_t(),
+            element: Membrane.Element.name(),
             data: Membrane.ParentNotification.t()
           }
 

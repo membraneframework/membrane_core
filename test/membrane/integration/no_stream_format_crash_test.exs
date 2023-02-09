@@ -9,7 +9,7 @@ defmodule Membrane.FailWhenNoStreamFormatAreSent do
   defmodule SourceWhichDoesNotSendStreamFormat do
     use Membrane.Source
 
-    def_output_pad :output, accepted_format: _any, mode: :pull
+    def_output_pad :output, accepted_format: _any, flow_control: :manual
 
     @impl true
     def handle_init(_ctx, _options) do
@@ -40,7 +40,7 @@ defmodule Membrane.FailWhenNoStreamFormatAreSent do
     ]
 
     options = [
-      structure: links
+      spec: links
     ]
 
     pipeline = Pipeline.start_supervised!(options)
@@ -66,7 +66,7 @@ defmodule Membrane.FailWhenNoStreamFormatAreSent do
     ]
 
     options = [
-      structure: links
+      spec: links
     ]
 
     pipeline = Pipeline.start_supervised!(options)

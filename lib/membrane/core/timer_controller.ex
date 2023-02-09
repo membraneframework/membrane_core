@@ -5,13 +5,12 @@ defmodule Membrane.Core.TimerController do
   alias Membrane.Core.{CallbackHandler, Component, Timer}
 
   require Membrane.Core.Component
-  require Membrane.Element.CallbackContext.Tick
 
   defguardp is_timer_present(timer_id, state)
             when is_map_key(state.synchronization.timers, timer_id)
 
-  @spec start_timer(Timer.id_t(), Timer.interval_t(), Clock.t(), Component.state_t()) ::
-          Component.state_t()
+  @spec start_timer(Timer.id(), Timer.interval(), Clock.t(), Component.state()) ::
+          Component.state()
   def start_timer(id, _interval, _clock, state) when is_timer_present(id, state) do
     raise Membrane.TimerError, "Timer #{inspect(id)} already exists"
   end
@@ -22,8 +21,8 @@ defmodule Membrane.Core.TimerController do
     put_in(state, [:synchronization, :timers, id], timer)
   end
 
-  @spec timer_interval(Timer.id_t(), Timer.interval_t(), Component.state_t()) ::
-          Component.state_t()
+  @spec timer_interval(Timer.id(), Timer.interval(), Component.state()) ::
+          Component.state()
   def timer_interval(id, interval, state) do
     with {:ok, timer} <- state.synchronization.timers |> Map.fetch(id) do
       put_in(
@@ -36,28 +35,34 @@ defmodule Membrane.Core.TimerController do
     end
   end
 
-  @spec stop_timer(Timer.id_t(), Component.state_t()) :: Component.state_t()
+  @spec stop_all_timers(Component.state()) :: Component.state()
+  def stop_all_timers(state) do
+    for {_id, timer} <- state.synchronization.timers do
+      stop_and_unsubscribe(timer)
+    end
+
+    Bunch.Access.put_in(state, [:synchronization, :timers], %{})
+  end
+
+  @spec stop_timer(Timer.id(), Component.state()) :: Component.state()
   def stop_timer(id, state) do
     {timer, state} = state |> Bunch.Access.pop_in([:synchronization, :timers, id])
 
     if timer |> is_nil do
       raise Membrane.TimerError, "Timer #{inspect(id)} doesn't exist"
     else
-      :ok = timer |> Timer.stop()
-      timer.clock |> Clock.unsubscribe()
+      stop_and_unsubscribe(timer)
       state
     end
   end
 
-  @spec handle_tick(Timer.id_t(), Component.state_t()) :: Component.state_t()
+  @spec handle_tick(Timer.id(), Component.state()) :: Component.state()
   def handle_tick(timer_id, state) when is_timer_present(timer_id, state) do
-    context = Component.callback_context_generator(:any, Tick, state)
-
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_tick,
         Component.action_handler(state),
-        %{context: context},
+        %{context: &Component.context_from_state/1},
         [timer_id],
         state
       )
@@ -74,8 +79,8 @@ defmodule Membrane.Core.TimerController do
     state
   end
 
-  @spec handle_clock_update(Timer.id_t(), Clock.ratio_t(), Component.state_t()) ::
-          Component.state_t()
+  @spec handle_clock_update(Timer.id(), Clock.ratio(), Component.state()) ::
+          Component.state()
   def handle_clock_update(clock, ratio, state) do
     update_in(
       state,
@@ -85,5 +90,11 @@ defmodule Membrane.Core.TimerController do
         timer -> timer
       end)
     )
+  end
+
+  @spec stop_and_unsubscribe(Timer.t()) :: :ok
+  defp stop_and_unsubscribe(timer) do
+    Timer.stop(timer)
+    Clock.unsubscribe(timer.clock)
   end
 end

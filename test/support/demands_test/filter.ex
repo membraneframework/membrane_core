@@ -4,9 +4,9 @@ defmodule Membrane.Support.DemandsTest.Filter do
 
   alias Membrane.Buffer
 
-  def_output_pad :output, accepted_format: _any
+  def_output_pad :output, flow_control: :manual, accepted_format: _any
 
-  def_input_pad :input, demand_unit: :buffers, accepted_format: _any
+  def_input_pad :input, flow_control: :manual, demand_unit: :buffers, accepted_format: _any
 
   def_options demand_generator: [
                 spec: (pos_integer -> non_neg_integer),
@@ -24,7 +24,7 @@ defmodule Membrane.Support.DemandsTest.Filter do
   end
 
   @impl true
-  def handle_process(:input, %Buffer{payload: payload}, _ctx, state) do
+  def handle_buffer(:input, %Buffer{payload: payload}, _ctx, state) do
     {[buffer: {:output, %Buffer{payload: payload <> <<255>>}}, redemand: :output], state}
   end
 

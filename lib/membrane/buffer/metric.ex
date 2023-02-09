@@ -6,7 +6,7 @@ defmodule Membrane.Buffer.Metric do
   alias Membrane.Buffer
   alias __MODULE__
 
-  @type unit_t :: :buffers | :bytes
+  @type unit :: :buffers | :bytes
 
   @callback buffer_size_approximation() :: pos_integer
 
@@ -15,7 +15,7 @@ defmodule Membrane.Buffer.Metric do
   @callback split_buffers([%Buffer{}] | [], non_neg_integer) ::
               {[%Buffer{}] | [], [%Buffer{}] | []}
 
-  @spec from_unit(unit_t()) :: module()
+  @spec from_unit(unit()) :: module()
   def from_unit(:buffers), do: Metric.Count
   def from_unit(:bytes), do: Metric.ByteSize
 end

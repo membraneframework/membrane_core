@@ -3,6 +3,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   use Membrane.Core.CallbackHandler
 
   alias Membrane.ActionError
+  alias Membrane.Core
   alias Membrane.Core.Bin.State
   alias Membrane.Core.{Message, Parent, TimerController}
 
@@ -10,10 +11,20 @@ defmodule Membrane.Core.Bin.ActionHandler do
   require Message
 
   @impl CallbackHandler
-  def handle_action({name, args}, _cb, _params, %State{terminating?: true})
-      when name in [:spec, :playback] do
+  def handle_action({:spec, args}, _cb, _params, %State{terminating?: true}) do
     raise Membrane.ParentError,
-          "Action #{inspect({name, args})} cannot be handled because the bin is already terminating"
+          "Action #{inspect({:spec, args})} cannot be handled because the bin is already terminating"
+  end
+
+  @impl CallbackHandler
+  def handle_action({:setup, :incomplete} = action, cb, _params, _state)
+      when cb != :handle_setup do
+    raise ActionError, action: action, reason: {:invalid_callback, :handle_setup}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:setup, operation}, _cb, _params, state) do
+    Core.LifecycleController.handle_setup_operation(operation, state)
   end
 
   @impl CallbackHandler
@@ -28,8 +39,13 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:remove_child, children}, _cb, _params, state) do
+  def handle_action({:remove_children, children}, _cb, _params, state) do
     Parent.ChildLifeController.handle_remove_children(children, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:remove_link, {child_name, pad_ref}}, _cb, _params, state) do
+    Parent.ChildLifeController.handle_remove_link(child_name, pad_ref, state)
   end
 
   @impl CallbackHandler

@@ -16,9 +16,9 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   """
   use Membrane.Pipeline
 
-  @spec remove_child(pid(), Membrane.Child.name_t()) :: any()
+  @spec remove_child(pid(), Membrane.Child.name()) :: any()
   def remove_child(pid, child_name) do
-    send(pid, {:remove_child, child_name})
+    send(pid, {:remove_children, child_name})
   end
 
   @impl true
@@ -49,7 +49,7 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
 
     spec = links ++ children
 
-    {[spec: spec, playback: :playing], %{}}
+    {[spec: spec], %{}}
   end
 
   @impl true
@@ -58,8 +58,8 @@ defmodule Membrane.Support.ChildRemovalTest.Pipeline do
   end
 
   @impl true
-  def handle_info({:remove_child, name}, _ctx, state) do
-    {[remove_child: name], state}
+  def handle_info({:remove_children, name}, _ctx, state) do
+    {[remove_children: name], state}
   end
 
   defp maybe_add_extra_source(children, %{extra_source: source}),

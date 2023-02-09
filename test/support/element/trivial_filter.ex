@@ -5,7 +5,7 @@ defmodule Membrane.Support.Element.TrivialFilter do
 
   use Membrane.Filter
 
-  def_output_pad :output, accepted_format: _any
+  def_output_pad :output, flow_control: :manual, accepted_format: _any
 
-  def_input_pad :input, accepted_format: _any, demand_unit: :buffers
+  def_input_pad :input, flow_control: :manual, accepted_format: _any, demand_unit: :buffers
 end

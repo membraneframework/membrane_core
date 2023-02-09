@@ -34,7 +34,7 @@ defmodule Membrane.Sync do
   @no_sync :membrane_no_sync
 
   @type t :: pid | :membrane_no_sync
-  @type status_t :: :registered | :sync
+  @type status :: :registered | :sync
 
   @doc """
   Starts a Sync process linked to the current process.
@@ -186,7 +186,7 @@ defmodule Membrane.Sync do
     |> Enum.filter(&(&1.status == :sync))
     |> Enum.group_by(& &1.latency, & &1.reply_to)
     |> Enum.each(fn {latency, reply_to} ->
-      time = (max_latency - latency) |> Time.round_to_milliseconds()
+      time = (max_latency - latency) |> Time.as_milliseconds(:round)
       Process.send_after(self(), {:reply, reply_to}, time)
     end)
   end

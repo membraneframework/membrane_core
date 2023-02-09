@@ -41,7 +41,7 @@ defmodule Membrane.Integration.TimerTest do
     def handle_init(_ctx, pid) do
       spec = [child(:element, Element), child(:bin, Bin)]
 
-      {[spec: spec, playback: :playing], %{pid: pid}}
+      {[spec: spec], %{pid: pid}}
     end
 
     @impl true
@@ -85,8 +85,7 @@ defmodule Membrane.Integration.TimerTest do
   end
 
   test "Stopping timer with `:no_interval`" do
-    pipeline =
-      Testing.Pipeline.start_link_supervised!(structure: [child(:element, StopNoInterval)])
+    pipeline = Testing.Pipeline.start_link_supervised!(spec: [child(:element, StopNoInterval)])
 
     assert_pipeline_play(pipeline)
     assert_pipeline_notified(pipeline, :element, :ok)

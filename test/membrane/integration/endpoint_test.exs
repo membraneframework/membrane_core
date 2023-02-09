@@ -15,7 +15,7 @@ defmodule Membrane.Core.EndpointTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure: [
+          spec: [
             child(:endpoint, %Testing.Endpoint{output: buffers}) |> child(:filter, TestFilter),
             get_child(:filter) |> get_child(:endpoint)
           ]
@@ -29,7 +29,7 @@ defmodule Membrane.Core.EndpointTest do
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
-          structure:
+          spec:
             [
               child(:endpoint, %Testing.Endpoint{output: buffers}),
               child(:filter1, TestFilter),

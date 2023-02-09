@@ -65,7 +65,7 @@ defmodule Membrane.Core.Telemetry do
   end
 
   @doc false
-  @spec __get_public_pad_name__(Membrane.Pad.ref_t()) :: Membrane.Pad.ref_t()
+  @spec __get_public_pad_name__(Membrane.Pad.ref()) :: Membrane.Pad.ref()
   def __get_public_pad_name__(pad) do
     case pad do
       {:private, direction} -> direction

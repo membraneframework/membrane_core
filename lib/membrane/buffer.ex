@@ -11,13 +11,13 @@ defmodule Membrane.Buffer do
   alias Membrane.Payload
   alias Membrane.Time
 
-  @type metadata_t :: map
+  @type metadata :: map
 
   @type t :: %Buffer{
           pts: Time.t() | nil,
           dts: Time.t() | nil,
           payload: Payload.t(),
-          metadata: metadata_t
+          metadata: metadata
         }
 
   @enforce_keys [:payload]

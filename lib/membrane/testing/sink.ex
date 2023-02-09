@@ -17,7 +17,7 @@ defmodule Membrane.Testing.Sink do
           ...
       ]
       {:ok, pid} = Testing.Pipeline.start_link(
-        structure: links
+        spec: links
       )
 
   Asserting that `Membrane.Testing.Sink` element processed a buffer that matches
@@ -33,6 +33,7 @@ defmodule Membrane.Testing.Sink do
   alias Membrane.Testing.Notification
 
   def_input_pad :input,
+    flow_control: :manual,
     demand_unit: :buffers,
     accepted_format: _any
 
@@ -79,7 +80,7 @@ defmodule Membrane.Testing.Sink do
   end
 
   @impl true
-  def handle_write(:input, buf, _ctx, state) do
+  def handle_buffer(:input, buf, _ctx, state) do
     case state do
       %{autodemand: false} -> {notify({:buffer, buf}), state}
       %{autodemand: true} -> {[demand: :input] ++ notify({:buffer, buf}), state}

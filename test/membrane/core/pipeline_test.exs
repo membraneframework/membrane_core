@@ -4,7 +4,6 @@ defmodule Membrane.Core.PipelineTest do
   import Membrane.Testing.Assertions
   import Membrane.ChildrenSpec
 
-  alias Membrane.ChildrenSpec
   alias Membrane.Core.Message
   alias Membrane.Core.Pipeline.{ActionHandler, State}
   alias Membrane.Testing
@@ -30,6 +29,10 @@ defmodule Membrane.Core.PipelineTest do
     def handle_info(message, _ctx, state) do
       {[], Map.put(state, :other, message)}
     end
+  end
+
+  defmodule TestBin do
+    use Membrane.Bin
   end
 
   defp state(_ctx) do
@@ -80,11 +83,11 @@ defmodule Membrane.Core.PipelineTest do
     end
 
     test "should raise if trying to spawn element with already taken name", %{state: state} do
-      state = %State{state | children: %{a: self()}}
+      state = %State{state | children: %{a: %{group: nil, name: :a}}}
 
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         ActionHandler.handle_action(
-          {:spec, [child(:a, Membrane.Testing.Source)]},
+          {:spec, [child(:a, TestBin)]},
           nil,
           [],
           state
@@ -117,12 +120,6 @@ defmodule Membrane.Core.PipelineTest do
     assert :ok == Testing.Pipeline.terminate(pid, blocking?: true)
   end
 
-  test "Pipeline should be able to steer its playback with :playback action" do
-    pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
-    Testing.Pipeline.execute_actions(pid, playback: :playing)
-    assert_pipeline_play(pid)
-  end
-
   test "Pipeline should be able to terminate itself with :terminate action" do
     Enum.each([:normal, :shutdown], fn reason ->
       {:ok, supervisor, pid} = Testing.Pipeline.start(module: TestPipeline)
@@ -145,7 +142,7 @@ defmodule Membrane.Core.PipelineTest do
       opts1
     }
 
-    Testing.Pipeline.execute_actions(pid, spec: spec, playback: :playing)
+    Testing.Pipeline.execute_actions(pid, spec: spec)
     assert_pipeline_play(pid)
   end
 end

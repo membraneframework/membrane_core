@@ -6,22 +6,22 @@ defmodule Membrane.Core.Timer do
 
   require Membrane.Core.Message
 
-  @type id_t :: any()
-  @type interval_t :: Ratio.t() | Time.non_neg_t() | :no_interval
+  @type id :: any()
+  @type interval :: Ratio.t() | Time.non_neg() | :no_interval
   @type t :: %__MODULE__{
-          id: id_t,
-          interval: interval_t,
+          id: id,
+          interval: interval,
           init_time: Time.t(),
           clock: Clock.t(),
           next_tick_time: Time.t(),
-          ratio: Clock.ratio_t(),
+          ratio: Clock.ratio(),
           timer_ref: reference() | nil
         }
 
   @enforce_keys [:interval, :clock, :init_time, :id]
-  defstruct @enforce_keys ++ [next_tick_time: 0, ratio: 1, timer_ref: nil]
+  defstruct @enforce_keys ++ [next_tick_time: 0, ratio: Ratio.new(1), timer_ref: nil]
 
-  @spec start(id_t, interval_t, Clock.t()) :: t
+  @spec start(id, interval, Clock.t()) :: t
   def start(id, interval, clock) do
     %__MODULE__{id: id, interval: interval, init_time: Time.monotonic_time(), clock: clock}
     |> tick
@@ -37,7 +37,7 @@ defmodule Membrane.Core.Timer do
     :ok
   end
 
-  @spec update_ratio(t, Clock.ratio_t()) :: t
+  @spec update_ratio(t, Clock.ratio()) :: t
   def update_ratio(timer, ratio) do
     %__MODULE__{timer | ratio: ratio}
   end
@@ -48,8 +48,6 @@ defmodule Membrane.Core.Timer do
   end
 
   def tick(timer) do
-    use Ratio
-
     %__MODULE__{
       id: id,
       interval: interval,
@@ -58,19 +56,21 @@ defmodule Membrane.Core.Timer do
       ratio: ratio
     } = timer
 
-    next_tick_time = next_tick_time + interval
+    next_tick_time = Ratio.add(Ratio.new(next_tick_time), Ratio.new(interval))
 
     # Next tick time converted to BEAM clock time
     beam_next_tick_time =
-      (init_time + next_tick_time / ratio) |> Ratio.floor() |> Time.round_to_milliseconds()
+      Ratio.add(Ratio.new(init_time), Ratio.div(next_tick_time, ratio))
+      |> Ratio.floor()
+      |> Time.as_milliseconds(:round)
 
     timer_ref =
       Process.send_after(self(), Message.new(:timer_tick, id), beam_next_tick_time, abs: true)
 
-    %__MODULE__{timer | next_tick_time: next_tick_time, timer_ref: timer_ref}
+    %__MODULE__{timer | next_tick_time: next_tick_time |> Ratio.floor(), timer_ref: timer_ref}
   end
 
-  @spec set_interval(t, interval_t) :: t
+  @spec set_interval(t, interval) :: t
   def set_interval(%__MODULE__{interval: :no_interval} = timer, interval) do
     %__MODULE__{timer | interval: interval}
     |> tick()

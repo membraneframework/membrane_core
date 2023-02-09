@@ -6,11 +6,9 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   use Bunch
 
-  alias Membrane.Core.{CallbackHandler, Child, Element, Message}
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.{CallbackHandler, Child, Element, Message}
-  alias Membrane.Core.Element.{ActionHandler, PlaybackQueue, State}
-  alias Membrane.Element.CallbackContext
+  alias Membrane.Core.Element.{ActionHandler, CallbackContext, PlaybackQueue, State}
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
@@ -19,7 +17,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   @doc """
   Performs initialization tasks and executes `handle_init` callback.
   """
-  @spec handle_init(Element.options_t(), State.t()) :: State.t()
+  @spec handle_init(Element.options(), State.t()) :: State.t()
   def handle_init(options, %State{module: module} = state) do
     Membrane.Logger.debug(
       "Initializing element: #{inspect(module)}, options: #{inspect(options)}"
@@ -37,13 +35,12 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     state = put_in(state.synchronization.clock, clock)
     Message.send(state.parent_pid, :clock, [state.name, clock])
-    require CallbackContext.Init
 
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_init,
         ActionHandler,
-        %{context: &CallbackContext.Init.from_state/1},
+        %{context: &CallbackContext.from_state/1},
         [],
         %{state | internal_state: options}
       )
@@ -53,21 +50,18 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @spec handle_setup(State.t()) :: State.t()
   def handle_setup(state) do
-    require CallbackContext.Setup
-    context = &CallbackContext.Setup.from_state/1
-
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_setup,
         ActionHandler,
-        %{context: context},
+        %{context: &CallbackContext.from_state/1},
         [],
         state
       )
 
-    Membrane.Logger.debug("Element initialized")
-    Message.send(state.parent_pid, :initialized, state.name)
-    %State{state | initialized?: true}
+    with %{setup_incomplete?: false} <- state do
+      Membrane.Core.LifecycleController.complete_setup(state)
+    end
   end
 
   @spec handle_playing(State.t()) :: State.t()
@@ -76,14 +70,12 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     Membrane.Logger.debug("Got play request")
     state = %State{state | playback: :playing}
-    require CallbackContext.Playing
-    context = &CallbackContext.Playing.from_state/1
 
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_playing,
         ActionHandler,
-        %{context: context},
+        %{context: &CallbackContext.from_state/1},
         [],
         state
       )
@@ -105,14 +97,11 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     state = %{state | terminating?: true}
 
-    require CallbackContext.TerminateRequest
-    context = &CallbackContext.TerminateRequest.from_state/1
-
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_terminate_request,
         ActionHandler,
-        %{context: context},
+        %{context: &CallbackContext.from_state/1},
         [],
         state
       )
@@ -125,13 +114,10 @@ defmodule Membrane.Core.Element.LifecycleController do
   """
   @spec handle_info(message :: any, State.t()) :: State.t()
   def handle_info(message, state) do
-    require CallbackContext.Info
-    context = &CallbackContext.Info.from_state/1
-
     CallbackHandler.exec_and_handle_callback(
       :handle_info,
       ActionHandler,
-      %{context: context},
+      %{context: &CallbackContext.from_state/1},
       [message],
       state
     )

@@ -16,11 +16,11 @@ defmodule Membrane.Testing.EndpointTest do
              Endpoint.handle_playing(nil, %{stream_format: :stream_format})
   end
 
-  describe "Handle write" do
+  describe "Handle buffer" do
     test "demands when autodemand is true" do
       buffer = %Membrane.Buffer{payload: 123}
 
-      assert {actions, _state} = Endpoint.handle_write(:input, buffer, nil, %{autodemand: true})
+      assert {actions, _state} = Endpoint.handle_buffer(:input, buffer, nil, %{autodemand: true})
 
       assert actions == [
                demand: :input,
@@ -31,7 +31,7 @@ defmodule Membrane.Testing.EndpointTest do
     test "does not demand when autodemand is false" do
       buffer = %Membrane.Buffer{payload: 123}
 
-      assert {actions, _state} = Endpoint.handle_write(:input, buffer, nil, %{autodemand: false})
+      assert {actions, _state} = Endpoint.handle_buffer(:input, buffer, nil, %{autodemand: false})
 
       assert actions == [notify_parent: %Notification{payload: {:buffer, buffer}}]
     end

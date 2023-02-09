@@ -23,7 +23,7 @@ defmodule Membrane.Testing.Pipeline do
   ]
   options =  [
     module: :default # :default is the default value for this parameter, so you do not need to pass it here
-    structure: links
+    spec: links
   ]
   pipeline = Membrane.Testing.Pipeline.start_link_supervised!(options)
   ```
@@ -63,7 +63,7 @@ defmodule Membrane.Testing.Pipeline do
         child(:tested_element, TestedElement) |>
         child(sink, %Membrane.Testing.Sink{})
     ]
-    {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(structure: links)
+    {:ok, pipeline} = Membrane.Testing.Pipeline.start_link(spec: links)
 
   We can now wait till the end of the stream reaches the sink element (don't forget
   to import `Membrane.Testing.Assertions`):
@@ -79,11 +79,14 @@ defmodule Membrane.Testing.Pipeline do
 
   use Membrane.Pipeline
 
+  alias Membrane.Child
   alias Membrane.ChildrenSpec
+  alias Membrane.Core.Message
   alias Membrane.{Element, Pipeline}
   alias Membrane.Testing.Notification
 
   require Membrane.Logger
+  require Membrane.Core.Message
 
   defmodule State do
     @moduledoc false
@@ -113,7 +116,7 @@ defmodule Membrane.Testing.Pipeline do
   @type options ::
           [
             module: :default,
-            structure: [ChildrenSpec.structure_builder_t()],
+            spec: [ChildrenSpec.builder()],
             test_process: pid(),
             name: Pipeline.name()
           ]
@@ -201,7 +204,7 @@ defmodule Membrane.Testing.Pipeline do
 
       message_child(pipeline, :sink, {:message, "to handle"})
   """
-  @spec message_child(pid(), Element.name_t(), any()) :: :ok
+  @spec message_child(pid(), Element.name(), any()) :: :ok
   def message_child(pipeline, child, message) do
     send(pipeline, {:for_element, child, message})
     :ok
@@ -218,16 +221,73 @@ defmodule Membrane.Testing.Pipeline do
     :ok
   end
 
+  @doc """
+  Returns the pid of the children process.
+
+  Accepts pipeline pid as a first argument and a child reference or a list
+  of child references representing a path as a second argument.
+
+  If second argument is a child reference, function gets pid of this child
+  from pipeline.
+
+  If second argument is a path of child references, function gets pid of
+  last a component pointed by this path.
+
+  Returns
+   * `{:ok, child_pid}`, if a child was succesfully found
+   * `{:error, reason}`, if, for example, pipeline is not alive or children path is invalid
+  """
+  @spec get_child_pid(pid(), child_ref_path :: Child.ref() | [Child.ref()]) ::
+          {:ok, pid()} | {:error, reason :: term()}
+  def get_child_pid(pipeline, [_head | _tail] = child_ref_path) do
+    do_get_child_pid(pipeline, child_ref_path)
+  end
+
+  def get_child_pid(pipeline, child_ref) when not is_list(child_ref) do
+    do_get_child_pid(pipeline, [child_ref])
+  end
+
+  @doc """
+  Returns the pid of the children process.
+
+  Works as get_child_pid/2, but raises an error instead of returning
+  `{:error, reason}` tuple.
+  """
+  @spec get_child_pid!(pid(), child_ref_path :: Child.ref() | [Child.ref()]) :: pid()
+  def get_child_pid!(parent_pid, child_ref_path) do
+    {:ok, child_pid} = get_child_pid(parent_pid, child_ref_path)
+    child_pid
+  end
+
+  defp do_get_child_pid(component_pid, child_ref_path, is_pipeline? \\ true)
+
+  defp do_get_child_pid(component_pid, [], _is_pipeline?) do
+    {:ok, component_pid}
+  end
+
+  defp do_get_child_pid(component_pid, [child_ref | child_ref_path_tail], is_pipeline?) do
+    case Message.call(component_pid, :get_child_pid, child_ref) do
+      {:ok, child_pid} ->
+        do_get_child_pid(child_pid, child_ref_path_tail, false)
+
+      {:error, {:call_failure, {:noproc, _call_info}}} ->
+        if is_pipeline?,
+          do: {:error, :pipeline_not_alive},
+          else: {:error, :component_not_alive}
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
   @impl true
   def handle_init(ctx, options) do
     case Keyword.get(options, :module, :default) do
       :default ->
-        structure = Bunch.listify(Keyword.get(options, :structure, []))
-
-        spec = structure
+        spec = Bunch.listify(Keyword.get(options, :spec, []))
 
         new_state = %State{test_process: Keyword.fetch!(options, :test_process), module: nil}
-        {[spec: spec, playback: :playing], new_state}
+        {[spec: spec], new_state}
 
       module when is_atom(module) ->
         case Code.ensure_compiled(module) do

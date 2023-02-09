@@ -15,23 +15,23 @@ defmodule Membrane.Core.Pipeline.State do
   @type t :: %__MODULE__{
           internal_state: Membrane.Pipeline.state() | nil,
           module: module,
-          children: ChildrenModel.children_t(),
-          crash_groups: %{CrashGroup.name_t() => CrashGroup.t()},
+          children: ChildrenModel.children(),
+          crash_groups: %{CrashGroup.name() => CrashGroup.t()},
           links: %{Link.id() => Link.t()},
           synchronization: %{
-            timers: %{Timer.id_t() => Timer.t()},
+            timers: %{Timer.id() => Timer.t()},
             clock_provider: %{
               clock: Membrane.Clock.t() | nil,
-              provider: Child.name_t() | nil,
+              provider: Child.name() | nil,
               choice: :auto | :manual
             },
             clock_proxy: Membrane.Clock.t()
           },
           playback: Membrane.Playback.t(),
           initialized?: boolean(),
-          playing_requested?: boolean(),
           terminating?: boolean(),
-          resource_guard: Membrane.ResourceGuard.t()
+          resource_guard: Membrane.ResourceGuard.t(),
+          setup_incomplete?: boolean()
         }
 
   @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard]
@@ -44,7 +44,7 @@ defmodule Membrane.Core.Pipeline.State do
                 pending_specs: %{},
                 playback: :stopped,
                 initialized?: false,
-                playing_requested?: false,
-                terminating?: false
+                terminating?: false,
+                setup_incomplete?: false
               ]
 end

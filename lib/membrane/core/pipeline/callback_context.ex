@@ -1,23 +1,20 @@
 defmodule Membrane.Core.Pipeline.CallbackContext do
   @moduledoc false
 
-  use Membrane.Core.CallbackContext,
-    clock: Membrane.Clock.t(),
-    children: %{Membrane.Child.name_t() => Membrane.ChildEntry.t()},
-    playback: Membrane.Playback.t(),
-    resource_guard: Membrane.ResourceGuard.t(),
-    utility_supervisor: Membrane.UtilitySupervisor.t()
+  @type optional_fields ::
+          [from: GenServer.from()]
+          | [members: [Membrane.Child.name()], crash_initiator: Membrane.Child.name()]
 
-  @impl true
-  def extract_default_fields(state, args) do
-    quote do
-      [
-        clock: unquote(state).synchronization.clock_proxy,
-        children: unquote(state).children,
-        playback: unquote(state).playback,
-        resource_guard: unquote(state).resource_guard,
-        utility_supervisor: unquote(state).subprocess_supervisor
-      ]
-    end ++ args
+  @spec from_state(Membrane.Core.Pipeline.State.t(), optional_fields()) ::
+          Membrane.Pipeline.CallbackContext.t()
+  def from_state(state, optional_fields \\ []) do
+    Map.new(optional_fields)
+    |> Map.merge(%{
+      clock: state.synchronization.clock_proxy,
+      children: state.children,
+      playback: state.playback,
+      resource_guard: state.resource_guard,
+      utility_supervisor: state.subprocess_supervisor
+    })
   end
 end

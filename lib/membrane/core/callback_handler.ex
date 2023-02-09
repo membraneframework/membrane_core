@@ -11,24 +11,24 @@ defmodule Membrane.Core.CallbackHandler do
 
   require Membrane.Logger
 
-  @type state_t :: %{
+  @type state :: %{
           :module => module,
-          :internal_state => internal_state_t,
+          :internal_state => internal_state,
           optional(atom) => any
         }
 
-  @type internal_state_t :: any
+  @type internal_state :: any
 
-  @type callback_return_t(action, internal_state) ::
+  @type callback_return(action, internal_state) ::
           {[action], internal_state}
 
-  @type callback_return_t :: callback_return_t(any, any)
+  @type callback_return :: callback_return(any, any)
 
-  @type handler_params_t :: map
+  @type handler_params :: map
 
-  @callback handle_action(action :: any, callback :: atom, handler_params_t, state_t) :: state_t
-  @callback transform_actions(actions :: list, callback :: atom, handler_params_t, state_t) ::
-              {actions :: list, state_t}
+  @callback handle_action(action :: any, callback :: atom, handler_params, state) :: state
+  @callback transform_actions(actions :: list, callback :: atom, handler_params, state) ::
+              {actions :: list, state}
 
   defmacro __using__(_args) do
     quote location: :keep do
@@ -47,10 +47,10 @@ defmodule Membrane.Core.CallbackHandler do
   @spec exec_and_handle_callback(
           callback :: atom,
           module,
-          handler_params_t,
+          handler_params,
           args :: list,
-          state_t
-        ) :: state_t
+          state
+        ) :: state
   def exec_and_handle_callback(
         callback,
         handler_module,
@@ -67,10 +67,10 @@ defmodule Membrane.Core.CallbackHandler do
           callback :: atom,
           original_callback :: atom,
           module,
-          handler_params_t,
+          handler_params,
           args_list :: list,
-          state_t
-        ) :: state_t
+          state
+        ) :: state
   def exec_and_handle_split_callback(
         callback,
         original_callback,
@@ -117,8 +117,8 @@ defmodule Membrane.Core.CallbackHandler do
     end)
   end
 
-  @spec exec_callback(callback :: atom, args :: list, handler_params_t, state_t) ::
-          {list, internal_state_t}
+  @spec exec_callback(callback :: atom, args :: list, handler_params, state) ::
+          {list, internal_state}
   defp exec_callback(
          callback,
          args,
@@ -160,12 +160,12 @@ defmodule Membrane.Core.CallbackHandler do
   end
 
   @spec handle_callback_result(
-          {actions :: Keyword.t(), internal_state_t},
+          {actions :: Keyword.t(), internal_state},
           callback :: atom,
           module,
-          handler_params_t,
-          state_t
-        ) :: state_t
+          handler_params,
+          state
+        ) :: state
   defp handle_callback_result(cb_result, callback, handler_module, handler_params, state) do
     {actions, new_internal_state} = cb_result
     state = %{state | internal_state: new_internal_state}

@@ -1,8 +1,12 @@
-defmodule Membrane.Core.Parent.StructureParserTest do
+defmodule Membrane.Core.Parent.SpecificationParserTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Parent.{Link, StructureParser}
+  alias Membrane.Core.Parent.{Link, SpecificationParser}
   alias Membrane.Core.Parent.Link.Endpoint
+
+  defmodule A do
+    use Membrane.Filter
+  end
 
   test "valid link" do
     import Membrane.ChildrenSpec
@@ -20,19 +24,19 @@ defmodule Membrane.Core.Parent.StructureParserTest do
       |> bin_output()
     ]
 
-    assert {[], links} = StructureParser.parse(links_spec)
+    assert {[], links} = SpecificationParser.parse(links_spec)
 
     assert [
              %Link{
                from: %Endpoint{
-                 child: :a,
+                 child: {:child_ref, :a},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :b,
+                 child: {:child_ref, :b},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -41,14 +45,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :b,
+                 child: {:child_ref, :b},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :c,
+                 child: {:child_ref, :c},
                  pad_props: %{options: [q: 1]},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -57,14 +61,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :c,
+                 child: {:child_ref, :c},
                  pad_props: %{},
                  pad_spec: :x,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :d,
+                 child: {:child_ref, :d},
                  pad_props: %{},
                  pad_spec: Pad.ref(:y, 2),
                  pad_ref: nil,
@@ -73,14 +77,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :d,
+                 child: {:child_ref, :d},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {Membrane.Bin, :itself},
+                 child: {:child_ref, {Membrane.Bin, :itself}},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
@@ -98,19 +102,19 @@ defmodule Membrane.Core.Parent.StructureParserTest do
       get_child(:d) |> get_child(:b) |> get_child(:e)
     ]
 
-    assert {[], links} = StructureParser.parse(links_spec)
+    assert {[], links} = SpecificationParser.parse(links_spec)
 
     assert [
              %Link{
                from: %Endpoint{
-                 child: :a,
+                 child: {:child_ref, :a},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :b,
+                 child: {:child_ref, :b},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -119,14 +123,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :b,
+                 child: {:child_ref, :b},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :c,
+                 child: {:child_ref, :c},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -135,14 +139,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :d,
+                 child: {:child_ref, :d},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :b,
+                 child: {:child_ref, :b},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -151,14 +155,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :b,
+                 child: {:child_ref, :b},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :e,
+                 child: {:child_ref, :e},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -171,8 +175,8 @@ defmodule Membrane.Core.Parent.StructureParserTest do
   test "invalid link" do
     [:abc, [:abc], %{{:abc, :output} => {:def, :input}}]
     |> Enum.each(fn link_spec ->
-      assert_raise Membrane.ParentError, ~r/.*Invalid structure specification.*:abc/, fn ->
-        StructureParser.parse(link_spec)
+      assert_raise Membrane.ParentError, ~r/.*Invalid specification.*:abc/, fn ->
+        SpecificationParser.parse(link_spec)
       end
     end)
   end
@@ -187,28 +191,28 @@ defmodule Membrane.Core.Parent.StructureParserTest do
     ]
     |> Enum.each(fn link_spec ->
       assert_raise Membrane.ParentError,
-                   ~r/.*Invalid structure specification.*/,
-                   fn -> StructureParser.parse(link_spec) end
+                   ~r/.*Invalid specification.*/,
+                   fn -> SpecificationParser.parse(link_spec) end
     end)
   end
 
   test "link creating children" do
     import Membrane.ChildrenSpec
 
-    links_spec = [child(:a, A) |> child(:b, B) |> child(:c, C)]
-    assert {children, links} = StructureParser.parse(links_spec)
+    links_spec = [child(:a, A) |> child(:b, A) |> child(:c, A)]
+    assert {children, links} = SpecificationParser.parse(links_spec)
 
     assert [
              %Link{
                from: %Endpoint{
-                 child: :a,
+                 child: {:child_name, :a},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :b,
+                 child: {:child_name, :b},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -217,14 +221,14 @@ defmodule Membrane.Core.Parent.StructureParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: :b,
+                 child: {:child_name, :b},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: :c,
+                 child: {:child_name, :c},
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -234,9 +238,9 @@ defmodule Membrane.Core.Parent.StructureParserTest do
            ] = links
 
     assert Enum.sort(children) == [
-             {:a, A, %{get_if_exists: false}},
-             {:b, B, %{get_if_exists: false}},
-             {:c, C, %{get_if_exists: false}}
+             {{:child_name, :a}, A, %{get_if_exists: false}},
+             {{:child_name, :b}, A, %{get_if_exists: false}},
+             {{:child_name, :c}, A, %{get_if_exists: false}}
            ]
   end
 end

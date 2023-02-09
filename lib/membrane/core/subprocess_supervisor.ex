@@ -29,7 +29,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
   """
   @spec start_component(
           supervisor_pid,
-          name :: Membrane.Child.name_t(),
+          name :: Membrane.Child.name(),
           (supervisor_pid, parent_supervisor_pid -> {:ok, child_pid} | {:error, reason :: any()})
         ) ::
           {:ok, child_pid} | {:error, reason :: any()}
@@ -227,6 +227,12 @@ defmodule Membrane.Core.SubprocessSupervisor do
   end
 
   defp handle_exit(%{role: :utility}, _reason, _state) do
+    :ok
+  end
+
+  # Clause handling the case when child start function returns error
+  # and we don't know its PID, but we still receive exit signal from it.
+  defp handle_exit(nil, _reason, _state) do
     :ok
   end
 end

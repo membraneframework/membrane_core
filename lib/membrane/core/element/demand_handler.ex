@@ -24,12 +24,12 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   @doc """
   Called when redemand action was returned.
-    * If element is currently supplying demand it means that after finishing supply_demand it will call
+    * If element is currently supplying demand, it means that after finishing `supply_demand` it will call
       `handle_delayed_demands`.
-    * If <span class="x x-first x-last">the </span>element isn't supplying demand at the moment <span class="x x-first x-last">and there's some unsupplied demand on the given </span>
-      <span class="x x-first x-last">output, `</span>handle_demand<span class="x x-first x-last">` is invoked right away, so that the demand can be synchronously supplied.</span>
+    * If element isn't supplying demand at the moment and there's some unsupplied demand on the given
+      output, `handle_demand` is invoked right away, so that the demand can be synchronously supplied.
   """
-  @spec handle_redemand(Pad.ref_t(), State.t()) :: State.t()
+  @spec handle_redemand(Pad.ref(), State.t()) :: State.t()
   def handle_redemand(pad_ref, %State{supplying_demand?: true} = state) do
     Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
   end
@@ -55,7 +55,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   before proceeding to supplying it.
   """
   @spec supply_demand(
-          Pad.ref_t(),
+          Pad.ref(),
           size :: non_neg_integer | (non_neg_integer() -> non_neg_integer()),
           State.t()
         ) :: State.t()
@@ -64,7 +64,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     supply_demand(pad_ref, state)
   end
 
-  @spec supply_demand(Pad.ref_t(), State.t()) :: State.t()
+  @spec supply_demand(Pad.ref(), State.t()) :: State.t()
   def supply_demand(pad_ref, %State{supplying_demand?: true} = state) do
     Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
   end
@@ -98,12 +98,13 @@ defmodule Membrane.Core.Element.DemandHandler do
   overflow if the toilet is enabled.
   """
   @spec handle_outgoing_buffers(
-          Pad.ref_t(),
-          PadModel.pad_data_t(),
+          Pad.ref(),
+          PadModel.pad_data(),
           [Buffer.t()],
           State.t()
         ) :: State.t()
-  def handle_outgoing_buffers(pad_ref, %{mode: :pull} = data, buffers, state) do
+  def handle_outgoing_buffers(pad_ref, %{flow_control: flow_control} = data, buffers, state)
+      when flow_control in [:auto, :manual] do
     %{other_demand_unit: other_demand_unit, demand: demand} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
     PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
@@ -112,7 +113,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   def handle_outgoing_buffers(
         pad_ref,
         %{
-          mode: :push,
+          flow_control: :push,
           toilet: toilet
         } = data,
         buffers,
@@ -177,8 +178,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @spec handle_input_queue_output(
-          Pad.ref_t(),
-          [InputQueue.output_value_t()],
+          Pad.ref(),
+          [InputQueue.output_value()],
           State.t()
         ) :: State.t()
   defp handle_input_queue_output(pad_ref, data, state) do
@@ -188,25 +189,25 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @spec do_handle_input_queue_output(
-          Pad.ref_t(),
-          InputQueue.output_value_t(),
+          Pad.ref(),
+          InputQueue.output_value(),
           State.t()
         ) :: State.t()
   defp do_handle_input_queue_output(pad_ref, {:event, e}, state),
     do: EventController.exec_handle_event(pad_ref, e, state)
 
-  defp do_handle_input_queue_output(pad_ref, {:stream_format, c}, state),
-    do: StreamFormatController.exec_handle_stream_format(pad_ref, c, state)
+  defp do_handle_input_queue_output(pad_ref, {:stream_format, stream_format}, state),
+    do: StreamFormatController.exec_handle_stream_format(pad_ref, stream_format, state)
 
   defp do_handle_input_queue_output(
          pad_ref,
-         {:buffers, buffers, size},
+         {:buffers, buffers, _inbound_metric_buf_size, outbound_metric_buf_size},
          state
        ) do
-    state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - size))
+    state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - outbound_metric_buf_size))
 
     if toilet = PadModel.get_data!(state, pad_ref, :toilet) do
-      Toilet.drain(toilet, size)
+      Toilet.drain(toilet, outbound_metric_buf_size)
     end
 
     BufferController.exec_buffer_callback(pad_ref, buffers, state)

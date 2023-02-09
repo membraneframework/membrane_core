@@ -15,7 +15,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
          log_tag: "test",
          target_queue_size: 100,
          min_demand_factor: 0.1,
-         demand_unit: :bytes,
+         inbound_demand_unit: :bytes,
+         outbound_demand_unit: :bytes,
          demand_pid: self(),
          linked_output_ref: :output_pad_ref,
          expected_metric: Buffer.Metric.from_unit(:bytes),
@@ -25,7 +26,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
     test "return InputQueue struct and send demand message", context do
       assert InputQueue.init(%{
-               demand_unit: context.demand_unit,
+               inbound_demand_unit: context.inbound_demand_unit,
+               outbound_demand_unit: context.outbound_demand_unit,
                demand_pid: context.demand_pid,
                demand_pad: context.linked_output_ref,
                log_tag: context.log_tag,
@@ -39,7 +41,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
                size: 0,
                demand: 0,
                min_demand: context.expected_min_demand,
-               metric: context.expected_metric,
+               inbound_metric: context.expected_metric,
+               outbound_metric: context.expected_metric,
                toilet?: false
              }
 
@@ -51,7 +54,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
     test "not send the demand if toilet is enabled", context do
       assert InputQueue.init(%{
-               demand_unit: context.demand_unit,
+               inbound_demand_unit: context.inbound_demand_unit,
+               outbound_demand_unit: context.outbound_demand_unit,
                demand_pid: context.demand_pid,
                demand_pad: context.linked_output_ref,
                log_tag: context.log_tag,
@@ -65,7 +69,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
                size: 0,
                demand: context.target_queue_size,
                min_demand: context.expected_min_demand,
-               metric: context.expected_metric,
+               inbound_metric: context.expected_metric,
+               outbound_metric: context.expected_metric,
                toilet?: true
              }
 
@@ -80,7 +85,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         struct(InputQueue,
           size: 0,
-          metric: Buffer.Metric.Count,
+          inbound_metric: Buffer.Metric.Count,
+          outbound_metric: Buffer.Metric.Count,
           q: Qex.new()
         )
 
@@ -106,14 +112,15 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
   describe ".store/3 should" do
     setup do
-      {:ok, %{size: 10, q: Qex.new() |> Qex.push({:buffers, [], 3}), payload: <<1, 2, 3>>}}
+      {:ok, %{size: 10, q: Qex.new() |> Qex.push({:buffers, [], 3, 3}), payload: <<1, 2, 3>>}}
     end
 
     test "increment `size` when `:metric` is `Count`", context do
       input_queue =
         struct(InputQueue,
           size: context.size,
-          metric: Buffer.Metric.Count,
+          inbound_metric: Buffer.Metric.Count,
+          outbound_metric: Buffer.Metric.Count,
           q: context.q
         )
 
@@ -126,7 +133,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         struct(InputQueue,
           size: context.size,
-          metric: Buffer.Metric.ByteSize,
+          inbound_metric: Buffer.Metric.ByteSize,
+          outbound_metric: Buffer.Metric.ByteSize,
           q: context.q
         )
 
@@ -139,7 +147,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         struct(InputQueue,
           size: context.size,
-          metric: Buffer.Metric.ByteSize,
+          inbound_metric: Buffer.Metric.ByteSize,
+          outbound_metric: Buffer.Metric.ByteSize,
           q: context.q
         )
 
@@ -147,14 +156,15 @@ defmodule Membrane.Core.Element.InputQueueTest do
       %{q: new_q} = InputQueue.store(input_queue, :buffers, v)
       {{:value, last_elem}, remaining_q} = new_q |> Qex.pop_back()
       assert remaining_q == context.q
-      assert last_elem == {:buffers, v, 3}
+      assert last_elem == {:buffers, v, 3, 3}
     end
 
     test "append event to the queue", context do
       input_queue =
         struct(InputQueue,
           size: context.size,
-          metric: Buffer.Metric.ByteSize,
+          inbound_metric: Buffer.Metric.ByteSize,
+          outbound_metric: Buffer.Metric.ByteSize,
           q: context.q
         )
 
@@ -169,7 +179,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         struct(InputQueue,
           size: context.size,
-          metric: Buffer.Metric.ByteSize,
+          inbound_metric: Buffer.Metric.ByteSize,
+          outbound_metric: Buffer.Metric.ByteSize,
           q: context.q
         )
 
@@ -183,7 +194,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
     setup do
       input_queue =
         InputQueue.init(%{
-          demand_unit: :buffers,
+          inbound_demand_unit: :buffers,
+          outbound_demand_unit: :buffers,
           demand_pid: self(),
           demand_pad: :pad,
           log_tag: "test",
@@ -205,7 +217,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     end
 
     test "send demands to the pid and updates demand", %{input_queue: input_queue} do
-      assert {{:value, [{:buffers, [1], 1}]}, new_input_queue} =
+      assert {{:value, [{:buffers, [1], 1, 1}]}, new_input_queue} =
                input_queue
                |> InputQueue.store(bufs(10))
                |> InputQueue.take_and_demand(1, self(), :pad)
@@ -220,8 +232,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
   describe ".take_and_demand/4 should also" do
     setup do
       size = 6
-      buffers1 = {:buffers, [:b1, :b2, :b3], 3}
-      buffers2 = {:buffers, [:b4, :b5, :b6], 3}
+      buffers1 = {:buffers, [:b1, :b2, :b3], 3, 3}
+      buffers2 = {:buffers, [:b4, :b5, :b6], 3, 3}
       q = Qex.new() |> Qex.push(buffers1) |> Qex.push(buffers2)
 
       input_queue =
@@ -231,7 +243,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
           min_demand: 0,
           target_queue_size: 100,
           toilet?: false,
-          metric: Buffer.Metric.Count,
+          inbound_metric: Buffer.Metric.Count,
+          outbound_metric: Buffer.Metric.Count,
           q: q
         )
 
@@ -251,7 +264,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
       assert result == {:empty, [context.buffers1, context.buffers2]}
     end
 
-    test "set `size` to 0 hen there are not enough buffers", context do
+    test "set `size` to 0 when there are not enough buffers", context do
       {_, %{size: new_size}} =
         InputQueue.take_and_demand(
           context.input_queue,
@@ -306,8 +319,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
           :linked_output_ref
         )
 
-      exp_buf2 = {:buffers, [:b4], 1}
-      exp_rest = {:buffers, [:b5, :b6], 2}
+      exp_buf2 = {:buffers, [:b4], 1, 1}
+      exp_rest = {:buffers, [:b5, :b6], 2, 2}
       assert result == {:value, [context.buffers1, exp_buf2]}
 
       list = new_q |> Enum.into([])
@@ -316,6 +329,84 @@ defmodule Membrane.Core.Element.InputQueueTest do
       assert list == exp_list
       assert_received Message.new(:demand, _, _)
     end
+  end
+
+  test "if the queue works properly for :bytes input metric and :buffers output metric" do
+    queue =
+      InputQueue.init(%{
+        inbound_demand_unit: :bytes,
+        outbound_demand_unit: :buffers,
+        demand_pid: self(),
+        demand_pad: :input,
+        log_tag: nil,
+        toilet?: false,
+        target_size: 10,
+        min_demand_factor: 1
+      })
+
+    assert_receive {Membrane.Core.Message, :demand, 10, [for_pad: :input]}
+    assert queue.demand == 0
+    queue = InputQueue.store(queue, [%Buffer{payload: "1234"}])
+    assert queue.size == 4
+    queue = InputQueue.store(queue, [%Buffer{payload: "12345678"}])
+    queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
+    queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
+    assert queue.size == 16
+    assert queue.demand == 0
+    {out, queue} = InputQueue.take_and_demand(queue, 2, self(), :input)
+    assert bufs_size(out, :buffers) == 2
+    assert queue.size == 4
+    assert queue.demand == 0
+    assert_receive {Membrane.Core.Message, :demand, 12, [for_pad: :input]}
+    queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
+    queue = InputQueue.store(queue, [%Buffer{payload: "1234"}])
+    {out, queue} = InputQueue.take_and_demand(queue, 1, self(), :input)
+    assert bufs_size(out, :buffers) == 1
+    assert queue.size == 8
+    assert queue.demand == -8
+  end
+
+  test "if the queue works properly for :buffers input metric and :bytes output metric" do
+    queue =
+      InputQueue.init(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: :bytes,
+        demand_pid: self(),
+        demand_pad: :input,
+        log_tag: nil,
+        toilet?: false,
+        target_size: 3,
+        min_demand_factor: 1
+      })
+
+    assert_receive {Membrane.Core.Message, :demand, 3, [for_pad: :input]}
+    assert queue.demand == 0
+    queue = InputQueue.store(queue, [%Buffer{payload: "1234"}])
+    assert queue.size == 1
+    queue = InputQueue.store(queue, [%Buffer{payload: "12345678"}])
+    queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
+    queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
+    assert queue.size == 4
+    assert queue.demand == 0
+    {out, queue} = InputQueue.take_and_demand(queue, 2, self(), :input)
+    assert bufs_size(out, :bytes) == 2
+    assert queue.size == 4
+    assert queue.demand == 0
+    refute_receive {Membrane.Core.Message, :demand, _size, [for_pad: :input]}
+    {out, queue} = InputQueue.take_and_demand(queue, 11, self(), :input)
+    assert bufs_size(out, :bytes) == 11
+    assert queue.size == 2
+    assert queue.demand == -1
+    assert_receive {Membrane.Core.Message, :demand, 3, [for_pad: :input]}
+  end
+
+  defp bufs_size(output, unit) do
+    {_state, bufs} = output
+
+    Enum.flat_map(bufs, fn {:buffers, bufs_list, _inbound_metric_size, _outbound_metric_size} ->
+      bufs_list
+    end)
+    |> Membrane.Buffer.Metric.from_unit(unit).buffers_size()
   end
 
   defp bufs(n), do: Enum.to_list(1..n)

@@ -10,6 +10,7 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Element.{
     ActionHandler,
+    CallbackContext,
     DemandController,
     EventController,
     InputQueue,
@@ -19,41 +20,39 @@ defmodule Membrane.Core.Element.PadController do
   }
 
   alias Membrane.Core.Parent.Link.Endpoint
-  alias Membrane.Element.CallbackContext
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
-  require Membrane.Element.CallbackContext.{PadAdded, PadRemoved}
   require Membrane.Logger
   require Membrane.Pad
 
-  @type link_call_props_t ::
+  @type link_call_props ::
           %{
             initiator: :parent,
             stream_format_validation_params:
-              StreamFormatController.stream_format_validation_params_t()
+              StreamFormatController.stream_format_validation_params()
           }
           | %{
               initiator: :sibling,
-              other_info: PadModel.pad_info_t() | nil,
+              other_info: PadModel.pad_info() | nil,
               link_metadata: %{toilet: Toilet.t() | nil},
               stream_format_validation_params:
-                StreamFormatController.stream_format_validation_params_t()
+                StreamFormatController.stream_format_validation_params()
             }
 
-  @type link_call_reply_props_t ::
-          {Endpoint.t(), PadModel.pad_info_t(), %{toilet: Toilet.t() | nil}}
+  @type link_call_reply_props ::
+          {Endpoint.t(), PadModel.pad_info(), %{toilet: Toilet.t() | nil}}
 
-  @type link_call_reply_t ::
-          :ok | {:ok, link_call_reply_props_t} | {:error, {:neighbor_dead, reason :: any}}
+  @type link_call_reply ::
+          :ok | {:ok, link_call_reply_props} | {:error, {:neighbor_dead, reason :: any}}
 
   @default_auto_demand_size_factor 4000
 
   @doc """
   Verifies linked pad, initializes it's data.
   """
-  @spec handle_link(Pad.direction_t(), Endpoint.t(), Endpoint.t(), link_call_props_t, State.t()) ::
-          {link_call_reply_t, State.t()}
+  @spec handle_link(Pad.direction(), Endpoint.t(), Endpoint.t(), link_call_props, State.t()) ::
+          {link_call_reply, State.t()}
   def handle_link(direction, endpoint, other_endpoint, link_props, state) do
     Membrane.Logger.debug(
       "Element handle link on pad #{inspect(endpoint.pad_ref)} with pad #{inspect(other_endpoint.pad_ref)} of child #{inspect(other_endpoint.child)}"
@@ -73,26 +72,13 @@ defmodule Membrane.Core.Element.PadController do
 
     :ok = Child.PadController.validate_pad_being_linked!(direction, info)
 
-    toilet =
-      if direction == :input do
-        Toilet.new(
-          endpoint.pad_props.toilet_capacity,
-          info.demand_unit,
-          self(),
-          endpoint.pad_props.throttling_factor
-        )
-      else
-        nil
-      end
-
-    do_handle_link(endpoint, other_endpoint, info, toilet, link_props, state)
+    do_handle_link(endpoint, other_endpoint, info, link_props, state)
   end
 
   defp do_handle_link(
          endpoint,
          other_endpoint,
          info,
-         toilet,
          %{initiator: :parent} = props,
          state
        ) do
@@ -105,7 +91,6 @@ defmodule Membrane.Core.Element.PadController do
           initiator: :sibling,
           other_info: info,
           link_metadata: %{
-            toilet: toilet,
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
           },
           stream_format_validation_params: []
@@ -143,7 +128,6 @@ defmodule Membrane.Core.Element.PadController do
          endpoint,
          other_endpoint,
          info,
-         toilet,
          %{initiator: :sibling} = link_props,
          state
        ) do
@@ -153,8 +137,29 @@ defmodule Membrane.Core.Element.PadController do
       stream_format_validation_params: stream_format_validation_params
     } = link_props
 
+    {output_info, input_info, input_endpoint} =
+      if info.direction == :output,
+        do: {info, other_info, other_endpoint},
+        else: {other_info, info, endpoint}
+
+    {output_demand_unit, input_demand_unit} = resolve_demand_units(output_info, input_info)
+
+    link_metadata =
+      Map.put(link_metadata, :input_demand_unit, input_demand_unit)
+      |> Map.put(:output_demand_unit, output_demand_unit)
+
+    toilet =
+      if input_demand_unit != nil,
+        do:
+          Toilet.new(
+            input_endpoint.pad_props.toilet_capacity,
+            input_demand_unit,
+            self(),
+            input_endpoint.pad_props.throttling_factor
+          )
+
     Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
-    link_metadata = %{link_metadata | toilet: link_metadata.toilet || toilet}
+    link_metadata = Map.put(link_metadata, :toilet, toilet)
 
     :ok =
       Child.PadController.validate_pad_mode!(
@@ -185,7 +190,7 @@ defmodule Membrane.Core.Element.PadController do
   Executes `handle_pad_removed` callback if the pad was dynamic.
   Note: it also flushes all buffers from PlaybackBuffer.
   """
-  @spec handle_unlink(Pad.ref_t(), State.t()) :: State.t()
+  @spec handle_unlink(Pad.ref(), State.t()) :: State.t()
   def handle_unlink(pad_ref, state) do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
       state = generate_eos_if_needed(pad_ref, state)
@@ -201,12 +206,32 @@ defmodule Membrane.Core.Element.PadController do
               "Tried to unlink a static pad #{inspect(pad_ref)}. Static pads cannot be unlinked unless element is terminating"
 
       {:error, :unknown_pad} ->
+        with false <- state.terminating?,
+             %{availability: :always} <- state.pads_info[Pad.name_by_ref(pad_ref)] do
+          raise Membrane.PadError,
+                "Tried to unlink a static pad #{inspect(pad_ref)}, before it was linked. Static pads cannot be unlinked unless element is terminating"
+        end
+
         Membrane.Logger.debug(
           "Ignoring unlinking pad #{inspect(pad_ref)} that hasn't been successfully linked"
         )
 
         state
     end
+  end
+
+  defp resolve_demand_units(output_info, input_info) do
+    output_demand_unit =
+      if output_info[:flow_control] == :push,
+        do: nil,
+        else: output_info[:demand_unit] || input_info[:demand_unit] || :buffers
+
+    input_demand_unit =
+      if input_info[:flow_control] == :push,
+        do: nil,
+        else: input_info[:demand_unit] || output_info[:demand_unit] || :buffers
+
+    {output_demand_unit, input_demand_unit}
   end
 
   defp init_pad_data(
@@ -234,7 +259,7 @@ defmodule Membrane.Core.Element.PadController do
         associated_pads: []
       })
 
-    data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, state))
+    data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, metadata, state))
 
     data =
       data |> Map.merge(init_pad_mode_data(data, endpoint.pad_props, other_info, metadata, state))
@@ -242,11 +267,11 @@ defmodule Membrane.Core.Element.PadController do
     data = struct!(Membrane.Element.PadData, data)
     state = put_in(state, [:pads_data, endpoint.pad_ref], data)
 
-    if data.demand_mode == :auto do
+    if data.flow_control == :auto do
       state =
         state.pads_data
         |> Map.values()
-        |> Enum.filter(&(&1.direction != data.direction and &1.demand_mode == :auto))
+        |> Enum.filter(&(&1.direction != data.direction and &1.flow_control == :auto))
         |> Enum.reduce(state, fn other_data, state ->
           PadModel.update_data!(state, other_data.ref, :associated_pads, &[data.ref | &1])
         end)
@@ -260,22 +285,31 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  defp init_pad_direction_data(%{direction: :input}, _props, _state), do: %{sticky_messages: []}
-  defp init_pad_direction_data(%{direction: :output}, _props, _state), do: %{}
+  defp init_pad_direction_data(%{direction: :input}, _props, metadata, _state),
+    do: %{
+      sticky_messages: [],
+      demand_unit: metadata.input_demand_unit,
+      other_demand_unit: metadata.output_demand_unit
+    }
+
+  defp init_pad_direction_data(%{direction: :output}, _props, metadata, _state),
+    do: %{demand_unit: metadata.output_demand_unit, other_demand_unit: metadata.input_demand_unit}
 
   defp init_pad_mode_data(
-         %{mode: :pull, direction: :input, demand_mode: :manual} = data,
+         %{direction: :input, flow_control: :manual} = data,
          props,
          other_info,
          metadata,
          %State{}
        ) do
-    %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: demand_unit} = data
-    enable_toilet? = other_info.mode == :push
+    %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: this_demand_unit} = data
+
+    enable_toilet? = other_info.flow_control == :push
 
     input_queue =
       InputQueue.init(%{
-        demand_unit: demand_unit,
+        inbound_demand_unit: other_info[:demand_unit] || this_demand_unit,
+        outbound_demand_unit: this_demand_unit,
         demand_pid: pid,
         demand_pad: other_ref,
         log_tag: inspect(ref),
@@ -288,16 +322,17 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp init_pad_mode_data(
-         %{mode: :pull, direction: :output, demand_mode: :manual},
+         %{direction: :output, flow_control: :manual},
          _props,
-         other_info,
+         _other_info,
          _metadata,
          _state
-       ),
-       do: %{demand: 0, other_demand_unit: other_info[:demand_unit]}
+       ) do
+    %{demand: 0}
+  end
 
   defp init_pad_mode_data(
-         %{mode: :pull, demand_mode: :auto, direction: direction},
+         %{flow_control: :auto, direction: direction},
          props,
          other_info,
          metadata,
@@ -306,11 +341,11 @@ defmodule Membrane.Core.Element.PadController do
     associated_pads =
       state.pads_data
       |> Map.values()
-      |> Enum.filter(&(&1.direction != direction and &1.demand_mode == :auto))
+      |> Enum.filter(&(&1.direction != direction and &1.flow_control == :auto))
       |> Enum.map(& &1.ref)
 
     toilet =
-      if direction == :input and other_info.mode == :push do
+      if direction == :input and other_info.flow_control == :push do
         metadata.toilet
       else
         nil
@@ -328,20 +363,20 @@ defmodule Membrane.Core.Element.PadController do
     %{
       demand: 0,
       associated_pads: associated_pads,
-      other_demand_unit: other_info[:demand_unit],
       auto_demand_size: auto_demand_size,
       toilet: toilet
     }
   end
 
   defp init_pad_mode_data(
-         %{mode: :push, direction: :output},
+         %{flow_control: :push, direction: :output},
          _props,
-         %{mode: :pull} = other_info,
+         %{flow_control: other_flow_control},
          metadata,
          _state
-       ) do
-    %{toilet: metadata.toilet, other_demand_unit: other_info[:demand_unit]}
+       )
+       when other_flow_control in [:auto, :manual] do
+    %{toilet: metadata.toilet}
   end
 
   defp init_pad_mode_data(_data, _props, _other_info, _metadata, _state), do: %{}
@@ -350,7 +385,7 @@ defmodule Membrane.Core.Element.PadController do
   Generates end of stream on the given input pad if it hasn't been generated yet
   and playback is `playing`.
   """
-  @spec generate_eos_if_needed(Pad.ref_t(), State.t()) :: State.t()
+  @spec generate_eos_if_needed(Pad.ref(), State.t()) :: State.t()
   def generate_eos_if_needed(pad_ref, state) do
     %{direction: direction, end_of_stream?: eos?} = PadModel.get_data!(state, pad_ref)
 
@@ -364,10 +399,10 @@ defmodule Membrane.Core.Element.PadController do
   @doc """
   Removes all associations between the given pad and any other_endpoint pads.
   """
-  @spec remove_pad_associations(Pad.ref_t(), State.t()) :: State.t()
+  @spec remove_pad_associations(Pad.ref(), State.t()) :: State.t()
   def remove_pad_associations(pad_ref, state) do
     case PadModel.get_data!(state, pad_ref) do
-      %{mode: :pull, demand_mode: :auto} = pad_data ->
+      %{flow_control: :auto} = pad_data ->
         state =
           Enum.reduce(pad_data.associated_pads, state, fn pad, state ->
             PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))
@@ -389,13 +424,12 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  @spec maybe_handle_pad_added(Pad.ref_t(), State.t()) :: State.t()
+  @spec maybe_handle_pad_added(Pad.ref(), State.t()) :: State.t()
   defp maybe_handle_pad_added(ref, state) do
-    %{options: pad_opts, direction: direction, availability: availability} =
-      PadModel.get_data!(state, ref)
+    %{options: pad_opts, availability: availability} = PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
-      context = &CallbackContext.PadAdded.from_state(&1, options: pad_opts, direction: direction)
+      context = &CallbackContext.from_state(&1, pad_options: pad_opts)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_added,
@@ -409,17 +443,15 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  @spec maybe_handle_pad_removed(Pad.ref_t(), State.t()) :: State.t()
+  @spec maybe_handle_pad_removed(Pad.ref(), State.t()) :: State.t()
   defp maybe_handle_pad_removed(ref, state) do
-    %{direction: direction, availability: availability} = PadModel.get_data!(state, ref)
+    %{availability: availability} = PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
-      context = &CallbackContext.PadRemoved.from_state(&1, direction: direction)
-
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_removed,
         ActionHandler,
-        %{context: context},
+        %{context: &CallbackContext.from_state/1},
         [ref],
         state
       )

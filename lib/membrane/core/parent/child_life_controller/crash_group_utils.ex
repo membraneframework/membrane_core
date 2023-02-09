@@ -7,8 +7,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
   alias Membrane.Core.Pipeline
 
   @spec add_crash_group(
-          Membrane.CrashGroup.t(),
-          [Membrane.Child.name_t()],
+          {Membrane.Child.group(), Membrane.CrashGroup.mode()},
+          [Membrane.Child.name()],
           [pid()],
           Pipeline.State.t()
         ) :: Pipeline.State.t()
@@ -36,7 +36,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     end)
   end
 
-  @spec remove_crash_group_if_empty(Pipeline.State.t(), CrashGroup.name_t()) ::
+  @spec remove_crash_group_if_empty(Pipeline.State.t(), CrashGroup.name()) ::
           {:removed | :not_removed, Pipeline.State.t()}
   def remove_crash_group_if_empty(state, group_name) do
     %CrashGroup{alive_members_pids: alive_members_pids} = state.crash_groups[group_name]
@@ -50,7 +50,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     end
   end
 
-  @spec remove_member_of_crash_group(Pipeline.State.t(), CrashGroup.name_t(), pid()) ::
+  @spec remove_member_of_crash_group(Pipeline.State.t(), CrashGroup.name(), pid()) ::
           Pipeline.State.t()
   def remove_member_of_crash_group(state, group_name, pid) do
     Bunch.Access.update_in(
@@ -60,7 +60,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     )
   end
 
-  @spec get_group_by_member_pid(pid(), Parent.state_t()) ::
+  @spec get_group_by_member_pid(pid(), Parent.state()) ::
           {:ok, CrashGroup.t()} | {:error, :not_member}
   def get_group_by_member_pid(member_pid, state) do
     crash_group =
@@ -76,7 +76,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     end
   end
 
-  @spec set_triggered(Pipeline.State.t(), CrashGroup.name_t(), Membrane.Child.name_t()) ::
+  @spec set_triggered(Pipeline.State.t(), CrashGroup.name(), Membrane.Child.name()) ::
           Pipeline.State.t()
   def set_triggered(state, group_name, crash_initiator) do
     Bunch.Access.update_in(state, [:crash_groups, group_name], fn group ->
