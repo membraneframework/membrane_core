@@ -158,7 +158,9 @@ jobs:
       - run: git checkout master
       - run: docker run -v ./:/root/app -v ~/results:/root/results -v ~/benchmark_backup:/root/benchmark_backup -w /root/app membraneframeworklabs/docker_membrane mix run /root/benchmark_backup/run.exs /root/results/results_ref.res
       - run: docker run -v ./:/root/app -v ~/results:/root/results -v ~/benchmark_backup:/root/benchmark_backup -w /root/app membraneframeworklabs/docker_membrane mix run /root/benchmark_backup/compare.exs /root/results/results.res /root/results/results_ref.res
-      - run: rm ~/results/*
+      - run: 
+          command: rm ~/results/*
+          when: always
 
 
 workflows:
