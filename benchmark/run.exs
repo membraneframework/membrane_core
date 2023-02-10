@@ -207,7 +207,7 @@ defmodule Benchmark.Run do
 
     memory_samples = do_loop(pipeline_pid, initial_memory)
 
-    final_memory = meassure_memory() - initial_memory()
+    final_memory = meassure_memory() - initial_memory
     memory_samples = memory_samples++[final_memory]
     time = :os.system_time(:milli_seconds) - initial_time
 
