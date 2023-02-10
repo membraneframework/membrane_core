@@ -177,7 +177,8 @@ workflows:
       - lint:
           requires:
             - get_deps
-      - test_performance:
+      - request_performance_test:
           type: approval
+      - test_performance:
           requires:
-            - get_deps
+            - get_deps, request_performance_test
