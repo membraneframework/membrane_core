@@ -1,15 +1,15 @@
-"""
-The script providing a functionality to compare results of two performance tests.
 
-Comparison of two test results is done with the following command:
-`mix run benchmark/compare.exs <result file> <reference result file>`
-where the "result files" are the files generated with `mix run benchmark/run.exs` script.
+# A script providing a functionality to compare results of two performance tests.
 
-The following assertions are implemented:
-  * time assertion - the duration of the test might be no longer than 120% of the duration of the reference test.
-  * final memory assertion - the amount of memory used during the test, as meassured at the end of the test,
-  might be no greater than 120% of the memory used by the reference test.
-"""
+# Comparison of two test results is done with the following command:
+# `mix run benchmark/compare.exs <result file> <reference result file>`
+# where the "result files" are the files generated with `mix run benchmark/run.exs` script.
+
+# The following assertions are implemented:
+#   * time assertion - the duration of the test might be no longer than 120% of the duration of the reference test.
+#   * final memory assertion - the amount of memory used during the test, as meassured at the end of the test,
+#   might be no greater than 120% of the memory used by the reference test.
+
 defmodule Benchmark.Compare do
   require Logger
   defmodule PerformanceAssertions do
@@ -23,11 +23,27 @@ defmodule Benchmark.Compare do
     end
 
     @spec assert_final_memory(number(), number(), keyword(number())) :: nil
-    def assert_final_memory(memory, memory_ref, params) do
-      if memory > memory_ref * (1 + @allowed_worsening_factor),
+    def assert_final_memory(memory_samples, memory_samples_ref, params) do
+      final_memory = Enum.at(memory_samples, -1)
+      final_memory_ref = Enum.at(memory_samples_ref, -1)
+      if final_memory > final_memory_ref * (1 + @allowed_worsening_factor),
         do:
-          raise("The memory performance has got worse! For parameters: #{inspect(params)} the test
-          used to take: #{memory_ref} MB and now it takes: #{memory} MB")
+          raise("The memory performance has got worse! For parameters: #{inspect(params)} the final memory used
+          to be: #{final_memory_ref} MB and now it is: #{final_memory} MB")
+    end
+
+    defp integrate(memory_samples) do
+      Enum.sum(memory_samples)
+    end
+
+    @spec assert_cumulative_memory(number(), number(), keyword(number())) :: nil
+    def assert_cumulative_memory(memory_samples, memory_samples_ref, params) do
+      cumulative_memory = integrate(memory_samples)
+      cumulative_memory_ref = integrate(memory_samples_ref)
+      if cumulative_memory > cumulative_memory_ref * (1 + @allowed_worsening_factor),
+        do:
+          raise("The memory performance has got worse! For parameters: #{inspect(params, pretty: true)}
+          the cumulative memory used to be: #{cumulative_memory_ref} MB and now it is: #{cumulative_memory} MB")
     end
   end
 
@@ -36,15 +52,27 @@ defmodule Benchmark.Compare do
       do: raise("Incompatible performance test result files!")
 
     Enum.each(Map.keys(results), fn params ->
-      {time, memory} = Map.get(results, params)
-      {time_ref, memory_ref} = Map.get(ref_results, params)
+      {time, memory_samples} = Map.get(results, params)
+      {time_ref, memory_samples_ref} = Map.get(ref_results, params)
 
       Logger.debug(
-        "PARAMS: #{inspect(params)} \n  time: #{time} ms vs #{time_ref} ms \n  memory: #{memory} MB vs #{memory_ref} MB"
+        """
+
+        PARAMS:
+        #{inspect(params)}
+
+        TIME:
+        #{time} [ms] vs #{time_ref} [ms]
+
+        MEMORY_SAMPLES:
+        #{inspect(memory_samples, pretty: true, limit: 10)} [MB] vs
+        #{inspect(memory_samples_ref, pretty: true, limit: 10)} [MB]
+        """
       )
 
       PerformanceAssertions.assert_time(time, time_ref, params)
-      PerformanceAssertions.assert_final_memory(memory, memory_ref, params)
+      PerformanceAssertions.assert_final_memory(memory_samples, memory_samples_ref, params)
+      PerformanceAssertions.assert_cumulative_memory(memory_samples, memory_samples_ref, params)
     end)
 
     :ok
