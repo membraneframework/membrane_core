@@ -28,8 +28,8 @@ defmodule Benchmark.Compare do
       final_memory_ref = Enum.at(memory_samples_ref, -1)
       if final_memory > final_memory_ref * (1 + @allowed_worsening_factor),
         do:
-          raise("The memory performance has got worse! For parameters: #{inspect(params)} the final memory used
-          to be: #{final_memory_ref} MB and now it is: #{final_memory} MB")
+          raise("The memory performance has got worse! For parameters: #{inspect(params)}
+          the final memory used to be: #{final_memory_ref} MB and now it is: #{final_memory} MB")
     end
 
     defp integrate(memory_samples) do

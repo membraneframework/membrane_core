@@ -17,6 +17,9 @@
 # Test cases are specified with the @params_grid module attribute of the `Benchmark.Run` module.
 # Each test case is performed multiple times - the number of repetitions is specified with the
 # @how_many_tries attribute of the `Benchmark.Run` module.
+# As a result of a test, a binary result file with an avaraged duration of each test case and memory samples
+# performed with @memory_sampling_period [ms] intervals is produced.
+# `benchmark/comparse.exs` script can be used to compare result files.
 
 
 defmodule Benchmark.Run do
@@ -38,27 +41,27 @@ defmodule Benchmark.Run do
       number_of_buffers: 50000,
       buffer_size: 1
     ],
-    # [
-    #   reductions: 10_000,
-    #   max_random: 1,
-    #   number_of_filters: 100,
-    #   number_of_buffers: 50000,
-    #   buffer_size: 1
-    # ],
-    # [
-    #   reductions: 10_000_000,
-    #   max_random: 1,
-    #   number_of_filters: 10,
-    #   number_of_buffers: 50,
-    #   buffer_size: 100_000
-    # ],
-    # [
-    #   reductions: 10_000,
-    #   max_random: 5,
-    #   number_of_filters: 10,
-    #   number_of_buffers: 50000,
-    #   buffer_size: 1
-    # ]
+    [
+      reductions: 10_000,
+      max_random: 1,
+      number_of_filters: 100,
+      number_of_buffers: 50000,
+      buffer_size: 1
+    ],
+    [
+      reductions: 10_000_000,
+      max_random: 1,
+      number_of_filters: 10,
+      number_of_buffers: 50,
+      buffer_size: 100_000
+    ],
+    [
+      reductions: 10_000,
+      max_random: 5,
+      number_of_filters: 10,
+      number_of_buffers: 50000,
+      buffer_size: 1
+    ]
   ]
   @how_many_tries 3
   @memory_sampling_period 100
@@ -204,6 +207,8 @@ defmodule Benchmark.Run do
 
     memory_samples = do_loop(pipeline_pid, initial_memory)
 
+    final_memory = meassure_memory() - initial_memory()
+    memory_samples = memory_samples++[final_memory]
     time = :os.system_time(:milli_seconds) - initial_time
 
     Membrane.Pipeline.terminate(pipeline_pid, blocking?: true)
