@@ -176,5 +176,6 @@ workflows:
           requires:
             - get_deps
       - test_performance:
+          type: approval
           requires:
             - get_deps
