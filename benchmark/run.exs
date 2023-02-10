@@ -37,7 +37,7 @@ defmodule Benchmark.Run do
       max_random: 1,
       number_of_filters: 10,
       number_of_buffers: 50000,
-      buffer_size: 100_000
+      buffer_size: 1
     ],
     [
       reductions: 10_000,
