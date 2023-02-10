@@ -14,7 +14,7 @@
 # `:end_of_stream` event
 # * `buffer_size` - size of each buffer, in bytes
 
-# Test cases are specified with the @params_grid module attribute of the `Benchmark.Run` module.
+# Test cases are specified with the @test_cases module attribute of the `Benchmark.Run` module.
 # Each test case is performed multiple times - the number of repetitions is specified with the
 # @how_many_tries attribute of the `Benchmark.Run` module.
 # As a result of a test, a binary result file with an avaraged duration of each test case and memory samples
@@ -33,29 +33,29 @@ defmodule Benchmark.Run do
   require Logger
   require Membrane.RCPipeline
 
-  @params_grid [
-    [
+  @test_cases [
+    linear: [
       reductions: 10_000,
       max_random: 1,
       number_of_filters: 10,
       number_of_buffers: 50000,
       buffer_size: 1
     ],
-    [
+    linear: [
       reductions: 10_000,
       max_random: 1,
       number_of_filters: 100,
       number_of_buffers: 50000,
       buffer_size: 1
     ],
-    [
+    linear: [
       reductions: 10_000_000,
       max_random: 1,
       number_of_filters: 10,
       number_of_buffers: 50,
       buffer_size: 100_000
     ],
-    [
+    linear: [
       reductions: 10_000,
       max_random: 5,
       number_of_filters: 10,
@@ -120,7 +120,6 @@ defmodule Benchmark.Run do
     @impl true
     def handle_init(_ctx, opts) do
       workload_simulation = Reductions.prepare_desired_function(opts.number_of_reductions)
-      Process.send_after(self(), :collect, 10_000)
       state = %{buffers: [], workload_simulation: workload_simulation, generator: opts.generator}
       {[], state}
     end
@@ -196,7 +195,7 @@ defmodule Benchmark.Run do
     if next_action == :continue, do: do_loop(pid, initial_memory, loop_counter+1, memory_samples), else: memory_samples
   end
 
-  defp perform_test(params) do
+  defp perform_test({:linear, params}) do
     initial_time = :os.system_time(:milli_seconds)
     initial_memory = meassure_memory()
 
@@ -216,15 +215,15 @@ defmodule Benchmark.Run do
   end
 
   def start() do
-      Enum.reduce(@params_grid, %{}, fn params, results_map ->
+      Enum.reduce(@test_cases, %{}, fn test_case, results_map ->
         results =
           for _try_number <- 1..@how_many_tries do
-            perform_test(params)
+            perform_test(test_case)
           end
 
         avg_time = (Enum.unzip(results) |> elem(0) |> Enum.sum()) / length(results)
         avarage_memory_samples_in_mb = Enum.unzip(results) |> elem(1) |> Enum.zip() |> Enum.map(&Tuple.to_list(&1))|> Enum.map(&Enum.sum(&1)/(length(&1)*1_000_000))
-        Map.put(results_map, params, {avg_time, avarage_memory_samples_in_mb})
+        Map.put(results_map, test_case, {avg_time, avarage_memory_samples_in_mb})
       end)
   end
 end

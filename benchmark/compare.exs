@@ -16,19 +16,19 @@ defmodule Benchmark.Compare do
     @allowed_worsening_factor 0.2
 
     @spec assert_time(number(), number(), keyword(number())) :: nil
-    def assert_time(time, time_ref, params) do
+    def assert_time(time, time_ref, test_case) do
       if time > time_ref * (1 + @allowed_worsening_factor),
-        do: raise("The time performance has got worse! For parameters: #{inspect(params)} the test
+        do: raise("The time performance has got worse! For test case: #{inspect(test_case, pretty: true)} the test
           used to take: #{time_ref} ms and now it takes: #{time} ms")
     end
 
     @spec assert_final_memory(number(), number(), keyword(number())) :: nil
-    def assert_final_memory(memory_samples, memory_samples_ref, params) do
+    def assert_final_memory(memory_samples, memory_samples_ref, test_case) do
       final_memory = Enum.at(memory_samples, -1)
       final_memory_ref = Enum.at(memory_samples_ref, -1)
       if final_memory > final_memory_ref * (1 + @allowed_worsening_factor),
         do:
-          raise("The memory performance has got worse! For parameters: #{inspect(params)}
+          raise("The memory performance has got worse! For test case: #{inspect(test_case, pretty: true)}
           the final memory used to be: #{final_memory_ref} MB and now it is: #{final_memory} MB")
     end
 
@@ -37,12 +37,12 @@ defmodule Benchmark.Compare do
     end
 
     @spec assert_cumulative_memory(number(), number(), keyword(number())) :: nil
-    def assert_cumulative_memory(memory_samples, memory_samples_ref, params) do
+    def assert_cumulative_memory(memory_samples, memory_samples_ref, test_case) do
       cumulative_memory = integrate(memory_samples)
       cumulative_memory_ref = integrate(memory_samples_ref)
       if cumulative_memory > cumulative_memory_ref * (1 + @allowed_worsening_factor),
         do:
-          raise("The memory performance has got worse! For parameters: #{inspect(params, pretty: true)}
+          raise("The memory performance has got worse! For test case: #{inspect(test_case, pretty: true)}
           the cumulative memory used to be: #{cumulative_memory_ref} MB and now it is: #{cumulative_memory} MB")
     end
   end
@@ -51,15 +51,15 @@ defmodule Benchmark.Compare do
     if Map.keys(results) != Map.keys(ref_results),
       do: raise("Incompatible performance test result files!")
 
-    Enum.each(Map.keys(results), fn params ->
-      {time, memory_samples} = Map.get(results, params)
-      {time_ref, memory_samples_ref} = Map.get(ref_results, params)
+    Enum.each(Map.keys(results), fn test_case ->
+      {time, memory_samples} = Map.get(results, test_case)
+      {time_ref, memory_samples_ref} = Map.get(ref_results, test_case)
 
       Logger.debug(
         """
 
-        PARAMS:
-        #{inspect(params)}
+        TEST CASE:
+        #{inspect(test_case, pretty: true)}
 
         TIME:
         #{time} [ms] vs #{time_ref} [ms]
@@ -70,9 +70,9 @@ defmodule Benchmark.Compare do
         """
       )
 
-      PerformanceAssertions.assert_time(time, time_ref, params)
-      PerformanceAssertions.assert_final_memory(memory_samples, memory_samples_ref, params)
-      PerformanceAssertions.assert_cumulative_memory(memory_samples, memory_samples_ref, params)
+      PerformanceAssertions.assert_time(time, time_ref, test_case)
+      PerformanceAssertions.assert_final_memory(memory_samples, memory_samples_ref, test_case)
+      PerformanceAssertions.assert_cumulative_memory(memory_samples, memory_samples_ref, test_case)
     end)
 
     :ok
