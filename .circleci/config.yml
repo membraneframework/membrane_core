@@ -181,4 +181,5 @@ workflows:
           type: approval
       - test_performance:
           requires:
-            - get_deps, request_performance_test
+            - get_deps
+            - request_performance_test
