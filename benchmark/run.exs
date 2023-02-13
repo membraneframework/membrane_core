@@ -61,40 +61,40 @@ defmodule Benchmark.Run do
   require Membrane.Pad
 
   @test_cases [
-    linear: [
-      reductions: 10_000,
-      max_random: 1,
-      number_of_filters: 10,
-      number_of_buffers: 50000,
-      buffer_size: 1
-    ],
-    linear: [
-      reductions: 10_000,
-      max_random: 1,
-      number_of_filters: 100,
-      number_of_buffers: 50000,
-      buffer_size: 1
-    ],
-    linear: [
-      reductions: 10_000_000,
-      max_random: 1,
-      number_of_filters: 10,
-      number_of_buffers: 50,
-      buffer_size: 100_000
-    ],
-    linear: [
-      reductions: 10_000,
-      max_random: 5,
-      number_of_filters: 10,
-      number_of_buffers: 50000,
-      buffer_size: 1
-    ],
-    with_branches: [
-      struct: [{1, 3}, {3, 2}, {2, 1}],
-      reductions: 10_000,
-      number_of_buffers: 50000,
-      buffer_size: 1
-    ],
+    # linear: [
+    #   reductions: 10_000,
+    #   max_random: 1,
+    #   number_of_filters: 10,
+    #   number_of_buffers: 50000,
+    #   buffer_size: 1
+    # ],
+    # linear: [
+    #   reductions: 10_000,
+    #   max_random: 1,
+    #   number_of_filters: 100,
+    #   number_of_buffers: 50000,
+    #   buffer_size: 1
+    # ],
+    # linear: [
+    #   reductions: 10_000_000,
+    #   max_random: 1,
+    #   number_of_filters: 10,
+    #   number_of_buffers: 50,
+    #   buffer_size: 100_000
+    # ],
+    # linear: [
+    #   reductions: 10_000,
+    #   max_random: 5,
+    #   number_of_filters: 10,
+    #   number_of_buffers: 50000,
+    #   buffer_size: 1
+    # ],
+    # with_branches: [
+    #   struct: [{1, 3}, {3, 2}, {2, 1}],
+    #   reductions: 10_000,
+    #   number_of_buffers: 50000,
+    #   buffer_size: 1
+    # ],
     with_branches: [
       struct: [{1, 3}, {1, 3}, {3, 1}, {3, 1}],
       reductions: 10_000,
@@ -227,19 +227,25 @@ defmodule Benchmark.Run do
     def_input_pad :input, accepted_format: _any, availability: :on_request
     def_output_pad :output, accepted_format: _any, availability: :on_request
 
+    def_options number_of_reductions: [spec: integer()]
+
     @impl true
-    def handle_init(_ctx, _opts) do
-      {[], %{}}
+    def handle_init(_ctx, opts) do
+      workload_simulation = Reductions.prepare_desired_function(opts.number_of_reductions)
+      {[], %{workload_simulation: workload_simulation}}
     end
 
     @impl true
     def handle_buffer(_pad, buffer, _ctx, state) do
-    {[forward: buffer], state}
+      state.workload_simulation.()
+      {[forward: buffer], state}
     end
   end
 
   def prepare_branched_pipeline(params) do
     struct = params[:struct]
+    reductions = params[:reductions]
+
     source = %Membrane.Testing.Source{
       output:
         {1,
@@ -256,6 +262,7 @@ defmodule Benchmark.Run do
            end
          end}
     }
+
     initial_level = %{level: 1, spec: [child(:source, source)]}
     final_level = Enum.reduce(struct, initial_level, fn {input_pads, output_pads}, current_level ->
       how_many_output_pads = length(current_level.spec)
@@ -266,7 +273,7 @@ defmodule Benchmark.Run do
         Enum.flat_map(fn {group_of_branches, filter_no} ->
           Enum.with_index(group_of_branches) |> Enum.map(fn {branch, branch_index_in_group} ->
             pad_no = filter_no*pads_per_filter+branch_index_in_group
-            branch |> via_in(Pad.ref(:input, pad_no)) |> child("filter_#{current_level.level}_#{filter_no}", BranchedFilter, get_if_exists: true)
+            branch |> via_in(Pad.ref(:input, pad_no)) |> child("filter_#{current_level.level}_#{filter_no}", %BranchedFilter{number_of_reductions: reductions}, get_if_exists: true)
           end)
         end)
 
