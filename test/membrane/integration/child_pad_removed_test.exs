@@ -129,6 +129,10 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
     assert is_pid(pid)
   end
 
+  defp assert_child_removed_output_pad(child) do
+    assert_receive {:child_pad_removed, ^child, Pad.ref(:output, _id)}
+  end
+
   describe "when child-bin removes a pad" do
     test "sibling is unlinked" do
       for bin_actions <- [
@@ -147,7 +151,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
             refute_received {:pad_removed, :sink}
         end
 
-        assert_receive {:child_pad_removed, :bin, Pad.ref(:output, _id)}
+        assert_child_removed_output_pad(:bin)
         assert_child_exists(pipeline, :bin)
         assert_child_exists(pipeline, :sink)
 
@@ -155,6 +159,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
       end
     end
 
+    @tag :dupa
     test "sibling linked via static pad raises" do
       for actions <- [
             [remove_children: :source],
@@ -168,7 +173,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
 
         execute_actions_in_bin(pipeline, actions)
 
-        assert_receive {:child_pad_removed, :bin, Pad.ref(:output, _id)}
+        assert_child_removed_output_pad(:bin)
 
         assert_receive {:DOWN, ^monitor_ref, :process, ^sink_pid,
                         {%Membrane.PadError{message: message}, _stacktrace}}
@@ -191,7 +196,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
 
         execute_actions_in_bin(pipeline, bin_actions)
 
-        assert_receive {:child_pad_removed, :bin, Pad.ref(:output, _id)}
+        assert_child_removed_output_pad(:bin)
         assert_receive {:DOWN, ^monitor_ref, :process, ^sink_pid, _reason}
         assert_child_exists(pipeline, :bin)
 

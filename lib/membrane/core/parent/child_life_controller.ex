@@ -454,21 +454,18 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @spec handle_link_response(Parent.Link.id(), Membrane.Pad.direction(), Parent.state()) ::
           Parent.state()
   def handle_link_response(link_id, direction, state) do
-    case Map.fetch(state.links, link_id) do
-      {:ok, %Link{spec_ref: spec_ref}} ->
-        state =
-          with %{pending_specs: %{^spec_ref => _spec_data}} <- state do
-            update_in(
-              state,
-              [:pending_specs, spec_ref, :awaiting_responses],
-              &MapSet.delete(&1, {link_id, direction})
-            )
-          end
+    with {:ok, %Link{spec_ref: spec_ref}} <- Map.fetch(state.links, link_id),
+         true <- Map.has_key?(state.pending_specs, spec_ref) do
+      state =
+        update_in(
+          state,
+          [:pending_specs, spec_ref, :awaiting_responses],
+          &MapSet.delete(&1, {link_id, direction})
+        )
 
-        proceed_spec_startup(spec_ref, state)
-
-      :error ->
-        state
+      proceed_spec_startup(spec_ref, state)
+    else
+      _other -> state
     end
   end
 

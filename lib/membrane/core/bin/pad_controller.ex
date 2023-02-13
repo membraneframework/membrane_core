@@ -248,21 +248,40 @@ defmodule Membrane.Core.Bin.PadController do
           &[{state.module, pad_name} | &1]
         )
 
-      reply =
-        Message.call!(child_endpoint.pid, :handle_link, [
+      handle_link_response =
+        Message.call(child_endpoint.pid, :handle_link, [
           direction,
           child_endpoint,
           other_endpoint,
           params
         ])
 
-      state = PadModel.set_data!(state, endpoint.pad_ref, :linked?, true)
-      state = PadModel.set_data!(state, endpoint.pad_ref, :endpoint, child_endpoint)
-      state = ChildLifeController.proceed_spec_startup(spec_ref, state)
-      {reply, state}
+      case handle_link_response do
+        {:error, {:call_failure, reason}} ->
+          Membrane.Logger.debug("""
+          Tried to link pad #{inspect(endpoint.pad_ref)}, but child #{inspect(endpoint.child)},
+          that was supposed to be linked to this pad, is not alive.
+          """)
+
+          {{:error, {:child_dead, reason}}, state}
+
+        {:error, _reason} = error ->
+          {error, state}
+
+        reply ->
+          state = PadModel.set_data!(state, endpoint.pad_ref, :linked?, true)
+          state = PadModel.set_data!(state, endpoint.pad_ref, :endpoint, child_endpoint)
+          state = ChildLifeController.proceed_spec_startup(spec_ref, state)
+          {reply, state}
+      end
     else
       {:error, :unknown_pad} ->
-        {{:error, {:unknown_pad, state.name, state.module, endpoint.pad_ref}}, state}
+        Membrane.Logger.debug("""
+        Tried to link pad #{inspect(endpoint.pad_ref)}, but this pad is not existing
+        in the moment of receiving :handle_link. It could be removed or never existed.
+        """)
+
+        {{:error, {:unknown_pad, state.name, endpoint.pad_ref}}, state}
     end
   end
 
