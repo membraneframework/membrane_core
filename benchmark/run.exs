@@ -61,40 +61,40 @@ defmodule Benchmark.Run do
   require Membrane.Pad
 
   @test_cases [
-    # linear: [
-    #   reductions: 10_000,
-    #   max_random: 1,
-    #   number_of_filters: 10,
-    #   number_of_buffers: 50000,
-    #   buffer_size: 1
-    # ],
-    # linear: [
-    #   reductions: 10_000,
-    #   max_random: 1,
-    #   number_of_filters: 100,
-    #   number_of_buffers: 50000,
-    #   buffer_size: 1
-    # ],
-    # linear: [
-    #   reductions: 10_000_000,
-    #   max_random: 1,
-    #   number_of_filters: 10,
-    #   number_of_buffers: 50,
-    #   buffer_size: 100_000
-    # ],
-    # linear: [
-    #   reductions: 10_000,
-    #   max_random: 5,
-    #   number_of_filters: 10,
-    #   number_of_buffers: 50000,
-    #   buffer_size: 1
-    # ],
-    # with_branches: [
-    #   struct: [{1, 3}, {3, 2}, {2, 1}],
-    #   reductions: 10_000,
-    #   number_of_buffers: 50000,
-    #   buffer_size: 1
-    # ],
+    linear: [
+      reductions: 10_000,
+      max_random: 1,
+      number_of_filters: 10,
+      number_of_buffers: 50000,
+      buffer_size: 1
+    ],
+    linear: [
+      reductions: 10_000,
+      max_random: 1,
+      number_of_filters: 100,
+      number_of_buffers: 50000,
+      buffer_size: 1
+    ],
+    linear: [
+      reductions: 10_000_000,
+      max_random: 1,
+      number_of_filters: 10,
+      number_of_buffers: 50,
+      buffer_size: 100_000
+    ],
+    linear: [
+      reductions: 10_000,
+      max_random: 5,
+      number_of_filters: 10,
+      number_of_buffers: 50000,
+      buffer_size: 1
+    ],
+    with_branches: [
+      struct: [{1, 3}, {3, 2}, {2, 1}],
+      reductions: 10_000,
+      number_of_buffers: 50000,
+      buffer_size: 1
+    ],
     with_branches: [
       struct: [{1, 3}, {1, 3}, {3, 1}, {3, 1}],
       reductions: 10_000,

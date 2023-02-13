@@ -59,7 +59,6 @@ defmodule Benchmark.Compare do
 
       Logger.debug(
         """
-
         TEST CASE:
         #{inspect(test_case, pretty: true)}
 
