@@ -562,9 +562,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
         awaiting_responses =
           spec_data.awaiting_responses
-          |> MapSet.reject(fn {link_id, _direction} ->
+          |> Enum.reject(fn {link_id, _direction} ->
             MapSet.member?(removed_links_ids, link_id)
           end)
+          |> MapSet.new()
 
         spec_data = %{
           spec_data
@@ -593,7 +594,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
       awaiting_responses =
         spec_data.awaiting_responses
-        |> MapSet.reject(&match?({^link_id, _direction}, &1))
+        |> Enum.reject(&match?({^link_id, _direction}, &1))
+        |> MapSet.new()
 
       state =
         put_in(
