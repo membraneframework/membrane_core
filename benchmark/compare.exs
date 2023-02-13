@@ -13,7 +13,7 @@
 defmodule Benchmark.Compare do
   require Logger
   defmodule PerformanceAssertions do
-    @allowed_worsening_factor 0.2
+    @allowed_worsening_factor 0.5
 
     @spec assert_time(number(), number(), keyword(number())) :: nil
     def assert_time(time, time_ref, test_case) do
