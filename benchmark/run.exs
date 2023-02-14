@@ -52,9 +52,9 @@
 defmodule Benchmark.Run do
   import Membrane.ChildrenSpec
 
-  alias Membrane.RCPipeline
-  alias Membrane.RCMessage
   alias Membrane.Pad
+  alias Benchmark.Run.BranchedFilter
+  alias Benchmark.Run.LinearFilter
 
   require Logger
   require Membrane.RCPipeline
@@ -105,85 +105,8 @@ defmodule Benchmark.Run do
   @how_many_tries 3
   @memory_sampling_period 100
 
-  defmodule Reductions do
-    @moduledoc false
 
-    @function :erlang.date()
-    @n1 100
-    @n2 1_000_000
-    defp setup_process(n) do
-      parent = self()
-
-      spawn(fn ->
-        Enum.each(1..n, fn _x -> @function end)
-        send(parent, :erlang.process_info(self())[:reductions])
-      end)
-    end
-
-    defp calculate do
-      setup_process(@n1)
-
-      r1 =
-        receive do
-          value -> value
-        end
-
-      setup_process(@n2)
-
-      r2 =
-        receive do
-          value -> value
-        end
-
-      {r1, r2}
-    end
-
-    @spec prepare_desired_function(non_neg_integer()) :: (() -> any())
-    def prepare_desired_function(how_many_reductions) do
-      {r1, r2} = calculate()
-      n = trunc((how_many_reductions - r2) / (r2 - r1) * (@n2 - @n1) + @n2)
-      fn -> Enum.each(1..n, fn _x -> @function end) end
-    end
-  end
-
-  defmodule Filter do
-    @moduledoc false
-    use Membrane.Filter
-
-    def_input_pad :input, accepted_format: _any
-    def_output_pad :output, accepted_format: _any
-
-    def_options number_of_reductions: [spec: integer()],
-                generator: [spec: (integer() -> integer())]
-
-    @impl true
-    def handle_init(_ctx, opts) do
-      workload_simulation = Reductions.prepare_desired_function(opts.number_of_reductions)
-      state = %{buffers: [], workload_simulation: workload_simulation, generator: opts.generator}
-      {[], state}
-    end
-
-    @impl true
-    def handle_buffer(_pad, buffer, _ctx, state) do
-      state.workload_simulation.()
-      state = %{state | buffers: state.buffers ++ [buffer]}
-      how_many_buffers_to_output = state.generator.(length(state.buffers))
-
-      if how_many_buffers_to_output > 0 do
-        [buffers_to_output | list_of_rest_buffers_lists] =
-          Enum.chunk_every(state.buffers, how_many_buffers_to_output)
-
-        buffers_to_output = Enum.map(buffers_to_output, &%Membrane.Buffer{payload: &1})
-        rest_buffers = List.flatten(list_of_rest_buffers_lists)
-        state = %{state | buffers: rest_buffers}
-        {[buffer: {:output, buffers_to_output}], state}
-      else
-        {[], state}
-      end
-    end
-  end
-
-  defp prepare_linear_pipeline(params) do
+  defp prepare_pipeline(:linear, params) do
     Enum.reduce(
       1..params[:number_of_filters],
       child(%Membrane.Testing.Source{
@@ -203,7 +126,7 @@ defmodule Benchmark.Run do
            end}
       }),
       fn n, acc ->
-        child(acc, String.to_atom("filter_#{n}"), %Filter{
+        child(acc, String.to_atom("filter_#{n}"), %LinearFilter{
           number_of_reductions: params[:reductions],
           generator: fn number_of_buffers ->
             how_many_needed = Enum.random(1..params[:max_random])
@@ -221,28 +144,7 @@ defmodule Benchmark.Run do
     |> child(:sink, %Membrane.Testing.Sink{autodemand: true})
   end
 
-  defmodule BranchedFilter do
-    use Membrane.Filter
-
-    def_input_pad :input, accepted_format: _any, availability: :on_request
-    def_output_pad :output, accepted_format: _any, availability: :on_request
-
-    def_options number_of_reductions: [spec: integer()]
-
-    @impl true
-    def handle_init(_ctx, opts) do
-      workload_simulation = Reductions.prepare_desired_function(opts.number_of_reductions)
-      {[], %{workload_simulation: workload_simulation}}
-    end
-
-    @impl true
-    def handle_buffer(_pad, buffer, _ctx, state) do
-      state.workload_simulation.()
-      {[forward: buffer], state}
-    end
-  end
-
-  def prepare_branched_pipeline(params) do
+  defp prepare_pipeline(:with_branches, params) do
     struct = params[:struct]
     reductions = params[:reductions]
 
@@ -288,27 +190,26 @@ defmodule Benchmark.Run do
     Enum.at(final_level.spec, 0) |> child(:sink, Membrane.Testing.Sink)
   end
 
-  defp meassure_memory(), do: :erlang.memory(:total)
+  defp meassure_memory(mode \\ :fast)
+  defp meassure_memory(:fast), do: :erlang.memory(:total)
 
   defp do_loop(pid, initial_memory, loop_counter \\ 0, memory_samples \\ []) do
     memory = meassure_memory() - initial_memory
     memory_samples = memory_samples ++ [memory]
     next_action = receive do
-      %Membrane.RCMessage.EndOfStream{element: :sink}->
+      :sink_eos ->
          :stop
       after @memory_sampling_period -> :continue
     end
     if next_action == :continue, do: do_loop(pid, initial_memory, loop_counter+1, memory_samples), else: memory_samples
   end
 
-  defp perform_test({:linear, params}) do
+  defp perform_test({test_type, params}) when test_type in [:linear, :with_branches] do
     initial_time = :os.system_time(:milli_seconds)
     initial_memory = meassure_memory()
 
-    pipeline_pid = Membrane.RCPipeline.start!()
-    RCPipeline.exec_actions(pipeline_pid, spec: prepare_linear_pipeline(params))
-
-    RCPipeline.subscribe(pipeline_pid, %RCMessage.EndOfStream{element: :sink, pad: _, from: _})
+    {:ok, _supervisor_pid, pipeline_pid} = Benchmark.Run.Pipeline.start(monitoring_process: self(),
+     spec: prepare_pipeline(test_type, params))
 
     memory_samples = do_loop(pipeline_pid, initial_memory)
 
@@ -319,28 +220,6 @@ defmodule Benchmark.Run do
     Membrane.Pipeline.terminate(pipeline_pid, blocking?: true)
     {time, memory_samples}
   end
-
-  defp perform_test({:with_branches, params}) do
-    initial_time = :os.system_time(:milli_seconds)
-    initial_memory = meassure_memory()
-
-    pipeline_pid = Membrane.RCPipeline.start!()
-    spec = prepare_branched_pipeline(params)
-
-    RCPipeline.exec_actions(pipeline_pid, spec: spec)
-
-    RCPipeline.subscribe(pipeline_pid, %RCMessage.EndOfStream{element: :sink, pad: _, from: _})
-
-    memory_samples = do_loop(pipeline_pid, initial_memory)
-
-    final_memory = meassure_memory() - initial_memory
-    memory_samples = memory_samples++[final_memory]
-    time = :os.system_time(:milli_seconds) - initial_time
-
-    Membrane.Pipeline.terminate(pipeline_pid, blocking?: true)
-    {time, memory_samples}
-  end
-
 
   def start() do
       Enum.reduce(@test_cases, %{}, fn test_case, results_map ->
