@@ -413,8 +413,9 @@ defmodule Membrane.Core.Element.ActionHandler do
         raise ElementError, "Tried to make a redemand on input pad #{inspect(pad_ref)}"
 
       %{mode: :push} ->
-        raise ElementError,
-              "Tried to make a redemand on pad #{inspect(pad_ref)} working in push mode"
+        # raise ElementError,
+        #       "Tried to make a redemand on pad #{inspect(pad_ref)} working in push mode"
+        state
 
       %{demand_mode: :auto} ->
         raise ElementError,
