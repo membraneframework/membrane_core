@@ -97,7 +97,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     until all bin pads of the spec are linked. Linking bin pads is actually routing link calls to proper
     bin children.
   - Mark spec children as ready, optionally request to play or terminate
-  - Cleanup spec: remove it from `pending_specs` and all other specs' `dependencies` and try proceeding startup
+  - Cleanup spec: remove it from `pending_specs` and all other specs' `dependent_specs` and try proceeding startup
     for all other pending specs that depended on the spec.
   """
   @spec handle_spec(ChildrenSpec.t(), Parent.state()) :: Parent.state() | no_return()
@@ -536,6 +536,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp remove_children_from_specs(removed_children, state) do
     removed_children = Bunch.listify(removed_children) |> MapSet.new()
 
+    removed_children_specs =
+      removed_children
+      |> Enum.map(&get_in(state, [:children, &1, :spec_ref]))
+
     removed_links_ids =
       state.links
       |> Map.values()
@@ -545,34 +549,20 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       )
       |> MapSet.new(& &1.id)
 
+    removed_links_specs =
+      removed_links_ids
+      |> Enum.map(&get_in(state, [:links, &1, :spec_ref]))
+
     updated_specs =
-      state.pending_specs
-      |> Enum.filter(fn {_ref, spec_data} ->
-        not MapSet.disjoint?(spec_data.children_names, removed_children) or
-          not MapSet.disjoint?(spec_data.links_ids, removed_links_ids)
-      end)
-      |> Map.new(fn {spec_ref, spec_data} ->
-        children_names =
-          spec_data.children_names
-          |> MapSet.difference(removed_children)
-
-        links_ids =
-          spec_data.links_ids
-          |> MapSet.difference(removed_links_ids)
-
-        awaiting_responses =
-          spec_data.awaiting_responses
-          |> Enum.reject(fn {link_id, _direction} ->
-            MapSet.member?(removed_links_ids, link_id)
-          end)
-          |> MapSet.new()
-
-        spec_data = %{
-          spec_data
-          | children_names: children_names,
-            links_ids: links_ids,
-            awaiting_responses: awaiting_responses
-        }
+      Enum.uniq(removed_children_specs ++ removed_links_specs)
+      |> Enum.filter(&Map.has_key?(state.pending_specs, &1))
+      |> Map.new(fn spec_ref ->
+        spec_data =
+          Map.get(state.pending_specs, spec_ref)
+          |> remove_children_and_links_from_spec_data(
+            removed_children,
+            removed_links_ids
+          )
 
         {spec_ref, spec_data}
       end)
@@ -580,7 +570,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = Map.update!(state, :pending_specs, &Map.merge(&1, updated_specs))
 
     updated_specs
-    |> Enum.map(fn {spec_ref, _spec_data} -> spec_ref end)
+    |> Map.keys()
     |> Enum.reduce(state, &proceed_spec_startup/2)
   end
 
@@ -589,23 +579,45 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     link = Map.fetch!(state.links, link_id)
     spec_ref = link.spec_ref
 
-    with %{pending_specs: %{^spec_ref => spec_data}} <- state do
-      links_ids = MapSet.delete(spec_data.links_ids, link.id)
-
-      awaiting_responses =
-        spec_data.awaiting_responses
-        |> Enum.reject(&match?({^link_id, _direction}, &1))
-        |> MapSet.new()
-
+    if Map.has_key?(state.pending_specs, spec_ref) do
       state =
-        put_in(
+        update_in(
           state,
           [:pending_specs, spec_ref],
-          %{spec_data | links_ids: links_ids, awaiting_responses: awaiting_responses}
+          &remove_children_and_links_from_spec_data(&1, [], [link_id])
         )
 
       proceed_spec_startup(spec_ref, state)
+    else
+      state
     end
+  end
+
+  defp remove_children_and_links_from_spec_data(spec_data, removed_children, removed_links_ids) do
+    removed_children = MapSet.new(removed_children)
+    removed_links_ids = MapSet.new(removed_links_ids)
+
+    children_names =
+      spec_data.children_names
+      |> MapSet.difference(removed_children)
+
+    links_ids =
+      spec_data.links_ids
+      |> MapSet.difference(removed_links_ids)
+
+    awaiting_responses =
+      spec_data.awaiting_responses
+      |> Enum.reject(fn {link_id, _direction} ->
+        MapSet.member?(removed_links_ids, link_id)
+      end)
+      |> MapSet.new()
+
+    %{
+      spec_data
+      | children_names: children_names,
+        links_ids: links_ids,
+        awaiting_responses: awaiting_responses
+    }
   end
 
   @spec handle_child_pad_removed(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
@@ -711,15 +723,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp remove_spec_from_dependencies(spec_ref, state) do
-    dependencies =
+    related_specs =
       state.pending_specs
       |> Enum.filter(fn {_ref, data} -> MapSet.member?(data.dependent_specs, spec_ref) end)
       |> Map.new(fn {ref, data} ->
         {ref, Map.update!(data, :dependent_specs, &MapSet.delete(&1, spec_ref))}
       end)
 
-    state = %{state | pending_specs: Map.merge(state.pending_specs, dependencies)}
-    dependencies |> Map.keys() |> Enum.reduce(state, &proceed_spec_startup/2)
+    state = %{state | pending_specs: Map.merge(state.pending_specs, related_specs)}
+    related_specs |> Map.keys() |> Enum.reduce(state, &proceed_spec_startup/2)
   end
 
   defp exec_handle_crash_group_down_callback(
