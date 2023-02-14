@@ -52,7 +52,7 @@ defmodule Membrane.FailWhenNoStreamFormatAreSent do
       end
 
     source_ref = Process.monitor(source_pid)
-    assert_pipeline_play(pipeline)
+
     Pipeline.message_child(pipeline, :source, :send_buffer)
     assert_receive {:DOWN, ^source_ref, :process, ^source_pid, {reason, _stack_trace}}
     assert %Membrane.ElementError{message: action_error_msg} = reason

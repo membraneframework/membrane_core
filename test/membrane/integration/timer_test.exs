@@ -63,7 +63,6 @@ defmodule Membrane.Integration.TimerTest do
         custom_args: self()
       )
 
-    assert_pipeline_play(pipeline)
     assert_pipeline_notified(pipeline, :element, :tick)
     assert_pipeline_notified(pipeline, :bin, :tick)
     assert_receive :pipeline_tick
@@ -87,7 +86,6 @@ defmodule Membrane.Integration.TimerTest do
   test "Stopping timer with `:no_interval`" do
     pipeline = Testing.Pipeline.start_link_supervised!(spec: [child(:element, StopNoInterval)])
 
-    assert_pipeline_play(pipeline)
     assert_pipeline_notified(pipeline, :element, :ok)
     Testing.Pipeline.terminate(pipeline)
   end

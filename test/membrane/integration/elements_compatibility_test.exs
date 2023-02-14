@@ -245,8 +245,6 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
           |> child(sink_module.__struct__(test_pid: self()))
       )
 
-    assert_pipeline_play(pid)
-
     state_dump =
       receive do
         {:state_dump, state_dump} -> state_dump

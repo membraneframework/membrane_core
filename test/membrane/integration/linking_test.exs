@@ -171,7 +171,6 @@ defmodule Membrane.Integration.LinkingTest do
       source_pid = get_child_pid(:source, bin_pid)
       source_ref = Process.monitor(source_pid)
 
-      assert_pipeline_play(pipeline)
       Process.exit(sink_pid, :kill)
       assert_pipeline_crash_group_down(pipeline, :group_2)
 
@@ -286,7 +285,6 @@ defmodule Membrane.Integration.LinkingTest do
     spec = [bin_spec, sink_spec, links_spec]
     send(pipeline, {:start_spec, %{spec: spec}})
     assert_receive(:spec_started)
-    assert_pipeline_play(pipeline)
   end
 
   defmodule SlowSetupSink do

@@ -62,7 +62,6 @@ defmodule Membrane.Integration.SyncTest do
 
     pipeline = Testing.Pipeline.start_link_supervised!(options)
 
-    assert_pipeline_play(pipeline)
     send(pipeline, {:spawn_children, spec})
 
     assert_start_of_stream(pipeline, :sink_a)
