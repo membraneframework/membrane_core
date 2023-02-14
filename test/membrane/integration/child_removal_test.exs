@@ -193,7 +193,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
         )
 
       monitor = Process.monitor(pipeline)
-      Testing.Pipeline.terminate(pipeline)
+      Testing.Pipeline.terminate(pipeline, asynchronous?: true)
+      Process.sleep(100)
+
       assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
       send(RemovalDeferSource, :terminate)
       send(RemovalDeferSink, :terminate)
@@ -209,7 +211,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
         )
 
       monitor = Process.monitor(pipeline)
-      Testing.Pipeline.terminate(pipeline)
+      Testing.Pipeline.terminate(pipeline, asynchronous?: true)
+      Process.sleep(100)
+
       assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
       assert_receive {RemovalDeferBin, :terminate_request}
       assert %{module: Membrane.Core.Bin.Zombie} = :sys.get_state(RemovalDeferBin)
@@ -227,7 +231,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
         )
 
       pipeline_monitor = Process.monitor(pipeline)
-      Testing.Pipeline.terminate(pipeline)
+      Testing.Pipeline.terminate(pipeline, asynchronous?: true)
+      Process.sleep(100)
+
       assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
       assert_receive {RemovalDeferBin, :terminate_request}
       assert %{module: RemovalDeferBin} = :sys.get_state(RemovalDeferBin)

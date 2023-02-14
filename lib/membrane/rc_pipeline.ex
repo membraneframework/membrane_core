@@ -392,7 +392,7 @@ defmodule Membrane.RCPipeline do
   def handle_terminate_request(_ctx, state) do
     pipeline_event = %Terminated{from: self()}
     send_event_to_controller_if_subscribed(pipeline_event, state)
-    {[], state}
+    {[terminate: :normal], state}
   end
 
   defp send_event_to_controller_if_subscribed(message, state) do
