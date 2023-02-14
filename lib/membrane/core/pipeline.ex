@@ -146,13 +146,14 @@ defmodule Membrane.Core.Pipeline do
   def handle_call(message, from, state) do
     context = &CallbackContext.from_state(&1, from: from)
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_call,
-      Membrane.Core.Pipeline.ActionHandler,
-      %{context: context},
-      [message],
-      state
-    )
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_call,
+        Membrane.Core.Pipeline.ActionHandler,
+        %{context: context},
+        [message],
+        state
+      )
 
     {:noreply, state}
   end
