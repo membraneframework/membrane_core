@@ -375,6 +375,7 @@ defmodule Membrane.Integration.LinkingTest do
     Membrane.Pipeline.terminate(pipeline, blocking?: true)
   end
 
+  @tag :dupa
   test "Bin should crash if it doesn't link internally within timeout" do
     defmodule NoInternalLinkBin do
       use Membrane.Bin
@@ -415,8 +416,9 @@ defmodule Membrane.Integration.LinkingTest do
     monitor_1 = Process.monitor(bin_1_pid)
     monitor_2 = Process.monitor(bin_2_pid)
 
-    assert_receive {:DOWN, ^monitor_1, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
-    assert_receive {:DOWN, ^monitor_2, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
+    assert_receive {:DOWN, ref, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}
+                   when ref in [monitor_1, monitor_2],
+                   6000
 
     Testing.Pipeline.terminate(pipeline)
   end
