@@ -4,6 +4,4 @@ defmodule Membrane.CrashGroup do
   Crash groups can be used through `Membrane.ChildrenSpec`.
   """
   @type mode() :: :temporary | nil
-  @type name() :: any()
-  @type t :: {name, mode}
 end

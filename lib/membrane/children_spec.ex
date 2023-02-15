@@ -185,7 +185,7 @@ defmodule Membrane.ChildrenSpec do
   ### Crash groups
 
   A crash group is a logical entity that prevents the whole pipeline from crashing when one of
-  its children crashes. A crash group is defined with the use of two children specification options:
+  components crashes. A crash group is defined with the use of two children specification options:
   * `group` - which acts as a crash group identifier
   * `crash_group_mode` - its value specifies the behavior of children in the crash group. Currently, we support only
   `:temporary` mode which means that Membrane will not make any attempts to restart crashed child.
@@ -318,7 +318,7 @@ defmodule Membrane.ChildrenSpec do
 
   @type children_spec_options :: [
           group: Child.group(),
-          crash_group_mode: Membrane.CrashGroup.mode() | nil,
+          crash_group_mode: Membrane.CrashGroup.mode(),
           stream_sync: :sinks | [[Child.name()]],
           clock_provider: Child.name() | nil,
           node: node() | nil,

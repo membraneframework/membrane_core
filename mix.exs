@@ -84,10 +84,7 @@ defmodule Membrane.Mixfile do
         Membrane.RCMessage
       ],
       groups_for_modules: [
-        Pipeline: [
-          ~r/^Membrane\.Pipeline($|\.)/,
-          ~r/^Membrane\.(CrashGroup)($|\.)/
-        ],
+        Pipeline: [~r/^Membrane\.Pipeline($|\.)/],
         "RC Pipeline": [
           ~r/^Membrane\.(RCPipeline)($|\.)/,
           ~r/^Membrane\.(RCMessage)($|\.)/
@@ -101,7 +98,10 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Source($|\.)/,
           ~r/^Membrane\.Element($|\.)/
         ],
-        Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
+        Parent: [
+          ~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/,
+          ~r/^Membrane\.(CrashGroup)($|\.)/
+        ],
         Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
         Communication: [
           ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
