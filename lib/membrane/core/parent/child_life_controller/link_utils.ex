@@ -51,9 +51,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
           state
       end
 
-    state = ChildLifeController.remove_link_from_spec(link.id, state)
-
-    delete_link(link, state)
+    ChildLifeController.remove_link_from_specs(link.id, state)
+    |> Map.update!(:links, &Map.delete(&1, link.id))
   end
 
   @spec remove_link(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
@@ -63,8 +62,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
         [link.to, link.from]
         |> Enum.reduce(state, &unlink_endpoint/2)
 
-      state = ChildLifeController.remove_link_from_spec(link.id, state)
-      delete_link(link, state)
+      ChildLifeController.remove_link_from_specs(link.id, state)
+      |> Map.update!(:links, &Map.delete(&1, link.id))
     else
       {:error, :not_found} ->
         with %{^child_name => _child_entry} <- state.children do
@@ -184,19 +183,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   defp opposite_endpoint(%Link{to: %Endpoint{child: child}, from: from}, child), do: from
 
-  defp delete_link(link, state) do
-    {_link, state} = pop_in(state, [:links, link.id])
-    spec_ref = link.spec_ref
-
-    with {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref) do
-      new_links_ids = Enum.reject(spec_data.links_ids, &(&1 == link.id))
-      state = put_in(state, [:pending_specs, spec_ref, :links_ids], new_links_ids)
-      ChildLifeController.proceed_spec_startup(spec_ref, state)
-    else
-      :error -> state
-    end
-  end
-
   defp validate_links(links, state) do
     links
     |> Enum.concat(Map.values(state.links))
@@ -297,31 +283,53 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
         :ok ->
           put_in(state, [:links, link.id, :linked?], true)
 
-        {:error, {:unknown_pad, name, module, pad}} ->
-          Membrane.Logger.debug("""
-          Failed to establish link between #{inspect(from.pad_ref)} and #{inspect(to.pad_ref)}
-          because pad #{inspect(pad)} of component named #{inspect(name)} (#{inspect(module)})
-          is down.
-          """)
+        {:error, reason} ->
+          log_handle_link_error(reason, from, to)
 
-          state
-
-        {:error, {:call_failure, _reason}} ->
-          Membrane.Logger.debug("""
-          Failed to establish link between #{inspect(from.pad_ref)} and #{inspect(to.pad_ref)}
-          because #{inspect(from.child)} is down.
-          """)
-
-          state
-
-        {:error, {:neighbor_dead, _reason}} ->
-          Membrane.Logger.debug("""
-          Failed to establish link between #{inspect(from.pad_ref)} and #{inspect(to.pad_ref)}
-          because #{inspect(to.child)} is down.
-          """)
+          for endpoint <- [from, to] do
+            Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+          end
 
           state
       end
     end
+  end
+
+  defp log_handle_link_error({:call_failure, _reason}, from, to) do
+    Membrane.Logger.debug("""
+    Failed to establish link between #{inspect(from.child)} via #{inspect(from.pad_ref)} and
+    #{inspect(to.child)} via #{inspect(to.pad_ref)} because #{inspect(from.child)} is down.
+    """)
+  end
+
+  defp log_handle_link_error({:neighbor_dead, _reason}, from, to) do
+    Membrane.Logger.debug("""
+    Failed to establish link between #{inspect(from.child)} via #{inspect(from.pad_ref)} and
+    #{inspect(to.child)} via #{inspect(to.pad_ref)} because #{inspect(to.child)} is down.
+    """)
+  end
+
+  defp log_handle_link_error({:child_dead, _reason}, from, to) do
+    Membrane.Logger.debug("""
+    Failed to establish link between #{inspect(from.child)} via #{inspect(from.pad_ref)} and
+    #{inspect(to.child)} via #{inspect(to.pad_ref)} because descendant of #{inspect(from.child)}
+    is down.
+    """)
+  end
+
+  defp log_handle_link_error({:neighbor_child_dead, _reason}, from, to) do
+    Membrane.Logger.debug("""
+    Failed to establish link between #{inspect(from.child)} via #{inspect(from.pad_ref)} and
+    #{inspect(to.child)} via #{inspect(to.pad_ref)} because descendant of #{inspect(to.child)}
+    is down.
+    """)
+  end
+
+  defp log_handle_link_error({:unknown_pad, name, pad_ref}, from, to) do
+    Membrane.Logger.debug("""
+    Failed to establish link between #{inspect(from.child)} via #{inspect(from.pad_ref)} and
+    #{inspect(to.child)} via #{inspect(to.pad_ref)} because #{inspect(name)} does not have
+    pad #{inspect(pad_ref)}
+    """)
   end
 end

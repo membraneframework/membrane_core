@@ -122,7 +122,18 @@ defmodule Membrane.Core.Element.PadController do
         {:ok, state}
 
       {:error, {:call_failure, reason}} ->
+        Membrane.Logger.debug("""
+        Tried to link pad #{inspect(endpoint.pad_ref)}, but neighbour #{inspect(other_endpoint.child)}
+        is not alive.
+        """)
+
         {{:error, {:neighbor_dead, reason}}, state}
+
+      {:error, {:unknown_pad, _name, _pad_ref}} = error ->
+        {error, state}
+
+      {:error, {:child_dead, reason}} ->
+        {{:error, {:neighbor_child_dead, reason}}, state}
     end
   end
 

@@ -159,16 +159,13 @@ defmodule Membrane.Pad do
     end
   end
 
-  defguard is_pad_ref(term)
-           when term |> is_atom or
-                  (term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == __MODULE__ and
-                     term |> elem(1) |> is_atom)
-
   defguard is_static_pad_ref(term) when is_atom(term)
 
   defguard is_dynamic_pad_ref(term)
-           when term |> is_tuple and term |> tuple_size == 3 and term |> elem(0) == __MODULE__ and
-                  term |> elem(1) |> is_atom
+           when term |> is_tuple() and term |> tuple_size() == 3 and term |> elem(0) == __MODULE__ and
+                  term |> elem(1) |> is_atom()
+
+  defguard is_pad_ref(term) when is_static_pad_ref(term) or is_dynamic_pad_ref(term)
 
   defguard is_pad_name(term) when is_atom(term)
 
