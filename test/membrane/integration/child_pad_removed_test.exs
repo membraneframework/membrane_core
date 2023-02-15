@@ -159,7 +159,6 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
       end
     end
 
-    @tag :dupa
     test "sibling linked via static pad raises" do
       for actions <- [
             [remove_children: :source],
