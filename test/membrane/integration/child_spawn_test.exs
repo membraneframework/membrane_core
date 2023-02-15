@@ -152,7 +152,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec2)
     assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}
     assert reason.message =~ ~r/Cannot create children groups with ids: \[:source\]/
-    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+    Testing.Pipeline.terminate(pipeline_pid)
   end
 
   test "if the pipeline raises an exception when a children group with the same name as an exisiting child is added" do
@@ -169,7 +169,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec2)
     assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}
     assert reason.message =~ ~r/Cannot spawn children with names: \[:first_group\]/
-    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+    Testing.Pipeline.terminate(pipeline_pid)
   end
 
   test "if the pipeline raises an exception when a children group and a child with the same names are added" do
@@ -186,7 +186,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
     assert reason.message =~
              ~r/Cannot proceed, since the children group ids and children names created in this process are duplicating: \[:first_group\]/
 
-    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+    Testing.Pipeline.terminate(pipeline_pid)
   end
 
   test "if children can be spawned anonymously" do
@@ -195,7 +195,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
     assert_pipeline_play(pipeline_pid)
 
-    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+    Testing.Pipeline.terminate(pipeline_pid)
   end
 
   test "if the pipeline raises an exception when there is an attempt to spawn a child with a name satisfying the Membrane's reserved pattern" do
@@ -217,6 +217,6 @@ defmodule Membrane.Integration.ChildSpawnTest do
     assert reason.message =~
              ~r/Improper name: {Membrane.Child, :first_group, :source}/
 
-    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+    Testing.Pipeline.terminate(pipeline_pid)
   end
 end

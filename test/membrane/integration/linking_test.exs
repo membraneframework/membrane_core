@@ -372,7 +372,7 @@ defmodule Membrane.Integration.LinkingTest do
     )
 
     assert_end_of_stream(pipeline, :sink)
-    Membrane.Pipeline.terminate(pipeline, blocking?: true)
+    Membrane.Pipeline.terminate(pipeline)
   end
 
   test "Bin should crash if it doesn't link internally within timeout" do
@@ -542,7 +542,7 @@ defmodule Membrane.Integration.LinkingTest do
       assert_receive {:DOWN, ^monitor_ref, :process, ^sink_pid, :normal}
       assert_pipeline_notified(pipeline, :bin, :playing)
 
-      assert :ok == Testing.Pipeline.terminate(pipeline, blocking?: true)
+      assert :ok == Testing.Pipeline.terminate(pipeline)
     end
 
     test "crashed child" do
@@ -563,7 +563,7 @@ defmodule Membrane.Integration.LinkingTest do
       assert_pipeline_crash_group_down(pipeline, :group)
       assert_pipeline_notified(pipeline, :bin, :playing)
 
-      assert :ok == Testing.Pipeline.terminate(pipeline, blocking?: true)
+      assert :ok == Testing.Pipeline.terminate(pipeline)
     end
   end
 

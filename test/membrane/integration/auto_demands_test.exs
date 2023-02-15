@@ -229,7 +229,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       end
     end)
 
-    Pipeline.terminate(pipeline, blocking?: true)
+    Pipeline.terminate(pipeline)
     refute_sink_buffer(pipeline, :sink, _buffer, 0)
   end
 
