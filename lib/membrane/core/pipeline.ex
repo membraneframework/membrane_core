@@ -74,6 +74,12 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
+  def handle_info(Message.new(:child_pad_removed, [child, pad]), state) do
+    state = ChildLifeController.handle_child_pad_removed(child, pad, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
   def handle_info(Message.new(:child_notification, [from, notification]), state) do
     state = LifecycleController.handle_child_notification(from, notification, state)
     {:noreply, state}

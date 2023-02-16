@@ -94,7 +94,6 @@ defmodule Membrane.ElementTest do
   end
 
   describe "End of stream" do
-    @tag :target
     test "causes handle_end_of_stream/3 to be called", %{pipeline: pipeline} do
       TestFilter.assert_callback_called(:handle_end_of_stream)
     end

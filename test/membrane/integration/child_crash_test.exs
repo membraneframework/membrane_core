@@ -1,10 +1,14 @@
 defmodule Membrane.Integration.ChildCrashTest do
   use ExUnit.Case, async: false
 
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Support.ChildCrashTest
   alias Membrane.Testing
+
+  require Membrane.Pad, as: Pad
+  require Membrane.Child, as: Child
 
   test "Element that is not member of any crash group crashed when pipeline is in playing state" do
     Process.flag(:trap_exit, true)
@@ -189,6 +193,194 @@ defmodule Membrane.Integration.ChildCrashTest do
     assert_pid_alive(pipeline_pid)
 
     assert_pipeline_crash_group_down(pipeline_pid, 2)
+  end
+
+  defmodule DynamicElement do
+    use Membrane.Endpoint
+
+    def_input_pad :input,
+      accepted_format: _any,
+      availability: :on_request,
+      flow_control: :push
+
+    def_output_pad :output,
+      accepted_format: _any,
+      availability: :on_request,
+      flow_control: :push
+
+    @impl true
+    def handle_playing(_ctx, _opts) do
+      {[notify_parent: :playing], %{}}
+    end
+  end
+
+  defmodule Bin do
+    use Membrane.Bin
+
+    alias Membrane.Integration.ChildCrashTest.DynamicElement
+    require Membrane.Pad, as: Pad
+
+    def_input_pad :input,
+      accepted_format: _any,
+      availability: :on_request
+
+    def_output_pad :output,
+      accepted_format: _any,
+      availability: :on_request
+
+    def_options do_internal_link: [spec: boolean(), default: true]
+
+    @impl true
+    def handle_playing(_ctx, _opts) do
+      {[notify_parent: :playing], %{}}
+    end
+
+    @impl true
+    def handle_pad_added(Pad.ref(direction, _id) = pad, _ctx, state) do
+      spec =
+        if state.do_internal_link do
+          [
+            {child(direction, DynamicElement), group: :group, crash_group_mode: :temporary},
+            get_child(Child.ref(direction, group: :group)) |> bin_output(pad)
+          ]
+        else
+          []
+        end
+
+      {[spec: spec, notify_parent: :handle_pad_added], state}
+    end
+  end
+
+  defmodule OuterBin do
+    use Membrane.Bin
+
+    alias Membrane.Integration.ChildCrashTest.Bin
+
+    def_output_pad :output,
+      accepted_format: _any,
+      availability: :on_request
+
+    @impl true
+    def handle_pad_added(pad, _ctx, state) do
+      spec = child(:bin, Bin) |> bin_output(pad)
+      {[spec: spec], state}
+    end
+
+    @impl true
+    def handle_child_notification(notification, :bin, _ctx, state) do
+      {[notify_parent: {:child_notification, notification}], state}
+    end
+
+    @impl true
+    def handle_child_pad_removed(child, pad, _ctx, state) do
+      {[notify_parent: {:child_pad_removed, child, pad}], state}
+    end
+  end
+
+  describe "When crash group inside a bin crashes" do
+    test "bin removes a pad" do
+      pipeline =
+        Testing.Pipeline.start_link_supervised!(
+          spec: child(:bin, Bin) |> child(:element, DynamicElement),
+          raise_on_child_pad_removed?: false
+        )
+
+      assert_pipeline_notified(pipeline, :element, :playing)
+
+      child_ref = Child.ref(:output, group: :group)
+      bin_child_pid = Testing.Pipeline.get_child_pid!(pipeline, [:bin, child_ref])
+      Process.exit(bin_child_pid, :kill)
+
+      assert_child_pad_removed(pipeline, :bin, Pad.ref(:output, _id))
+
+      Testing.Pipeline.terminate(pipeline)
+    end
+
+    test "spec is updated" do
+      pipeline =
+        Testing.Pipeline.start_link_supervised!(
+          spec:
+            child(:first_bin, %Bin{do_internal_link: false})
+            |> child(:second_bin, Bin)
+            |> child(:element, DynamicElement),
+          raise_on_child_pad_removed?: false
+        )
+
+      assert_pipeline_notified(pipeline, :second_bin, :handle_pad_added)
+      refute_pipeline_notified(pipeline, :element, :playing)
+
+      child_ref = Child.ref(:output, group: :group)
+
+      Testing.Pipeline.get_child_pid!(pipeline, [:second_bin, child_ref])
+      |> Process.exit(:kill)
+
+      assert_child_pad_removed(pipeline, :second_bin, Pad.ref(:output, _id))
+
+      Testing.Pipeline.execute_actions(pipeline, remove_children: :first_bin)
+
+      assert_pipeline_notified(pipeline, :element, :playing)
+      assert_pipeline_notified(pipeline, :second_bin, :playing)
+
+      Testing.Pipeline.terminate(pipeline)
+    end
+
+    test "bin's parent's parent is notified, if should be" do
+      pipeline =
+        Testing.Pipeline.start_link_supervised!(
+          spec:
+            child(:bin, OuterBin)
+            |> child(:element, DynamicElement),
+          raise_on_child_pad_removed?: false
+        )
+
+      assert_pipeline_notified(pipeline, :element, :playing)
+
+      inner_element_pid =
+        Testing.Pipeline.get_child_pid!(
+          pipeline,
+          [:bin, :bin, Child.ref(:output, group: :group)]
+        )
+
+      Process.exit(inner_element_pid, :kill)
+
+      assert_child_pad_removed(pipeline, :bin, Pad.ref(:output, _id))
+      assert_pipeline_notified(pipeline, :bin, {:child_pad_removed, :bin, Pad.ref(:output, _id)})
+
+      Testing.Pipeline.terminate(pipeline)
+    end
+  end
+
+  test "When crash group crashes, another crash group from this same spec is still living" do
+    children_definitions =
+      child(:first_bin, %Bin{do_internal_link: false})
+      |> child(:second_bin, Bin)
+      |> child(:element, DynamicElement)
+
+    spec = [
+      {children_definitions, group: :a, crash_group_mode: :temporary},
+      {children_definitions, group: :b, crash_group_mode: :temporary}
+    ]
+
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(
+        spec: spec,
+        raise_on_child_pad_removed?: false
+      )
+
+    assert_pipeline_notified(pipeline, Child.ref(:second_bin, group: :a), :handle_pad_added)
+
+    Testing.Pipeline.get_child_pid!(pipeline, Child.ref(:second_bin, group: :a))
+    |> Process.exit(:kill)
+
+    assert_pipeline_crash_group_down(pipeline, :a)
+    refute_pipeline_notified(pipeline, Child.ref(:second_bin, group: :b), :playing)
+
+    Testing.Pipeline.execute_actions(pipeline, remove_children: Child.ref(:first_bin, group: :b))
+
+    assert_pipeline_notified(pipeline, Child.ref(:second_bin, group: :b), :playing)
+    assert_pipeline_notified(pipeline, Child.ref(:element, group: :b), :playing)
+
+    Testing.Pipeline.terminate(pipeline)
   end
 
   defp assert_pid_alive(pid) do
