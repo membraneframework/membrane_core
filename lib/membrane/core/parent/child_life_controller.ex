@@ -624,18 +624,22 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   def handle_child_pad_removed(child, pad, state) do
     Membrane.Logger.debug_verbose("Child #{inspect(child)} removed pad #{inspect(pad)}")
 
-    Parent.ChildrenModel.assert_child_exists!(state, child)
+    child_terminating? = Parent.ChildrenModel.get_child_data!(state, child).terminating?
 
-    state =
-      CallbackHandler.exec_and_handle_callback(
-        :handle_child_pad_removed,
-        Component.action_handler(state),
-        %{context: &Component.context_from_state/1},
-        [child, pad],
-        state
-      )
+    unless child_terminating? do
+      state =
+        CallbackHandler.exec_and_handle_callback(
+          :handle_child_pad_removed,
+          Component.action_handler(state),
+          %{context: &Component.context_from_state/1},
+          [child, pad],
+          state
+        )
 
-    LinkUtils.handle_child_pad_removed(child, pad, state)
+      LinkUtils.handle_child_pad_removed(child, pad, state)
+    else
+      state
+    end
   end
 
   @doc """
