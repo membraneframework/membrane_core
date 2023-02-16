@@ -626,7 +626,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     child_terminating? = Parent.ChildrenModel.get_child_data!(state, child).terminating?
 
-    unless child_terminating? do
+    if child_terminating? do
+      state
+    else
       state =
         CallbackHandler.exec_and_handle_callback(
           :handle_child_pad_removed,
@@ -637,8 +639,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         )
 
       LinkUtils.handle_child_pad_removed(child, pad, state)
-    else
-      state
     end
   end
 
