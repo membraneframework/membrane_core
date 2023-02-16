@@ -38,21 +38,23 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   @spec handle_child_pad_removed(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
   def handle_child_pad_removed(child, pad, state) do
-    {:ok, link} = get_link(state.links, child, pad)
+    with {:ok, link} <- get_link(state.links, child, pad) do
+      state =
+        opposite_endpoint(link, child)
+        |> case do
+          %Endpoint{child: {Membrane.Bin, :itself}} = bin_endpoint ->
+            PadController.remove_pad!(bin_endpoint.pad_ref, state)
 
-    state =
-      opposite_endpoint(link, child)
-      |> case do
-        %Endpoint{child: {Membrane.Bin, :itself}} = bin_endpoint ->
-          PadController.remove_pad!(bin_endpoint.pad_ref, state)
+          %Endpoint{} = endpoint ->
+            Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+            state
+        end
 
-        %Endpoint{} = endpoint ->
-          Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
-          state
-      end
-
-    ChildLifeController.remove_link_from_specs(link.id, state)
-    |> Map.update!(:links, &Map.delete(&1, link.id))
+      ChildLifeController.remove_link_from_specs(link.id, state)
+      |> Map.update!(:links, &Map.delete(&1, link.id))
+    else
+      {:error, :not_found} -> state
+    end
   end
 
   @spec remove_link(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()

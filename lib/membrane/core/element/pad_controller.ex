@@ -46,7 +46,9 @@ defmodule Membrane.Core.Element.PadController do
   @type link_call_reply ::
           :ok
           | {:ok, link_call_reply_props}
-          | {:error, {:neighbor_dead, reason :: any} | :unknown_pad}
+          | {:error, {:neighbor_dead, reason :: any()}}
+          | {:error, {:neighbor_child_dead, reason :: any()}}
+          | {:error, {:unknown_pad, name :: Membrane.Child.name(), pad_ref :: Pad.ref()}}
 
   @default_auto_demand_size_factor 4000
 
