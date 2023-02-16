@@ -41,7 +41,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @opaque parsed_children_spec_options :: %{
             group: Child.group(),
-            crash_group_mode: Membrane.CrashGroup.mode(),
+            crash_group_mode: ChildrenSpec.crash_group_mode(),
             stream_sync: :sinks | [[Child.name()]],
             clock_provider: Child.name() | nil,
             node: node() | nil,
@@ -624,18 +624,22 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   def handle_child_pad_removed(child, pad, state) do
     Membrane.Logger.debug_verbose("Child #{inspect(child)} removed pad #{inspect(pad)}")
 
-    Parent.ChildrenModel.assert_child_exists!(state, child)
+    child_terminating? = Parent.ChildrenModel.get_child_data!(state, child).terminating?
 
-    state =
-      CallbackHandler.exec_and_handle_callback(
-        :handle_child_pad_removed,
-        Component.action_handler(state),
-        %{context: &Component.context_from_state/1},
-        [child, pad],
-        state
-      )
+    if child_terminating? do
+      state
+    else
+      state =
+        CallbackHandler.exec_and_handle_callback(
+          :handle_child_pad_removed,
+          Component.action_handler(state),
+          %{context: &Component.context_from_state/1},
+          [child, pad],
+          state
+        )
 
-    LinkUtils.handle_child_pad_removed(child, pad, state)
+      LinkUtils.handle_child_pad_removed(child, pad, state)
+    end
   end
 
   @doc """

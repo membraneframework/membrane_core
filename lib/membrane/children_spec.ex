@@ -185,7 +185,7 @@ defmodule Membrane.ChildrenSpec do
   ### Crash groups
 
   A crash group is a logical entity that prevents the whole pipeline from crashing when one of
-  its children crashes. A crash group is defined with the use of two children specification options:
+  components crashes. A crash group is defined with the use of two children specification options:
   * `group` - which acts as a crash group identifier
   * `crash_group_mode` - its value specifies the behavior of children in the crash group. Currently, we support only
   `:temporary` mode which means that Membrane will not make any attempts to restart crashed child.
@@ -225,7 +225,7 @@ defmodule Membrane.ChildrenSpec do
   #### Limitations
 
   At this moment crash groups are only useful for elements with dynamic pads.
-  Crash groups work only in pipelines and are not supported in bins.
+  Crash groups work in pipelines and bins as well.
 
   ### Log metadata
   `:log_metadata` field can be used to set the `Membrane.Logger` metadata for all children in the given children specification.
@@ -237,9 +237,8 @@ defmodule Membrane.ChildrenSpec do
   ```
   {[
     child(:a, A) |> child(:b, B),
-    {child(:c, C), crash_group:
-    {:second, :temporary}}
-  ], crash_group_mode: :temporary, group: :first, node: some_node}
+    {child(:c, C), group: :second, crash_group_mode: :temporary}
+  ], group: :first, crash_group_mode: :temporary, node: some_node}
   ```
 
   Child `:c` will be spawned in the `:second` crash group, while children `:a` and `:b` will be spawned in the `:first` crash group.
@@ -314,12 +313,14 @@ defmodule Membrane.ChildrenSpec do
 
   @type child_definition :: struct() | module()
 
-  @type child_options :: [get_if_exists: boolean]
+  @type child_options :: [get_if_exists: boolean()]
   @default_child_options [get_if_exists: [default: false]]
+
+  @type crash_group_mode :: :temporary | nil
 
   @type children_spec_options :: [
           group: Child.group(),
-          crash_group_mode: Membrane.CrashGroup.mode() | nil,
+          crash_group_mode: crash_group_mode(),
           stream_sync: :sinks | [[Child.name()]],
           clock_provider: Child.name() | nil,
           node: node() | nil,
