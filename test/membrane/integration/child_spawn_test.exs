@@ -79,7 +79,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> child(:sink, SinkThatNotifiesParent, get_if_exists: true)
 
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-    assert_pipeline_play(pipeline_pid)
+
     refute_pipeline_notified(pipeline_pid, :sink, :message_from_sink)
   end
 
@@ -95,8 +95,11 @@ defmodule Membrane.Integration.ChildSpawnTest do
       child(:source, %Testing.Source{output: [1, 2, 3]})
       |> child(:sink, Testing.Sink, get_if_exists: true)
 
-    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec, setup: :complete)
-    assert_pipeline_play(pipeline_pid)
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+
+    for payload <- [1, 2, 3] do
+      assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: ^payload})
+    end
   end
 
   test "if child/3 doesn't spawn child with a given name if there is already a child with given name among the children
@@ -112,7 +115,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> child(:sink, Testing.Sink)
 
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-    assert_pipeline_play(pipeline_pid)
+
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 1})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 2})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 3})
@@ -134,7 +137,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> child(:sink, Testing.Sink, get_if_exists: true)
 
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-    assert_pipeline_play(pipeline_pid)
+
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 1})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 2})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 3})
@@ -193,7 +196,6 @@ defmodule Membrane.Integration.ChildSpawnTest do
     pipeline_pid = Testing.Pipeline.start_supervised!()
     spec = child(%Testing.Source{output: [1, 2, 3]}) |> child(Testing.Sink)
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-    assert_pipeline_play(pipeline_pid)
 
     Testing.Pipeline.terminate(pipeline_pid)
   end

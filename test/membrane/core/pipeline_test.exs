@@ -143,6 +143,9 @@ defmodule Membrane.Core.PipelineTest do
     }
 
     Testing.Pipeline.execute_actions(pid, spec: spec)
-    assert_pipeline_play(pid)
+
+    for payload <- [1, 2, 3] do
+      assert_sink_buffer(pid, :b, %Membrane.Buffer{payload: ^payload})
+    end
   end
 end

@@ -17,7 +17,8 @@
  * Implement automatic demands in Membrane Sinks and Endpoints. [#512](https://github.com/membraneframework/membrane_core/pull/512)
  * Add `handle_child_pad_removed/4` callback in Bins and Pipelines. [#513](https://github.com/membraneframework/membrane_core/pull/513)
  * Introduce support for crash groups in Bins. [#521](https://github.com/membraneframework/membrane_core/pull/521)
-
+ * Remove `assert_pipeline_play/2` from `Membrane.Testing.Assertions`. [#528](https://github.com/membraneframework/membrane_core/pull/528)
+ 
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
  * Refine communication between parent and its children [#270](https://github.com/membraneframework/membrane_core/issues/270)

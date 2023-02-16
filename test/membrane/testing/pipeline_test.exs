@@ -145,8 +145,6 @@ defmodule Membrane.Testing.PipelineTest do
 
     pipeline = Pipeline.start_supervised!(spec: spec)
 
-    assert_pipeline_play(pipeline)
-
     # getting children pids from pipeline
     for bin <- [:bin_1, :bin_2, :bin_3] do
       Pipeline.execute_actions(pipeline, notify_child: {bin, {:get_pid, bin}})
