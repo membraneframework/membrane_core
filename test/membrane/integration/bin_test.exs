@@ -257,7 +257,7 @@ defmodule Membrane.Core.BinTest do
       refute is_nil(clock2)
 
       assert proxy_for?(clock1, clock2)
-      ClockPipeline.terminate(pid, blocking?: true)
+      ClockPipeline.terminate(pid)
     end
 
     test "handle_parent_notification/3 works for Bin" do

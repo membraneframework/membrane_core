@@ -31,7 +31,7 @@ defmodule Membrane.Integration.SyncTest do
       pipeline = Testing.Pipeline.start_link_supervised!(pipeline_opts)
       assert_pipeline_notified(pipeline, :source, :start_timer)
       Process.sleep(tick_interval * tries)
-      Testing.Pipeline.terminate(pipeline, blocking?: true)
+      Testing.Pipeline.terminate(pipeline)
       ticks_amount = Sync.Helper.receive_ticks()
       assert_in_delta ticks_amount, tries, @tick_number_error
     end

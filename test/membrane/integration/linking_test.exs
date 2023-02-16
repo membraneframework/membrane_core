@@ -372,7 +372,7 @@ defmodule Membrane.Integration.LinkingTest do
     )
 
     assert_end_of_stream(pipeline, :sink)
-    Membrane.Pipeline.terminate(pipeline, blocking?: true)
+    Membrane.Pipeline.terminate(pipeline)
   end
 
   @tag :dupa

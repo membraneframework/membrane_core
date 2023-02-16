@@ -67,7 +67,7 @@ defmodule Membrane.Integration.TimerTest do
     assert_pipeline_notified(pipeline, :element, :tick)
     assert_pipeline_notified(pipeline, :bin, :tick)
     assert_receive :pipeline_tick
-    Testing.Pipeline.terminate(pipeline, blocking?: true)
+    Testing.Pipeline.terminate(pipeline)
   end
 
   defmodule StopNoInterval do
@@ -89,6 +89,6 @@ defmodule Membrane.Integration.TimerTest do
 
     assert_pipeline_play(pipeline)
     assert_pipeline_notified(pipeline, :element, :ok)
-    Testing.Pipeline.terminate(pipeline, blocking?: true)
+    Testing.Pipeline.terminate(pipeline)
   end
 end
