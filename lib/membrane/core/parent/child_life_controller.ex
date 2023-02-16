@@ -41,7 +41,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   @opaque parsed_children_spec_options :: %{
             group: Child.group(),
-            crash_group_mode: Membrane.CrashGroup.mode(),
+            crash_group_mode: ChildrenSpec.crash_group_mode(),
             stream_sync: :sinks | [[Child.name()]],
             clock_provider: Child.name() | nil,
             node: node() | nil,

@@ -313,12 +313,14 @@ defmodule Membrane.ChildrenSpec do
 
   @type child_definition :: struct() | module()
 
-  @type child_options :: [get_if_exists: boolean]
+  @type child_options :: [get_if_exists: boolean()]
   @default_child_options [get_if_exists: [default: false]]
+
+  @type crash_group_mode :: :temporary | nil
 
   @type children_spec_options :: [
           group: Child.group(),
-          crash_group_mode: Membrane.CrashGroup.mode(),
+          crash_group_mode: crash_group_mode(),
           stream_sync: :sinks | [[Child.name()]],
           clock_provider: Child.name() | nil,
           node: node() | nil,

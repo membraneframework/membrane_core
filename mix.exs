@@ -98,10 +98,7 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Source($|\.)/,
           ~r/^Membrane\.Element($|\.)/
         ],
-        Parent: [
-          ~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/,
-          ~r/^Membrane\.(CrashGroup)($|\.)/
-        ],
+        Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
         Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
         Communication: [
           ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
