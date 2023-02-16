@@ -92,7 +92,7 @@ defmodule Membrane.Testing.Pipeline do
     @moduledoc false
 
     @enforce_keys [:test_process, :module]
-    defstruct @enforce_keys ++ [:custom_pipeline_state, :raise_on_child_pad_removed?]
+    defstruct @enforce_keys ++ [:custom_pipeline_state]
 
     @typedoc """
     Structure for holding state
@@ -109,8 +109,7 @@ defmodule Membrane.Testing.Pipeline do
     @type t :: %__MODULE__{
             test_process: pid() | nil,
             module: module() | nil,
-            custom_pipeline_state: Pipeline.state(),
-            raise_on_child_pad_removed?: boolean() | nil
+            custom_pipeline_state: Pipeline.state()
           }
   end
 
@@ -119,8 +118,7 @@ defmodule Membrane.Testing.Pipeline do
             module: :default,
             spec: [ChildrenSpec.builder()],
             test_process: pid(),
-            name: Pipeline.name(),
-            raise_on_child_pad_removed?: boolean()
+            name: Pipeline.name()
           ]
           | [
               module: module(),
@@ -287,15 +285,8 @@ defmodule Membrane.Testing.Pipeline do
     case Keyword.get(options, :module, :default) do
       :default ->
         spec = Bunch.listify(Keyword.get(options, :spec, []))
-        test_process = Keyword.fetch!(options, :test_process)
-        raise? = Keyword.get(options, :raise_on_child_pad_removed?, true)
 
-        new_state = %State{
-          test_process: test_process,
-          raise_on_child_pad_removed?: raise?,
-          module: nil
-        }
-
+        new_state = %State{test_process: Keyword.fetch!(options, :test_process), module: nil}
         {[spec: spec], new_state}
 
       module when is_atom(module) ->
@@ -476,29 +467,6 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @impl true
-  def handle_child_pad_removed(child, pad, ctx, state) do
-    if state.raise_on_child_pad_removed? do
-      raise """
-      Child #{inspect(child)} removed it's pad #{inspect(pad)}. If you want to
-      handle such a scenario, pass `raise_on_child_pad_removed?: false` option to
-      `Membrane.Testing.Pipeline.start_*/2` or pass there a pipeline module
-      implementing this callback via `:module` option.
-      """
-    end
-
-    {custom_actions, custom_state} =
-      eval_injected_module_callback(
-        :handle_child_pad_removed,
-        [child, pad, ctx],
-        state
-      )
-
-    :ok = notify_test_process(state.test_process, {:handle_child_pad_removed, {child, pad}})
-
-    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
-  end
-
-  @impl true
   def handle_crash_group_down(group_name, ctx, state) do
     {custom_actions, custom_state} =
       eval_injected_module_callback(
@@ -514,8 +482,8 @@ defmodule Membrane.Testing.Pipeline do
 
   defp eval_injected_module_callback(callback, args, state)
 
-  defp eval_injected_module_callback(_callback, _args, %State{module: nil}),
-    do: {[], nil}
+  defp eval_injected_module_callback(_callback, _args, %State{module: nil} = state),
+    do: {[], state}
 
   defp eval_injected_module_callback(callback, args, state) do
     apply(state.module, callback, args ++ [state.custom_pipeline_state])

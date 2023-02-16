@@ -91,20 +91,6 @@ defmodule Membrane.Bin do
               callback_return
 
   @doc """
-  Callback invoked when a child removes its pad.
-
-  The callback won't be invoked, when you have initiated the pad removal,
-  eg. when you have returned `t:Membrane.Bin.Action.remove_link()` action
-  which made one of your children's pads be removed.
-  """
-  @callback handle_child_pad_removed(
-              child :: Child.name(),
-              pad :: Pad.ref(),
-              context :: CallbackContext.t(),
-              state :: state
-            ) :: callback_return
-
-  @doc """
   Callback invoked when a notification comes in from an element.
   """
   @callback handle_child_notification(
@@ -182,7 +168,8 @@ defmodule Membrane.Bin do
   @callback handle_terminate_request(
               context :: CallbackContext.t(),
               state
-            ) :: callback_return
+            ) ::
+              callback_return()
 
   @optional_callbacks handle_init: 2,
                       handle_pad_added: 3,
@@ -196,8 +183,7 @@ defmodule Membrane.Bin do
                       handle_child_notification: 4,
                       handle_parent_notification: 3,
                       handle_tick: 3,
-                      handle_terminate_request: 2,
-                      handle_child_pad_removed: 4
+                      handle_terminate_request: 2
 
   @doc PadsSpecs.def_pad_docs(:input, :bin)
   defmacro def_input_pad(name, spec) do

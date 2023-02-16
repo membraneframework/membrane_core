@@ -255,10 +255,7 @@ defmodule Membrane.Core.ElementTest do
 
   test "should handle unlinking pads" do
     assert {:noreply, state} =
-             Element.handle_info(
-               Message.new(:handle_unlink, :dynamic_input),
-               linked_state()
-             )
+             Element.handle_info(Message.new(:handle_unlink, :dynamic_input), linked_state())
 
     refute Map.has_key?(state.pads_data, :dynamic_input)
   end

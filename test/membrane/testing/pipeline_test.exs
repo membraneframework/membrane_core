@@ -22,21 +22,10 @@ defmodule Membrane.Testing.PipelineTest do
     test "works with :default implementation" do
       elements = [elem: Elem, elem2: Elem]
       links = [get_child(:elem) |> get_child(:elem2)]
-
-      options = [
-        module: :default,
-        spec: elements ++ links,
-        test_process: nil,
-        raise_on_child_pad_removed?: false
-      ]
-
+      options = [module: :default, spec: elements ++ links, test_process: nil]
       assert {[spec: spec], state} = Pipeline.handle_init(%{}, options)
 
-      assert state == %Pipeline.State{
-               module: nil,
-               test_process: nil,
-               raise_on_child_pad_removed?: false
-             }
+      assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == elements ++ links
     end
@@ -45,12 +34,7 @@ defmodule Membrane.Testing.PipelineTest do
       links = [child(:elem, Elem) |> child(:elem2, Elem)]
       options = [module: :default, spec: links, test_process: nil]
       assert {[spec: spec], state} = Pipeline.handle_init(%{}, options)
-
-      assert state == %Pipeline.State{
-               module: nil,
-               test_process: nil,
-               raise_on_child_pad_removed?: true
-             }
+      assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == links
     end
@@ -63,8 +47,7 @@ defmodule Membrane.Testing.PipelineTest do
       assert state == %Pipeline.State{
                custom_pipeline_state: :state,
                module: MockPipeline,
-               test_process: nil,
-               raise_on_child_pad_removed?: nil
+               test_process: nil
              }
     end
   end
@@ -74,12 +57,7 @@ defmodule Membrane.Testing.PipelineTest do
       links = [child(:elem, Elem) |> child(:elem2, Elem)]
       options = [module: :default, spec: links, test_process: nil]
       assert {[spec: spec], state} = Pipeline.handle_init(%{}, options)
-
-      assert state == %Pipeline.State{
-               module: nil,
-               test_process: nil,
-               raise_on_child_pad_removed?: true
-             }
+      assert state == %Pipeline.State{module: nil, test_process: nil}
 
       assert spec == links
     end
@@ -107,7 +85,7 @@ defmodule Membrane.Testing.PipelineTest do
       end
     end
 
-    defmodule TripleElementBin do
+    defmodule Bin do
       use Membrane.Bin
 
       @impl true
@@ -138,9 +116,9 @@ defmodule Membrane.Testing.PipelineTest do
     end
 
     spec = [
-      child(:bin_1, TripleElementBin),
-      child(:bin_2, TripleElementBin),
-      child(:bin_3, TripleElementBin)
+      child(:bin_1, Bin),
+      child(:bin_2, Bin),
+      child(:bin_3, Bin)
     ]
 
     pipeline = Pipeline.start_supervised!(spec: spec)
@@ -190,81 +168,5 @@ defmodule Membrane.Testing.PipelineTest do
     assert_receive {:DOWN, ^monitor_ref, :process, ^pipeline, _reason}
 
     assert {:error, :pipeline_not_alive} = Pipeline.get_child_pid(pipeline, :bin_1)
-  end
-
-  describe "Testing.Pipeline on handle_child_pad_removed" do
-    defmodule DynamicElement do
-      use Membrane.Endpoint
-
-      def_input_pad :input,
-        accepted_format: _any,
-        availability: :on_request,
-        flow_control: :push
-
-      def_output_pad :output,
-        accepted_format: _any,
-        availability: :on_request,
-        flow_control: :push
-
-      @impl true
-      def handle_pad_added(pad, _ctx, state) do
-        {[notify_parent: {:pad_added, pad}], state}
-      end
-    end
-
-    defmodule Bin do
-      use Membrane.Bin
-
-      alias Membrane.Testing.PipelineTest.DynamicElement
-
-      require Membrane.Pad, as: Pad
-
-      def_output_pad :output,
-        accepted_format: _any,
-        availability: :on_request
-
-      @impl true
-      def handle_pad_added(pad, _ctx, state) do
-        spec =
-          child(:element, DynamicElement)
-          |> via_out(Pad.ref(:output, 1))
-          |> bin_output(pad)
-
-        {[spec: spec], state}
-      end
-
-      @impl true
-      def handle_parent_notification(:remove_link, _ctx, state) do
-        {[remove_link: {:element, Pad.ref(:output, 1)}], state}
-      end
-    end
-
-    test "raises with option `:raise_on_child_pad_removed?` set to default" do
-      spec =
-        child(:bin, Bin)
-        |> child(:sink, DynamicElement)
-
-      pipeline = Pipeline.start_supervised!(spec: spec)
-      monitor_ref = Process.monitor(pipeline)
-
-      assert_pipeline_notified(pipeline, :sink, {:pad_added, _pad})
-      Pipeline.execute_actions(pipeline, notify_child: {:bin, :remove_link})
-
-      assert_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
-    end
-
-    test "doesn't raise with option `raise_on_child_pad_removed?: false`" do
-      spec =
-        child(:bin, Bin)
-        |> child(:sink, DynamicElement)
-
-      pipeline = Pipeline.start_supervised!(spec: spec, raise_on_child_pad_removed?: false)
-      monitor_ref = Process.monitor(pipeline)
-
-      assert_pipeline_notified(pipeline, :sink, {:pad_added, _pad})
-      Pipeline.execute_actions(pipeline, notify_child: {:bin, :remove_link})
-
-      refute_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
-    end
   end
 end

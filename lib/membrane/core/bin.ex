@@ -183,11 +183,6 @@ defmodule Membrane.Core.Bin do
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(:child_pad_removed, [child, pad]), state) do
-    state = Parent.ChildLifeController.handle_child_pad_removed(child, pad, state)
-    {:noreply, state}
-  end
-
   defp do_handle_info(Message.new(:child_notification, [from, notification]), state) do
     state = Parent.LifecycleController.handle_child_notification(from, notification, state)
     {:noreply, state}

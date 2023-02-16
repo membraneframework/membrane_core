@@ -44,11 +44,7 @@ defmodule Membrane.Core.Element.PadController do
           {Endpoint.t(), PadModel.pad_info(), %{toilet: Toilet.t() | nil}}
 
   @type link_call_reply ::
-          :ok
-          | {:ok, link_call_reply_props}
-          | {:error, {:neighbor_dead, reason :: any()}}
-          | {:error, {:neighbor_child_dead, reason :: any()}}
-          | {:error, {:unknown_pad, name :: Membrane.Child.name(), pad_ref :: Pad.ref()}}
+          :ok | {:ok, link_call_reply_props} | {:error, {:neighbor_dead, reason :: any}}
 
   @default_auto_demand_size_factor 4000
 
@@ -124,18 +120,7 @@ defmodule Membrane.Core.Element.PadController do
         {:ok, state}
 
       {:error, {:call_failure, reason}} ->
-        Membrane.Logger.debug("""
-        Tried to link pad #{inspect(endpoint.pad_ref)}, but neighbour #{inspect(other_endpoint.child)}
-        is not alive.
-        """)
-
         {{:error, {:neighbor_dead, reason}}, state}
-
-      {:error, {:unknown_pad, _name, _pad_ref}} = error ->
-        {error, state}
-
-      {:error, {:child_dead, reason}} ->
-        {{:error, {:neighbor_child_dead, reason}}, state}
     end
   end
 
