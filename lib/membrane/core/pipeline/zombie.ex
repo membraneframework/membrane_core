@@ -8,7 +8,7 @@ defmodule Membrane.Core.Pipeline.Zombie do
 
   # Overrides all the overridable callbacks to add a debug message that the original
   # implementation is not called
-  Membrane.Bin.behaviour_info(:callbacks)
+  Membrane.Pipeline.behaviour_info(:callbacks)
   |> Enum.filter(&Module.overridable?(__MODULE__, &1))
   |> Enum.map(fn {name, arity} ->
     args = Enum.map(1..arity//1, &Macro.var(:"arg#{&1}", __MODULE__))
