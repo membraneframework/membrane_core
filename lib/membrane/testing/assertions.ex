@@ -450,6 +450,23 @@ defmodule Membrane.Testing.Assertions do
   end
 
   @doc """
+  Asserts that `Membrane.Testing.Pipeline` child with name `child` removed or is going to
+  remove it's pad with ref `pad` within the `timeout` period specified in milliseconds.
+  """
+  defmacro assert_child_pad_removed(
+             pipeline,
+             child,
+             pad,
+             timeout \\ @default_timeout
+           ) do
+    assert_receive_from_pipeline(
+      pipeline,
+      {:handle_child_pad_removed, {child, pad}},
+      timeout
+    )
+  end
+
+  @doc """
   Asserts that a cleanup function was registered in `Membrane.Testing.MockResourceGuard`.
   """
   defmacro assert_resource_guard_register(

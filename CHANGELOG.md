@@ -15,6 +15,7 @@
  * The flow control of the pad is now set with a single `:flow_control` option instead of `:mode` and `:demand_mode` options.
  * Remove _t suffix from types [#509](https://github.com/membraneframework/membrane_core/pull/509)
  * Implement automatic demands in Membrane Sinks and Endpoints. [#512](https://github.com/membraneframework/membrane_core/pull/512)
+ * Add `handle_child_pad_removed/4` callback in Bins and Pipelines. [#513](https://github.com/membraneframework/membrane_core/pull/513)
 
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
