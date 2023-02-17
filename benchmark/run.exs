@@ -104,7 +104,8 @@ defmodule Benchmark.Run do
     ]
   ]
   @how_many_tries 3
-  @test_timeout 300_000 # [ms]
+  # [ms]
+  @test_timeout 300_000
   # the greater the factor is, the more unevenly distributed by the dispatcher will the buffers be
   @uneven_distribution_dispatcher_factor 2
 
