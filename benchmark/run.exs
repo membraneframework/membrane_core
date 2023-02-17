@@ -285,15 +285,14 @@ defmodule Benchmark.Run do
       end
 
     time = Time.stop_meassurement(time_meassurement)
-
+    final_memory = FinalMemory.stop_meassurement(final_memory_meassurement)
     in_progress_memory = InProgressMemory.stop_meassurement(in_progress_memory_meassurment)
-
     message_queues_length =
       MessageQueuesLength.stop_meassurement(message_queues_length_meassurement)
 
     Membrane.Pipeline.terminate(pipeline_pid)
 
-    final_memory = FinalMemory.stop_meassurement(final_memory_meassurement)
+
 
     %{
       Time => time,
