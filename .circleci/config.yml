@@ -157,7 +157,7 @@ jobs:
       - run: cp mix.exs ~/benchmark_backup
       - run: docker run -e MIX_ENV=benchmark -v ./:/root/app -v ~/results:/root/results -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/run.exs /root/results/results.res
       - run: git checkout master
-      - run: cp  ~/benchmark_backup/mix.exs ~/
+      - run: cp  ~/benchmark_backup/mix.exs ~/app
       - run: docker run -e MIX_ENV=benchmark -v ./:/root/app -v ~/results:/root/results -v ~/benchmark_backup:/root/benchmark_backup -w /root/app membraneframeworklabs/docker_membrane mix run /root/benchmark_backup/run.exs /root/results/results_ref.res
       - run: docker run -v ./:/root/app -v ~/results:/root/results -v ~/benchmark_backup:/root/benchmark_backup -w /root/app membraneframeworklabs/docker_membrane mix run /root/benchmark_backup/compare.exs /root/results/results.res /root/results/results_ref.res
       - run: 
