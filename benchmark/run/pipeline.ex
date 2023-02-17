@@ -4,13 +4,17 @@ defmodule Benchmark.Run.Pipeline do
 
   @impl true
   def handle_init(_ctx, options) do
-    {[spec: options[:spec]], %{monitoring_process: options[:monitoring_process]}}
+    {[spec: options[:spec]], %{monitoring_process: options[:monitoring_process], memory: []}}
   end
 
   @impl true
-  def handle_call(:get_filters_memory, ctx, state) do
+  def handle_call(:get_children_pids, ctx, state) do
+    children_pids =
+      Enum.map(ctx.children, fn {_child_name, child_entry} ->
+        child_entry.pid
+      end)
 
-    {[reply: 1], state}
+    {[reply: children_pids], state}
   end
 
   @impl true
@@ -20,7 +24,6 @@ defmodule Benchmark.Run.Pipeline do
   end
 
   def handle_element_end_of_stream(_not_sink, _pad, _ctx, state) do
-
     {[], state}
   end
 end

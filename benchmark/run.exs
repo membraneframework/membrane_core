@@ -48,7 +48,6 @@
 # performed with @memory_sampling_period [ms] intervals is produced.
 # `benchmark/comparse.exs` script can be used to compare result files.
 
-
 defmodule Benchmark.Run do
   import Membrane.ChildrenSpec
 
@@ -61,50 +60,83 @@ defmodule Benchmark.Run do
   require Membrane.Pad
 
   @test_cases [
-    linear: [
-      reductions: 10_000,
-      max_random: 1,
-      number_of_filters: 10,
-      number_of_buffers: 50000,
-      buffer_size: 1
-    ],
-    linear: [
-      reductions: 10_000,
-      max_random: 1,
-      number_of_filters: 100,
-      number_of_buffers: 50000,
-      buffer_size: 1
-    ],
-    linear: [
-      reductions: 10_000_000,
-      max_random: 1,
-      number_of_filters: 10,
-      number_of_buffers: 50,
-      buffer_size: 100_000
-    ],
-    linear: [
-      reductions: 10_000,
-      max_random: 5,
-      number_of_filters: 10,
-      number_of_buffers: 50000,
-      buffer_size: 1
-    ],
+    # linear: [
+    #   reductions: 10_000,
+    #   max_random: 1,
+    #   number_of_filters: 10,
+    #   number_of_buffers: 500_000,
+    #   buffer_size: 1
+    # ],
+    # linear: [
+    #   reductions: 10_000,
+    #   max_random: 1,
+    #   number_of_filters: 100,
+    #   number_of_buffers: 50000,
+    #   buffer_size: 1
+    # ],
+    # linear: [
+    #   reductions: 10_000_000,
+    #   max_random: 1,
+    #   number_of_filters: 10,
+    #   number_of_buffers: 50,
+    #   buffer_size: 100_000
+    # ],
+    # linear: [
+    #   reductions: 10_000,
+    #   max_random: 5,
+    #   number_of_filters: 10,
+    #   number_of_buffers: 50000,
+    #   buffer_size: 1
+    # ],
+    # with_branches: [
+    #   struct: [{1, 3}, {3, 2}, {2, 1}],
+    #   reductions: 10_000,
+    #   number_of_buffers: 50000,
+    #   buffer_size: 1,
+    #   max_random: 1
+    # ],
     with_branches: [
-      struct: [{1, 3}, {3, 2}, {2, 1}],
+      struct: [{1, 2}, {2, 1}],
       reductions: 10_000,
       number_of_buffers: 50000,
-      buffer_size: 1
-    ],
-    with_branches: [
-      struct: [{1, 3}, {1, 3}, {3, 1}, {3, 1}],
-      reductions: 10_000,
-      number_of_buffers: 50000,
-      buffer_size: 1
+      buffer_size: 1,
+      max_random: 1
     ]
   ]
   @how_many_tries 3
   @memory_sampling_period 100
+  # the greater the factor is, the more unevenly distributed by the dispatcher will the buffers be
+  @uneven_distribution_dispatcher_factor 2
 
+  defp prepare_generator(max_random) do
+    fn number_of_buffers ->
+      how_many_needed = Enum.random(1..max_random)
+
+      if number_of_buffers >= how_many_needed do
+        how_many_to_output = Enum.random(1..max_random)
+        min(number_of_buffers, how_many_to_output)
+      else
+        0
+      end
+    end
+  end
+
+  defp prepare_dispatcher() do
+    fn how_many_pads, how_many_buffers_to_output ->
+      max_buffers_per_pad =
+        floor(@uneven_distribution_dispatcher_factor * how_many_buffers_to_output / how_many_pads)
+
+      {distribution, how_many_buffers_for_last_pad} =
+        Enum.map_reduce(1..(how_many_pads - 1)//1, how_many_buffers_to_output, fn pad_no,
+                                                                                  buffers_left ->
+          how_many_buffers_per_pad = min(Enum.random(0..max_buffers_per_pad), buffers_left)
+          {how_many_buffers_per_pad, buffers_left - how_many_buffers_per_pad}
+        end)
+
+      distribution = distribution ++ [how_many_buffers_for_last_pad]
+      Enum.shuffle(distribution)
+    end
+  end
 
   defp prepare_pipeline(:linear, params) do
     Enum.reduce(
@@ -128,16 +160,7 @@ defmodule Benchmark.Run do
       fn n, acc ->
         child(acc, String.to_atom("filter_#{n}"), %LinearFilter{
           number_of_reductions: params[:reductions],
-          generator: fn number_of_buffers ->
-            how_many_needed = Enum.random(1..params[:max_random])
-
-            if number_of_buffers >= how_many_needed do
-              how_many_to_output = Enum.random(1..params[:max_random])
-              min(number_of_buffers, how_many_to_output)
-            else
-              0
-            end
-          end
+          generator: prepare_generator(params[:max_random])
         })
       end
     )
@@ -165,56 +188,142 @@ defmodule Benchmark.Run do
          end}
     }
 
-    initial_level = %{level: 1, spec: [child(:source, source)]}
-    final_level = Enum.reduce(struct, initial_level, fn {input_pads, output_pads}, current_level ->
-      how_many_output_pads = length(current_level.spec)
-      if rem(how_many_output_pads, input_pads) != 0, do: raise "Wrong branched pipeline specification!"
+    initial_level = %{
+      level: 0,
+      unfinished_branches: [child(:source, source)],
+      finished_branches: []
+    }
 
-      pads_per_filter = div(how_many_output_pads, input_pads)
-      spec = Enum.chunk_every(current_level.spec, pads_per_filter) |> Enum.with_index() |>
-        Enum.flat_map(fn {group_of_branches, filter_no} ->
-          Enum.with_index(group_of_branches) |> Enum.map(fn {branch, branch_index_in_group} ->
-            pad_no = filter_no*pads_per_filter+branch_index_in_group
-            branch |> via_in(Pad.ref(:input, pad_no)) |> child("filter_#{current_level.level}_#{filter_no}", %BranchedFilter{number_of_reductions: reductions}, get_if_exists: true)
+    final_level =
+      Enum.reduce(struct, initial_level, fn {input_pads, output_pads}, current_level ->
+        how_many_output_pads = length(current_level.unfinished_branches)
+
+        if rem(how_many_output_pads, input_pads) != 0,
+          do: raise("Wrong branched pipeline specification!")
+
+        {unfinished_branches_list, newly_finished_branches_list} =
+          Enum.chunk_every(current_level.unfinished_branches, input_pads)
+          |> Enum.with_index()
+          |> Enum.map(fn {group_of_branches, filter_no} ->
+            [first_branch | rest_of_branches] = group_of_branches
+
+            branch_ending_with_newly_added_element =
+              first_branch
+              |> via_in(Pad.ref(:input, 0))
+              |> child(
+                {:filter, current_level.level, filter_no},
+                %BranchedFilter{
+                  number_of_reductions: reductions,
+                  generator: prepare_generator(params[:max_random]),
+                  dispatcher: prepare_dispatcher()
+                },
+                get_if_exists: true
+              )
+
+            unfinished_branches =
+              Enum.map(0..(output_pads - 1), fn pad_no ->
+                get_child({:filter, current_level.level, filter_no})
+                |> via_out(Pad.ref(:output, pad_no))
+              end)
+
+            newly_finished_branches =
+              Enum.with_index(rest_of_branches, 1)
+              |> Enum.map(fn {branch, branch_index_in_group} ->
+                branch
+                |> via_in(Pad.ref(:input, branch_index_in_group))
+                |> get_child({:filter, current_level.level, filter_no})
+              end)
+
+            {unfinished_branches,
+             newly_finished_branches ++ [branch_ending_with_newly_added_element]}
           end)
-        end)
+          |> Enum.unzip()
 
-      spec = Enum.flat_map(spec, fn branch ->
-        Enum.map(1..output_pads, fn output_pad_no ->
-          branch |> via_out(Pad.ref(:output, output_pad_no))
-        end)
+        newly_finished_branches = List.flatten(newly_finished_branches_list)
+        unfinished_branches = List.flatten(unfinished_branches_list)
+
+        %{
+          level: current_level.level + 1,
+          unfinished_branches: unfinished_branches,
+          finished_branches: current_level.finished_branches ++ newly_finished_branches
+        }
       end)
 
-      %{level: current_level.level+1, spec: spec}
-    end)
-    Enum.at(final_level.spec, 0) |> child(:sink, Membrane.Testing.Sink)
+    if length(final_level.unfinished_branches) != 1,
+      do: raise("Wrong branched pipeline specification!")
+
+    branch_with_sink =
+      Enum.at(final_level.unfinished_branches, 0) |> child(:sink, Membrane.Testing.Sink)
+
+    ([branch_with_sink] ++ final_level.finished_branches) |> print_links()
   end
 
-  defp meassure_memory(mode \\ :fast)
-  defp meassure_memory(:fast), do: :erlang.memory(:total)
+  defp print_links(list_of_builders) do
+    Enum.flat_map(list_of_builders, fn builder ->
+      Enum.map(builder.links, &"#{inspect(&1.from)} -> #{inspect(&1.to)}")
+    end)
+    |> IO.inspect()
 
-  defp do_loop(pid, initial_memory, loop_counter \\ 0, memory_samples \\ []) do
-    memory = meassure_memory() - initial_memory
-    memory_samples = memory_samples ++ [memory]
-    next_action = receive do
-      :sink_eos ->
-         :stop
-      after @memory_sampling_period -> :continue
-    end
-    if next_action == :continue, do: do_loop(pid, initial_memory, loop_counter+1, memory_samples), else: memory_samples
+    list_of_builders
+  end
+
+  defp meassure_memory(:fast, initial_memory), do: :erlang.memory(:total) - initial_memory
+
+  defp meassure_memory(:precise_allocated, children_pids) do
+    Enum.reduce(children_pids, 0, fn pid, acc ->
+      acc + (:erlang.process_info(pid, :memory) |> elem(1))
+    end)
+  end
+
+  defp meassure_memory(:precise_used, children_pids) do
+    Enum.reduce(children_pids, 0, fn pid, acc ->
+      states_size = :sys.get_state(pid) |> :erlang.term_to_binary() |> byte_size()
+
+      message_queue_size =
+        :erlang.process_info(pid, :messages) |> :erlang.term_to_binary() |> byte_size()
+
+      acc + message_queue_size + states_size
+    end)
+  end
+
+  defp do_loop(pid, children_pids, initial_memory, loop_counter \\ 0, memory_samples \\ []) do
+    fast = meassure_memory(:precise_allocated, children_pids)
+    start_time = :os.system_time(:milli_seconds)
+    precise = meassure_memory(:precise_used, children_pids)
+    end_time = :os.system_time(:milli_seconds)
+
+    IO.inspect(
+      "#{precise / 1_000_000} DIFF: #{(fast - precise) / 1_000_000} PRECISE TOOK: #{end_time - start_time}"
+    )
+
+    next_action =
+      receive do
+        :sink_eos ->
+          :stop
+      after
+        @memory_sampling_period -> :continue
+      end
+
+    if next_action == :continue,
+      do: do_loop(pid, children_pids, initial_memory, memory_samples),
+      else: memory_samples
   end
 
   defp perform_test({test_type, params}) when test_type in [:linear, :with_branches] do
     initial_time = :os.system_time(:milli_seconds)
-    initial_memory = meassure_memory()
+    initial_memory = meassure_memory(:fast, 0)
 
-    {:ok, _supervisor_pid, pipeline_pid} = Benchmark.Run.Pipeline.start(monitoring_process: self(),
-     spec: prepare_pipeline(test_type, params))
+    {:ok, _supervisor_pid, pipeline_pid} =
+      Benchmark.Run.Pipeline.start(
+        monitoring_process: self(),
+        spec: prepare_pipeline(test_type, params)
+      )
 
-    memory_samples = do_loop(pipeline_pid, initial_memory)
+    children_pids = Membrane.Pipeline.call(pipeline_pid, :get_children_pids)
+    memory_samples = do_loop(pipeline_pid, children_pids, initial_memory)
 
-    final_memory = meassure_memory() - initial_memory
-    memory_samples = memory_samples++[final_memory]
+    final_memory = meassure_memory(:fast, 0) - initial_memory
+    memory_samples = memory_samples ++ [final_memory]
     time = :os.system_time(:milli_seconds) - initial_time
 
     Membrane.Pipeline.terminate(pipeline_pid, blocking?: true)
@@ -222,18 +331,26 @@ defmodule Benchmark.Run do
   end
 
   def start() do
-      Enum.reduce(@test_cases, %{}, fn test_case, results_map ->
-        results =
-          for _try_number <- 1..@how_many_tries do
-            perform_test(test_case)
-          end
+    Enum.reduce(@test_cases, %{}, fn test_case, results_map ->
+      results =
+        for _try_number <- 1..@how_many_tries do
+          perform_test(test_case)
+        end
 
-        avg_time = (Enum.unzip(results) |> elem(0) |> Enum.sum()) / length(results)
-        avarage_memory_samples_in_mb = Enum.unzip(results) |> elem(1) |> Enum.zip() |> Enum.map(&Tuple.to_list(&1))|> Enum.map(&Enum.sum(&1)/(length(&1)*1_000_000))
-        Map.put(results_map, test_case, {avg_time, avarage_memory_samples_in_mb})
-      end)
+      avg_time = (Enum.unzip(results) |> elem(0) |> Enum.sum()) / length(results)
+
+      avarage_memory_samples_in_mb =
+        Enum.unzip(results)
+        |> elem(1)
+        |> Enum.zip()
+        |> Enum.map(&Tuple.to_list(&1))
+        |> Enum.map(&(Enum.sum(&1) / (length(&1) * 1_000_000)))
+
+      Map.put(results_map, test_case, {avg_time, avarage_memory_samples_in_mb})
+    end)
   end
 end
+
 output_filename = System.argv() |> Enum.at(0)
 result_map = Benchmark.Run.start()
 File.write!(output_filename, :erlang.term_to_binary(result_map))

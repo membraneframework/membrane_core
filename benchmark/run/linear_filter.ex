@@ -24,11 +24,7 @@ defmodule Benchmark.Run.LinearFilter do
     how_many_buffers_to_output = state.generator.(length(state.buffers))
 
     if how_many_buffers_to_output > 0 do
-      [buffers_to_output | list_of_rest_buffers_lists] =
-        Enum.chunk_every(state.buffers, how_many_buffers_to_output)
-
-      buffers_to_output = Enum.map(buffers_to_output, &%Membrane.Buffer{payload: &1})
-      rest_buffers = List.flatten(list_of_rest_buffers_lists)
+      {buffers_to_output, rest_buffers} = Enum.split(state.buffers, how_many_buffers_to_output)
       state = %{state | buffers: rest_buffers}
       {[buffer: {:output, buffers_to_output}], state}
     else
