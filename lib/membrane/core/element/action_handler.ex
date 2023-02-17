@@ -20,6 +20,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   require Membrane.Core.Telemetry
   require Membrane.Logger
 
+  @use_push_flow_control Application.compile_env(:membrane_core, :use_push_flow_control, false)
+
   @impl CallbackHandler
   def transform_actions(actions, callback, _handler_params, state) do
     actions = join_buffers(actions)
@@ -392,9 +394,12 @@ defmodule Membrane.Core.Element.ActionHandler do
         raise PadDirectionError, action: :demand, direction: :output, pad: pad_ref
 
       %{mode: :push} ->
-        # raise ElementError,
-        #       "Tried to request a demand on pad #{inspect(pad_ref)} working in push mode"
-        state
+        if @use_push_flow_control do
+          state
+        else
+          raise ElementError,
+                "Tried to request a demand on pad #{inspect(pad_ref)} working in push mode"
+        end
 
       %{demand_mode: :auto} ->
         raise ElementError,
@@ -413,9 +418,12 @@ defmodule Membrane.Core.Element.ActionHandler do
         raise ElementError, "Tried to make a redemand on input pad #{inspect(pad_ref)}"
 
       %{mode: :push} ->
-        # raise ElementError,
-        #       "Tried to make a redemand on pad #{inspect(pad_ref)} working in push mode"
-        state
+        if @use_push_flow_control do
+          state
+        else
+          raise ElementError,
+                "Tried to make a redemand on pad #{inspect(pad_ref)} working in push mode"
+        end
 
       %{demand_mode: :auto} ->
         raise ElementError,

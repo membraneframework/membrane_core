@@ -10,6 +10,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
   require Pad
 
+  @use_push_flow_control Application.compile_env(:membrane_core, :use_push_flow_control, false)
+
   @spec def_pads([{Pad.name_t(), raw_spec :: Macro.t()}], Pad.direction_t(), :element | :bin) ::
           Macro.t()
   def def_pads(pads, direction, component) do
@@ -179,7 +181,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       config = if component == :bin, do: Map.delete(config, :demand_mode), else: config
 
       config =
-        if config.mode == :pull do
+        if @use_push_flow_control and config.mode == :pull do
           Map.delete(%{config | mode: :push}, :demand_mode)
         else
           config
