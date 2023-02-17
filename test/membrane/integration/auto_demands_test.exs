@@ -75,8 +75,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
             |> child(:sink, Sink)
         )
 
-      assert_pipeline_play(pipeline)
-
       Enum.each(out_payloads, fn payload ->
         assert_sink_buffer(pipeline, :sink, buffer)
         assert buffer.payload == payload
@@ -99,7 +97,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
         ]
       )
 
-    assert_pipeline_play(pipeline)
     Pipeline.message_child(pipeline, :right_sink, {:make_demand, 1000})
 
     Enum.each(1..1000, fn payload ->
@@ -124,7 +121,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
         ]
       )
 
-    assert_pipeline_play(pipeline)
     Process.sleep(500)
     Pipeline.execute_actions(pipeline, remove_children: :right_sink)
 
@@ -215,7 +211,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
           |> child(:sink, Sink)
       )
 
-    assert_pipeline_play(pipeline)
     buffers = Enum.map(1..10, &%Membrane.Buffer{payload: &1})
     Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
 
@@ -229,7 +224,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       end
     end)
 
-    Pipeline.terminate(pipeline, blocking?: true)
+    Pipeline.terminate(pipeline)
     refute_sink_buffer(pipeline, :sink, _buffer, 0)
   end
 
@@ -245,7 +240,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       )
 
     Process.monitor(pipeline)
-    assert_pipeline_play(pipeline)
+
     buffers = Enum.map(1..100_000, &%Membrane.Buffer{payload: &1})
     Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
     assert_receive({:DOWN, _ref, :process, ^pipeline, {:shutdown, :child_crash}})

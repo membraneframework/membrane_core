@@ -93,8 +93,6 @@ defmodule Membrane.Integration.DeferSetupTest do
           |> child(:bin_2, %Bin{defer_play: false})
       )
 
-    assert_pipeline_play(pipeline)
-
     for bin <- [:bin_1, :bin_2] do
       refute_child_playing(pipeline, bin)
     end

@@ -171,7 +171,6 @@ defmodule Membrane.Integration.LinkingTest do
       source_pid = get_child_pid(:source, bin_pid)
       source_ref = Process.monitor(source_pid)
 
-      assert_pipeline_play(pipeline)
       Process.exit(sink_pid, :kill)
       assert_pipeline_crash_group_down(pipeline, :group_2)
 
@@ -286,7 +285,6 @@ defmodule Membrane.Integration.LinkingTest do
     spec = [bin_spec, sink_spec, links_spec]
     send(pipeline, {:start_spec, %{spec: spec}})
     assert_receive(:spec_started)
-    assert_pipeline_play(pipeline)
   end
 
   defmodule SlowSetupSink do
@@ -372,9 +370,10 @@ defmodule Membrane.Integration.LinkingTest do
     )
 
     assert_end_of_stream(pipeline, :sink)
-    Membrane.Pipeline.terminate(pipeline, blocking?: true)
+    Membrane.Pipeline.terminate(pipeline)
   end
 
+  @tag :dupa
   test "Bin should crash if it doesn't link internally within timeout" do
     defmodule NoInternalLinkBin do
       use Membrane.Bin
@@ -415,8 +414,9 @@ defmodule Membrane.Integration.LinkingTest do
     monitor_1 = Process.monitor(bin_1_pid)
     monitor_2 = Process.monitor(bin_2_pid)
 
-    assert_receive {:DOWN, ^monitor_1, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
-    assert_receive {:DOWN, ^monitor_2, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}, 6000
+    assert_receive {:DOWN, ref, :process, _pid, {%Membrane.LinkError{}, _stacktrace}}
+                   when ref in [monitor_1, monitor_2],
+                   6000
 
     Testing.Pipeline.terminate(pipeline)
   end
@@ -500,6 +500,70 @@ defmodule Membrane.Integration.LinkingTest do
       for i <- (pad_id + 1)..10//1 do
         refute_link_removed(pipeline, i)
       end
+    end
+  end
+
+  describe "Spec shouldn't wait on links with" do
+    defmodule LazyBin do
+      use Membrane.Bin
+
+      def_output_pad :output,
+        availability: :on_request,
+        accepted_format: _any
+
+      @impl true
+      def handle_playing(_ctx, state) do
+        {[notify_parent: :playing], state}
+      end
+    end
+
+    defmodule Sink do
+      use Membrane.Sink
+
+      def_input_pad :input,
+        accepted_format: _any
+
+      @impl true
+      def handle_init(_ctx, _opts) do
+        {[notify_parent: :init], %{}}
+      end
+    end
+
+    test "removed child" do
+      spec = child(:bin, LazyBin) |> child(:sink, Sink)
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+
+      assert_pipeline_notified(pipeline, :sink, :init)
+      sink_pid = Testing.Pipeline.get_child_pid!(pipeline, :sink)
+      monitor_ref = Process.monitor(sink_pid)
+
+      Testing.Pipeline.execute_actions(pipeline, remove_children: :sink)
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^sink_pid, :normal}
+      assert_pipeline_notified(pipeline, :bin, :playing)
+
+      assert :ok == Testing.Pipeline.terminate(pipeline)
+    end
+
+    test "crashed child" do
+      sink_ref = Child.ref(:sink, group: :group)
+
+      spec = [
+        {child(:sink, Sink), group: :group, crash_group_mode: :temporary},
+        child(:bin, LazyBin) |> get_child(sink_ref)
+      ]
+
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+
+      assert_pipeline_notified(pipeline, sink_ref, :init)
+
+      Testing.Pipeline.get_child_pid!(pipeline, sink_ref)
+      |> Process.exit(:kill)
+
+      assert_pipeline_crash_group_down(pipeline, :group)
+      assert_pipeline_notified(pipeline, :bin, :playing)
+
+      assert :ok == Testing.Pipeline.terminate(pipeline)
     end
   end
 

@@ -171,10 +171,6 @@ defmodule Membrane.Testing.Assertions do
     assert_receive_from_pipeline(pipeline, :setup, timeout)
   end
 
-  defmacro assert_pipeline_play(pipeline, timeout \\ @default_timeout) do
-    assert_receive_from_pipeline(pipeline, :play, timeout)
-  end
-
   @doc """
   Asserts that pipeline received or will receive a message matching
   `message_pattern` from another process within the `timeout` period specified
@@ -445,6 +441,23 @@ defmodule Membrane.Testing.Assertions do
     assert_receive_from_pipeline(
       pipeline,
       {:handle_element_end_of_stream, {element_name, pad}},
+      timeout
+    )
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.Pipeline` child with name `child` removed or is going to
+  remove it's pad with ref `pad` within the `timeout` period specified in milliseconds.
+  """
+  defmacro assert_child_pad_removed(
+             pipeline,
+             child,
+             pad,
+             timeout \\ @default_timeout
+           ) do
+    assert_receive_from_pipeline(
+      pipeline,
+      {:handle_child_pad_removed, {child, pad}},
       timeout
     )
   end

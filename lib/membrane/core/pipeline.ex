@@ -74,6 +74,12 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
+  def handle_info(Message.new(:child_pad_removed, [child, pad]), state) do
+    state = ChildLifeController.handle_child_pad_removed(child, pad, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
   def handle_info(Message.new(:child_notification, [from, notification]), state) do
     state = LifecycleController.handle_child_notification(from, notification, state)
     {:noreply, state}
@@ -146,13 +152,14 @@ defmodule Membrane.Core.Pipeline do
   def handle_call(message, from, state) do
     context = &CallbackContext.from_state(&1, from: from)
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_call,
-      Membrane.Core.Pipeline.ActionHandler,
-      %{context: context},
-      [message],
-      state
-    )
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_call,
+        Membrane.Core.Pipeline.ActionHandler,
+        %{context: context},
+        [message],
+        state
+      )
 
     {:noreply, state}
   end

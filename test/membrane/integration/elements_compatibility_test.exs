@@ -245,15 +245,13 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
           |> child(sink_module.__struct__(test_pid: self()))
       )
 
-    assert_pipeline_play(pid)
-
     state_dump =
       receive do
         {:state_dump, state_dump} -> state_dump
       end
 
     assert Enum.join(Utilities.buffer()) == state_dump |> Enum.reverse() |> Enum.join()
-    Pipeline.terminate(pid, blocking?: true)
+    Pipeline.terminate(pid)
   end
 
   test "if sink demanding in bytes receives all the data and no more then demanded number of bytes at once" do

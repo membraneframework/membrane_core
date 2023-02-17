@@ -117,7 +117,7 @@ defmodule Membrane.Core.PipelineTest do
 
   test "Pipeline can be terminated synchronously" do
     pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
-    assert :ok == Testing.Pipeline.terminate(pid, blocking?: true)
+    assert :ok == Testing.Pipeline.terminate(pid)
   end
 
   test "Pipeline should be able to terminate itself with :terminate action" do
@@ -143,6 +143,9 @@ defmodule Membrane.Core.PipelineTest do
     }
 
     Testing.Pipeline.execute_actions(pid, spec: spec)
-    assert_pipeline_play(pid)
+
+    for payload <- [1, 2, 3] do
+      assert_sink_buffer(pid, :b, %Membrane.Buffer{payload: ^payload})
+    end
   end
 end

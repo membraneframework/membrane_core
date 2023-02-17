@@ -29,7 +29,7 @@ defmodule Membrane.Pipeline do
         use Membrane.Pipeline
 
         def start_link(options) do
-          Membrane.Pipeline.start_link(options, name: MyPipeline)
+          Membrane.Pipeline.start_link(__MODULE__, options, name: MyPipeline)
         end
 
         # ...
@@ -61,7 +61,7 @@ defmodule Membrane.Pipeline do
   use Bunch
 
   alias __MODULE__.{Action, CallbackContext}
-  alias Membrane.{Child, Pad}
+  alias Membrane.{Child, Pad, PipelineError}
 
   require Membrane.Logger
   require Membrane.Core.Message, as: Message
@@ -134,6 +134,20 @@ defmodule Membrane.Pipeline do
               state
             ) ::
               callback_return
+
+  @doc """
+  Callback invoked when a child removes its pad.
+
+  The callback won't be invoked, when you have initiated the pad removal,
+  eg. when you have returned `t:Membrane.Pipeline.Action.remove_link()`
+  action which made one of your children's pads be removed.
+  """
+  @callback handle_child_pad_removed(
+              child :: Child.name(),
+              pad :: Pad.ref(),
+              context :: CallbackContext.t(),
+              state :: state
+            ) :: callback_return
 
   @doc """
   Callback invoked when a notification comes in from an element.
@@ -231,7 +245,8 @@ defmodule Membrane.Pipeline do
                       handle_tick: 3,
                       handle_crash_group_down: 3,
                       handle_call: 3,
-                      handle_terminate_request: 2
+                      handle_terminate_request: 2,
+                      handle_child_pad_removed: 4
 
   @doc """
   Starts the Pipeline based on given module and links it to the current
@@ -295,41 +310,73 @@ defmodule Membrane.Pipeline do
   end
 
   @doc """
-  Gracefully terminates the pipeline.
+  Terminates the pipeline.
 
-  Accepts two options:
-    * `blocking?` - tells whether to stop the pipeline synchronously
-    * `timeout` - if `blocking?` is set to true it tells how much
-      time (ms) to wait for pipeline to get terminated. Defaults to 5000.
+  Accepts three options:
+    * `asynchronous?` - if set to `true`, pipline termination won't be blocking and
+      will be executed in the process, which pid is returned as function result. If
+      set to `false`, pipeline termination will be blocking and will be executed in
+      the process that called this function. Defaults to `false`.
+    * `timeout` - tells how much time (ms) to wait for pipeline to get gracefully
+      terminated. Defaults to 5000.
+    * `force?` - if set to `true` and pipeline is still alive after `timeout`,
+      pipeline will be killed using `Process.exit/2` with reason `:kill`, and function
+      will return `{:error, :timeout}`. If set to `false` and pipeline is still alive
+      after `timeout`, function will raise an error. Defaults to `false`.
+
+  Returns:
+    * `{:ok, pid}` - if option `asynchronous?: true` was passed.
+    * `:ok` - if pipeline was gracefully terminated within `timeout`.
+    * `{:error, :timeout}` - if pipeline was killed after a `timeout`.
   """
-  @spec terminate(pipeline :: pid, Keyword.t()) ::
-          :ok | {:error, :timeout}
+  @spec terminate(pipeline :: pid, timeout: timeout(), force?: boolean(), asynchronous?: boolean()) ::
+          :ok | {:ok, pid()} | {:error, :timeout}
   def terminate(pipeline, opts \\ []) do
-    blocking? = Keyword.get(opts, :blocking?, false)
-    timeout = Keyword.get(opts, :timeout, 5000)
+    [asynchronous?: asynchronous?] ++ opts =
+      Keyword.validate!(opts,
+        asynchronous?: false,
+        force?: false,
+        timeout: 5000
+      )
+      |> Enum.sort()
 
-    ref = if blocking?, do: Process.monitor(pipeline)
+    if asynchronous? do
+      Task.start(__MODULE__, :do_terminate, [pipeline, opts])
+    else
+      do_terminate(pipeline, opts)
+    end
+  end
+
+  @doc false
+  @spec do_terminate(pipeline :: pid, timeout: timeout(), force?: boolean()) ::
+          :ok | {:error, :timeout}
+  def do_terminate(pipeline, opts) do
+    timeout = Keyword.get(opts, :timeout)
+    force? = Keyword.get(opts, :force?)
+
+    ref = Process.monitor(pipeline)
     Message.send(pipeline, :terminate)
 
-    if(blocking?,
-      do: wait_for_down(ref, timeout),
-      else: :ok
-    )
-  end
-
-  @spec call(pid, any, integer()) :: :ok
-  def call(pipeline, message, timeout \\ 5000) do
-    GenServer.call(pipeline, message, timeout)
-  end
-
-  defp wait_for_down(ref, timeout) do
     receive do
       {:DOWN, ^ref, _process, _pid, _reason} ->
         :ok
     after
       timeout ->
-        {:error, :timeout}
+        if force? do
+          Process.exit(pipeline, :kill)
+          {:error, :timeout}
+        else
+          raise PipelineError, """
+          Pipeline #{inspect(pipeline)} hasn't terminated within given timeout (#{inspect(timeout)} ms).
+          If you want to kill it anyway, use `force?: true` option.
+          """
+        end
     end
+  end
+
+  @spec call(pid, any, timeout()) :: :ok
+  def call(pipeline, message, timeout \\ 5000) do
+    GenServer.call(pipeline, message, timeout)
   end
 
   @doc """

@@ -105,8 +105,6 @@ defmodule Membrane.Core.BinTest do
 
       pipeline = Testing.Pipeline.start_link_supervised!(spec: children)
 
-      assert_pipeline_play(pipeline)
-
       assert_pipeline_notified(pipeline, :test_bin, {:handle_element_start_of_stream, :sink, _})
 
       assert_buffers_flow_through(pipeline, buffers, :test_bin)
@@ -126,8 +124,6 @@ defmodule Membrane.Core.BinTest do
       ]
 
       pipeline = Testing.Pipeline.start_link_supervised!(spec: links)
-
-      assert_pipeline_play(pipeline)
 
       assert_pipeline_notified(
         pipeline,
@@ -257,7 +253,7 @@ defmodule Membrane.Core.BinTest do
       refute is_nil(clock2)
 
       assert proxy_for?(clock1, clock2)
-      ClockPipeline.terminate(pid, blocking?: true)
+      ClockPipeline.terminate(pid)
     end
 
     test "handle_parent_notification/3 works for Bin" do
@@ -282,8 +278,6 @@ defmodule Membrane.Core.BinTest do
   end
 
   defp assert_data_flows_through(pipeline, buffers, receiving_element \\ :sink) do
-    assert_pipeline_play(pipeline)
-
     assert_start_of_stream(pipeline, ^receiving_element)
 
     assert_buffers_flow_through(pipeline, buffers, receiving_element)

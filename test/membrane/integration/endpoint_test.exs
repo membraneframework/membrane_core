@@ -49,8 +49,6 @@ defmodule Membrane.Core.EndpointTest do
   end
 
   defp assert_data_flows_through(pipeline, buffers, receiving_element) do
-    assert_pipeline_play(pipeline)
-
     assert_start_of_stream(pipeline, ^receiving_element)
 
     buffers

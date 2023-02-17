@@ -85,10 +85,7 @@ defmodule Membrane.Mixfile do
         Membrane.RCMessage
       ],
       groups_for_modules: [
-        Pipeline: [
-          ~r/^Membrane\.Pipeline($|\.)/,
-          ~r/^Membrane\.(CrashGroup)($|\.)/
-        ],
+        Pipeline: [~r/^Membrane\.Pipeline($|\.)/],
         "RC Pipeline": [
           ~r/^Membrane\.(RCPipeline)($|\.)/,
           ~r/^Membrane\.(RCMessage)($|\.)/

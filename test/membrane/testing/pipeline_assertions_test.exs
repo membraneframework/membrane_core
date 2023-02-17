@@ -37,15 +37,6 @@ defmodule Membrane.Testing.PipelineAssertionsTest do
     end
   end
 
-  test "assert_pipeline_play works", %{state: state} do
-    Pipeline.handle_playing(context(), state)
-    assert_pipeline_play(self())
-
-    assert_raise ExUnit.AssertionError, fn ->
-      assert_pipeline_play(self(), 0)
-    end
-  end
-
   describe "assert_pipeline_receive" do
     test "does not flunk when pipeline receives a message", %{state: state} do
       message = "I am an important message"

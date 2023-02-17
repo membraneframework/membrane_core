@@ -96,7 +96,7 @@ defmodule Membrane.RCPipelineTest do
       assert_receive %RCMessage.EndOfStream{from: ^pipeline, element: :c, pad: :input}
 
       # STOP
-      RCPipeline.terminate(pipeline, blocking?: true)
+      RCPipeline.terminate(pipeline)
 
       # TEST
       refute_receive %RCMessage.Terminated{from: ^pipeline}

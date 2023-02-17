@@ -56,7 +56,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
       [:filter1, :filter2, :filter3]
       |> Enum.map(&get_filter_pid(&1, pipeline_pid))
 
-    assert_pipeline_play(pipeline_pid)
     assert_pipeline_notified(pipeline_pid, :filter1, :playing)
     assert_pipeline_notified(pipeline_pid, :filter2, :playing)
     assert_pipeline_notified(pipeline_pid, :filter3, :playing)
@@ -95,7 +94,6 @@ defmodule Membrane.Integration.ChildRemovalTest do
       [:filter1, :filter2, :filter3]
       |> Enum.map(&get_filter_pid(&1, pipeline_pid))
 
-    assert_pipeline_play(pipeline_pid)
     assert_pipeline_notified(pipeline_pid, :filter1, :playing)
     assert_pipeline_notified(pipeline_pid, :filter2, :playing)
     assert_pipeline_notified(pipeline_pid, :filter3, :playing)
@@ -193,7 +191,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
         )
 
       monitor = Process.monitor(pipeline)
-      Testing.Pipeline.terminate(pipeline)
+      Testing.Pipeline.terminate(pipeline, asynchronous?: true)
+      Process.sleep(100)
+
       assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
       send(RemovalDeferSource, :terminate)
       send(RemovalDeferSink, :terminate)
@@ -209,7 +209,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
         )
 
       monitor = Process.monitor(pipeline)
-      Testing.Pipeline.terminate(pipeline)
+      Testing.Pipeline.terminate(pipeline, asynchronous?: true)
+      Process.sleep(100)
+
       assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
       assert_receive {RemovalDeferBin, :terminate_request}
       assert %{module: Membrane.Core.Bin.Zombie} = :sys.get_state(RemovalDeferBin)
@@ -227,7 +229,9 @@ defmodule Membrane.Integration.ChildRemovalTest do
         )
 
       pipeline_monitor = Process.monitor(pipeline)
-      Testing.Pipeline.terminate(pipeline)
+      Testing.Pipeline.terminate(pipeline, asynchronous?: true)
+      Process.sleep(100)
+
       assert %{module: Membrane.Core.Pipeline.Zombie} = :sys.get_state(pipeline)
       assert_receive {RemovalDeferBin, :terminate_request}
       assert %{module: RemovalDeferBin} = :sys.get_state(RemovalDeferBin)

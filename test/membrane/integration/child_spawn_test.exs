@@ -79,7 +79,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> child(:sink, SinkThatNotifiesParent, get_if_exists: true)
 
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-    assert_pipeline_play(pipeline_pid)
+
     refute_pipeline_notified(pipeline_pid, :sink, :message_from_sink)
   end
 
@@ -95,8 +95,11 @@ defmodule Membrane.Integration.ChildSpawnTest do
       child(:source, %Testing.Source{output: [1, 2, 3]})
       |> child(:sink, Testing.Sink, get_if_exists: true)
 
-    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec, setup: :complete)
-    assert_pipeline_play(pipeline_pid)
+    Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
+
+    for payload <- [1, 2, 3] do
+      assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: ^payload})
+    end
   end
 
   test "if child/3 doesn't spawn child with a given name if there is already a child with given name among the children
@@ -112,7 +115,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> child(:sink, Testing.Sink)
 
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-    assert_pipeline_play(pipeline_pid)
+
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 1})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 2})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 3})
@@ -134,7 +137,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
       |> child(:sink, Testing.Sink, get_if_exists: true)
 
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-    assert_pipeline_play(pipeline_pid)
+
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 1})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 2})
     assert_sink_buffer(pipeline_pid, :sink, %Buffer{payload: 3})
@@ -152,7 +155,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec2)
     assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}
     assert reason.message =~ ~r/Cannot create children groups with ids: \[:source\]/
-    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+    Testing.Pipeline.terminate(pipeline_pid)
   end
 
   test "if the pipeline raises an exception when a children group with the same name as an exisiting child is added" do
@@ -169,7 +172,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec2)
     assert_receive {:DOWN, ^pipeline_ref, :process, ^pipeline_pid, {reason, _stack_trace}}
     assert reason.message =~ ~r/Cannot spawn children with names: \[:first_group\]/
-    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+    Testing.Pipeline.terminate(pipeline_pid)
   end
 
   test "if the pipeline raises an exception when a children group and a child with the same names are added" do
@@ -186,16 +189,15 @@ defmodule Membrane.Integration.ChildSpawnTest do
     assert reason.message =~
              ~r/Cannot proceed, since the children group ids and children names created in this process are duplicating: \[:first_group\]/
 
-    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+    Testing.Pipeline.terminate(pipeline_pid)
   end
 
   test "if children can be spawned anonymously" do
     pipeline_pid = Testing.Pipeline.start_supervised!()
     spec = child(%Testing.Source{output: [1, 2, 3]}) |> child(Testing.Sink)
     Testing.Pipeline.execute_actions(pipeline_pid, spec: spec)
-    assert_pipeline_play(pipeline_pid)
 
-    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+    Testing.Pipeline.terminate(pipeline_pid)
   end
 
   test "if the pipeline raises an exception when there is an attempt to spawn a child with a name satisfying the Membrane's reserved pattern" do
@@ -217,6 +219,6 @@ defmodule Membrane.Integration.ChildSpawnTest do
     assert reason.message =~
              ~r/Improper name: {Membrane.Child, :first_group, :source}/
 
-    Testing.Pipeline.terminate(pipeline_pid, blocking?: true)
+    Testing.Pipeline.terminate(pipeline_pid)
   end
 end
