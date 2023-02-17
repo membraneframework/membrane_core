@@ -1,5 +1,7 @@
 defmodule Membrane.Core.Metrics do
+  @moduledoc false
   if Application.compile_env(:membrane_core, :enable_metrics, false) do
+    @spec init() :: :ok
     def init() do
       :ets.new(__MODULE__, [:named_table, :public, write_concurrency: true])
       :ok
@@ -30,6 +32,7 @@ defmodule Membrane.Core.Metrics do
       end
     end
 
+    @spec scrape() :: list()
     def scrape() do
       :ets.tab2list(__MODULE__)
     end
@@ -38,6 +41,7 @@ defmodule Membrane.Core.Metrics do
       true
     end
   else
+    @spec init() :: :ok
     def init() do
       :ok
     end
@@ -67,6 +71,7 @@ defmodule Membrane.Core.Metrics do
       end
     end
 
+    @spec scrape() :: no_return
     def scrape() do
       raise "Membrane Core metrics disabled"
     end
