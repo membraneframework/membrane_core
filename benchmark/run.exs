@@ -104,7 +104,7 @@ defmodule Benchmark.Run do
     ]
   ]
   @how_many_tries 3
-  @metrics_sampling_period 100
+  @test_timeout 300_000 # [ms]
   # the greater the factor is, the more unevenly distributed by the dispatcher will the buffers be
   @uneven_distribution_dispatcher_factor 2
 
@@ -258,74 +258,37 @@ defmodule Benchmark.Run do
     [branch_with_sink] ++ final_level.finished_branches
   end
 
-  defp meassure(:fast_memory, initial_memory), do: :erlang.memory(:total) - initial_memory
-
-  defp meassure(:precisely_allocated_memory, children_pids) do
-    Enum.reduce(children_pids, 0, fn pid, acc ->
-      acc + (:erlang.process_info(pid, :memory) |> elem(1))
-    end)
-  end
-
-  defp meassure(:precisely_used_memory, children_pids) do
-    Enum.reduce(children_pids, 0, fn pid, acc ->
-      states_size = :sys.get_state(pid) |> :erlang.term_to_binary() |> byte_size()
-
-      message_queue_size =
-        :erlang.process_info(pid, :messages) |> :erlang.term_to_binary() |> byte_size()
-
-      acc + message_queue_size + states_size
-    end)
-  end
-
-  defp meassure(:message_queues_length, children_pids) do
-    Enum.map(children_pids, fn pid ->
-      {:message_queue_len, message_queue_len} = :erlang.process_info(pid, :message_queue_len)
-      message_queue_len
-    end)
-    |> Enum.sum()
-  end
-
-  defp do_loop(
-         pid,
-         {children_pids, initial_memory},
-         {memory, message_queues_length} \\ {[], []}
-       ) do
-    memory = memory ++ [meassure(:fast_memory, initial_memory)]
-
-    message_queues_length =
-      message_queues_length ++ [meassure(:message_queues_length, children_pids)]
-
-    next_action =
-      receive do
-        :sink_eos ->
-          :stop
-      after
-        @metrics_sampling_period -> :continue
-      end
-
-    if next_action == :continue,
-      do: do_loop(pid, {children_pids, initial_memory}, {memory, message_queues_length}),
-      else: {memory, message_queues_length}
-  end
-
   defp perform_test({test_type, params}) when test_type in [:linear, :with_branches] do
-    initial_time = :os.system_time(:milli_seconds)
-    initial_memory = meassure(:fast_memory, 0)
+    spec = prepare_pipeline(test_type, params)
+
+    time_meassurement = Time.start_meassurement()
+    final_memory_meassurement = FinalMemory.start_meassurement()
 
     {:ok, _supervisor_pid, pipeline_pid} =
       Benchmark.Run.Pipeline.start(
         monitoring_process: self(),
-        spec: prepare_pipeline(test_type, params)
+        spec: spec
       )
 
     children_pids = Membrane.Pipeline.call(pipeline_pid, :get_children_pids)
 
-    {in_progress_memory, message_queues_length} =
-      do_loop(pipeline_pid, {children_pids, initial_memory})
+    in_progress_memory_meassurment = InProgressMemory.start_meassurement(children_pids)
+    message_queues_length_meassurement = MessageQueuesLength.start_meassurement(children_pids)
 
-    time = :os.system_time(:milli_seconds) - initial_time
+    :ok =
+      receive do
+        :sink_eos -> :ok
+      after
+        @test_timeout ->
+          raise "The test wasn't finished within the assumed timeout: #{@test_timeout} ms."
+      end
 
-    final_memory = meassure(:fast_memory, 0) - initial_memory
+    time = Time.stop_meassurement(time_meassurement)
+    final_memory = FinalMemory.stop_meassurement(final_memory_meassurement)
+    in_progress_memory = InProgressMemory.stop_meassurement(in_progress_memory_meassurment)
+
+    message_queues_length =
+      MessageQueuesLength.stop_meassurement(message_queues_length_meassurement)
 
     Membrane.Pipeline.terminate(pipeline_pid)
 

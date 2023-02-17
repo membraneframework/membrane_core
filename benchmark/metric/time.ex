@@ -19,4 +19,14 @@ defmodule Benchmark.Metric.Time do
   def average(times) do
     Enum.sum(times) / length(times)
   end
+
+  @impl true
+  def start_meassurement(_opts \\ nil) do
+    :os.system_time(:milli_seconds)
+  end
+
+  @impl true
+  def stop_meassurement(starting_time) do
+    :os.system_time(:milli_seconds) - starting_time
+  end
 end

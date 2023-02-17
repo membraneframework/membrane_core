@@ -19,4 +19,14 @@ defmodule Benchmark.Metric.FinalMemory do
   def average(final_memory_samples) do
     Enum.sum(final_memory_samples) / (length(final_memory_samples) * 1_000_000)
   end
+
+  @impl true
+  def start_meassurement(_opts \\ nil) do
+    :erlang.memory(:total)
+  end
+
+  @impl true
+  def stop_meassurement(starting_memory) do
+    :erlang.memory(:total) - starting_memory
+  end
 end

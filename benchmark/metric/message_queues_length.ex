@@ -2,6 +2,7 @@ defmodule Benchmark.Metric.MessageQueuesLength do
   @behaviour Benchmark.Metric
 
   @allowed_worsening_factor 0.1
+  @sampling_period 100
 
   @impl true
   def assert(queues_lengths, queues_lengths_ref, test_case) do
@@ -29,5 +30,41 @@ defmodule Benchmark.Metric.MessageQueuesLength do
 
   defp integrate(queues_lengths) do
     Enum.sum(queues_lengths)
+  end
+
+  @impl true
+  def start_meassurement(children_pids) do
+    task =
+      Task.async(fn ->
+        do_loop([], children_pids)
+      end)
+
+    task
+  end
+
+  defp do_loop(acc, children_pids) do
+    acc = acc ++ [meassure_queues_length(children_pids)]
+
+    receive do
+      :stop -> acc
+    after
+      @sampling_period -> do_loop(acc, children_pids)
+    end
+  end
+
+  defp meassure_queues_length(children_pids) do
+    Enum.map(children_pids, fn pid ->
+      case :erlang.process_info(pid, :message_queue_len) do
+        {:message_queue_len, message_queue_len} -> message_queue_len
+        _other -> 0
+      end
+    end)
+    |> Enum.sum()
+  end
+
+  @impl true
+  def stop_meassurement(task) do
+    send(task.pid, :stop)
+    Task.await(task)
   end
 end

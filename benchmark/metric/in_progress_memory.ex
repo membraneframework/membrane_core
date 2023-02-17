@@ -2,6 +2,7 @@ defmodule Benchmark.Metric.InProgressMemory do
   @behaviour Benchmark.Metric
 
   @allowed_worsening_factor 0.5
+  @sampling_period 100
 
   @impl true
   def assert(memory_samples, memory_samples_ref, test_case) do
@@ -18,6 +19,10 @@ defmodule Benchmark.Metric.InProgressMemory do
     :ok
   end
 
+  defp integrate(memory_samples) do
+    Enum.sum(memory_samples)
+  end
+
   @impl true
   def average(memory_samples_from_multiple_tries) do
     memory_samples_from_multiple_tries
@@ -26,7 +31,31 @@ defmodule Benchmark.Metric.InProgressMemory do
     |> Enum.map(&(Enum.sum(&1) / (length(&1) * 1_000_000)))
   end
 
-  defp integrate(memory_samples) do
-    Enum.sum(memory_samples)
+  @impl true
+  def start_meassurement(_opts \\ nil) do
+    initial_memory = :erlang.memory(:total)
+
+    task =
+      Task.async(fn ->
+        do_loop([], initial_memory)
+      end)
+
+    task
+  end
+
+  defp do_loop(acc, initial_memory) do
+    acc = acc ++ [:erlang.memory(:total) - initial_memory]
+
+    receive do
+      :stop -> acc
+    after
+      @sampling_period -> do_loop(acc, initial_memory)
+    end
+  end
+
+  @impl true
+  def stop_meassurement(task) do
+    send(task.pid, :stop)
+    Task.await(task)
   end
 end

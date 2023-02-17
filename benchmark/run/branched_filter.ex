@@ -63,13 +63,21 @@ defmodule Benchmark.Run.BranchedFilter do
 
   @impl true
   def handle_end_of_stream(_pad, ctx, state) do
-    output_pads_without_eos =
-      Enum.filter(ctx.pads, fn {pad_ref, pad} ->
-        pad.end_of_stream? == false and pad.direction == :output
-      end)
-      |> Enum.map(fn {pad_ref, _pad} -> pad_ref end)
+    all_input_pads_eos? =
+      Enum.filter(ctx.pads, fn {_pad_ref, pad} -> pad.direction == :input end)
+      |> Enum.all?(fn {_input_pad_ref, input_pad} -> input_pad.end_of_stream? == true end)
 
-    actions = Enum.map(output_pads_without_eos, &{:end_of_stream, &1})
-    {actions, state}
+    if all_input_pads_eos? do
+      output_pads_without_eos =
+        Enum.filter(ctx.pads, fn {_pad_ref, pad} ->
+          pad.end_of_stream? == false and pad.direction == :output
+        end)
+        |> Enum.map(fn {pad_ref, _pad} -> pad_ref end)
+
+      actions = Enum.map(output_pads_without_eos, &{:end_of_stream, &1})
+      {actions, state}
+    else
+      {[], state}
+    end
   end
 end

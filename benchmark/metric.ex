@@ -9,6 +9,8 @@ defmodule Benchmark.Metric do
   """
   @type meassurement :: any
 
+  @opaque meassurement_state :: any
+
   @doc """
   A function used to assert that the first meassurement is no worse than the second meassurement.
   """
@@ -26,4 +28,7 @@ defmodule Benchmark.Metric do
   In case the first meassurement is worse than the second, the function should raise.
   """
   @callback average([meassurement]) :: meassurement
+
+  @callback start_meassurement(opts :: any) :: meassurement_state
+  @callback stop_meassurement(meassurement_state) :: meassurement
 end
