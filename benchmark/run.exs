@@ -327,7 +327,7 @@ defmodule Benchmark.Run do
 
     final_memory = meassure(:fast_memory, 0) - initial_memory
 
-    Membrane.Pipeline.terminate(pipeline_pid, blocking?: true)
+    Membrane.Pipeline.terminate(pipeline_pid)
 
     %{
       Time => time,
