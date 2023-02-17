@@ -44,8 +44,7 @@
 # Test cases are specified with the @test_cases module attribute of the `Benchmark.Run` module.
 # Each test case is performed multiple times - the number of repetitions is specified with the
 # @how_many_tries attribute of the `Benchmark.Run` module.
-# As a result of a test, a binary result file with an avaraged duration of each test case and memory samples
-# performed with @memory_sampling_period [ms] intervals is produced.
+# As a result of a test, a binary result file with an avaraged metrics gather during the test is created.
 # `benchmark/comparse.exs` script can be used to compare result files.
 
 defmodule Benchmark.Run do
@@ -54,6 +53,7 @@ defmodule Benchmark.Run do
   alias Membrane.Pad
   alias Benchmark.Run.BranchedFilter
   alias Benchmark.Run.LinearFilter
+  alias Benchmark.Metric.{FinalMemory, InProgressMemory, MessageQueuesLength, Time}
 
   require Logger
   require Membrane.RCPipeline
@@ -100,11 +100,11 @@ defmodule Benchmark.Run do
       reductions: 10_000,
       number_of_buffers: 50000,
       buffer_size: 1,
-      max_random: 1
+      max_random: 10
     ]
   ]
   @how_many_tries 3
-  @memory_sampling_period 100
+  @metrics_sampling_period 100
   # the greater the factor is, the more unevenly distributed by the dispatcher will the buffers be
   @uneven_distribution_dispatcher_factor 2
 
@@ -127,7 +127,7 @@ defmodule Benchmark.Run do
         floor(@uneven_distribution_dispatcher_factor * how_many_buffers_to_output / how_many_pads)
 
       {distribution, how_many_buffers_for_last_pad} =
-        Enum.map_reduce(1..(how_many_pads - 1)//1, how_many_buffers_to_output, fn pad_no,
+        Enum.map_reduce(1..(how_many_pads - 1)//1, how_many_buffers_to_output, fn _pad_no,
                                                                                   buffers_left ->
           how_many_buffers_per_pad = min(Enum.random(0..max_buffers_per_pad), buffers_left)
           {how_many_buffers_per_pad, buffers_left - how_many_buffers_per_pad}
@@ -255,27 +255,18 @@ defmodule Benchmark.Run do
     branch_with_sink =
       Enum.at(final_level.unfinished_branches, 0) |> child(:sink, Membrane.Testing.Sink)
 
-    ([branch_with_sink] ++ final_level.finished_branches) |> print_links()
+    [branch_with_sink] ++ final_level.finished_branches
   end
 
-  defp print_links(list_of_builders) do
-    Enum.flat_map(list_of_builders, fn builder ->
-      Enum.map(builder.links, &"#{inspect(&1.from)} -> #{inspect(&1.to)}")
-    end)
-    |> IO.inspect()
+  defp meassure(:fast_memory, initial_memory), do: :erlang.memory(:total) - initial_memory
 
-    list_of_builders
-  end
-
-  defp meassure_memory(:fast, initial_memory), do: :erlang.memory(:total) - initial_memory
-
-  defp meassure_memory(:precise_allocated, children_pids) do
+  defp meassure(:precisely_allocated_memory, children_pids) do
     Enum.reduce(children_pids, 0, fn pid, acc ->
       acc + (:erlang.process_info(pid, :memory) |> elem(1))
     end)
   end
 
-  defp meassure_memory(:precise_used, children_pids) do
+  defp meassure(:precisely_used_memory, children_pids) do
     Enum.reduce(children_pids, 0, fn pid, acc ->
       states_size = :sys.get_state(pid) |> :erlang.term_to_binary() |> byte_size()
 
@@ -286,32 +277,40 @@ defmodule Benchmark.Run do
     end)
   end
 
-  defp do_loop(pid, children_pids, initial_memory, loop_counter \\ 0, memory_samples \\ []) do
-    fast = meassure_memory(:precise_allocated, children_pids)
-    start_time = :os.system_time(:milli_seconds)
-    precise = meassure_memory(:precise_used, children_pids)
-    end_time = :os.system_time(:milli_seconds)
+  defp meassure(:message_queues_length, children_pids) do
+    Enum.map(children_pids, fn pid ->
+      {:message_queue_len, message_queue_len} = :erlang.process_info(pid, :message_queue_len)
+      message_queue_len
+    end)
+    |> Enum.sum()
+  end
 
-    IO.inspect(
-      "#{precise / 1_000_000} DIFF: #{(fast - precise) / 1_000_000} PRECISE TOOK: #{end_time - start_time}"
-    )
+  defp do_loop(
+         pid,
+         {children_pids, initial_memory},
+         {memory, message_queues_length} \\ {[], []}
+       ) do
+    memory = memory ++ [meassure(:fast_memory, initial_memory)]
+
+    message_queues_length =
+      message_queues_length ++ [meassure(:message_queues_length, children_pids)]
 
     next_action =
       receive do
         :sink_eos ->
           :stop
       after
-        @memory_sampling_period -> :continue
+        @metrics_sampling_period -> :continue
       end
 
     if next_action == :continue,
-      do: do_loop(pid, children_pids, initial_memory, memory_samples),
-      else: memory_samples
+      do: do_loop(pid, {children_pids, initial_memory}, {memory, message_queues_length}),
+      else: {memory, message_queues_length}
   end
 
   defp perform_test({test_type, params}) when test_type in [:linear, :with_branches] do
     initial_time = :os.system_time(:milli_seconds)
-    initial_memory = meassure_memory(:fast, 0)
+    initial_memory = meassure(:fast_memory, 0)
 
     {:ok, _supervisor_pid, pipeline_pid} =
       Benchmark.Run.Pipeline.start(
@@ -320,14 +319,22 @@ defmodule Benchmark.Run do
       )
 
     children_pids = Membrane.Pipeline.call(pipeline_pid, :get_children_pids)
-    memory_samples = do_loop(pipeline_pid, children_pids, initial_memory)
 
-    final_memory = meassure_memory(:fast, 0) - initial_memory
-    memory_samples = memory_samples ++ [final_memory]
+    {in_progress_memory, message_queues_length} =
+      do_loop(pipeline_pid, {children_pids, initial_memory})
+
     time = :os.system_time(:milli_seconds) - initial_time
 
+    final_memory = meassure(:fast_memory, 0) - initial_memory
+
     Membrane.Pipeline.terminate(pipeline_pid, blocking?: true)
-    {time, memory_samples}
+
+    %{
+      Time => time,
+      FinalMemory => final_memory,
+      InProgressMemory => in_progress_memory,
+      MessageQueuesLength => message_queues_length
+    }
   end
 
   def start() do
@@ -337,16 +344,23 @@ defmodule Benchmark.Run do
           perform_test(test_case)
         end
 
-      avg_time = (Enum.unzip(results) |> elem(0) |> Enum.sum()) / length(results)
+      averaged_results =
+        Enum.reduce(results, %{}, fn test_case_results, aggregated_results_map ->
+          Enum.reduce(test_case_results, aggregated_results_map, fn {metric_module, metric_value},
+                                                                    aggregated_results_map ->
+            Map.update(
+              aggregated_results_map,
+              metric_module,
+              [metric_value],
+              &(&1 ++ [metric_value])
+            )
+          end)
+        end)
+        |> Map.new(fn {metric_module, metric_result} ->
+          {metric_module, metric_module.average(metric_result)}
+        end)
 
-      avarage_memory_samples_in_mb =
-        Enum.unzip(results)
-        |> elem(1)
-        |> Enum.zip()
-        |> Enum.map(&Tuple.to_list(&1))
-        |> Enum.map(&(Enum.sum(&1) / (length(&1) * 1_000_000)))
-
-      Map.put(results_map, test_case, {avg_time, avarage_memory_samples_in_mb})
+      Map.put(results_map, test_case, averaged_results)
     end)
   end
 end

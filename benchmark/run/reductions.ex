@@ -4,29 +4,19 @@ defmodule Benchmark.Run.Reductions do
   @function :erlang.date()
   @n1 100
   @n2 1_000_000
-  defp setup_process(n) do
-    parent = self()
+  defp meassure(n) do
+    task =
+      Task.async(fn ->
+        Enum.each(1..n, fn _x -> @function end)
+        :erlang.process_info(self())[:reductions]
+      end)
 
-    spawn(fn ->
-      Enum.each(1..n, fn _x -> @function end)
-      send(parent, :erlang.process_info(self())[:reductions])
-    end)
+    Task.await(task)
   end
 
   defp calculate do
-    setup_process(@n1)
-
-    r1 =
-      receive do
-        value -> value
-      end
-
-    setup_process(@n2)
-
-    r2 =
-      receive do
-        value -> value
-      end
+    r1 = meassure(@n1)
+    r2 = meassure(@n2)
 
     {r1, r2}
   end
