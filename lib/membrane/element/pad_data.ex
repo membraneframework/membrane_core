@@ -47,7 +47,8 @@ defmodule Membrane.Element.PadData do
           auto_demand_size: private_field(),
           sticky_messages: private_field,
           toilet: private_field,
-          associated_pads: private_field
+          associated_pads: private_field,
+          metrics_data: private_field
         }
 
   @enforce_keys [
@@ -76,6 +77,6 @@ defmodule Membrane.Element.PadData do
                 sticky_messages: [],
                 toilet: nil,
                 associated_pads: [],
-                meas: %{}
+                metrics_data: %{}
               ]
 end

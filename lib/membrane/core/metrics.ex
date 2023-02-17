@@ -33,6 +33,10 @@ defmodule Membrane.Core.Metrics do
     def scrape() do
       :ets.tab2list(__MODULE__)
     end
+
+    defmacro enabled?() do
+      true
+    end
   else
     def init() do
       :ok
@@ -65,6 +69,10 @@ defmodule Membrane.Core.Metrics do
 
     def scrape() do
       raise "Membrane Core metrics disabled"
+    end
+
+    defmacro enabled?() do
+      false
     end
   end
 end

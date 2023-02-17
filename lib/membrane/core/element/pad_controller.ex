@@ -23,6 +23,7 @@ defmodule Membrane.Core.Element.PadController do
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
+  require Membrane.Core.Metrics, as: Metrics
   require Membrane.Element.CallbackContext.{PadAdded, PadRemoved}
   require Membrane.Logger
   require Membrane.Pad
@@ -79,8 +80,8 @@ defmodule Membrane.Core.Element.PadController do
         nil
       end
 
-    meas =
-      if direction == :input do
+    metrics_data =
+      if Metrics.enabled?() and direction == :input do
         %{
           path: Membrane.ComponentPath.get(),
           ref: endpoint.pad_ref,
@@ -90,16 +91,28 @@ defmodule Membrane.Core.Element.PadController do
         nil
       end
 
-    do_handle_link(endpoint, other_endpoint, info, toilet, meas, link_props, state)
+    do_handle_link(endpoint, other_endpoint, info, toilet, metrics_data, link_props, state)
   end
 
-  defp do_handle_link(endpoint, other_endpoint, info, toilet, meas, %{initiator: :parent}, state) do
+  defp do_handle_link(
+         endpoint,
+         other_endpoint,
+         info,
+         toilet,
+         metrics_data,
+         %{initiator: :parent},
+         state
+       ) do
     handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
         Pad.opposite_direction(info.direction),
         other_endpoint,
         endpoint,
-        %{initiator: :sibling, other_info: info, link_metadata: %{toilet: toilet, meas: meas}}
+        %{
+          initiator: :sibling,
+          other_info: info,
+          link_metadata: %{toilet: toilet, metrics_data: metrics_data}
+        }
       ])
 
     case handle_link_response do
@@ -135,17 +148,15 @@ defmodule Membrane.Core.Element.PadController do
          other_endpoint,
          info,
          toilet,
-         meas,
+         metrics_data,
          %{initiator: :sibling} = link_props,
          state
        ) do
     %{other_info: other_info, link_metadata: link_metadata} = link_props
 
-    link_metadata = %{
-      link_metadata
-      | toilet: link_metadata.toilet || toilet,
-        meas: link_metadata.meas || meas
-    }
+    link_metadata =
+      %{link_metadata | toilet: link_metadata.toilet || toilet}
+      |> Map.put(:metrics_data, link_metadata[:metrics_data] || metrics_data)
 
     :ok =
       Child.PadController.validate_pad_mode!(
@@ -221,7 +232,7 @@ defmodule Membrane.Core.Element.PadController do
         start_of_stream?: false,
         end_of_stream?: false,
         associated_pads: [],
-        meas: metadata.meas
+        metrics_data: metadata[:metrics_data]
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, props, state))
