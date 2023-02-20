@@ -374,7 +374,7 @@ defmodule Membrane.Pipeline do
     end
   end
 
-  @spec call(pid, any, timeout()) :: :ok
+  @spec call(pid, any, timeout()) :: term()
   def call(pipeline, message, timeout \\ 5000) do
     GenServer.call(pipeline, message, timeout)
   end
