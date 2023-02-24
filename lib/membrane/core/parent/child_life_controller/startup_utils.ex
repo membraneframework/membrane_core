@@ -242,7 +242,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     else
       {:error, reason} ->
         # ignore clock if element couldn't be started
-        receive_clock(name)
+        _clock = receive_clock(name)
         raise ParentError, "Error starting child #{inspect(name)}, reason: #{inspect(reason)}"
     end
   end

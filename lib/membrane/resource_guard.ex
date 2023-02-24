@@ -143,6 +143,8 @@ defmodule Membrane.ResourceGuard do
     for {function, tag, timeout} <- guards do
       do_cleanup(function, tag, timeout)
     end
+
+    :ok
   end
 
   defp do_cleanup(function, tag, timeout) do
