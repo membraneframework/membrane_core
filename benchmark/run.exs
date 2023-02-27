@@ -61,14 +61,14 @@ defmodule Benchmark.Run do
 
   @test_cases [
     linear: [
-      reductions: 0,
+      reductions: 100,
       max_random: 1,
       number_of_filters: 10,
       number_of_buffers: 500_000,
       buffer_size: 1
     ],
     linear: [
-      reductions: 1_000,
+      reductions: 100,
       max_random: 1,
       number_of_filters: 100,
       number_of_buffers: 50000,
