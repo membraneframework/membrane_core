@@ -3,7 +3,7 @@ defmodule Benchmark.Run.Reductions do
 
   defp test_function, do: :erlang.date()
   @n1 100
-  @n2 1_000_000
+  @n2 1_000
   defp meassure(n) do
     task =
       Task.async(fn ->
