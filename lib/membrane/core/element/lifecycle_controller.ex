@@ -79,7 +79,7 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     state =
       %State{state | playback: :playing}
-      |> FlowControlUtils.resolve_auto_pads_flow_control()
+      |> FlowControlUtils.resolve_effective_flow_control()
 
     state =
       CallbackHandler.exec_and_handle_callback(

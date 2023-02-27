@@ -29,7 +29,7 @@ defmodule Membrane.Core.Child.PadModel do
           end_of_stream?: boolean(),
           direction: Pad.direction(),
           flow_control: Pad.flow_control(),
-          opposite_endpoint_flow_control: :push | :pull | :undefined,
+          other_effective_flow_control: Pad.effective_flow_control(),
           name: Pad.name(),
           ref: Pad.ref(),
           demand_unit: Membrane.Buffer.Metric.unit() | nil,

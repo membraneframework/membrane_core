@@ -217,13 +217,13 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(
-         Message.new(:opposite_endpoint_flow_control, [my_pad_ref, flow_control]),
+         Message.new(:other_effective_flow_control, [my_pad_ref, effective_flow_control]),
          state
        ) do
     state =
-      FlowControlUtils.handle_opposite_endpoint_flow_control(
+      FlowControlUtils.handle_other_effective_flow_control(
         my_pad_ref,
-        flow_control,
+        effective_flow_control,
         state
       )
 

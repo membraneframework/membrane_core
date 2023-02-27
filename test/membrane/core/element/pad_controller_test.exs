@@ -43,7 +43,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
                    other_info: %{direction: :input, flow_control: :manual, demand_unit: :buffers},
                    link_metadata: %{toilet: make_ref(), observability_metadata: %{}},
                    stream_format_validation_params: [],
-                   opposite_endpoint_flow_control: :pull
+                   other_effective_flow_control: :pull
                  },
                  state
                )
