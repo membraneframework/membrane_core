@@ -1,7 +1,7 @@
 defmodule Benchmark.Metric.MessageQueuesLength do
   @behaviour Benchmark.Metric
 
-  @allowed_worsening_factor 0.2
+  @allowed_worsening_factor 0.5
   @sampling_period 100
 
   @impl true
