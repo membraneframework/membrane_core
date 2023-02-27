@@ -1,13 +1,13 @@
 defmodule Benchmark.Run.Reductions do
   @moduledoc false
 
-  @function :erlang.date()
+  defp test_function, do: :erlang.date()
   @n1 100
   @n2 1_000_000
   defp meassure(n) do
     task =
       Task.async(fn ->
-        Enum.each(1..n, fn _x -> @function end)
+        Enum.each(1..n, fn _x -> test_function() end)
         :erlang.process_info(self())[:reductions]
       end)
 
@@ -25,6 +25,6 @@ defmodule Benchmark.Run.Reductions do
   def prepare_desired_function(how_many_reductions) do
     {r1, r2} = calculate()
     n = trunc((how_many_reductions - r2) / (r2 - r1) * (@n2 - @n1) + @n2)
-    fn -> Enum.each(1..n, fn _x -> @function end) end
+    fn -> Enum.each(1..n, fn _x -> test_function() end) end
   end
 end
