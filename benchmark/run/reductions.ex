@@ -1,9 +1,11 @@
 defmodule Benchmark.Run.Reductions do
   @moduledoc false
 
-  defp test_function, do: :erlang.date()
   @n1 100
   @n2 1_000
+
+  defp test_function, do: :rand.uniform()
+
   defp meassure(n) do
     task =
       Task.async(fn ->
