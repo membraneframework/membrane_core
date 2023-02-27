@@ -25,8 +25,8 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
+    EffectiveFlowControlController,
     EventController,
-    FlowControlUtils,
     LifecycleController,
     PadController,
     State,
@@ -221,7 +221,7 @@ defmodule Membrane.Core.Element do
          state
        ) do
     state =
-      FlowControlUtils.handle_other_effective_flow_control(
+      EffectiveFlowControlController.handle_other_effective_flow_control(
         my_pad_ref,
         effective_flow_control,
         state

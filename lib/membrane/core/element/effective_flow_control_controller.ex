@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.FlowControlUtils do
+defmodule Membrane.Core.Element.EffectiveFlowControlController do
   @moduledoc false
 
   alias Membrane.Core.Element.State

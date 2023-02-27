@@ -13,7 +13,7 @@ defmodule Membrane.Core.Element.PadController do
     CallbackContext,
     DemandController,
     EventController,
-    FlowControlUtils,
+    EffectiveFlowControlController,
     InputQueue,
     State,
     StreamFormatController,
@@ -87,7 +87,8 @@ defmodule Membrane.Core.Element.PadController do
          %{initiator: :parent} = props,
          state
        ) do
-    flow_control = FlowControlUtils.pad_effective_flow_control(endpoint.pad_ref, state)
+    flow_control =
+      EffectiveFlowControlController.pad_effective_flow_control(endpoint.pad_ref, state)
 
     handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
@@ -201,7 +202,7 @@ defmodule Membrane.Core.Element.PadController do
         state
       )
 
-    state = FlowControlUtils.handle_input_pad_added(endpoint.pad_ref, state)
+    state = EffectiveFlowControlController.handle_input_pad_added(endpoint.pad_ref, state)
     state = maybe_handle_pad_added(endpoint.pad_ref, state)
     {{:ok, {endpoint, info, link_metadata}}, state}
   end
