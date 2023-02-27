@@ -31,6 +31,7 @@ defmodule Membrane.Element.PadData do
           end_of_stream?: boolean(),
           direction: Pad.direction(),
           flow_control: Pad.flow_control(),
+          opposite_endpoint_flow_control: :push | :pull | :undefined,
           name: Pad.name(),
           ref: Pad.ref(),
           options: %{optional(atom) => any},
@@ -73,6 +74,7 @@ defmodule Membrane.Element.PadData do
                 associated_pads: [],
                 sticky_events: [],
                 stream_format_validation_params: [],
-                other_demand_unit: nil
+                other_demand_unit: nil,
+                opposite_endpoint_flow_control: :undefined
               ]
 end

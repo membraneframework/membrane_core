@@ -373,7 +373,6 @@ defmodule Membrane.Integration.LinkingTest do
     Membrane.Pipeline.terminate(pipeline)
   end
 
-  @tag :dupa
   test "Bin should crash if it doesn't link internally within timeout" do
     defmodule NoInternalLinkBin do
       use Membrane.Bin

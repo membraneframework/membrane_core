@@ -82,7 +82,8 @@ defmodule Membrane.Core.ElementTest do
             initiator: :sibling,
             other_info: %{direction: :input, flow_control: :manual, demand_unit: :buffers},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
-            stream_format_validation_params: []
+            stream_format_validation_params: [],
+            opposite_endpoint_flow_control: :pull
           }
         ]),
         nil,
@@ -112,7 +113,8 @@ defmodule Membrane.Core.ElementTest do
             initiator: :sibling,
             other_info: %{direction: :output, flow_control: :manual},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
-            stream_format_validation_params: []
+            stream_format_validation_params: [],
+            opposite_endpoint_flow_control: :pull
           }
         ]),
         nil,
@@ -227,7 +229,8 @@ defmodule Membrane.Core.ElementTest do
                      flow_control: :manual
                    },
                    link_metadata: %{observability_metadata: %{}},
-                   stream_format_validation_params: []
+                   stream_format_validation_params: [],
+                   opposite_endpoint_flow_control: :pull
                  }
                ]),
                nil,

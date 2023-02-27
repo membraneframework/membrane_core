@@ -13,6 +13,7 @@ defmodule Membrane.Core.Element.PadController do
     CallbackContext,
     DemandController,
     EventController,
+    FlowControlUtils,
     InputQueue,
     State,
     StreamFormatController,
@@ -86,6 +87,8 @@ defmodule Membrane.Core.Element.PadController do
          %{initiator: :parent} = props,
          state
        ) do
+    flow_control = FlowControlUtils.pad_effective_flow_control(endpoint.pad_ref, state)
+
     handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
         Pad.opposite_direction(info.direction),
@@ -97,8 +100,10 @@ defmodule Membrane.Core.Element.PadController do
           link_metadata: %{
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
           },
-          stream_format_validation_params: []
+          stream_format_validation_params: [],
+          opposite_endpoint_flow_control: flow_control
         }
+        # |> IO.inspect(label: "link_props to sibling")
       ])
 
     case handle_link_response do
@@ -115,6 +120,7 @@ defmodule Membrane.Core.Element.PadController do
             other_endpoint,
             info,
             props.stream_format_validation_params,
+            :undefined,
             other_info,
             link_metadata,
             state
@@ -146,11 +152,96 @@ defmodule Membrane.Core.Element.PadController do
          %{initiator: :sibling} = link_props,
          state
        ) do
+    # dupa: check if auto_push?: true and sibling is in pull mode
+    # jak jestes filtrem:
+
+    # Jak przychodzi input pad
+    # if auto_push? do
+    # jezeli przychodzi link w pushu, to czilera utopia
+    # jezeli przychodzi link w pullu, to wyslij wiadomosc zeby zamienil w auto_push. sourcy powinny raisowac na takie cos
+
+    # if not auto_push? do
+    # jezeli przychodzi link w pullu, to nic nie rob
+    # jezeli przychodzi w pushu, a są juz inne w pullu, to nic nie rob i ustaw toilet
+    # jezeli przychodzi w pushu, i jest jedynym linkiem aktualnie, to zamien sie w auto_push i wyslij wiadomosc na output pady
+
+    # Jak przychodzi output pad
+    # if auto_push, to wysylasz wiadomosc ze jestes pushem
+    # jak nie, to nic nie robisz
+
+    # raisowanie powinno odbywac sie w handle_playing, lub podczas linkowania po handle_playing
+    # istnieją filtry w autodemandach, ktore mają flage true, i takie ktore nie
+    # co zrobic zeby dostac flage w true: miec wszystkie pady inputy w pushu
+
+    # powinno byc tak:
+    # wczesniej mi sie mieszalo przez te maszynke xd
+    # teraz robimy wersje konserwatywną: tzn zamieniamy tylko fitry autodemandowe
+    # raisujemy na probe dolaczenia pull sourcea do auto pusha: potem moze doimpementujemy w 2 strone
+    # na poczatku stawiamy rzeczy i one se dzialaja w autodemandach
+    # source pushowy / pullowy wysyla na dzien dobry padem info jaki ma typ pada
+    # filter ktory ma za sobą jakis source pullowy, wysyla info ze jest pullowy
+    # filter ktory ma za sobą wszystkie source pushowe, wysyla info ze jest pushowy
+
+    # na dzien dobry filter w auto dziala na autodemandach
+    # jak zapnie mu sie source, to mu wysyla info jakiego jest typu
+    # jak wszystkie source są pullowe, to nic sie nie zmienia
+    # raisowac mamy, jak source pullowy dopnie sie do auto pusha
+
+    # ogolnie auto element moze byc w 3 stanach:
+    # nie wie jeszcze jaki source jest przed nim -> auto demand A
+    # wie ze ma przed sobą pull source -> auto demand B
+    # wue ze ma przed sobą same pushowe source -> auto push C
+    # narazie sie wywalajmy przy probie przejscia z auto-push w auto-demand (jakiejkolwiek)
+    # mozna przejsc ze stany A do B lub z A do C
+    # pad sourcea jest zawsze w stanie B lub C
+    # jak filter jest w B lub C, to jest output pady same sie takie staja
+    # jezeli masz jakiegos przodka w B, to sam jestes w B
+    # jezeli nie masz nikogo w B a masz kogos w C, to sam jestes w C
+    # jak wchodzisz do B albo C, albo juz jestes ale dodaje ci sie nowy output pad, to wysylasz nim info ze jestes B lub C
+    # jak przechodzisz z A do C to masz w dupie demandy
+    # jak przechodzisz z A do B, to ignorujesz potem info o tym ze ktos dolaczyl a jest w C
+
+    # mozna zrobic pole auto_mode: :push / :pull / :undefined
+
+    # czyli tak:
+    # jezeli wiemy jaki jest mode pada, to wysylamy to w handle_link, w przeciwnym razie jak sie dowiemy
+    # manual/push output pad jest zawsze w pull/push mode
+    # jak mamy auto pada, to dziedziczy po typie elementu, jezeli nie jest on :undefined
+    # jak jest, to jak element wyjdzie z :undefined, to wtedy wysyla poprawną wiadomosc na output pady
+
+    # algo wiadomosci z wlasnym trybem
+
+    # USTALANIE:
+    # - trigerrowane na handle_playing lub na przyjscie trybu pada, gdy jestesmy po playing
+    # - z undefined, gdy jest jakis przodek w pull, to jestem w pull
+    # - z undefined, gdy wszyscy przodkowie sa w push, to jestem w push
+    # - z undefined, gdy nie ma nic, to czekam dalej
+    # - z nie undefined, sprawdzam czy sie zgadza, jak sie cos nie zgadza to sie wywalam (jak bylem w pull, to czilera utopia, jak bylem w push, to nie da ise przejsc juz do pull i raisuje)
+
+    # WYSYLANIE:
+    # - tylko po output padach
+    # - gdy jest ustalone, to w handle_link. Gdy na handle_link jest niestualone, to tylko jak zostanie ustalone
+
+    # ODBIERANIE:
+    # - po input padach
+    # - w handle_link lub w specjalnej wiadomosci
+    # - gdy jestesmy przed handle_playing, to tylko zapisz
+    # - na handle_playing podejmij decyzje
+    # - gdy dstajesz mode po handle_playing, to jesli nie podjales decyzji to ja podejmij, a jesli ja juz kiedys podjales, to zwaliduj czy sie nie wywalic
+
+    # zatem operacje jakie chce miec w nowym module:
+    # dodaj pad effective flow control
+    # handle playing
+    # hanlde pad added (output)
+
     %{
       other_info: other_info,
       link_metadata: link_metadata,
-      stream_format_validation_params: stream_format_validation_params
+      stream_format_validation_params: stream_format_validation_params,
+      opposite_endpoint_flow_control: opposite_endpoint_flow_control
     } = link_props
+
+    # |> IO.inspect(label: "link_props from sibling")
 
     {output_info, input_info, input_endpoint} =
       if info.direction == :output,
@@ -188,11 +279,13 @@ defmodule Membrane.Core.Element.PadController do
         other_endpoint,
         info,
         stream_format_validation_params,
+        opposite_endpoint_flow_control,
         other_info,
         link_metadata,
         state
       )
 
+    state = FlowControlUtils.handle_input_pad_added(endpoint.pad_ref, state)
     state = maybe_handle_pad_added(endpoint.pad_ref, state)
     {{:ok, {endpoint, info, link_metadata}}, state}
   end
@@ -254,6 +347,7 @@ defmodule Membrane.Core.Element.PadController do
          other_endpoint,
          info,
          stream_format_validation_params,
+         opposite_endpoint_flow_control,
          other_info,
          metadata,
          state
@@ -268,6 +362,7 @@ defmodule Membrane.Core.Element.PadController do
           Child.PadController.parse_pad_options!(info.name, endpoint.pad_props.options, state),
         ref: endpoint.pad_ref,
         stream_format_validation_params: stream_format_validation_params,
+        opposite_endpoint_flow_control: opposite_endpoint_flow_control,
         stream_format: nil,
         start_of_stream?: false,
         end_of_stream?: false,

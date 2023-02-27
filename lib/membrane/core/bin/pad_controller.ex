@@ -254,6 +254,7 @@ defmodule Membrane.Core.Bin.PadController do
           child_endpoint,
           other_endpoint,
           params
+          # |> IO.inspect(label: "link_props for child")
         ])
 
       case handle_link_response do

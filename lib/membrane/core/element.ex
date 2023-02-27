@@ -26,6 +26,7 @@ defmodule Membrane.Core.Element do
     BufferController,
     DemandController,
     EventController,
+    FlowControlUtils,
     LifecycleController,
     PadController,
     State,
@@ -212,6 +213,20 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:parent_notification, notification), state) do
     state = Core.Child.LifecycleController.handle_parent_notification(notification, state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(
+         Message.new(:opposite_endpoint_flow_control, [my_pad_ref, flow_control]),
+         state
+       ) do
+    state =
+      FlowControlUtils.handle_opposite_endpoint_flow_control(
+        my_pad_ref,
+        flow_control,
+        state
+      )
+
     {:noreply, state}
   end
 
