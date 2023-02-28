@@ -28,10 +28,10 @@ defmodule Benchmark.Run.BranchedFilter do
   def handle_buffer(_pad, buffer, ctx, state) do
     state = %{state | buffers: state.buffers ++ [buffer]}
     state.workload_simulation.()
-    how_many_buffers_to_output = state.generator.(length(state.buffers))
+    how_many_buffers_to_output = length(state.buffers) |> state.generator.()
 
     if how_many_buffers_to_output > 0 do
-      output_pads = Map.keys(ctx.pads) |> Enum.filter(&match?({Membrane.Pad, :output, _}, &1))
+      output_pads = Map.keys(ctx.pads) |> Enum.filter(&match?(Membrane.Pad.ref(:output, _id), &1))
 
       how_many_buffers_per_pad =
         state.dispatcher.(length(output_pads), how_many_buffers_to_output)

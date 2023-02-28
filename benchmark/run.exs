@@ -202,7 +202,7 @@ defmodule Benchmark.Run do
         if rem(how_many_output_pads, input_pads) != 0,
           do: raise("Wrong branched pipeline specification!")
 
-        {unfinished_branches_list, newly_finished_branches_list} =
+        {unfinished_branches_lists, newly_finished_branches_lists} =
           Enum.chunk_every(current_level.unfinished_branches, input_pads)
           |> Enum.with_index()
           |> Enum.map(fn {group_of_branches, filter_no} ->
@@ -240,8 +240,8 @@ defmodule Benchmark.Run do
           end)
           |> Enum.unzip()
 
-        newly_finished_branches = List.flatten(newly_finished_branches_list)
-        unfinished_branches = List.flatten(unfinished_branches_list)
+        newly_finished_branches = List.flatten(newly_finished_branches_lists)
+        unfinished_branches = List.flatten(unfinished_branches_lists)
 
         %{
           level: current_level.level + 1,

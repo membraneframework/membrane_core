@@ -21,7 +21,7 @@ defmodule Benchmark.Run.LinearFilter do
   def handle_buffer(_pad, buffer, _ctx, state) do
     state.workload_simulation.()
     state = %{state | buffers: state.buffers ++ [buffer]}
-    how_many_buffers_to_output = state.generator.(length(state.buffers))
+    how_many_buffers_to_output = length(state.buffers) |> state.generator.()
 
     if how_many_buffers_to_output > 0 do
       {buffers_to_output, rest_buffers} = Enum.split(state.buffers, how_many_buffers_to_output)

@@ -4,7 +4,7 @@ defmodule Benchmark.Run.Pipeline do
 
   @impl true
   def handle_init(_ctx, options) do
-    {[spec: options[:spec]], %{monitoring_process: options[:monitoring_process], memory: []}}
+    {[spec: options[:spec]], %{monitoring_process: options[:monitoring_process]}}
   end
 
   @impl true
