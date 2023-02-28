@@ -23,12 +23,8 @@ defmodule Benchmark.Run.LinearFilter do
     state = %{state | buffers: state.buffers ++ [buffer]}
     how_many_buffers_to_output = length(state.buffers) |> state.generator.()
 
-    if how_many_buffers_to_output > 0 do
-      {buffers_to_output, rest_buffers} = Enum.split(state.buffers, how_many_buffers_to_output)
-      state = %{state | buffers: rest_buffers}
-      {[buffer: {:output, buffers_to_output}], state}
-    else
-      {[], state}
-    end
+    {buffers_to_output, rest_buffers} = Enum.split(state.buffers, how_many_buffers_to_output)
+    state = %{state | buffers: rest_buffers}
+    {[buffer: {:output, buffers_to_output}], state}
   end
 end

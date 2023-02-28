@@ -206,20 +206,21 @@ defmodule Benchmark.Run do
           Enum.chunk_every(current_level.unfinished_branches, input_pads)
           |> Enum.with_index()
           |> Enum.map(fn {group_of_branches, filter_no} ->
-            [first_branch | rest_of_branches] = group_of_branches
-
-            branch_ending_with_newly_added_element =
-              first_branch
-              |> via_in(Pad.ref(:input, 0))
-              |> child(
-                {:filter, current_level.level, filter_no},
-                %BranchedFilter{
-                  number_of_reductions: reductions,
-                  generator: prepare_generator(params[:max_random]),
-                  dispatcher: prepare_dispatcher()
-                },
-                get_if_exists: true
-              )
+            newly_finished_branches =
+              Enum.with_index(group_of_branches)
+              |> Enum.map(fn {branch, branch_index_in_group} ->
+                branch
+                |> via_in(Pad.ref(:input, branch_index_in_group))
+                |> child(
+                  {:filter, current_level.level, filter_no},
+                  %BranchedFilter{
+                    number_of_reductions: reductions,
+                    generator: prepare_generator(params[:max_random]),
+                    dispatcher: prepare_dispatcher()
+                  },
+                  get_if_exists: true
+                )
+              end)
 
             unfinished_branches =
               Enum.map(0..(output_pads - 1), fn pad_no ->
@@ -227,16 +228,7 @@ defmodule Benchmark.Run do
                 |> via_out(Pad.ref(:output, pad_no))
               end)
 
-            newly_finished_branches =
-              Enum.with_index(rest_of_branches, 1)
-              |> Enum.map(fn {branch, branch_index_in_group} ->
-                branch
-                |> via_in(Pad.ref(:input, branch_index_in_group))
-                |> get_child({:filter, current_level.level, filter_no})
-              end)
-
-            {unfinished_branches,
-             newly_finished_branches ++ [branch_ending_with_newly_added_element]}
+            {unfinished_branches, newly_finished_branches}
           end)
           |> Enum.unzip()
 
