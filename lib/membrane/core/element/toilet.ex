@@ -151,7 +151,7 @@ defmodule Membrane.Core.Element.Toilet do
                 \`"#"`/
                  |`"`|
                .-|   |-.
-          jgs /  '   '  \
+              /  '   '  \
               '---------'
     """)
 
