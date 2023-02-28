@@ -81,6 +81,9 @@ defmodule Membrane.Core.Element.DemandController do
   Also, the `demand_decrease` argument can be passed, decreasing the size of the
   demand on the input pad before proceeding to the rest of the function logic.
   """
+  # dupa: funkcja do wysylania demandow
+  # powinna zostac odpalona o ogarnieciu effective flow control
+  # albo demandy powinny byc obslugiwane po ogarnieciu effective flow control?
   @spec send_auto_demand_if_needed(Pad.ref(), integer, State.t()) :: State.t()
   def send_auto_demand_if_needed(pad_ref, demand_decrease \\ 0, state) do
     data = PadModel.get_data!(state, pad_ref)

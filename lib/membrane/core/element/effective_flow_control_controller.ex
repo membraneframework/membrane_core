@@ -36,16 +36,17 @@ defmodule Membrane.Core.Element.EffectiveFlowControlController do
   def handle_other_effective_flow_control(my_pad_ref, other_effective_flow_control, state) do
     pad_data = PadModel.get_data!(state, my_pad_ref)
 
-    if pad_data.direction != :input do
-      raise "this function should be called only for input pads"
-    end
-
     pad_data = %{pad_data | other_effective_flow_control: other_effective_flow_control}
     state = PadModel.set_data!(state, my_pad_ref, pad_data)
 
     cond do
-      pad_data.flow_control != :auto or other_effective_flow_control == :undefined or
-          state.playback == :stopped ->
+      state.playback == :stopped ->
+        state
+
+      pad_data.direction == :output or pad_data.flow_control != :auto ->
+        state
+
+      other_effective_flow_control == :undefined ->
         state
 
       state.effective_flow_control == :undefined ->
@@ -76,7 +77,7 @@ defmodule Membrane.Core.Element.EffectiveFlowControlController do
 
     if effective_flow_control != :undefined do
       Enum.each(state.pads_data, fn {_pad_ref, pad_data} ->
-        with %{direction: :output, flow_control: :auto} <- pad_data do
+        if pad_data.flow_control == :auto do
           Message.send(pad_data.pid, :other_effective_flow_control, [
             pad_data.other_ref,
             effective_flow_control

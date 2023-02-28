@@ -7,10 +7,9 @@ defmodule Membrane.Core.Element.ToiletTest do
   end
 
   test "if toilet is implemented as :atomics for elements put on the same node", context do
-    toilet = Toilet.new(100, :buffers, context.responsible_process, 1)
+    toilet = Toilet.new(100, :buffers, context.responsible_process, 1, :pull)
 
-    {_module, {_pid, atomic_ref}, _capacity, _responsible_process_pid, _throttling_factor,
-     _unrinsed_buffers} = toilet
+    %Toilet{counter: {_pid, atomic_ref}} = toilet
 
     Toilet.fill(toilet, 10)
     assert :atomics.get(atomic_ref, 1) == 10
@@ -20,10 +19,9 @@ defmodule Membrane.Core.Element.ToiletTest do
 
   test "if the receiving element uses toilet with :atomics and the sending element with a interprocess message, when the toilet is distributed",
        context do
-    toilet = Toilet.new(100, :buffers, context.responsible_process, 1)
+    toilet = Toilet.new(100, :buffers, context.responsible_process, 1, :pull)
 
-    {_module, {counter_pid, atomic_ref}, _capacity, _responsible_process_pid, _throttling_factor,
-     _unrinsed_buffers} = toilet
+    %Toilet{counter: {counter_pid, atomic_ref}} = toilet
 
     Toilet.fill(toilet, 10)
     assert GenServer.call(counter_pid, {:add_get, atomic_ref, 0}) == 10
@@ -34,16 +32,17 @@ defmodule Membrane.Core.Element.ToiletTest do
   end
 
   test "if throttling mechanism works properly", context do
-    toilet = Toilet.new(100, :buffers, context.responsible_process, 10)
+    toilet = Toilet.new(100, :buffers, context.responsible_process, 10, :pull)
+
     {:ok, toilet} = Toilet.fill(toilet, 10)
-    assert {_module, _counter, _capacity, _pid, _throttling_factor, 0} = toilet
+    assert toilet.unrinsed_buffers_size == 0
     {:ok, toilet} = Toilet.fill(toilet, 5)
-    assert {_module, _counter, _capacity, _pid, _throttling_factor, 5} = toilet
+    assert toilet.unrinsed_buffers_size == 5
     {:ok, toilet} = Toilet.fill(toilet, 80)
-    assert {_module, _counter, _capacity, _pid, _throttling_factor, 0} = toilet
+    assert toilet.unrinsed_buffers_size == 0
     {:ok, toilet} = Toilet.fill(toilet, 9)
-    assert {_module, _counter, _capacity, _pid, _throttling_factor, 9} = toilet
+    assert toilet.unrinsed_buffers_size == 9
     {:overflow, toilet} = Toilet.fill(toilet, 11)
-    assert {_module, _counter, _capacity, _pid, _throttling_factor, 0} = toilet
+    assert toilet.unrinsed_buffers_size == 0
   end
 end

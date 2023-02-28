@@ -38,7 +38,8 @@ defmodule Membrane.Core.Element.PadController do
               other_info: PadModel.pad_info() | nil,
               link_metadata: %{toilet: Toilet.t() | nil},
               stream_format_validation_params:
-                StreamFormatController.stream_format_validation_params()
+                StreamFormatController.stream_format_validation_params(),
+              other_effective_flow_control: Pad.effective_flow_control()
             }
 
   @type link_call_reply_props ::
@@ -87,7 +88,7 @@ defmodule Membrane.Core.Element.PadController do
          %{initiator: :parent} = props,
          state
        ) do
-    flow_control =
+    effective_flow_control =
       EffectiveFlowControlController.pad_effective_flow_control(endpoint.pad_ref, state)
 
     handle_link_response =
@@ -102,9 +103,8 @@ defmodule Membrane.Core.Element.PadController do
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
           },
           stream_format_validation_params: [],
-          other_effective_flow_control: flow_control
+          other_effective_flow_control: effective_flow_control
         }
-        # |> IO.inspect(label: "link_props to sibling")
       ])
 
     case handle_link_response do
@@ -340,12 +340,13 @@ defmodule Membrane.Core.Element.PadController do
         demand_pid: pid,
         demand_pad: other_ref,
         log_tag: inspect(ref),
+        # dupa: ogarnij te zmienną ponizej, to jest nietrywialne. ogolnie trzeba patrzec na effective_flow_control, mozna doda
         toilet?: enable_toilet?,
         target_size: props.target_queue_size,
         min_demand_factor: props.min_demand_factor
       })
 
-    %{input_queue: input_queue, demand: 0, toilet: if(enable_toilet?, do: metadata.toilet)}
+    %{input_queue: input_queue, demand: 0, toilet: metadata.toilet}
   end
 
   defp init_pad_mode_data(

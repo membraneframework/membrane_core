@@ -72,8 +72,8 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     for idx <- 0..10, filter_type <- [:filter_a, :filter_b] do
       child = {filter_type, idx}
       child_pid = Testing.Pipeline.get_child_pid!(pipeline, child)
-
       child_state = :sys.get_state(child_pid)
+
       expected = if filter_type == :filter_a, do: :push, else: :pull
       assert child_state.effective_flow_control == expected
     end

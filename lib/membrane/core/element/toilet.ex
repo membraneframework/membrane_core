@@ -5,7 +5,47 @@ defmodule Membrane.Core.Element.Toilet do
   # time and exceeds its capacity, it overflows by logging an error and killing
   # the responsible process (passed on the toilet creation).
 
+  alias Membrane.Pad
+
   require Membrane.Logger
+
+  defmodule Worker do
+    @moduledoc false
+
+    # This is a GenServer created when the counter is about to be accessed from different nodes - it's running on the same node,
+    # where the :atomics variable is put, and processes from different nodes can ask it to modify the counter on their behalf.
+
+    use GenServer
+
+    @impl true
+    def init(parent_pid) do
+      Process.monitor(parent_pid)
+      {:ok, nil, :hibernate}
+    end
+
+    @impl true
+    def handle_call({:add_get, atomic_ref, value}, _from, _state) do
+      result = :atomics.add_get(atomic_ref, 1, value)
+      {:reply, result, nil}
+    end
+
+    @impl true
+    def handle_call({:get, atomic_ref}, _from, _state) do
+      result = :atomics.get(atomic_ref, 1)
+      {:reply, result, nil}
+    end
+
+    @impl true
+    def handle_cast({:sub, atomic_ref, value}, _state) do
+      :atomics.sub(atomic_ref, 1, value)
+      {:noreply, nil}
+    end
+
+    @impl true
+    def handle_info({:DOWN, _ref, :process, _object, _reason}, state) do
+      {:stop, :normal, state}
+    end
+  end
 
   defmodule DistributedCounter do
     @moduledoc false
@@ -14,38 +54,6 @@ defmodule Membrane.Core.Element.Toilet do
     # The counter uses :atomics module under the hood.
     # The module allows to create and modify the value of a counter in the same manner both when the counter is about to be accessed
     # from the same node, and from different nodes.
-
-    defmodule Worker do
-      @moduledoc false
-
-      # This is a GenServer created when the counter is about to be accessed from different nodes - it's running on the same node,
-      # where the :atomics variable is put, and processes from different nodes can ask it to modify the counter on their behalf.
-
-      use GenServer
-
-      @impl true
-      def init(parent_pid) do
-        Process.monitor(parent_pid)
-        {:ok, nil, :hibernate}
-      end
-
-      @impl true
-      def handle_call({:add_get, atomic_ref, value}, _from, _state) do
-        result = :atomics.add_get(atomic_ref, 1, value)
-        {:reply, result, nil}
-      end
-
-      @impl true
-      def handle_cast({:sub, atomic_ref, value}, _state) do
-        :atomics.sub(atomic_ref, 1, value)
-        {:noreply, nil}
-      end
-
-      @impl true
-      def handle_info({:DOWN, _ref, :process, _object, _reason}, state) do
-        {:stop, :normal, state}
-      end
-    end
 
     @type t :: {pid(), :atomics.atomics_ref()}
 
@@ -75,57 +83,142 @@ defmodule Membrane.Core.Element.Toilet do
     end
   end
 
-  @opaque t ::
-            {__MODULE__, DistributedCounter.t(), pos_integer, Process.dest(), pos_integer(),
-             non_neg_integer()}
+  defmodule DistributedEffectiveFlowControl do
+    @moduledoc false
+
+    @type t :: {pid(), :atomics.atomics_ref()}
+
+    @spec new(Pad.effective_flow_control()) :: t
+    def new(initial_value) do
+      atomic_ref = :atomics.new(1, [])
+
+      initial_value = effective_flow_control_to_int(initial_value)
+      :atomics.put(atomic_ref, 1, initial_value)
+
+      {:ok, pid} = GenServer.start(Worker, self())
+      {pid, atomic_ref}
+    end
+
+    @spec get(t) :: Pad.effective_flow_control()
+    def get({pid, atomic_ref}) when node(pid) == node(self()) do
+      :atomics.get(atomic_ref, 1)
+      |> int_to_effective_flow_control()
+    end
+
+    def get({pid, atomic_ref}) do
+      GenServer.call(pid, {:get, atomic_ref})
+      |> int_to_effective_flow_control()
+    end
+
+    # contains implementation only for caller being on this same node, as :atomics,
+    # because toilet is created on the receiver side of link and only receiver should
+    # call this function
+    @spec put(t, Pad.effective_flow_control()) :: :ok
+    def put({_pid, atomic_ref}, value) do
+      value = effective_flow_control_to_int(value)
+      :atomics.put(atomic_ref, 1, value)
+    end
+
+    defp int_to_effective_flow_control(0), do: :undefined
+    defp int_to_effective_flow_control(1), do: :push
+    defp int_to_effective_flow_control(2), do: :pull
+
+    defp effective_flow_control_to_int(:undefined), do: 0
+    defp effective_flow_control_to_int(:push), do: 1
+    defp effective_flow_control_to_int(:pull), do: 2
+  end
+
+  @type t :: %__MODULE__{
+          counter: DistributedCounter.t(),
+          capacity: pos_integer(),
+          responsible_process: Process.dest(),
+          throttling_factor: pos_integer(),
+          unrinsed_buffers_size: non_neg_integer(),
+          receiver_effective_flow_control: DistributedEffectiveFlowControl.t()
+        }
+
+  @enforce_keys [
+    :counter,
+    :capacity,
+    :responsible_process,
+    :throttling_factor,
+    :receiver_effective_flow_control
+  ]
+
+  defstruct @enforce_keys ++ [unrinsed_buffers_size: 0]
 
   @default_capacity_factor 200
 
   @spec new(
-          pos_integer() | nil,
-          Membrane.Buffer.Metric.unit(),
-          Process.dest(),
-          pos_integer()
+          capacity :: pos_integer() | nil,
+          demand_unit :: Membrane.Buffer.Metric.unit(),
+          responsible_process :: Process.dest(),
+          throttling_factor :: pos_integer(),
+          receiver_effective_flow_control :: Pad.effective_flow_control()
         ) :: t
-  def new(capacity, demand_unit, responsible_process, throttling_factor) do
+  def new(
+        capacity,
+        demand_unit,
+        responsible_process,
+        throttling_factor,
+        receiver_effective_flow_control \\ :undefined
+      ) do
     default_capacity =
       Membrane.Buffer.Metric.from_unit(demand_unit).buffer_size_approximation() *
         @default_capacity_factor
 
-    toilet_ref = DistributedCounter.new()
     capacity = capacity || default_capacity
-    {__MODULE__, toilet_ref, capacity, responsible_process, throttling_factor, 0}
+
+    receiver_effective_flow_control =
+      receiver_effective_flow_control
+      |> DistributedEffectiveFlowControl.new()
+
+    %__MODULE__{
+      counter: DistributedCounter.new(),
+      capacity: capacity,
+      responsible_process: responsible_process,
+      throttling_factor: throttling_factor,
+      receiver_effective_flow_control: receiver_effective_flow_control
+    }
+  end
+
+  @spec set_receiver_effective_flow_control(t, Pad.effective_flow_control()) :: :ok
+  def set_receiver_effective_flow_control(%__MODULE__{} = toilet, value) do
+    DistributedEffectiveFlowControl.put(
+      toilet.receiver_effective_flow_control,
+      value
+    )
   end
 
   @spec fill(t, non_neg_integer) :: {:ok | :overflow, t}
-  def fill(
-        {__MODULE__, counter, capacity, responsible_process, throttling_factor,
-         unrinsed_buffers_size},
-        amount
-      ) do
-    if unrinsed_buffers_size + amount < throttling_factor do
-      {:ok,
-       {__MODULE__, counter, capacity, responsible_process, throttling_factor,
-        amount + unrinsed_buffers_size}}
-    else
-      size = DistributedCounter.add_get(counter, amount + unrinsed_buffers_size)
+  def fill(%__MODULE__{} = toilet, amount) do
+    new_unrinsed_buffers_size = toilet.unrinsed_buffers_size + amount
 
-      if size > capacity do
-        overflow(size, capacity, responsible_process)
-        {:overflow, {__MODULE__, counter, capacity, responsible_process, throttling_factor, 0}}
-      else
-        {:ok, {__MODULE__, counter, capacity, responsible_process, throttling_factor, 0}}
+    if new_unrinsed_buffers_size < toilet.throttling_factor do
+      {:ok, %{toilet | unrinsed_buffers_size: new_unrinsed_buffers_size}}
+    else
+      size = DistributedCounter.add_get(toilet.counter, new_unrinsed_buffers_size)
+
+      toilet.receiver_effective_flow_control
+      |> DistributedEffectiveFlowControl.get()
+      |> case do
+        :pull when size > toilet.capacity ->
+          overflow(size, toilet.capacity, toilet.responsible_process)
+          {:overflow, %{toilet | unrinsed_buffers_size: 0}}
+
+        :undefined when size > 10 * toilet.capacity ->
+          overflow(size, 10 * toilet.capacity, toilet.responsible_process)
+          {:overflow, %{toilet | unrinsed_buffers_size: 0}}
+
+        _ok ->
+          {:ok, %{toilet | unrinsed_buffers_size: 0}}
       end
     end
   end
 
   @spec drain(t, non_neg_integer) :: :ok
-  def drain(
-        {__MODULE__, counter, _capacity, _responsible_process, _throttling_factor,
-         _unrinsed_buff_size},
-        amount
-      ) do
-    DistributedCounter.sub(counter, amount)
+  def drain(%__MODULE__{} = toilet, amount) do
+    DistributedCounter.sub(toilet.counter, amount)
   end
 
   defp overflow(size, capacity, responsible_process) do
