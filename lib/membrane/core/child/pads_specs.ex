@@ -10,6 +10,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
   require Membrane.Logger
   require Membrane.Pad
 
+  @use_push_flow_control Application.compile_env(:membrane_core, :use_push_flow_control, false)
+
   @doc """
   Returns documentation string common for both input and output pads
   """
@@ -196,7 +198,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       config = if component == :bin, do: Map.delete(config, :demand_mode), else: config
 
       config =
-        if config.mode == :pull do
+        if @use_push_flow_control and config.mode == :pull do
           Map.delete(%{config | mode: :push}, :demand_mode)
         else
           config
