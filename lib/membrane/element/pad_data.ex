@@ -75,7 +75,6 @@ defmodule Membrane.Element.PadData do
                 toilet: nil,
                 associated_pads: [],
                 sticky_events: [],
-                stream_format_validation_params: [],
-                meas: %{}
+                stream_format_validation_params: []
               ]
 end
