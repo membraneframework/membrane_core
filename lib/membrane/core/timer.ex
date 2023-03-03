@@ -33,7 +33,7 @@ defmodule Membrane.Core.Timer do
   end
 
   def stop(%__MODULE__{timer_ref: timer_ref}) do
-    Process.cancel_timer(timer_ref)
+    _time_left = Process.cancel_timer(timer_ref)
     :ok
   end
 
