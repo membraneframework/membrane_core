@@ -39,24 +39,17 @@ defmodule Membrane.Core.Element.EffectiveFlowControlController do
     pad_data = %{pad_data | other_effective_flow_control: other_effective_flow_control}
     state = PadModel.set_data!(state, my_pad_ref, pad_data)
 
-    cond do
-      state.playback == :stopped ->
-        state
+    if state.effective_flow_control == :push and pad_data.direction == :input and
+         other_effective_flow_control == :pull do
+      raise "dupa dupa 123"
+    end
 
-      pad_data.direction == :output or pad_data.flow_control != :auto ->
-        state
-
-      other_effective_flow_control == :undefined ->
-        state
-
-      state.effective_flow_control == :undefined ->
-        resolve_effective_flow_control(state)
-
-      state.effective_flow_control == :push and other_effective_flow_control == :pull ->
-        raise "dupa dupa 123"
-
-      state.effective_flow_control == :pull or other_effective_flow_control == :push ->
-        state
+    with :playing <- state.playback,
+         %{direction: :input, flow_control: :auto} <- pad_data,
+         mode when mode in [:push, :pull] <- other_effective_flow_control do
+      resolve_effective_flow_control(state)
+    else
+      _other -> state
     end
   end
 
@@ -76,14 +69,12 @@ defmodule Membrane.Core.Element.EffectiveFlowControlController do
       end
 
     if effective_flow_control != :undefined do
-      Enum.each(state.pads_data, fn {_pad_ref, pad_data} ->
-        if pad_data.flow_control == :auto do
-          Message.send(pad_data.pid, :other_effective_flow_control, [
-            pad_data.other_ref,
-            effective_flow_control
-          ])
-        end
-      end)
+      for {_ref, %{flow_control: :auto} = pad_data} <- state.pads_data do
+        Message.send(pad_data.pid, :other_effective_flow_control, [
+          pad_data.other_ref,
+          effective_flow_control
+        ])
+      end
     end
 
     %{state | effective_flow_control: effective_flow_control}

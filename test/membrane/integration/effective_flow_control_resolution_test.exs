@@ -25,7 +25,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     def_output_pad :pull_output, accepted_format: _any, flow_control: :manual
 
     @impl true
-    def handle_demand(_, _, _, _ctx, state), do: {[], state}
+    def handle_demand(_pad, _size, _unit, _ctx, state), do: {[], state}
   end
 
   @tag :dupa
