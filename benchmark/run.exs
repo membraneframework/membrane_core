@@ -19,7 +19,7 @@
 #
 # `:with_branches` test case is parametrized with the following parameters:
 # `struct` - a list of tuples of form `{how_many_input_pads, how_many_output_pads}`, where
-# `how_many_input_pads` and `how_manyoutput_pads` describe how many input
+# `how_many_input_pads` and `how_many_output_pads` describe how many input
 # pads and output pads, respectively, should filter at given level have.
 # I.e. [{1, 3}, {1, 2}, {6, 1}] describes the following pipeline:
 #
