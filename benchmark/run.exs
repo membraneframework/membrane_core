@@ -77,13 +77,6 @@ defmodule Benchmark.Run do
     ],
     linear: [
       reductions: 1_000,
-      max_random: 1,
-      number_of_filters: 10,
-      number_of_buffers: 50,
-      buffer_size: 100_000
-    ],
-    linear: [
-      reductions: 1_000,
       max_random: 5,
       number_of_filters: 10,
       number_of_buffers: 50_000,
