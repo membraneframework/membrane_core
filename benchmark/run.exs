@@ -18,8 +18,9 @@
 # * `buffer_size` - size of each buffer, in bytes
 #
 # `:with_branches` test case is parametrized with the following parameters:
-# `struct` - a list of tuples of form `{input_pads, output_pads}`, where `input_pads` and `output_pads` describe
-# how many input pads and output pads, respectively, should filter at given level have.
+# `struct` - a list of tuples of form `{how_many_input_pads, how_many_output_pads}`, where
+# `how_many_input_pads` and `how_manyoutput_pads` describe how many input
+# pads and output pads, respectively, should filter at given level have.
 # I.e. [{1, 3}, {1, 2}, {6, 1}] describes the following pipeline:
 #
 #                                                |---Filter_2_0 ---|
@@ -85,20 +86,20 @@ defmodule Benchmark.Run do
       reductions: 1_000,
       max_random: 5,
       number_of_filters: 10,
-      number_of_buffers: 50000,
+      number_of_buffers: 50_000,
       buffer_size: 1
     ],
     with_branches: [
       struct: [{1, 3}, {3, 2}, {2, 1}],
       reductions: 100,
-      number_of_buffers: 50000,
+      number_of_buffers: 50_000,
       buffer_size: 1,
       max_random: 1
     ],
     with_branches: [
       struct: [{1, 2}, {1, 2}, {2, 1}, {2, 1}],
       reductions: 100,
-      number_of_buffers: 50000,
+      number_of_buffers: 50_000,
       buffer_size: 1,
       max_random: 10
     ]
@@ -139,25 +140,26 @@ defmodule Benchmark.Run do
     end
   end
 
+  defp source_buffers_generator(state, _size, params) do
+    if state < params[:number_of_buffers] do
+      {[
+         buffer:
+           {:output, %Membrane.Buffer{payload: :crypto.strong_rand_bytes(params[:buffer_size])}},
+         redemand: :output
+       ], state + 1}
+    else
+      {[end_of_stream: :output], state}
+    end
+  end
+
   defp prepare_pipeline(:linear, params) do
+    source = %Membrane.Testing.Source{
+      output: {1, &source_buffers_generator(&1, &2, params)}
+    }
+
     Enum.reduce(
       1..params[:number_of_filters],
-      child(%Membrane.Testing.Source{
-        output:
-          {1,
-           fn state, _size ->
-             if state < params[:number_of_buffers] do
-               {[
-                  buffer:
-                    {:output,
-                     %Membrane.Buffer{payload: :crypto.strong_rand_bytes(params[:buffer_size])}},
-                  redemand: :output
-                ], state + 1}
-             else
-               {[end_of_stream: :output], state}
-             end
-           end}
-      }),
+      child(:source, source),
       fn n, acc ->
         child(acc, String.to_atom("filter_#{n}"), %LinearFilter{
           number_of_reductions: params[:reductions],
@@ -170,23 +172,9 @@ defmodule Benchmark.Run do
 
   defp prepare_pipeline(:with_branches, params) do
     struct = params[:struct]
-    reductions = params[:reductions]
 
     source = %Membrane.Testing.Source{
-      output:
-        {1,
-         fn state, _size ->
-           if state < params[:number_of_buffers] do
-             {[
-                buffer:
-                  {:output,
-                   %Membrane.Buffer{payload: :crypto.strong_rand_bytes(params[:buffer_size])}},
-                redemand: :output
-              ], state + 1}
-           else
-             {[end_of_stream: :output], state}
-           end
-         end}
+      output: {1, &source_buffers_generator(&1, &2, params)}
     }
 
     initial_level = %{
@@ -196,52 +184,13 @@ defmodule Benchmark.Run do
     }
 
     final_level =
-      Enum.reduce(struct, initial_level, fn {input_pads, output_pads}, current_level ->
-        how_many_output_pads = length(current_level.unfinished_branches)
-
-        if rem(how_many_output_pads, input_pads) != 0,
+      Enum.reduce(struct, initial_level, fn {how_many_input_pads, how_many_output_pads},
+                                            current_level ->
+        if rem(length(current_level.unfinished_branches), how_many_input_pads) != 0,
           do: raise("Wrong branched pipeline specification!")
 
-        {unfinished_branches_lists, newly_finished_branches_lists} =
-          Enum.chunk_every(current_level.unfinished_branches, input_pads)
-          |> Enum.with_index()
-          |> Enum.map(fn {group_of_branches, filter_no} ->
-            [first_branch | rest_of_branches] = group_of_branches
-
-            branch_ending_with_newly_added_element =
-              first_branch
-              |> via_in(Pad.ref(:input, 0))
-              |> child(
-                {:filter, current_level.level, filter_no},
-                %BranchedFilter{
-                  number_of_reductions: reductions,
-                  generator: prepare_generator(params[:max_random]),
-                  dispatcher: prepare_dispatcher()
-                },
-                get_if_exists: true
-              )
-
-            unfinished_branches =
-              Enum.map(0..(output_pads - 1), fn pad_no ->
-                get_child({:filter, current_level.level, filter_no})
-                |> via_out(Pad.ref(:output, pad_no))
-              end)
-
-            newly_finished_branches =
-              Enum.with_index(rest_of_branches, 1)
-              |> Enum.map(fn {branch, branch_index_in_group} ->
-                branch
-                |> via_in(Pad.ref(:input, branch_index_in_group))
-                |> get_child({:filter, current_level.level, filter_no})
-              end)
-
-            {unfinished_branches,
-             newly_finished_branches ++ [branch_ending_with_newly_added_element]}
-          end)
-          |> Enum.unzip()
-
-        newly_finished_branches = List.flatten(newly_finished_branches_lists)
-        unfinished_branches = List.flatten(unfinished_branches_lists)
+        {newly_finished_branches, unfinished_branches} =
+          add_filters_and_pads(current_level, how_many_input_pads, how_many_output_pads, params)
 
         %{
           level: current_level.level + 1,
@@ -257,6 +206,46 @@ defmodule Benchmark.Run do
       Enum.at(final_level.unfinished_branches, 0) |> child(:sink, Membrane.Testing.Sink)
 
     [branch_with_sink] ++ final_level.finished_branches
+  end
+
+  defp add_filters_and_pads(level_description, how_many_input_pads, how_many_output_pads, params) do
+    {newly_finished_branches_lists, unfinished_branches_lists} =
+      Enum.chunk_every(level_description.unfinished_branches, how_many_input_pads)
+      |> Enum.with_index()
+      |> Enum.map(fn {group_of_branches, filter_no} ->
+        [first_branch | rest_of_branches] = group_of_branches
+
+        branch_ending_with_newly_added_element =
+          first_branch
+          |> via_in(Pad.ref(:input, 0))
+          |> child(
+            {:filter, level_description.level, filter_no},
+            %BranchedFilter{
+              number_of_reductions: params[:reductions],
+              generator: prepare_generator(params[:max_random]),
+              dispatcher: prepare_dispatcher()
+            }
+          )
+
+        newly_finished_branches =
+          Enum.with_index(rest_of_branches, 1)
+          |> Enum.map(fn {branch, branch_index_in_group} ->
+            branch
+            |> via_in(Pad.ref(:input, branch_index_in_group))
+            |> get_child({:filter, level_description.level, filter_no})
+          end)
+
+        unfinished_branches =
+          Enum.map(0..(how_many_output_pads - 1), fn pad_no ->
+            get_child({:filter, level_description.level, filter_no})
+            |> via_out(Pad.ref(:output, pad_no))
+          end)
+
+        {[branch_ending_with_newly_added_element | newly_finished_branches], unfinished_branches}
+      end)
+      |> Enum.unzip()
+
+    {List.flatten(newly_finished_branches_lists), List.flatten(unfinished_branches_lists)}
   end
 
   defp perform_test({test_type, params}) when test_type in [:linear, :with_branches] do

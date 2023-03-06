@@ -10,7 +10,7 @@ defmodule Benchmark.Run.Reductions do
     task =
       Task.async(fn ->
         Enum.each(1..n, fn _x -> test_function() end)
-        :erlang.process_info(self())[:reductions]
+        Process.info(self(), :reductions) |> elem(1)
       end)
 
     Task.await(task)

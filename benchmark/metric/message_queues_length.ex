@@ -54,7 +54,7 @@ defmodule Benchmark.Metric.MessageQueuesLength do
 
   defp meassure_queues_length(children_pids) do
     Enum.map(children_pids, fn pid ->
-      case :erlang.process_info(pid, :message_queue_len) do
+      case Process.info(self(), :message_queue_len) do
         {:message_queue_len, message_queue_len} -> message_queue_len
         _other -> 0
       end
