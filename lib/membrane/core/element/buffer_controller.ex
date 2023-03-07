@@ -14,10 +14,12 @@ defmodule Membrane.Core.Element.BufferController do
     CallbackContext,
     DemandController,
     DemandHandler,
+    EffectiveFlowControlController,
     EventController,
     InputQueue,
     PlaybackQueue,
-    State
+    State,
+    Toilet
   }
 
   alias Membrane.Core.Telemetry
@@ -58,10 +60,20 @@ defmodule Membrane.Core.Element.BufferController do
           State.t()
   defp do_handle_buffer(pad_ref, %{flow_control: :auto} = data, buffers, state) do
     %{demand: demand, demand_unit: demand_unit} = data
-
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
-    state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
-    state = DemandController.send_auto_demand_if_needed(pad_ref, state)
+
+    state =
+      EffectiveFlowControlController.pad_effective_flow_control(pad_ref, state)
+      |> case do
+        :push ->
+          if data.toilet, do: Toilet.drain(data.toilet, buf_size)
+          state
+
+        :pull ->
+          state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
+          DemandController.send_auto_demand_if_needed(pad_ref, state)
+      end
+
     exec_buffer_callback(pad_ref, buffers, state)
   end
 
@@ -77,7 +89,12 @@ defmodule Membrane.Core.Element.BufferController do
     end
   end
 
-  defp do_handle_buffer(pad_ref, _data, buffers, state) do
+  defp do_handle_buffer(pad_ref, %{flow_control: :push} = data, buffers, state) do
+    if data.toilet do
+      buf_size = Buffer.Metric.from_unit(data.demand_unit).buffers_size(buffers)
+      Toilet.drain(data.toilet, buf_size)
+    end
+
     exec_buffer_callback(pad_ref, buffers, state)
   end
 

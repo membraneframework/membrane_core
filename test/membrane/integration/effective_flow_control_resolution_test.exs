@@ -28,8 +28,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     def handle_demand(_pad, _size, _unit, _ctx, state), do: {[], state}
   end
 
-  @tag :dupa
-  test "effective_flow_control is resolved in simple scenario " do
+  test "effective_flow_control is properly resolved in simple scenario" do
     spec_beggining = [
       child({:filter_a, 0}, DynamicFilter),
       child({:filter_b, 0}, DynamicFilter)

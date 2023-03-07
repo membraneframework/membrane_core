@@ -77,15 +77,9 @@ defmodule Membrane.Core.Element.DemandController do
   The demand should be sent when the current demand on the input pad is at most
   half of the demand request size and if there's positive demand on each of
   associated output pads.
-
-  Also, the `demand_decrease` argument can be passed, decreasing the size of the
-  demand on the input pad before proceeding to the rest of the function logic.
   """
-  # dupa: funkcja do wysylania demandow
-  # powinna zostac odpalona o ogarnieciu effective flow control
-  # albo demandy powinny byc obslugiwane po ogarnieciu effective flow control?
-  @spec send_auto_demand_if_needed(Pad.ref(), integer, State.t()) :: State.t()
-  def send_auto_demand_if_needed(pad_ref, demand_decrease \\ 0, state) do
+  @spec send_auto_demand_if_needed(Pad.ref(), State.t()) :: State.t()
+  def send_auto_demand_if_needed(pad_ref, %{effective_flow_control: :pull} = state) do
     data = PadModel.get_data!(state, pad_ref)
 
     %{
@@ -95,13 +89,13 @@ defmodule Membrane.Core.Element.DemandController do
       auto_demand_size: demand_request_size
     } = data
 
-    demand = demand - demand_decrease
-
     demand =
       if demand <= div(demand_request_size, 2) and auto_demands_positive?(associated_pads, state) do
-        if toilet do
+        if data.other_effective_flow_control in [:push, :undefined] do
           Toilet.drain(toilet, demand_request_size - demand)
-        else
+        end
+
+        if data.other_effective_flow_control in [:pull, :undefined] do
           Membrane.Logger.debug_verbose(
             "Sending auto demand of size #{demand_request_size - demand} on pad #{inspect(pad_ref)}"
           )
@@ -120,6 +114,10 @@ defmodule Membrane.Core.Element.DemandController do
       end
 
     PadModel.set_data!(state, pad_ref, :demand, demand)
+  end
+
+  def send_auto_demand_if_needed(_pad_ref, state) do
+    state
   end
 
   defp auto_demands_positive?(associated_pads, state) do

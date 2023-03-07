@@ -340,7 +340,6 @@ defmodule Membrane.Core.Element.PadController do
         demand_pid: pid,
         demand_pad: other_ref,
         log_tag: inspect(ref),
-        # dupa: ogarnij te zmienną ponizej, to jest nietrywialne. ogolnie trzeba patrzec na effective_flow_control, mozna doda
         toilet?: enable_toilet?,
         target_size: props.target_queue_size,
         min_demand_factor: props.min_demand_factor

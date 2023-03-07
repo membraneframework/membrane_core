@@ -38,6 +38,10 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
               pid: self(),
               flow_control: :push
             )
+        },
+        pads_info: %{
+          input: %{flow_control: :manual},
+          input_push: %{flow_control: :push}
         }
       )
 
@@ -96,6 +100,10 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             end_of_stream?: false,
             flow_control: :push
           }
+        },
+        pads_info: %{
+          output: %{flow_control: :push},
+          input: %{flow_control: :push}
         }
       )
 
@@ -480,6 +488,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             flow_control: :manual,
             demand: 0
           }
+        },
+        pads_info: %{
+          output: %{flow_control: :manual}
         },
         playback: :playing
       )

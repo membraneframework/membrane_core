@@ -1,7 +1,10 @@
 defmodule Membrane.Core.Element.EffectiveFlowControlController do
   @moduledoc false
 
-  alias Membrane.Core.Element.State
+  alias Membrane.Core.Element.{
+    State,
+    DemandController
+  }
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
@@ -41,7 +44,8 @@ defmodule Membrane.Core.Element.EffectiveFlowControlController do
 
     if state.effective_flow_control == :push and pad_data.direction == :input and
          other_effective_flow_control == :pull do
-      raise "dupa dupa 123"
+      # TODO: implement this
+      raise "not implemented yet"
     end
 
     with :playing <- state.playback,
@@ -54,7 +58,7 @@ defmodule Membrane.Core.Element.EffectiveFlowControlController do
   end
 
   @spec resolve_effective_flow_control(State.t()) :: State.t()
-  def resolve_effective_flow_control(state) do
+  def resolve_effective_flow_control(%State{effective_flow_control: :undefined} = state) do
     input_auto_pads =
       Map.values(state.pads_data)
       |> Enum.filter(&(&1.direction == :input && &1.flow_control == :auto))
@@ -68,6 +72,8 @@ defmodule Membrane.Core.Element.EffectiveFlowControlController do
         %{} -> :undefined
       end
 
+    state = %{state | effective_flow_control: effective_flow_control}
+
     if effective_flow_control != :undefined do
       for {_ref, %{flow_control: :auto} = pad_data} <- state.pads_data do
         Message.send(pad_data.pid, :other_effective_flow_control, [
@@ -77,6 +83,16 @@ defmodule Membrane.Core.Element.EffectiveFlowControlController do
       end
     end
 
-    %{state | effective_flow_control: effective_flow_control}
+    with %{effective_flow_control: :pull} <- state do
+      Enum.reduce(state.pads_data, state, fn
+        {pad_ref, %{flow_control: :auto, direction: :input}}, state ->
+          DemandController.send_auto_demand_if_needed(pad_ref, state)
+
+        _pad_entry, state ->
+          state
+      end)
+    end
   end
+
+  def resolve_effective_flow_control(state), do: state
 end

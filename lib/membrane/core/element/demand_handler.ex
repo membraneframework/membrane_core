@@ -9,6 +9,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
+    EffectiveFlowControlController,
     EventController,
     InputQueue,
     State,
@@ -103,27 +104,22 @@ defmodule Membrane.Core.Element.DemandHandler do
           [Buffer.t()],
           State.t()
         ) :: State.t()
-  def handle_outgoing_buffers(pad_ref, %{flow_control: flow_control} = data, buffers, state)
-      when flow_control in [:auto, :manual] do
+  def handle_outgoing_buffers(pad_ref, data, buffers, state) do
+    EffectiveFlowControlController.pad_effective_flow_control(pad_ref, state)
+    |> do_handle_outgoing_buffers(pad_ref, data, buffers, state)
+  end
+
+  defp do_handle_outgoing_buffers(:pull, pad_ref, data, buffers, state) do
     %{other_demand_unit: other_demand_unit, demand: demand} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
     PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
   end
 
-  def handle_outgoing_buffers(
-        pad_ref,
-        %{
-          flow_control: :push,
-          toilet: toilet
-        } = data,
-        buffers,
-        state
-      )
-      when toilet != nil do
+  defp do_handle_outgoing_buffers(:push, pad_ref, data, buffers, state) when data.toilet != nil do
     %{other_demand_unit: other_demand_unit} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
 
-    case Toilet.fill(toilet, buf_size) do
+    case Toilet.fill(data.toilet, buf_size) do
       {:ok, toilet} ->
         PadModel.set_data!(state, pad_ref, :toilet, toilet)
 
@@ -134,8 +130,12 @@ defmodule Membrane.Core.Element.DemandHandler do
     end
   end
 
-  def handle_outgoing_buffers(_pad_ref, _pad_data, _buffers, state) do
+  defp do_handle_outgoing_buffers(:push, _ref, _data, _buffers, state) do
     state
+  end
+
+  defp do_handle_outgoing_buffers(:undefined, _ref, _data, _buffers, _state) do
+    raise "not implemented yet"
   end
 
   defp update_demand(pad_ref, size, state) when is_integer(size) do
@@ -206,6 +206,7 @@ defmodule Membrane.Core.Element.DemandHandler do
        ) do
     state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - outbound_metric_buf_size))
 
+    # czyli wychodzi na to, ze toilet w manualnym pushu jest drainowany, w momencie zjadania buforow.
     if toilet = PadModel.get_data!(state, pad_ref, :toilet) do
       Toilet.drain(toilet, outbound_metric_buf_size)
     end
