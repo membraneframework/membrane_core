@@ -2,8 +2,8 @@ defmodule Membrane.Core.Element.EffectiveFlowControlController do
   @moduledoc false
 
   alias Membrane.Core.Element.{
-    State,
-    DemandController
+    DemandController,
+    State
   }
 
   require Membrane.Core.Child.PadModel, as: PadModel
