@@ -20,14 +20,16 @@ defmodule Membrane.Core.Message do
     end
   end
 
-  @spec send(pid, type, args, opts) :: t
+  @spec send(pid, type, args, opts) :: :ok
   def send(pid, type, args \\ [], opts \\ []) do
     Kernel.send(pid, message(type: type, args: args, opts: opts))
+    :ok
   end
 
-  @spec self(type, args, opts) :: t
+  @spec self(type, args, opts) :: :ok
   def self(type, args \\ [], opts \\ []) do
     __MODULE__.send(self(), type, args, opts)
+    :ok
   end
 
   @spec call(GenServer.server(), type, args, opts, timeout()) ::

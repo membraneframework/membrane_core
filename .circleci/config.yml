@@ -145,6 +145,26 @@ jobs:
       - run: mix dialyzer
       - save_plt_cache
 
+  test_performance: 
+    machine: true
+    resource_class: membraneframework/core-performance-test
+    working_directory: ~/app
+
+    steps:
+      - attach_workspace:
+          at: .
+      - run: cp -r benchmark/ ~/benchmark_backup/
+      - run: cp mix.exs ~/benchmark_backup/
+      - run: docker run -e MIX_ENV=benchmark -v ./:/root/app -v ~/results:/root/results -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/run.exs /root/results/results.res
+      - run: git checkout master
+      - run: cp  ~/benchmark_backup/mix.exs ~/app
+      - run: docker run -e MIX_ENV=benchmark -v ./:/root/app -v ~/results:/root/results -v ~/benchmark_backup/benchmark:/root/app/benchmark -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/run.exs /root/results/results_ref.res
+      - run: docker run -e MIX_ENV=benchmark -v ./:/root/app -v ~/results:/root/results -v ~/benchmark_backup/benchmark:/root/app/benchmark -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/compare.exs /root/results/results.res /root/results/results_ref.res
+      - run: 
+          command: rm ~/results/*
+          when: always
+
+
 workflows:
   version: 2
   build_and_test:
@@ -159,3 +179,9 @@ workflows:
       - lint:
           requires:
             - get_deps
+      - request_performance_test:
+          type: approval
+      - test_performance:
+          requires:
+            - get_deps
+            - request_performance_test

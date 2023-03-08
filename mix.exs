@@ -33,12 +33,13 @@ defmodule Membrane.Mixfile do
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(:benchmark), do: ["lib", "benchmark"]
   defp elixirc_paths(_env), do: ["lib"]
 
   defp dialyzer() do
     opts = [
       plt_local_path: "priv/plts",
-      flags: [:error_handling]
+      flags: [:error_handling, :unmatched_returns]
     ]
 
     if System.get_env("CI") == "true" do

@@ -160,7 +160,7 @@ defmodule Membrane.Core.Telemetry do
     else
       # A hack to suppress the 'unused variable' warnings
       quote do
-        fn ->
+        _fn = fn ->
           _unused = unquote(event_name)
           _unused = unquote(measurement)
           _unused = unquote(metadata)
