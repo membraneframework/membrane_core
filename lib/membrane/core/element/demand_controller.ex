@@ -91,7 +91,7 @@ defmodule Membrane.Core.Element.DemandController do
 
     demand =
       if demand <= div(demand_request_size, 2) and auto_demands_positive?(associated_pads, state) do
-        if data.other_effective_flow_control in [:push, :undefined] do
+        if toilet != nil and data.other_effective_flow_control in [:push, :undefined] do
           Toilet.drain(toilet, demand_request_size - demand)
         end
 
