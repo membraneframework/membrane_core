@@ -38,7 +38,7 @@ defmodule Membrane.Mixfile do
   defp dialyzer() do
     opts = [
       plt_local_path: "priv/plts",
-      flags: [:error_handling]
+      flags: [:error_handling, :unmatched_returns]
     ]
 
     if System.get_env("CI") == "true" do

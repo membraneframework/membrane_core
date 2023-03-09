@@ -74,7 +74,8 @@ defmodule Membrane.Core.Bin.PadController do
     unless PadModel.get_data!(state, pad_ref, :endpoint) do
       # If there's no endpoint associated to the pad, no internal link to the pad
       # has been requested in the bin yet
-      Process.send_after(self(), Message.new(:linking_timeout, pad_ref), 5000)
+      _ref = Process.send_after(self(), Message.new(:linking_timeout, pad_ref), 5000)
+      :ok
     end
 
     state

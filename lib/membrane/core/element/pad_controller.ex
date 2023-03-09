@@ -181,7 +181,9 @@ defmodule Membrane.Core.Element.PadController do
             input_endpoint.pad_props.throttling_factor
           )
 
-    Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
+    # The sibiling was an initiator, we don't need to use the pid of a task spawned for observability
+    _metadata = Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
+
     link_metadata = Map.put(link_metadata, :toilet, toilet)
 
     :ok =
