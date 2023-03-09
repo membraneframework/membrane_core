@@ -134,7 +134,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     state
   end
 
-  defp do_handle_outgoing_buffers(:undefined, _ref, _data, _buffers, _state) do
+  defp do_handle_outgoing_buffers(:not_resolved, _ref, _data, _buffers, _state) do
     raise "not implemented yet"
   end
 
@@ -206,7 +206,6 @@ defmodule Membrane.Core.Element.DemandHandler do
        ) do
     state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - outbound_metric_buf_size))
 
-    # czyli wychodzi na to, ze toilet w manualnym pushu jest drainowany, w momencie zjadania buforow.
     if toilet = PadModel.get_data!(state, pad_ref, :toilet) do
       Toilet.drain(toilet, outbound_metric_buf_size)
     end

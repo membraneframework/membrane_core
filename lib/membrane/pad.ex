@@ -66,7 +66,7 @@ defmodule Membrane.Pad do
   """
   @type flow_control :: :auto | :manual | :push
 
-  @type effective_flow_control :: :push | :pull | :undefined
+  @type effective_flow_control :: :push | :pull | :not_resolved
 
   @typedoc """
   Values used when defining pad availability:

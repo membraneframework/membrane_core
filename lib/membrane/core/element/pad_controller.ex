@@ -121,7 +121,7 @@ defmodule Membrane.Core.Element.PadController do
             other_endpoint,
             info,
             props.stream_format_validation_params,
-            :undefined,
+            :not_resolved,
             other_info,
             link_metadata,
             state

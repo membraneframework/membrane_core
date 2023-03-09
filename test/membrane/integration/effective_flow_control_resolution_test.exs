@@ -56,7 +56,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
       child_pid = Testing.Pipeline.get_child_pid!(pipeline, child)
       child_state = :sys.get_state(child_pid)
 
-      assert child_state.effective_flow_control == :undefined
+      assert child_state.effective_flow_control == :not_resolved
     end
 
     Testing.Pipeline.execute_actions(pipeline,

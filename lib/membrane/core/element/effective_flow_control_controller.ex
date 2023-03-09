@@ -58,7 +58,7 @@ defmodule Membrane.Core.Element.EffectiveFlowControlController do
   end
 
   @spec resolve_effective_flow_control(State.t()) :: State.t()
-  def resolve_effective_flow_control(%State{effective_flow_control: :undefined} = state) do
+  def resolve_effective_flow_control(%State{effective_flow_control: :not_resolved} = state) do
     input_auto_pads =
       Map.values(state.pads_data)
       |> Enum.filter(&(&1.direction == :input && &1.flow_control == :auto))
@@ -69,12 +69,12 @@ defmodule Membrane.Core.Element.EffectiveFlowControlController do
       |> case do
         %{pull: _pads} -> :pull
         %{push: _pads} -> :push
-        %{} -> :undefined
+        %{} -> :not_resolved
       end
 
     state = %{state | effective_flow_control: effective_flow_control}
 
-    if effective_flow_control != :undefined do
+    if effective_flow_control != :not_resolved do
       for {_ref, %{flow_control: :auto} = pad_data} <- state.pads_data do
         Message.send(pad_data.pid, :other_effective_flow_control, [
           pad_data.other_ref,

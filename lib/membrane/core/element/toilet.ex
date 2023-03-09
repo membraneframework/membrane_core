@@ -119,11 +119,11 @@ defmodule Membrane.Core.Element.Toilet do
       :atomics.put(atomic_ref, 1, value)
     end
 
-    defp int_to_effective_flow_control(0), do: :undefined
+    defp int_to_effective_flow_control(0), do: :not_resolved
     defp int_to_effective_flow_control(1), do: :push
     defp int_to_effective_flow_control(2), do: :pull
 
-    defp effective_flow_control_to_int(:undefined), do: 0
+    defp effective_flow_control_to_int(:not_resolved), do: 0
     defp effective_flow_control_to_int(:push), do: 1
     defp effective_flow_control_to_int(:pull), do: 2
   end
@@ -161,7 +161,7 @@ defmodule Membrane.Core.Element.Toilet do
         demand_unit,
         responsible_process,
         throttling_factor,
-        receiver_effective_flow_control \\ :undefined
+        receiver_effective_flow_control \\ :not_resolved
       ) do
     default_capacity =
       Membrane.Buffer.Metric.from_unit(demand_unit).buffer_size_approximation() *
@@ -206,7 +206,7 @@ defmodule Membrane.Core.Element.Toilet do
           overflow(size, toilet.capacity, toilet.responsible_process)
           {:overflow, %{toilet | unrinsed_buffers_size: 0}}
 
-        :undefined when size > 10 * toilet.capacity ->
+        :not_resolved when size > 10 * toilet.capacity ->
           overflow(size, 10 * toilet.capacity, toilet.responsible_process)
           {:overflow, %{toilet | unrinsed_buffers_size: 0}}
 

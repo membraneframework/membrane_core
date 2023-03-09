@@ -75,6 +75,6 @@ defmodule Membrane.Element.PadData do
                 sticky_events: [],
                 stream_format_validation_params: [],
                 other_demand_unit: nil,
-                other_effective_flow_control: :undefined
+                other_effective_flow_control: :not_resolved
               ]
 end
