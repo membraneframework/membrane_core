@@ -38,7 +38,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
   @spec handle_other_effective_flow_control(
           Pad.ref(),
-          EffectiveFlowController.effective_flow_control(),
+          effective_flow_control(),
           State.t()
         ) ::
           State.t()
@@ -83,14 +83,15 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
     state = %{state | effective_flow_control: effective_flow_control}
 
-    if effective_flow_control != :not_resolved do
-      for {_ref, %{flow_control: :auto} = pad_data} <- state.pads_data do
-        Message.send(pad_data.pid, :other_effective_flow_control_resolved, [
-          pad_data.other_ref,
-          effective_flow_control
-        ])
+    _ignored =
+      if effective_flow_control != :not_resolved do
+        for {_ref, %{flow_control: :auto} = pad_data} <- state.pads_data do
+          Message.send(pad_data.pid, :other_effective_flow_control_resolved, [
+            pad_data.other_ref,
+            effective_flow_control
+          ])
+        end
       end
-    end
 
     with %{effective_flow_control: :pull} <- state do
       Enum.reduce(state.pads_data, state, fn
