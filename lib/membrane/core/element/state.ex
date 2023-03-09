@@ -10,6 +10,7 @@ defmodule Membrane.Core.Element.State do
   alias Membrane.{Clock, Element, Pad, Sync}
   alias Membrane.Core.Timer
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
+  alias Membrane.Core.Element.EffectiveFlowController
 
   require Membrane.Pad
 
@@ -37,7 +38,7 @@ defmodule Membrane.Core.Element.State do
           subprocess_supervisor: pid,
           terminating?: boolean(),
           setup_incomplete?: boolean(),
-          effective_flow_control: Pad.effective_flow_control()
+          effective_flow_control: EffectiveFlowController.effective_flow_control()
         }
 
   defstruct [

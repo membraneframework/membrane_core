@@ -6,6 +6,7 @@ defmodule Membrane.Core.Child.PadModel do
   use Bunch
 
   alias Membrane.Core.Child
+  alias Membrane.Core.Element.EffectiveFlowController
   alias Membrane.{Pad, UnknownPadError}
 
   @type bin_pad_data :: %Membrane.Bin.PadData{
@@ -29,7 +30,7 @@ defmodule Membrane.Core.Child.PadModel do
           end_of_stream?: boolean(),
           direction: Pad.direction(),
           flow_control: Pad.flow_control(),
-          other_effective_flow_control: Pad.effective_flow_control(),
+          other_effective_flow_control: EffectiveFlowController.effective_flow_control() | nil,
           name: Pad.name(),
           ref: Pad.ref(),
           demand_unit: Membrane.Buffer.Metric.unit() | nil,

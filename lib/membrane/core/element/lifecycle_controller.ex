@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   alias Membrane.Core.Element.{
     ActionHandler,
     CallbackContext,
-    EffectiveFlowControlController,
+    EffectiveFlowController,
     PlaybackQueue,
     State
   }
@@ -79,7 +79,7 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     state =
       %State{state | playback: :playing}
-      |> EffectiveFlowControlController.resolve_effective_flow_control()
+      |> EffectiveFlowController.resolve_effective_flow_control()
 
     state =
       CallbackHandler.exec_and_handle_callback(

@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.PadController do
     ActionHandler,
     CallbackContext,
     DemandController,
-    EffectiveFlowControlController,
+    EffectiveFlowController,
     EventController,
     InputQueue,
     State,
@@ -39,7 +39,7 @@ defmodule Membrane.Core.Element.PadController do
               link_metadata: %{toilet: Toilet.t() | nil},
               stream_format_validation_params:
                 StreamFormatController.stream_format_validation_params(),
-              other_effective_flow_control: Pad.effective_flow_control()
+              other_effective_flow_control: EffectiveFlowController.effective_flow_control()
             }
 
   @type link_call_reply_props ::
@@ -89,7 +89,7 @@ defmodule Membrane.Core.Element.PadController do
          state
        ) do
     effective_flow_control =
-      EffectiveFlowControlController.pad_effective_flow_control(endpoint.pad_ref, state)
+      EffectiveFlowController.pad_effective_flow_control(endpoint.pad_ref, state)
 
     handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
@@ -202,7 +202,7 @@ defmodule Membrane.Core.Element.PadController do
         state
       )
 
-    state = EffectiveFlowControlController.handle_input_pad_added(endpoint.pad_ref, state)
+    state = EffectiveFlowController.handle_input_pad_added(endpoint.pad_ref, state)
     state = maybe_handle_pad_added(endpoint.pad_ref, state)
     {{:ok, {endpoint, info, link_metadata}}, state}
   end

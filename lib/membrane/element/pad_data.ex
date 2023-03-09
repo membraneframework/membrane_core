@@ -31,7 +31,7 @@ defmodule Membrane.Element.PadData do
           end_of_stream?: boolean(),
           direction: Pad.direction(),
           flow_control: Pad.flow_control(),
-          other_effective_flow_control: Pad.effective_flow_control(),
+          other_effective_flow_control: private_field(),
           name: Pad.name(),
           ref: Pad.ref(),
           options: %{optional(atom) => any},

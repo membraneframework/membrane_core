@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
-    EffectiveFlowControlController,
+    EffectiveFlowController,
     EventController,
     InputQueue,
     State,
@@ -105,7 +105,7 @@ defmodule Membrane.Core.Element.DemandHandler do
           State.t()
         ) :: State.t()
   def handle_outgoing_buffers(pad_ref, data, buffers, state) do
-    EffectiveFlowControlController.pad_effective_flow_control(pad_ref, state)
+    EffectiveFlowController.pad_effective_flow_control(pad_ref, state)
     |> do_handle_outgoing_buffers(pad_ref, data, buffers, state)
   end
 

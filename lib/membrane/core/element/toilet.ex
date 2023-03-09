@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.Toilet do
   # time and exceeds its capacity, it overflows by logging an error and killing
   # the responsible process (passed on the toilet creation).
 
-  alias Membrane.Pad
+  alias Membrane.Core.Element.EffectiveFlowController
 
   require Membrane.Logger
 
@@ -88,7 +88,7 @@ defmodule Membrane.Core.Element.Toilet do
 
     @type t :: {pid(), :atomics.atomics_ref()}
 
-    @spec new(Pad.effective_flow_control()) :: t
+    @spec new(EffectiveFlowController.effective_flow_control()) :: t
     def new(initial_value) do
       atomic_ref = :atomics.new(1, [])
 
@@ -99,7 +99,7 @@ defmodule Membrane.Core.Element.Toilet do
       {pid, atomic_ref}
     end
 
-    @spec get(t) :: Pad.effective_flow_control()
+    @spec get(t) :: EffectiveFlowController.effective_flow_control()
     def get({pid, atomic_ref}) when node(pid) == node(self()) do
       :atomics.get(atomic_ref, 1)
       |> int_to_effective_flow_control()
@@ -113,7 +113,7 @@ defmodule Membrane.Core.Element.Toilet do
     # contains implementation only for caller being on this same node, as :atomics,
     # because toilet is created on the receiver side of link and only receiver should
     # call this function
-    @spec put(t, Pad.effective_flow_control()) :: :ok
+    @spec put(t, EffectiveFlowController.effective_flow_control()) :: :ok
     def put({_pid, atomic_ref}, value) do
       value = effective_flow_control_to_int(value)
       :atomics.put(atomic_ref, 1, value)
@@ -154,7 +154,7 @@ defmodule Membrane.Core.Element.Toilet do
           demand_unit :: Membrane.Buffer.Metric.unit(),
           responsible_process :: Process.dest(),
           throttling_factor :: pos_integer(),
-          receiver_effective_flow_control :: Pad.effective_flow_control()
+          receiver_effective_flow_control :: EffectiveFlowController.effective_flow_control()
         ) :: t
   def new(
         capacity,
@@ -182,7 +182,8 @@ defmodule Membrane.Core.Element.Toilet do
     }
   end
 
-  @spec set_receiver_effective_flow_control(t, Pad.effective_flow_control()) :: :ok
+  @spec set_receiver_effective_flow_control(t, EffectiveFlowController.effective_flow_control()) ::
+          :ok
   def set_receiver_effective_flow_control(%__MODULE__{} = toilet, value) do
     DistributedEffectiveFlowControl.put(
       toilet.receiver_effective_flow_control,

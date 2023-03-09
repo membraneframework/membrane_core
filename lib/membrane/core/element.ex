@@ -25,7 +25,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
-    EffectiveFlowControlController,
+    EffectiveFlowController,
     EventController,
     LifecycleController,
     PadController,
@@ -217,11 +217,11 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(
-         Message.new(:other_effective_flow_control, [my_pad_ref, effective_flow_control]),
+         Message.new(:other_effective_flow_control_resolved, [my_pad_ref, effective_flow_control]),
          state
        ) do
     state =
-      EffectiveFlowControlController.handle_other_effective_flow_control(
+      EffectiveFlowController.handle_other_effective_flow_control(
         my_pad_ref,
         effective_flow_control,
         state

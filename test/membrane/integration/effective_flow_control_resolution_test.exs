@@ -52,11 +52,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
       child = {filter_type, idx}
 
       assert_pipeline_notified(pipeline, child, :playing)
-
-      child_pid = Testing.Pipeline.get_child_pid!(pipeline, child)
-      child_state = :sys.get_state(child_pid)
-
-      assert child_state.effective_flow_control == :not_resolved
+      assert_child_effective_flow_control(pipeline, child, :not_resolved)
     end
 
     Testing.Pipeline.execute_actions(pipeline,
@@ -70,11 +66,17 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
 
     for idx <- 0..10, filter_type <- [:filter_a, :filter_b] do
       child = {filter_type, idx}
-      child_pid = Testing.Pipeline.get_child_pid!(pipeline, child)
-      child_state = :sys.get_state(child_pid)
-
       expected = if filter_type == :filter_a, do: :push, else: :pull
-      assert child_state.effective_flow_control == expected
+
+      assert_child_effective_flow_control(pipeline, child, expected)
     end
+  end
+
+  defp assert_child_effective_flow_control(pipeline, child_name, expected) do
+    child_state =
+      Testing.Pipeline.get_child_pid!(pipeline, child_name)
+      |> :sys.get_state()
+
+    assert child_state.effective_flow_control == expected
   end
 end
