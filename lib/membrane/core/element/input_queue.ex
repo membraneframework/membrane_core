@@ -310,7 +310,7 @@ defmodule Membrane.Core.Element.InputQueue do
     Sending demand of size #{inspect(to_demand)} to output #{inspect(linked_output_ref)}
     """
     |> mk_log(input_queue)
-    |> Membrane.Logger.debug()
+    |> Membrane.Logger.debug_verbose()
 
     Message.send(demand_pid, :demand, to_demand, for_pad: linked_output_ref)
     %__MODULE__{input_queue | demand: demand - to_demand}

@@ -12,12 +12,9 @@ defmodule Membrane.Core.Element.PlaybackQueue do
 
   @spec eval(State.t()) :: State.t()
   def eval(%State{playback_queue: playback_queue} = state) do
-    require Membrane.Logger
-
     state =
       playback_queue
-      |> Enum.reverse()
-      |> Enum.reduce(state, fn function, state -> function.(state) end)
+      |> List.foldr(state, fn function, state -> function.(state) end)
 
     %State{state | playback_queue: []}
   end
