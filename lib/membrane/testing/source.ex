@@ -40,12 +40,15 @@ defmodule Membrane.Testing.Source do
   def_output_pad :output, flow_control: :manual, accepted_format: _any
 
   def_options output: [
-                spec: {initial_state :: any(), generator} | Enum.t(),
+                spec: Enum.t() | {initial_state :: any(), generator},
                 default: {0, &__MODULE__.default_buf_gen/2},
                 description: """
-                If `output` is an enumerable with `t:Membrane.Payload.t/0` then
+                If `output` is an enumerable with elements being `t:Membrane.Buffer.t/0`,
+                then a sequence of these buffers will be sent through the
+                `:output` pad, followed by `t:Membrane.Element.Action.end_of_stream/0`.
+                Otherwise, if `output` is an enumerable with `t:Membrane.Payload.t/0` then
                 buffer containing those payloads will be sent through the
-                `:output` pad and followed by `t:Membrane.Element.Action.end_of_stream/0`.
+                `:output` pad, followed by `t:Membrane.Element.Action.end_of_stream/0`.
 
                 If `output` is a `{initial_state, function}` tuple then the
                 the function will be invoked each time `handle_demand` is called.
@@ -74,8 +77,9 @@ defmodule Membrane.Testing.Source do
       {initial_state, generator} when is_function(generator) ->
         {[], opts |> Map.merge(%{generator_state: initial_state, output: generator})}
 
-      _enumerable_output ->
-        {[], opts}
+      enumerable_output ->
+        all_buffers_in_output = Enum.all?(enumerable_output, &match?(%Membrane.Buffer{}, &1))
+        {[], opts |> Map.merge(%{all_buffers_in_output?: all_buffers_in_output})}
     end
   end
 
@@ -124,15 +128,21 @@ defmodule Membrane.Testing.Source do
   end
 
   defp get_actions(%{output: output} = state, size) do
-    {payloads, output} = Enum.split(output, size)
-    buffers = Enum.map(payloads, &%Buffer{payload: &1})
+    {to_output_now, rest} = Enum.split(output, size)
+
+    buffers =
+      if state.all_buffers_in_output? do
+        to_output_now
+      else
+        Enum.map(to_output_now, &%Buffer{payload: &1})
+      end
 
     actions =
-      case output do
+      case rest do
         [] -> [buffer: {:output, buffers}, end_of_stream: :output]
         _non_empty -> [buffer: {:output, buffers}]
       end
 
-    {actions, %{state | output: output}}
+    {actions, %{state | output: rest}}
   end
 end

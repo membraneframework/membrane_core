@@ -1,7 +1,12 @@
 defmodule Membrane.Testing.SourceTest do
   use ExUnit.Case
 
+  import Membrane.ChildrenSpec
+  import Membrane.Testing.Assertions
+
   alias Membrane.Buffer
+  alias Membrane.Testing.Pipeline
+  alias Membrane.Testing.Sink
   alias Membrane.Testing.Source
 
   test "Source initializes buffer generator and its state properly" do
@@ -22,7 +27,10 @@ defmodule Membrane.Testing.SourceTest do
       demand_size = 3
 
       assert {actions, state} =
-               Source.handle_demand(:output, demand_size, :buffers, nil, %{output: payloads})
+               Source.handle_demand(:output, demand_size, :buffers, nil, %{
+                 output: payloads,
+                 all_buffers_in_output?: false
+               })
 
       assert [{:buffer, {:output, buffers}}] = actions
 
@@ -39,7 +47,10 @@ defmodule Membrane.Testing.SourceTest do
       payloads = [payload]
 
       assert {actions, _state} =
-               Source.handle_demand(:output, 2, :buffers, nil, %{output: payloads})
+               Source.handle_demand(:output, 2, :buffers, nil, %{
+                 output: payloads,
+                 all_buffers_in_output?: false
+               })
 
       assert [
                {:buffer, {:output, [buffer]}},
@@ -66,5 +77,25 @@ defmodule Membrane.Testing.SourceTest do
            ] = actions
 
     assert %Buffer{payload: 1} == buffer
+  end
+
+  test "Source wraps the elements of `Enum.t()` into `Membrane.Buffer.t()` if any of these elements is not a `Membrane.Buffer.t()`" do
+    pipeline = Pipeline.start_supervised!()
+    output = [%Buffer{payload: 1}, 2, 3]
+    spec = child(:source, %Source{output: output}) |> child(:sink, Sink)
+    Pipeline.execute_actions(pipeline, spec: spec)
+
+    result_buffers = Enum.map(output, &%Buffer{payload: &1})
+    Enum.each(result_buffers, &assert_sink_buffer(pipeline, :sink, ^&1))
+  end
+
+  test "Source doesn't wrap the elements of `Enum.t()` into `Membrane.Buffer.t()` if all of these elements are `Membrane.Buffer.t()`" do
+    pipeline = Pipeline.start_supervised!()
+    output = [%Buffer{payload: 1}, %Buffer{payload: 2}, %Buffer{payload: 3}]
+    spec = child(:source, %Source{output: output}) |> child(:sink, Sink)
+    Pipeline.execute_actions(pipeline, spec: spec)
+
+    result_buffers = output
+    Enum.each(result_buffers, &assert_sink_buffer(pipeline, :sink, ^&1))
   end
 end
