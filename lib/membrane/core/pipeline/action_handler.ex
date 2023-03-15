@@ -95,6 +95,8 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:terminate, :normal}, _cb, _params, state) do
+    state = %{state | terminating?: true}
+
     case LifecycleController.handle_terminate(state) do
       {:continue, state} -> state
       {:stop, _state} -> exit(:normal)
