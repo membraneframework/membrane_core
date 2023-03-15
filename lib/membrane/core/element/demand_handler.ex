@@ -9,7 +9,6 @@ defmodule Membrane.Core.Element.DemandHandler do
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
-    EffectiveFlowController,
     EventController,
     InputQueue,
     State,
@@ -104,22 +103,22 @@ defmodule Membrane.Core.Element.DemandHandler do
           [Buffer.t()],
           State.t()
         ) :: State.t()
-  def handle_outgoing_buffers(pad_ref, data, buffers, state) do
-    EffectiveFlowController.pad_effective_flow_control(pad_ref, state)
-    |> do_handle_outgoing_buffers(pad_ref, data, buffers, state)
-  end
-
-  defp do_handle_outgoing_buffers(:pull, pad_ref, data, buffers, state) do
+  def handle_outgoing_buffers(pad_ref, %{flow_control: flow_control} = data, buffers, state)
+      when flow_control in [:auto, :manual] do
     %{other_demand_unit: other_demand_unit, demand: demand} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-    PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
+    state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
+    fill_toilet_if_exists(pad_ref, data.toilet, buf_size, state)
   end
 
-  defp do_handle_outgoing_buffers(:push, pad_ref, data, buffers, state) when data.toilet != nil do
+  def handle_outgoing_buffers(pad_ref, %{flow_control: :push} = data, buffers, state) do
     %{other_demand_unit: other_demand_unit} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
+    fill_toilet_if_exists(pad_ref, data.toilet, buf_size, state)
+  end
 
-    case Toilet.fill(data.toilet, buf_size) do
+  defp fill_toilet_if_exists(pad_ref, toilet, buf_size, state) when toilet != nil do
+    case Toilet.fill(toilet, buf_size) do
       {:ok, toilet} ->
         PadModel.set_data!(state, pad_ref, :toilet, toilet)
 
@@ -130,13 +129,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     end
   end
 
-  defp do_handle_outgoing_buffers(:push, _ref, _data, _buffers, state) do
-    state
-  end
-
-  defp do_handle_outgoing_buffers(:not_resolved, _ref, _data, _buffers, _state) do
-    raise "not implemented yet"
-  end
+  defp fill_toilet_if_exists(_pad_ref, nil, _buf_size, state), do: state
 
   defp update_demand(pad_ref, size, state) when is_integer(size) do
     PadModel.set_data!(state, pad_ref, :demand, size)

@@ -121,7 +121,7 @@ defmodule Membrane.Core.Element.PadController do
             other_endpoint,
             info,
             props.stream_format_validation_params,
-            :not_resolved,
+            :push,
             other_info,
             link_metadata,
             state
@@ -171,15 +171,18 @@ defmodule Membrane.Core.Element.PadController do
       Map.put(link_metadata, :input_demand_unit, input_demand_unit)
       |> Map.put(:output_demand_unit, output_demand_unit)
 
+    my_effective_flow_control =
+      EffectiveFlowController.pad_effective_flow_control(endpoint.pad_ref, state)
+
     toilet =
-      if input_demand_unit != nil,
-        do:
-          Toilet.new(
-            input_endpoint.pad_props.toilet_capacity,
-            input_demand_unit,
-            self(),
-            input_endpoint.pad_props.throttling_factor
-          )
+      Toilet.new(
+        input_endpoint.pad_props.toilet_capacity,
+        input_demand_unit || :buffers,
+        self(),
+        input_endpoint.pad_props.throttling_factor,
+        other_effective_flow_control,
+        my_effective_flow_control
+      )
 
     # The sibiling was an initiator, we don't need to use the pid of a task spawned for observability
     _metadata = Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
@@ -223,7 +226,14 @@ defmodule Membrane.Core.Element.PadController do
       state = generate_eos_if_needed(pad_ref, state)
       state = maybe_handle_pad_removed(pad_ref, state)
       state = remove_pad_associations(pad_ref, state)
-      PadModel.delete_data!(state, pad_ref)
+      {pad_data, state} = PadModel.pop_data!(state, pad_ref)
+
+      with %{direction: :input, flow_control: :auto, other_effective_flow_control: :pull} <-
+             pad_data do
+        EffectiveFlowController.resolve_effective_flow_control(state)
+      else
+        _pad_data -> state
+      end
     else
       {:ok, %{availability: :always}} when state.terminating? ->
         state
@@ -285,7 +295,8 @@ defmodule Membrane.Core.Element.PadController do
         stream_format: nil,
         start_of_stream?: false,
         end_of_stream?: false,
-        associated_pads: []
+        associated_pads: [],
+        toilet: metadata.toilet
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, metadata, state))
@@ -328,7 +339,7 @@ defmodule Membrane.Core.Element.PadController do
          %{direction: :input, flow_control: :manual} = data,
          props,
          other_info,
-         metadata,
+         _metadata,
          %State{}
        ) do
     %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: this_demand_unit} = data
@@ -347,7 +358,7 @@ defmodule Membrane.Core.Element.PadController do
         min_demand_factor: props.min_demand_factor
       })
 
-    %{input_queue: input_queue, demand: 0, toilet: metadata.toilet}
+    %{input_queue: input_queue, demand: 0}
   end
 
   defp init_pad_mode_data(
@@ -363,8 +374,8 @@ defmodule Membrane.Core.Element.PadController do
   defp init_pad_mode_data(
          %{flow_control: :auto, direction: direction},
          props,
-         other_info,
-         metadata,
+         _other_info,
+         _metadata,
          %State{} = state
        ) do
     associated_pads =
@@ -373,12 +384,12 @@ defmodule Membrane.Core.Element.PadController do
       |> Enum.filter(&(&1.direction != direction and &1.flow_control == :auto))
       |> Enum.map(& &1.ref)
 
-    toilet =
-      if direction == :input and other_info.flow_control == :push do
-        metadata.toilet
-      else
-        nil
-      end
+    # toilet =
+    #   if direction == :input and other_info.flow_control == :push do
+    #     metadata.toilet
+    #   else
+    #     nil
+    #   end
 
     auto_demand_size =
       if direction == :input do
@@ -392,21 +403,21 @@ defmodule Membrane.Core.Element.PadController do
     %{
       demand: 0,
       associated_pads: associated_pads,
-      auto_demand_size: auto_demand_size,
-      toilet: toilet
+      auto_demand_size: auto_demand_size
+      # toilet: toilet
     }
   end
 
-  defp init_pad_mode_data(
-         %{flow_control: :push, direction: :output},
-         _props,
-         %{flow_control: other_flow_control},
-         metadata,
-         _state
-       )
-       when other_flow_control in [:auto, :manual] do
-    %{toilet: metadata.toilet}
-  end
+  # defp init_pad_mode_data(
+  #        %{flow_control: :push, direction: :output},
+  #        _props,
+  #        %{flow_control: other_flow_control},
+  #        metadata,
+  #        _state
+  #      )
+  #      when other_flow_control in [:auto, :manual] do
+  #   %{toilet: metadata.toilet}
+  # end
 
   defp init_pad_mode_data(_data, _props, _other_info, _metadata, _state), do: %{}
 

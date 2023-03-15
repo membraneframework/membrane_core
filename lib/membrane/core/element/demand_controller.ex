@@ -20,10 +20,8 @@ defmodule Membrane.Core.Element.DemandController do
   def handle_demand(pad_ref, size, state) do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
-      %{direction: :output, flow_control: flow_control} = data
-
-      if flow_control == :push,
-        do: raise("Pad with :push control mode cannot handle demand.")
+      if data.direction == :input,
+        do: raise("Input pad cannot handle demand.")
 
       do_handle_demand(pad_ref, size, data, state)
     else
@@ -71,6 +69,10 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
+  defp do_handle_demand(_pad_ref, _size, %{flow_control: :push} = _data, state) do
+    state
+  end
+
   @doc """
   Sends auto demand to an input pad if it should be sent.
 
@@ -79,10 +81,11 @@ defmodule Membrane.Core.Element.DemandController do
   associated output pads.
   """
   @spec send_auto_demand_if_needed(Pad.ref(), State.t()) :: State.t()
-  def send_auto_demand_if_needed(pad_ref, %{effective_flow_control: :pull} = state) do
+  def send_auto_demand_if_needed(pad_ref, state) do
     data = PadModel.get_data!(state, pad_ref)
 
     %{
+      flow_control: :auto,
       demand: demand,
       toilet: toilet,
       associated_pads: associated_pads,
@@ -90,19 +93,17 @@ defmodule Membrane.Core.Element.DemandController do
     } = data
 
     demand =
-      if demand <= div(demand_request_size, 2) and auto_demands_positive?(associated_pads, state) do
-        if toilet != nil and data.other_effective_flow_control in [:push, :not_resolved] do
-          Toilet.drain(toilet, demand_request_size - demand)
-        end
+      if demand <= div(demand_request_size, 2) and
+           (state.effective_flow_control == :push or
+              auto_demands_positive?(associated_pads, state)) do
+        Membrane.Logger.debug_verbose(
+          "Sending auto demand of size #{demand_request_size - demand} on pad #{inspect(pad_ref)}"
+        )
 
-        if data.other_effective_flow_control in [:pull, :not_resolved] do
-          Membrane.Logger.debug_verbose(
-            "Sending auto demand of size #{demand_request_size - demand} on pad #{inspect(pad_ref)}"
-          )
+        %{pid: pid, other_ref: other_ref} = data
+        Message.send(pid, :demand, demand_request_size - demand, for_pad: other_ref)
 
-          %{pid: pid, other_ref: other_ref} = data
-          Message.send(pid, :demand, demand_request_size - demand, for_pad: other_ref)
-        end
+        if toilet, do: Toilet.drain(toilet, demand_request_size - demand)
 
         demand_request_size
       else
@@ -114,10 +115,6 @@ defmodule Membrane.Core.Element.DemandController do
       end
 
     PadModel.set_data!(state, pad_ref, :demand, demand)
-  end
-
-  def send_auto_demand_if_needed(_pad_ref, state) do
-    state
   end
 
   defp auto_demands_positive?(associated_pads, state) do

@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.ToiletTest do
   end
 
   test "if toilet is implemented as :atomics for elements put on the same node", context do
-    toilet = Toilet.new(100, :buffers, context.responsible_process, 1, :pull)
+    toilet = Toilet.new(100, :buffers, context.responsible_process, 1, :push, :pull)
 
     %Toilet{counter: {_pid, atomic_ref}} = toilet
 
@@ -19,7 +19,7 @@ defmodule Membrane.Core.Element.ToiletTest do
 
   test "if the receiving element uses toilet with :atomics and the sending element with a interprocess message, when the toilet is distributed",
        context do
-    toilet = Toilet.new(100, :buffers, context.responsible_process, 1, :pull)
+    toilet = Toilet.new(100, :buffers, context.responsible_process, 1, :push, :pull)
 
     %Toilet{counter: {counter_pid, atomic_ref}} = toilet
 
@@ -32,7 +32,7 @@ defmodule Membrane.Core.Element.ToiletTest do
   end
 
   test "if throttling mechanism works properly", context do
-    toilet = Toilet.new(100, :buffers, context.responsible_process, 10, :pull)
+    toilet = Toilet.new(100, :buffers, context.responsible_process, 10, :push, :pull)
 
     {:ok, toilet} = Toilet.fill(toilet, 10)
     assert toilet.unrinsed_buffers_size == 0

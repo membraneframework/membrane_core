@@ -14,7 +14,6 @@ defmodule Membrane.Core.Element.BufferController do
     CallbackContext,
     DemandController,
     DemandHandler,
-    EffectiveFlowController,
     EventController,
     InputQueue,
     PlaybackQueue,
@@ -62,18 +61,8 @@ defmodule Membrane.Core.Element.BufferController do
     %{demand: demand, demand_unit: demand_unit} = data
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
 
-    state =
-      EffectiveFlowController.pad_effective_flow_control(pad_ref, state)
-      |> case do
-        :push ->
-          if data.toilet, do: Toilet.drain(data.toilet, buf_size)
-          state
-
-        :pull ->
-          state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
-          DemandController.send_auto_demand_if_needed(pad_ref, state)
-      end
-
+    state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
+    state = DemandController.send_auto_demand_if_needed(pad_ref, state)
     exec_buffer_callback(pad_ref, buffers, state)
   end
 

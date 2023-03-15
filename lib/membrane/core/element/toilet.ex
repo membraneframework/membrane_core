@@ -119,13 +119,11 @@ defmodule Membrane.Core.Element.Toilet do
       :atomics.put(atomic_ref, 1, value)
     end
 
-    defp int_to_effective_flow_control(0), do: :not_resolved
-    defp int_to_effective_flow_control(1), do: :push
-    defp int_to_effective_flow_control(2), do: :pull
+    defp int_to_effective_flow_control(0), do: :push
+    defp int_to_effective_flow_control(1), do: :pull
 
-    defp effective_flow_control_to_int(:not_resolved), do: 0
-    defp effective_flow_control_to_int(:push), do: 1
-    defp effective_flow_control_to_int(:pull), do: 2
+    defp effective_flow_control_to_int(:push), do: 0
+    defp effective_flow_control_to_int(:pull), do: 1
   end
 
   @type t :: %__MODULE__{
@@ -134,7 +132,8 @@ defmodule Membrane.Core.Element.Toilet do
           responsible_process: Process.dest(),
           throttling_factor: pos_integer(),
           unrinsed_buffers_size: non_neg_integer(),
-          receiver_effective_flow_control: DistributedEffectiveFlowControl.t()
+          receiver_effective_flow_control: DistributedEffectiveFlowControl.t(),
+          sender_effective_flow_control: DistributedEffectiveFlowControl.t()
         }
 
   @enforce_keys [
@@ -142,7 +141,8 @@ defmodule Membrane.Core.Element.Toilet do
     :capacity,
     :responsible_process,
     :throttling_factor,
-    :receiver_effective_flow_control
+    :receiver_effective_flow_control,
+    :sender_effective_flow_control
   ]
 
   defstruct @enforce_keys ++ [unrinsed_buffers_size: 0]
@@ -154,14 +154,16 @@ defmodule Membrane.Core.Element.Toilet do
           demand_unit :: Membrane.Buffer.Metric.unit(),
           responsible_process :: Process.dest(),
           throttling_factor :: pos_integer(),
-          receiver_effective_flow_control :: EffectiveFlowController.effective_flow_control()
+          receiver_effective_flow_control :: EffectiveFlowController.effective_flow_control(),
+          sender_effective_flow_control :: EffectiveFlowController.effective_flow_control()
         ) :: t
   def new(
         capacity,
         demand_unit,
         responsible_process,
         throttling_factor,
-        receiver_effective_flow_control \\ :not_resolved
+        sender_effective_flow_control,
+        receiver_effective_flow_control
       ) do
     default_capacity =
       Membrane.Buffer.Metric.from_unit(demand_unit).buffer_size_approximation() *
@@ -173,12 +175,17 @@ defmodule Membrane.Core.Element.Toilet do
       receiver_effective_flow_control
       |> DistributedEffectiveFlowControl.new()
 
+    sender_effective_flow_control =
+      sender_effective_flow_control
+      |> DistributedEffectiveFlowControl.new()
+
     %__MODULE__{
       counter: DistributedCounter.new(),
       capacity: capacity,
       responsible_process: responsible_process,
       throttling_factor: throttling_factor,
-      receiver_effective_flow_control: receiver_effective_flow_control
+      receiver_effective_flow_control: receiver_effective_flow_control,
+      sender_effective_flow_control: sender_effective_flow_control
     }
   end
 
@@ -187,6 +194,15 @@ defmodule Membrane.Core.Element.Toilet do
   def set_receiver_effective_flow_control(%__MODULE__{} = toilet, value) do
     DistributedEffectiveFlowControl.put(
       toilet.receiver_effective_flow_control,
+      value
+    )
+  end
+
+  @spec set_sender_effective_flow_control(t, EffectiveFlowController.effective_flow_control()) ::
+          :ok
+  def set_sender_effective_flow_control(%__MODULE__{} = toilet, value) do
+    DistributedEffectiveFlowControl.put(
+      toilet.sender_effective_flow_control,
       value
     )
   end
@@ -200,21 +216,34 @@ defmodule Membrane.Core.Element.Toilet do
     else
       size = DistributedCounter.add_get(toilet.counter, new_unrinsed_buffers_size)
 
-      toilet.receiver_effective_flow_control
-      |> DistributedEffectiveFlowControl.get()
-      |> case do
-        :pull when size > toilet.capacity ->
-          overflow(size, toilet.capacity, toilet.responsible_process)
-          {:overflow, %{toilet | unrinsed_buffers_size: 0}}
-
-        :not_resolved when size > 10 * toilet.capacity ->
-          overflow(size, 10 * toilet.capacity, toilet.responsible_process)
-          {:overflow, %{toilet | unrinsed_buffers_size: 0}}
-
-        _ok ->
-          {:ok, %{toilet | unrinsed_buffers_size: 0}}
-      end
+      %{toilet | unrinsed_buffers_size: 0}
+      |> check_overflow(size)
     end
+  end
+
+  @spec check_overflow(t, integer) :: {:ok | :overflow, t}
+  defp check_overflow(%__MODULE__{} = toilet, size) do
+    endpoints_effective_flow_control(toilet)
+    |> case do
+      %{sender: :push, receiver: :pull} when size > toilet.capacity ->
+        overflow(size, toilet.capacity, toilet.responsible_process)
+        {:overflow, toilet}
+
+      %{} ->
+        {:ok, toilet}
+    end
+  end
+
+  @spec endpoints_effective_flow_control(t) :: map()
+  defp endpoints_effective_flow_control(%__MODULE__{} = toilet) do
+    %{
+      sender:
+        toilet.sender_effective_flow_control
+        |> DistributedEffectiveFlowControl.get(),
+      receiver:
+        toilet.receiver_effective_flow_control
+        |> DistributedEffectiveFlowControl.get()
+    }
   end
 
   @spec drain(t, non_neg_integer) :: :ok

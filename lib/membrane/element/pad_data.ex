@@ -31,7 +31,6 @@ defmodule Membrane.Element.PadData do
           end_of_stream?: boolean(),
           direction: Pad.direction(),
           flow_control: Pad.flow_control(),
-          other_effective_flow_control: private_field(),
           name: Pad.name(),
           ref: Pad.ref(),
           options: %{optional(atom) => any},
@@ -46,7 +45,8 @@ defmodule Membrane.Element.PadData do
           sticky_messages: private_field,
           toilet: private_field,
           associated_pads: private_field,
-          sticky_events: private_field
+          sticky_events: private_field,
+          other_effective_flow_control: private_field
         }
 
   @enforce_keys [
@@ -75,6 +75,6 @@ defmodule Membrane.Element.PadData do
                 sticky_events: [],
                 stream_format_validation_params: [],
                 other_demand_unit: nil,
-                other_effective_flow_control: :not_resolved
+                other_effective_flow_control: :push
               ]
 end

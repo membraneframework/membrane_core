@@ -98,7 +98,7 @@ defmodule Membrane.Core.Element.State do
       subprocess_supervisor: options.subprocess_supervisor,
       terminating?: false,
       setup_incomplete?: false,
-      effective_flow_control: :not_resolved
+      effective_flow_control: :push
     }
     |> PadSpecHandler.init_pads()
   end

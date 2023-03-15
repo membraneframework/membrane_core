@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   use ExUnit.Case, async: true
 
   alias Membrane.{ActionError, Buffer, ElementError, PadDirectionError}
-  alias Membrane.Core.Element.State
+  alias Membrane.Core.Element.{State, Toilet}
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
 
@@ -72,6 +72,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   end
 
   defp trivial_filter_state(_context) do
+    toilet = Toilet.new(100, :buffers, spawn(fn -> nil end), 1, :push, :push)
+
     state =
       struct(State,
         module: TrivialFilter,
@@ -89,7 +91,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             other_demand_unit: :bytes,
             start_of_stream?: true,
             end_of_stream?: false,
-            flow_control: :push
+            flow_control: :push,
+            toilet: toilet
           },
           input: %{
             direction: :input,
@@ -98,7 +101,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             stream_format: nil,
             start_of_stream?: true,
             end_of_stream?: false,
-            flow_control: :push
+            flow_control: :push,
+            toilet: :push
           }
         },
         pads_info: %{
