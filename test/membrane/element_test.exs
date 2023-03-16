@@ -80,7 +80,7 @@ defmodule Membrane.ElementTest do
   end
 
   describe "Start of stream" do
-    test "causes handle_start_of_stream/3 to be called", %{} do
+    test "causes handle_start_of_stream/3 to be called" do
       TestFilter.assert_callback_called(:handle_start_of_stream)
     end
 
