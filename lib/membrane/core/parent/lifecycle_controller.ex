@@ -81,6 +81,8 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
   @spec handle_terminate(Parent.state()) :: {:continue | :stop, Parent.state()}
   def handle_terminate(state) do
+    state = %{state | terminating?: true}
+
     if Enum.empty?(state.children) do
       {:stop, state}
     else
