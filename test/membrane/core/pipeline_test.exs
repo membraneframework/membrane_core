@@ -130,7 +130,7 @@ defmodule Membrane.Core.PipelineTest do
   end
 
   test "Pipeline should be able to terminate itself with terminate: :normal action when it has already spawned children" do
-    {:ok, _supervisor, pid} = Testing.Pipeline.start(module: TestPipeline)
+    pid = Testing.Pipeline.start_supervised!(module: TestPipeline)
     Process.monitor(pid)
     spec = child(:source, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink)
     Testing.Pipeline.execute_actions(pid, spec: spec)
