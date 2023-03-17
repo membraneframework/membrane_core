@@ -5,13 +5,73 @@ defmodule Membrane.Core.Element.DemandController do
 
   use Bunch
 
+  alias Membrane.Buffer
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, CallbackContext, PlaybackQueue, State, Toilet}
+  alias Membrane.Core.Element.{ActionHandler, CallbackContext, DemandCounter, EffectiveFlowController, PlaybackQueue, State, Toilet}
   alias Membrane.Pad
 
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
+
+  # -----  NEW FUNCTIONALITIES
+
+  @lacking_buffers_lowerbound 2000
+  @lacking_buffers_upperbound 4000
+
+  @spec increase_demand_counter_if_needed(Pad.ref(), State.t()) :: State.t()
+  def increase_demand_counter_if_needed(pad_ref, state) do
+    cond do
+      PadModel.get_data!(state, pad_ref, :flow_control) == :manual ->
+        do_increase_demand_counter_if_needed(:manual, pad_ref, state)
+
+      EffectiveFlowController.pad_effective_flow_control(pad_ref, state) == :pull ->
+        do_increase_demand_counter_if_needed(:auto_pull, pad_ref, state)
+
+      true ->
+        state
+    end
+  end
+
+  defp do_increase_demand_counter_if_needed(:manual, _pad_ref, state) do
+    state
+  end
+
+  defp do_increase_demand_counter_if_needed(:auto_pull, pad_ref, state) do
+    %{
+      demand_counter: demand_counter,
+      lacking_buffers: lacking_buffers,
+      associated_pads: associated_pads
+    } = pad_data = PadModel.get_data!(state, pad_ref)
+
+    if lacking_buffers < @lacking_buffers_lowerbound and
+        Enum.all?(associated_pads, &DemandCounter.get(&1.demand_counter) > 0) do
+      diff = @lacking_buffers_upperbound - lacking_buffers
+      counter_value = DemandCounter.increase_get(demand_counter, diff)
+
+      if counter_value - diff <= 0 do
+        Message.send(pad_data.pid, :demand_counter_increased, pad_data.other_ref)
+      end
+
+      PadModel.set_data!(state, pad_ref, :lacking_buffers, @lacking_buffers_upperbound)
+    else
+      state
+    end
+  end
+
+  @spec decrease_demand_counter_by_outgoing_buffers(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
+  def decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state) do
+    %{
+      other_demand_unit: other_demand_unit,
+      demand_counter: demand_counter
+    } = PadModel.get_data!(state, pad_ref)
+
+    buffers_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
+    demand_counter = DemandCounter.decrease(demand_counter, buffers_size)
+    PadModel.set_data!(state, pad_ref, :demand_counter, demand_counter)
+  end
+
+  # ----- OLD FUNCTIONALITIES
 
   @doc """
   Handles demand coming on an output pad. Updates demand value and executes `handle_demand` callback.

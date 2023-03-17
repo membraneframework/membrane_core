@@ -44,6 +44,8 @@ defmodule Membrane.Element.PadData do
           auto_demand_size: private_field,
           sticky_messages: private_field,
           toilet: private_field,
+          demand_counter: private_field,
+          lacking_buffers: private_field,
           associated_pads: private_field,
           sticky_events: private_field,
           other_effective_flow_control: private_field
@@ -71,6 +73,8 @@ defmodule Membrane.Element.PadData do
                 auto_demand_size: nil,
                 sticky_messages: [],
                 toilet: nil,
+                demand_counter: nil,
+                lacking_buffers: 0,
                 associated_pads: [],
                 sticky_events: [],
                 stream_format_validation_params: [],

@@ -1,10 +1,9 @@
 defmodule Membrane.Core.Element.EffectiveFlowController do
   @moduledoc false
 
-  alias Membrane.Core.Element.Toilet
-
   alias Membrane.Core.Element.{
     DemandController,
+    DemandCounter,
     State
   }
 
@@ -30,7 +29,8 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
   @spec handle_input_pad_added(Pad.ref(), State.t()) :: State.t()
   def handle_input_pad_added(pad_ref, state) do
-    with %{pads_data: %{^pad_ref => %{flow_control: :auto} = pad_data}} <- state do
+    with %{pads_data: %{^pad_ref => %{flow_control: :auto, direction: :input} = pad_data}} <-
+           state do
       handle_other_effective_flow_control(
         pad_ref,
         pad_data.other_effective_flow_control,
@@ -50,12 +50,19 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
     pad_data = %{pad_data | other_effective_flow_control: other_effective_flow_control}
     state = PadModel.set_data!(state, my_pad_ref, pad_data)
 
-    if state.playback == :playing and pad_data.direction == :input and
-         pad_data.flow_control == :auto and
-         other_effective_flow_control != state.effective_flow_control do
-      resolve_effective_flow_control(state)
-    else
-      state
+    cond do
+      state.playback != :playing or pad_data.direction != :input or pad_data.flow_control != :auto ->
+        state
+
+      other_effective_flow_control == state.effective_flow_control ->
+        :ok = update_demand_counter_receiver_mode(my_pad_ref, state)
+        state
+
+      other_effective_flow_control == :pull ->
+        set_effective_flow_control(:pull, state)
+
+      other_effective_flow_control == :push ->
+        resolve_effective_flow_control(state)
     end
   end
 
@@ -89,27 +96,19 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
     state = %{state | effective_flow_control: new_effective_flow_control}
 
-    _ignored =
-      for {_ref, %{flow_control: :auto} = pad_data} <- state.pads_data do
+    Enum.each(state.pads_data, fn
+      {_ref, %{flow_control: :auto, direction: :output} = pad_data} ->
         Message.send(pad_data.pid, :other_effective_flow_control_resolved, [
           pad_data.other_ref,
           new_effective_flow_control
         ])
 
-        case pad_data.direction do
-          :input ->
-            Toilet.set_receiver_effective_flow_control(
-              pad_data.toilet,
-              new_effective_flow_control
-            )
+      {_ref, %{flow_control: :auto, direction: :input} = pad_data} ->
+        :ok = update_demand_counter_receiver_mode(pad_data.ref, state)
 
-          :output ->
-            Toilet.set_sender_effective_flow_control(
-              pad_data.toilet,
-              new_effective_flow_control
-            )
-        end
-      end
+      _pad_entry ->
+        :ok
+    end)
 
     Enum.reduce(state.pads_data, state, fn
       {pad_ref, %{flow_control: :auto, direction: :input}}, state ->
@@ -118,5 +117,10 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
       _pad_entry, state ->
         state
     end)
+  end
+
+  defp update_demand_counter_receiver_mode(pad_ref, state) do
+    PadModel.get_data!(state, pad_ref, [:demand_counter])
+    |> DemandCounter.set_receiver_mode(state.effective_flow_control)
   end
 end

@@ -104,65 +104,65 @@ defmodule Membrane.Core.Element.DemandCounter do
     end
   end
 
-  defmodule DistributedEffectiveFlowControl do
+  defmodule DistributedReceiverMode do
     @moduledoc false
 
     @type t :: DistributedAtomic.t()
+    @type receiver_mode_value ::
+            EffectiveFlowController.effective_flow_control() | :to_be_resolved
 
-    @spec new(EffectiveFlowController.effective_flow_control()) :: t
+    @spec new(receiver_mode_value) :: t
     def new(initial_value) do
       initial_value
-      |> effective_flow_control_to_int()
+      |> receiver_mode_to_int()
       |> DistributedAtomic.new()
     end
 
-    @spec get(t) :: EffectiveFlowController.effective_flow_control()
+    @spec get(t) :: receiver_mode_value()
     def get(distributed_atomic) do
       distributed_atomic
       |> DistributedAtomic.get()
-      |> int_to_effective_flow_control()
+      |> int_to_receiver_mode()
     end
 
-    @spec put(t, EffectiveFlowController.effective_flow_control()) :: :ok
+    @spec put(t, receiver_mode_value()) :: :ok
     def put(distributed_atomic, value) do
-      value = effective_flow_control_to_int(value)
+      value = receiver_mode_to_int(value)
       DistributedAtomic.put(distributed_atomic, value)
     end
 
-    defp int_to_effective_flow_control(0), do: :not_resolved
-    defp int_to_effective_flow_control(1), do: :push
-    defp int_to_effective_flow_control(2), do: :pull
+    defp int_to_receiver_mode(0), do: :to_be_resolved
+    defp int_to_receiver_mode(1), do: :push
+    defp int_to_receiver_mode(2), do: :pull
 
-    defp effective_flow_control_to_int(:not_resolved), do: 0
-    defp effective_flow_control_to_int(:push), do: 1
-    defp effective_flow_control_to_int(:pull), do: 2
+    defp receiver_mode_to_int(:to_be_resolved), do: 0
+    defp receiver_mode_to_int(:push), do: 1
+    defp receiver_mode_to_int(:pull), do: 2
   end
 
   @default_overflow_limit_factor -200
   @default_buffered_decrementation_limit 1
-  # @default_capacity_factor 200
 
   @type t :: %__MODULE__{
           counter: DistributedAtomic.t(),
-          receiver_mode: DistributedEffectiveFlowControl.t(),
+          receiver_mode: DistributedReceiverMode.t(),
           receiver_process: Process.dest(),
           overflow_limit: neg_integer(),
           buffered_decrementation: non_neg_integer(),
           buffered_decrementation_limit: pos_integer()
         }
 
+  @type receiver_mode :: DistributedReceiverMode.receiver_mode_value()
+
   @enforce_keys [
     :counter,
     :receiver_mode,
-    :receiver_process
+    :receiver_process,
+    :buffered_decrementation_limit,
+    :overflow_limit
   ]
 
-  defstruct @enforce_keys ++
-              [
-                overflow_limit: -300,
-                buffered_decrementation: 0,
-                buffered_decrementation_limit: 1
-              ]
+  defstruct @enforce_keys ++ [buffered_decrementation: 0, toilet_overflowed?: false]
 
   @spec new(
           receiver_mode :: EffectiveFlowController.effective_flow_control(),
@@ -180,7 +180,7 @@ defmodule Membrane.Core.Element.DemandCounter do
       ) do
     %__MODULE__{
       counter: DistributedAtomic.new(),
-      receiver_mode: DistributedEffectiveFlowControl.new(receiver_mode),
+      receiver_mode: DistributedReceiverMode.new(receiver_mode),
       receiver_process: receiver_process,
       overflow_limit: overflow_limit || default_overflow_limit(receiver_demand_unit),
       buffered_decrementation_limit: buffered_decrementation_limit
@@ -189,7 +189,7 @@ defmodule Membrane.Core.Element.DemandCounter do
 
   @spec set_receiver_mode(t, EffectiveFlowController.effective_flow_control()) :: :ok
   def set_receiver_mode(%__MODULE__{} = demand_counter, mode) do
-    DistributedEffectiveFlowControl.put(
+    DistributedReceiverMode.put(
       demand_counter.receiver_mode,
       mode
     )
@@ -197,15 +197,15 @@ defmodule Membrane.Core.Element.DemandCounter do
 
   @spec get_receiver_mode(t) :: EffectiveFlowController.effective_flow_control()
   def get_receiver_mode(%__MODULE__{} = demand_counter) do
-    DistributedEffectiveFlowControl.get(demand_counter.receiver_mode)
+    DistributedReceiverMode.get(demand_counter.receiver_mode)
   end
 
-  @spec increase(t, non_neg_integer()) :: integer()
-  def increase(%__MODULE__{} = demand_counter, value) do
+  @spec increase_get(t, non_neg_integer()) :: integer()
+  def increase_get(%__MODULE__{} = demand_counter, value) do
     DistributedAtomic.add_get(demand_counter.counter, value)
   end
 
-  @spec decrease(t, non_neg_integer()) :: {:ok | :overflow, t}
+  @spec decrease(t, non_neg_integer()) :: t
   def decrease(%__MODULE__{} = demand_counter, value) do
     demand_counter = %{
       demand_counter
@@ -215,8 +215,13 @@ defmodule Membrane.Core.Element.DemandCounter do
     if demand_counter.buffered_decrementation >= demand_counter.buffered_decrementation_limit do
       flush_buffered_decrementation(demand_counter)
     else
-      {:ok, demand_counter}
+      demand_counter
     end
+  end
+
+  @spec get(t) :: integer()
+  def get(%__MODULE__{} = demand_counter) do
+    DistributedAtomic.get(demand_counter.counter)
   end
 
   defp flush_buffered_decrementation(demand_counter) do
@@ -228,12 +233,11 @@ defmodule Membrane.Core.Element.DemandCounter do
 
     demand_counter = %{demand_counter | buffered_decrementation: 0}
 
-    if get_receiver_mode(demand_counter) == :pull and
+    if not demand_counter.toilet_overflowed? and get_receiver_mode(demand_counter) == :pull and
          counter_value < demand_counter.overflow_limit do
       overflow(counter_value, demand_counter)
-      {:overflow, demand_counter}
     else
-      {:ok, demand_counter}
+      demand_counter
     end
   end
 
@@ -275,8 +279,9 @@ defmodule Membrane.Core.Element.DemandCounter do
     You can also try changing the `toilet_capacity` in `Membrane.ChildrenSpec.via_in/3`.
     """)
 
-    _result = Process.exit(demand_counter.receiver_process, :kill)
-    :ok
+    Process.exit(demand_counter.receiver_process, :kill)
+
+    %{demand_counter | toilet_overflowed?: true}
   end
 
   defp default_overflow_limit(demand_unit) do
