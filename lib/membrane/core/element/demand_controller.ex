@@ -59,6 +59,17 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
+  @spec handle_ingoing_buffers(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
+  def handle_ingoing_buffers(pad_ref, buffers, state) do
+    %{
+      demand_unit: demand_unit,
+      lacking_buffers: lacking_buffers
+    } = PadModel.get_data!(state, pad_ref)
+
+    buffers_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
+    PadModel.set_data!(state, pad_ref, :lacking_buffers, lacking_buffers - buffers_size)
+  end
+
   @spec decrease_demand_counter_by_outgoing_buffers(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
   def decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state) do
     %{
