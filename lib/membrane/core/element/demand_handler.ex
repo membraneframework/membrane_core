@@ -84,7 +84,6 @@ defmodule Membrane.Core.Element.DemandHandler do
       InputQueue.take_and_demand(
         pad_data.input_queue,
         pad_data.demand,
-        pad_data.pid,
         pad_data.other_ref
       )
 

@@ -2,7 +2,9 @@ defmodule Membrane.Core.Element.DemandCounter do
   @moduledoc false
   alias Membrane.Core.Element.EffectiveFlowController
 
+  require Membrane.Core.Message, as: Message
   require Membrane.Logger
+  require Membrane.Pad, as: Pad
 
   defmodule Worker do
     @moduledoc false
@@ -142,6 +144,7 @@ defmodule Membrane.Core.Element.DemandCounter do
 
   @default_overflow_limit_factor -200
   @default_buffered_decrementation_limit 1
+  @distributed_buffered_decrementation_limit 150
 
   @type t :: %__MODULE__{
           counter: DistributedAtomic.t(),
@@ -158,6 +161,8 @@ defmodule Membrane.Core.Element.DemandCounter do
     :counter,
     :receiver_mode,
     :receiver_process,
+    :sender_process,
+    :sender_pad_ref,
     :buffered_decrementation_limit,
     :overflow_limit
   ]
@@ -168,20 +173,31 @@ defmodule Membrane.Core.Element.DemandCounter do
           receiver_mode :: EffectiveFlowController.effective_flow_control(),
           receiver_process :: Process.dest(),
           receiver_demand_unit :: Membrane.Buffer.Metric.unit(),
-          overflow_limit :: neg_integer() | nil,
-          buffered_decrementation_limit :: pos_integer()
+          sender_process :: Process.dest(),
+          sender_pad_ref :: Pad.ref(),
+          overflow_limit :: neg_integer() | nil
         ) :: t
   def new(
         receiver_mode,
         receiver_process,
         receiver_demand_unit,
-        overflow_limit \\ nil,
-        buffered_decrementation_limit \\ @default_buffered_decrementation_limit
+        sender_process,
+        sender_pad_ref,
+        overflow_limit \\ nil
       ) do
+    {counter_pid, _atomic} = counter = DistributedAtomic.new()
+
+    buffered_decrementation_limit =
+      if node(sender_process) == node(counter_pid),
+        do: @default_buffered_decrementation_limit,
+        else: @distributed_buffered_decrementation_limit
+
     %__MODULE__{
-      counter: DistributedAtomic.new(),
+      counter: counter,
       receiver_mode: DistributedReceiverMode.new(receiver_mode),
       receiver_process: receiver_process,
+      sender_process: sender_process,
+      sender_pad_ref: sender_pad_ref,
       overflow_limit: overflow_limit || default_overflow_limit(receiver_demand_unit),
       buffered_decrementation_limit: buffered_decrementation_limit
     }
@@ -200,9 +216,20 @@ defmodule Membrane.Core.Element.DemandCounter do
     DistributedReceiverMode.get(demand_counter.receiver_mode)
   end
 
-  @spec increase_get(t, non_neg_integer()) :: integer()
-  def increase_get(%__MODULE__{} = demand_counter, value) do
-    DistributedAtomic.add_get(demand_counter.counter, value)
+  @spec increase(t, non_neg_integer()) :: :ok
+  def increase(%__MODULE__{} = demand_counter, value) do
+    new_counter_value = DistributedAtomic.add_get(demand_counter.counter, value)
+    old_counter_value = new_counter_value - value
+
+    if old_counter_value <= 0 do
+      Message.send(
+        demand_counter.sender_process,
+        :demand_counter_increased,
+        demand_counter.sender_pad_ref
+      )
+    end
+
+    :ok
   end
 
   @spec decrease(t, non_neg_integer()) :: t
@@ -224,7 +251,8 @@ defmodule Membrane.Core.Element.DemandCounter do
     DistributedAtomic.get(demand_counter.counter)
   end
 
-  defp flush_buffered_decrementation(demand_counter) do
+  @spec flush_buffered_decrementation(t) :: t
+  def flush_buffered_decrementation(demand_counter) do
     counter_value =
       DistributedAtomic.sub_get(
         demand_counter.counter,
@@ -235,13 +263,13 @@ defmodule Membrane.Core.Element.DemandCounter do
 
     if not demand_counter.toilet_overflowed? and get_receiver_mode(demand_counter) == :pull and
          counter_value < demand_counter.overflow_limit do
-      overflow(counter_value, demand_counter)
+      overflow(demand_counter, counter_value)
     else
       demand_counter
     end
   end
 
-  defp overflow(counter_value, demand_counter) do
+  defp overflow(demand_counter, counter_value) do
     Membrane.Logger.debug_verbose(~S"""
     Toilet overflow
 

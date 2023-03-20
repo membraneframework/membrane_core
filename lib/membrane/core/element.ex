@@ -178,6 +178,11 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
+  defp do_handle_info(Message.new(:demand_counter_increased, pad_ref) = msg, state) do
+    state = DemandController.handle_demand_counter_increased(pad_ref, state)
+    {:noreply, state}
+  end
+
   defp do_handle_info(Message.new(:buffer, buffers, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
     state = BufferController.handle_buffer(pad_ref, buffers, state)

@@ -8,11 +8,11 @@ defmodule Membrane.Core.Element.InputQueue do
 
   use Bunch
 
+  alias Membrane.Core.Element.DemandCounter
   alias Membrane.Buffer
-  alias Membrane.Core.{Message, Telemetry}
+  alias Membrane.Core.Telemetry
   alias Membrane.Pad
 
-  require Membrane.Core.Message
   require Membrane.Core.Telemetry
   require Membrane.Logger
 
@@ -32,8 +32,7 @@ defmodule Membrane.Core.Element.InputQueue do
           demand: integer(),
           min_demand: pos_integer(),
           inbound_metric: module(),
-          outbound_metric: module(),
-          toilet?: boolean()
+          outbound_metric: module()
         }
 
   @enforce_keys [
@@ -42,10 +41,10 @@ defmodule Membrane.Core.Element.InputQueue do
     :target_size,
     :size,
     :demand,
+    :demand_counter,
     :min_demand,
     :inbound_metric,
-    :outbound_metric,
-    :toilet?
+    :outbound_metric
   ]
 
   defstruct @enforce_keys
@@ -58,10 +57,9 @@ defmodule Membrane.Core.Element.InputQueue do
   @spec init(%{
           inbound_demand_unit: Buffer.Metric.unit(),
           outbound_demand_unit: Buffer.Metric.unit(),
-          demand_pid: pid(),
+          demand_counter: DemandCounter.t(),
           demand_pad: Pad.ref(),
           log_tag: String.t(),
-          toilet?: boolean(),
           target_size: pos_integer() | nil,
           min_demand_factor: pos_integer() | nil
         }) :: t()
@@ -69,10 +67,9 @@ defmodule Membrane.Core.Element.InputQueue do
     %{
       inbound_demand_unit: inbound_demand_unit,
       outbound_demand_unit: outbound_demand_unit,
-      demand_pid: demand_pid,
+      demand_counter: demand_counter,
       demand_pad: demand_pad,
       log_tag: log_tag,
-      toilet?: toilet?,
       target_size: target_size,
       min_demand_factor: min_demand_factor
     } = config
@@ -96,9 +93,9 @@ defmodule Membrane.Core.Element.InputQueue do
       min_demand: min_demand,
       inbound_metric: inbound_metric,
       outbound_metric: outbound_metric,
-      toilet?: toilet?
+      demand_counter: demand_counter
     }
-    |> send_demands(demand_pid, demand_pad)
+    |> send_demands(demand_pad)
   end
 
   @spec store(t(), atom(), any()) :: t()
@@ -157,11 +154,10 @@ defmodule Membrane.Core.Element.InputQueue do
     }
   end
 
-  @spec take_and_demand(t(), non_neg_integer(), pid(), Pad.ref()) :: {output(), t()}
+  @spec take_and_demand(t(), non_neg_integer(), Pad.ref()) :: {output(), t()}
   def take_and_demand(
         %__MODULE__{} = input_queue,
         count,
-        demand_pid,
         demand_pad
       )
       when count >= 0 do
@@ -170,7 +166,7 @@ defmodule Membrane.Core.Element.InputQueue do
     |> Membrane.Logger.debug_verbose()
 
     {out, %__MODULE__{size: new_size} = input_queue} = do_take(input_queue, count)
-    input_queue = send_demands(input_queue, demand_pid, demand_pad)
+    input_queue = send_demands(input_queue, demand_pad)
     Telemetry.report_metric(:take_and_demand, new_size, input_queue.log_tag)
     {out, input_queue}
   end
@@ -291,17 +287,16 @@ defmodule Membrane.Core.Element.InputQueue do
     end
   end
 
-  @spec send_demands(t(), pid(), Pad.ref()) :: t()
+  @spec send_demands(t(),  Pad.ref()) :: t()
   defp send_demands(
          %__MODULE__{
-           toilet?: false,
            size: size,
            target_size: target_size,
            demand: demand,
+           demand_counter: demand_counter,
            min_demand: min_demand
          } = input_queue,
-         demand_pid,
-         linked_output_ref
+                  linked_output_ref
        )
        when size < target_size and demand > 0 do
     to_demand = max(demand, min_demand)
@@ -312,11 +307,11 @@ defmodule Membrane.Core.Element.InputQueue do
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 
-    Message.send(demand_pid, :demand, to_demand, for_pad: linked_output_ref)
+    :ok = DemandCounter.increase(demand_counter, to_demand)
     %__MODULE__{input_queue | demand: demand - to_demand}
   end
 
-  defp send_demands(input_queue, _demand_pid, _linked_output_ref) do
+  defp send_demands(input_queue, _linked_output_ref) do
     input_queue
   end
 
@@ -327,11 +322,10 @@ defmodule Membrane.Core.Element.InputQueue do
       log_tag: log_tag,
       size: size,
       target_size: target_size,
-      toilet?: toilet
     } = input_queue
 
     [
-      "InputQueue #{log_tag}#{if toilet, do: " (toilet)", else: ""}: ",
+      "InputQueue #{log_tag}: ",
       message,
       "\n",
       "InputQueue size: #{inspect(size)}, target size: #{inspect(target_size)}"

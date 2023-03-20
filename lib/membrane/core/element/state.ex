@@ -24,6 +24,8 @@ defmodule Membrane.Core.Element.State do
           parent_pid: pid,
           supplying_demand?: boolean(),
           delayed_demands: MapSet.t({Pad.ref(), :supply | :redemand}),
+          supplying_output_demand?: boolean(),
+          delayed_output_demands: %{optional(Pad.ref()) => pos_integer()},
           synchronization: %{
             timers: %{Timer.id() => Timer.t()},
             parent_clock: Clock.t(),
@@ -51,6 +53,8 @@ defmodule Membrane.Core.Element.State do
     :parent_pid,
     :supplying_demand?,
     :delayed_demands,
+    :supplying_output_demand?,
+    :delayed_output_demands,
     :synchronization,
     :demand_size,
     :initialized?,
@@ -84,6 +88,8 @@ defmodule Membrane.Core.Element.State do
       parent_pid: options.parent,
       supplying_demand?: false,
       delayed_demands: MapSet.new(),
+      supplying_output_demand?: false,
+      delayed_output_demands: %{},
       synchronization: %{
         parent_clock: options.parent_clock,
         timers: %{},

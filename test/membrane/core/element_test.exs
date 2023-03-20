@@ -79,7 +79,7 @@ defmodule Membrane.Core.ElementTest do
             pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
           },
           %{
-            initiator: :sibling,
+            initiator: :parent,
             other_info: %{direction: :input, flow_control: :manual, demand_unit: :buffers},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
             stream_format_validation_params: [],

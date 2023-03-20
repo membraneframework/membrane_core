@@ -8,7 +8,16 @@ defmodule Membrane.Core.Element.DemandController do
   alias Membrane.Buffer
   alias Membrane.Core.{CallbackHandler, Message}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, CallbackContext, DemandCounter, EffectiveFlowController, PlaybackQueue, State, Toilet}
+
+  alias Membrane.Core.Element.{
+    ActionHandler,
+    CallbackContext,
+    DemandCounter,
+    PlaybackQueue,
+    State,
+    Toilet
+  }
+
   alias Membrane.Pad
 
   require Membrane.Core.Child.PadModel
@@ -19,44 +28,82 @@ defmodule Membrane.Core.Element.DemandController do
   @lacking_buffers_lowerbound 2000
   @lacking_buffers_upperbound 4000
 
-  @spec increase_demand_counter_if_needed(Pad.ref(), State.t()) :: State.t()
-  def increase_demand_counter_if_needed(pad_ref, state) do
-    cond do
-      PadModel.get_data!(state, pad_ref, :flow_control) == :manual ->
-        do_increase_demand_counter_if_needed(:manual, pad_ref, state)
+  @spec handle_demand_counter_increased(Pad.ref(), State.t()) :: State.t()
+  def handle_demand_counter_increased(pad_ref, state) do
+    with {:ok, pad} <- PadModel.get_data(state, pad_ref),
+        %State{playback: :playing} <- state do
+      if pad.direction == :input, do: raise ":demand_counter_increased cannot arrive at input pad"
 
-      EffectiveFlowController.pad_effective_flow_control(pad_ref, state) == :pull ->
-        do_increase_demand_counter_if_needed(:auto_pull, pad_ref, state)
-
-      true ->
+      do_handle_demand_counter_increased(pad, state)
+    else
+      {:error, :unknown_pad} ->
+        # We've got a :demand_counter_increased message on already unlinked pad
         state
+
+      %State{playback: :stopped} ->
+        PlaybackQueue.store(&handle_demand_counter_increased(pad_ref, &1), state)
     end
   end
 
-  defp do_increase_demand_counter_if_needed(:manual, _pad_ref, state) do
+  defp do_handle_demand_counter_increased(%{flow_control: :auto} = pad_data, %{effective_flow_control: :pull} = state) do
+    %{
+      demand_counter: demand_counter,
+      associated_pads: associated_pads
+    } = pad_data
+
+    counter_value = demand_counter |> DemandCounter.get()
+
+    if counter_value > 0 do
+      Enum.reduce(associated_pads, &increase_demand_counter_if_needed/2)
+    else
+      state
+    end
+  end
+
+  defp do_handle_demand_counter_increased(%{flow_control: :manual} = pad_data, state) do
+    counter_value = pad_data.demand_counter |> DemandCounter.get()
+
+    if counter_value > 0 do
+      register_pad_demand(pad_data.ref, counter_value, state)
+    else
+      state
+    end
+  end
+
+  defp do_handle_demand_counter_increased(_pad_data, state) do
     state
   end
 
-  defp do_increase_demand_counter_if_needed(:auto_pull, pad_ref, state) do
-    %{
-      demand_counter: demand_counter,
-      lacking_buffers: lacking_buffers,
-      associated_pads: associated_pads
-    } = pad_data = PadModel.get_data!(state, pad_ref)
+  @spec increase_demand_counter_if_needed(Pad.ref(), State.t()) :: State.t()
+  def increase_demand_counter_if_needed(pad_ref, state) do
+    pad_data = PadModel.get_data!(state, pad_ref)
 
-    if lacking_buffers < @lacking_buffers_lowerbound and
-        Enum.all?(associated_pads, &DemandCounter.get(&1.demand_counter) > 0) do
-      diff = @lacking_buffers_upperbound - lacking_buffers
-      counter_value = DemandCounter.increase_get(demand_counter, diff)
-
-      if counter_value - diff <= 0 do
-        Message.send(pad_data.pid, :demand_counter_increased, pad_data.other_ref)
-      end
+    if increase_demand_counter?(pad_data, state) do
+      diff = @lacking_buffers_upperbound - pad_data.lacking_buffers
+      :ok = DemandCounter.increase(pad_data.demand_counter, diff)
 
       PadModel.set_data!(state, pad_ref, :lacking_buffers, @lacking_buffers_upperbound)
     else
       state
     end
+  end
+
+  @spec register_pad_demand(Pad.ref(), non_neg_integer(), State.t()) :: State.t()
+  def register_pad_demand(_pad_ref, _demand, state) do
+    state
+  end
+
+  defp increase_demand_counter?(pad_data, state) do
+    %{
+      flow_control: flow_control,
+      lacking_buffers: lacking_buffers,
+      associated_pads: associated_pads
+    } = pad_data
+
+    flow_control == :auto and
+      state.effective_flow_control == :pull and
+      lacking_buffers < @lacking_buffers_lowerbound and
+      Enum.all?(associated_pads, &(DemandCounter.get(&1.demand_counter) > 0))
   end
 
   @spec handle_ingoing_buffers(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
@@ -70,7 +117,8 @@ defmodule Membrane.Core.Element.DemandController do
     PadModel.set_data!(state, pad_ref, :lacking_buffers, lacking_buffers - buffers_size)
   end
 
-  @spec decrease_demand_counter_by_outgoing_buffers(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
+  @spec decrease_demand_counter_by_outgoing_buffers(Pad.ref(), [Buffer.t()], State.t()) ::
+          State.t()
   def decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state) do
     %{
       other_demand_unit: other_demand_unit,

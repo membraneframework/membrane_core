@@ -12,6 +12,7 @@ defmodule Membrane.Core.Element.PadController do
     ActionHandler,
     CallbackContext,
     DemandController,
+    DemandCounter,
     EffectiveFlowController,
     EventController,
     InputQueue,
@@ -43,7 +44,7 @@ defmodule Membrane.Core.Element.PadController do
             }
 
   @type link_call_reply_props ::
-          {Endpoint.t(), PadModel.pad_info(), %{toilet: Toilet.t() | nil}}
+          {Endpoint.t(), PadModel.pad_info(), %{demand_counter: DemandCounter.t()}}
 
   @type link_call_reply ::
           :ok
@@ -88,6 +89,9 @@ defmodule Membrane.Core.Element.PadController do
          %{initiator: :parent} = props,
          state
        ) do
+
+    # IO.inspect(info.direction, label: "DUPAAAAAA PARENT")
+
     effective_flow_control =
       EffectiveFlowController.pad_effective_flow_control(endpoint.pad_ref, state)
 
@@ -160,34 +164,47 @@ defmodule Membrane.Core.Element.PadController do
       other_effective_flow_control: other_effective_flow_control
     } = link_props
 
-    {output_info, input_info, input_endpoint} =
-      if info.direction == :output,
-        do: {info, other_info, other_endpoint},
-        else: {other_info, info, endpoint}
+    # if info.direction != :input do
+    IO.inspect(info.direction, label: "DUPAAAAAA SIBLING")
+    if info.direction != :input, do: raise "#{info.direction} is wrong"
+    # end
 
-    {output_demand_unit, input_demand_unit} = resolve_demand_units(output_info, input_info)
+    true = (info.direction == :input)
+
+
+    {output_demand_unit, input_demand_unit} = resolve_demand_units(other_info, info)
 
     link_metadata =
       Map.put(link_metadata, :input_demand_unit, input_demand_unit)
       |> Map.put(:output_demand_unit, output_demand_unit)
 
-    my_effective_flow_control =
+    pad_effective_flow_control =
       EffectiveFlowController.pad_effective_flow_control(endpoint.pad_ref, state)
 
-    toilet =
-      Toilet.new(
-        input_endpoint.pad_props.toilet_capacity,
-        input_demand_unit || :buffers,
+    # toilet =
+    #   Toilet.new(
+    #     input_endpoint.pad_props.toilet_capacity,
+    #     input_demand_unit || :buffers,
+    #     self(),
+    #     input_endpoint.pad_props.throttling_factor,
+    #     other_effective_flow_control,
+    #     my_effective_flow_control
+    #   )
+
+    demand_counter =
+      DemandCounter.new(
+        pad_effective_flow_control,
         self(),
-        input_endpoint.pad_props.throttling_factor,
-        other_effective_flow_control,
-        my_effective_flow_control
+        input_demand_unit || :buffers,
+        other_endpoint.pid,
+        other_endpoint.pad_ref,
+        -300
       )
 
     # The sibiling was an initiator, we don't need to use the pid of a task spawned for observability
     _metadata = Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
 
-    link_metadata = Map.put(link_metadata, :toilet, toilet)
+    link_metadata = Map.put(link_metadata, :demand_counter, demand_counter)
 
     :ok =
       Child.PadController.validate_pad_mode!(
@@ -296,7 +313,7 @@ defmodule Membrane.Core.Element.PadController do
         start_of_stream?: false,
         end_of_stream?: false,
         associated_pads: [],
-        toilet: metadata.toilet
+        demand_counter: metadata.demand_counter
       })
 
     data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, metadata, state))
@@ -342,18 +359,15 @@ defmodule Membrane.Core.Element.PadController do
          _metadata,
          %State{}
        ) do
-    %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: this_demand_unit} = data
-
-    enable_toilet? = other_info.flow_control == :push
+    %{ref: ref, other_ref: other_ref, demand_unit: this_demand_unit, demand_counter: demand_counter} = data
 
     input_queue =
       InputQueue.init(%{
         inbound_demand_unit: other_info[:demand_unit] || this_demand_unit,
         outbound_demand_unit: this_demand_unit,
-        demand_pid: pid,
+        demand_counter: demand_counter,
         demand_pad: other_ref,
         log_tag: inspect(ref),
-        toilet?: enable_toilet?,
         target_size: props.target_queue_size,
         min_demand_factor: props.min_demand_factor
       })
@@ -384,13 +398,6 @@ defmodule Membrane.Core.Element.PadController do
       |> Enum.filter(&(&1.direction != direction and &1.flow_control == :auto))
       |> Enum.map(& &1.ref)
 
-    # toilet =
-    #   if direction == :input and other_info.flow_control == :push do
-    #     metadata.toilet
-    #   else
-    #     nil
-    #   end
-
     auto_demand_size =
       if direction == :input do
         props.auto_demand_size ||
@@ -404,7 +411,6 @@ defmodule Membrane.Core.Element.PadController do
       demand: 0,
       associated_pads: associated_pads,
       auto_demand_size: auto_demand_size
-      # toilet: toilet
     }
   end
 

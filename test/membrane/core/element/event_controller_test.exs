@@ -26,7 +26,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
         demand_pid: self(),
         demand_pad: :some_pad,
         log_tag: "test",
-        toilet?: false,
+        demand_counter: :demand_counter,
         target_size: nil,
         min_demand_factor: nil
       })
