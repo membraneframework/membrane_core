@@ -54,7 +54,7 @@ defmodule Benchmark.Run do
   alias Membrane.Pad
   alias Benchmark.Run.BranchedFilter
   alias Benchmark.Run.LinearFilter
-  alias Benchmark.Metric.{FinalMemory, InProgressMemory, MessageQueuesLength, Time}
+  alias Benchmark.Metric.{InProgressMemory, MessageQueuesLength, Time}
 
   require Logger
   require Membrane.RCPipeline
@@ -245,7 +245,6 @@ defmodule Benchmark.Run do
     spec = prepare_pipeline(test_type, params)
 
     time_meassurement = Time.start_meassurement()
-    final_memory_meassurement = FinalMemory.start_meassurement()
 
     {:ok, _supervisor_pid, pipeline_pid} =
       Benchmark.Run.Pipeline.start(
@@ -267,7 +266,6 @@ defmodule Benchmark.Run do
       end
 
     time = Time.stop_meassurement(time_meassurement)
-    final_memory = FinalMemory.stop_meassurement(final_memory_meassurement)
     in_progress_memory = InProgressMemory.stop_meassurement(in_progress_memory_meassurment)
 
     message_queues_length =
@@ -277,7 +275,6 @@ defmodule Benchmark.Run do
 
     %{
       Time => time,
-      FinalMemory => final_memory,
       InProgressMemory => in_progress_memory,
       MessageQueuesLength => message_queues_length
     }

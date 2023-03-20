@@ -20,17 +20,17 @@ defmodule Benchmark.Compare do
         Enum.map(Map.keys(test_case_results), fn metric_module ->
           """
           METRIC: #{metric_module}
-          #{inspect(Map.get(test_case_results, metric_module), pretty: true)}
-          vs
-          #{inspect(Map.get(test_case_results_ref, metric_module), pretty: true)}
-
+          used to be:
+          #{inspect(Map.get(test_case_results_ref, metric_module), pretty: true, limit: :infinity)}
+          now is:
+          #{inspect(Map.get(test_case_results, metric_module), pretty: true, limit: :infinity)}
           """
         end)
         |> Enum.join()
 
       Logger.debug("""
       TEST CASE:
-      #{inspect(test_case, pretty: true)}
+      #{inspect(test_case, pretty: true, limit: :infinity)}
 
       #{results_str}
 
