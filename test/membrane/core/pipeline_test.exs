@@ -129,6 +129,16 @@ defmodule Membrane.Core.PipelineTest do
     end)
   end
 
+  test "Pipeline should be able to terminate itself with terminate: :normal action when it has already spawned children" do
+    pid = Testing.Pipeline.start_supervised!(module: TestPipeline)
+    Process.monitor(pid)
+    spec = child(:source, %Testing.Source{output: [1, 2, 3]}) |> child(:sink, Testing.Sink)
+    Testing.Pipeline.execute_actions(pid, spec: spec)
+    assert_end_of_stream(pid, :sink)
+    Testing.Pipeline.execute_actions(pid, terminate: :normal)
+    assert_receive {:DOWN, _ref, :process, ^pid, :normal}
+  end
+
   test "Pipeline should be able to spawn its children in a nested specification" do
     pid = Testing.Pipeline.start_link_supervised!(module: TestPipeline)
     opts1 = []

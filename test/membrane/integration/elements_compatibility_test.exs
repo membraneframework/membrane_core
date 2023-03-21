@@ -2,7 +2,6 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
   use ExUnit.Case, async: true
 
   import Membrane.ChildrenSpec
-  import Membrane.Testing.Assertions
   alias Membrane.Testing.Pipeline
 
   defmodule StreamFormat do
