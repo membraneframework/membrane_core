@@ -79,7 +79,7 @@ defmodule Membrane.Testing.Source do
 
       enumerable_output ->
         all_buffers_in_output = Enum.all?(enumerable_output, &match?(%Membrane.Buffer{}, &1))
-        {[], opts |> Map.merge(%{all_buffers_in_output?: all_buffers_in_output})}
+        {[], opts |> Map.put(:all_buffers_in_output?, all_buffers_in_output)}
     end
   end
 
