@@ -89,9 +89,6 @@ defmodule Membrane.Core.Element.PadController do
          %{initiator: :parent} = props,
          state
        ) do
-
-    # IO.inspect(info.direction, label: "DUPAAAAAA PARENT")
-
     effective_flow_control =
       EffectiveFlowController.pad_effective_flow_control(endpoint.pad_ref, state)
 
@@ -165,12 +162,10 @@ defmodule Membrane.Core.Element.PadController do
     } = link_props
 
     # if info.direction != :input do
-    IO.inspect(info.direction, label: "DUPAAAAAA SIBLING")
-    if info.direction != :input, do: raise "#{info.direction} is wrong"
+    if info.direction != :input, do: raise("pad direction #{inspect(info.direction)} is wrong")
     # end
 
-    true = (info.direction == :input)
-
+    true = info.direction == :input
 
     {output_demand_unit, input_demand_unit} = resolve_demand_units(other_info, info)
 
@@ -180,16 +175,6 @@ defmodule Membrane.Core.Element.PadController do
 
     pad_effective_flow_control =
       EffectiveFlowController.pad_effective_flow_control(endpoint.pad_ref, state)
-
-    # toilet =
-    #   Toilet.new(
-    #     input_endpoint.pad_props.toilet_capacity,
-    #     input_demand_unit || :buffers,
-    #     self(),
-    #     input_endpoint.pad_props.throttling_factor,
-    #     other_effective_flow_control,
-    #     my_effective_flow_control
-    #   )
 
     demand_counter =
       DemandCounter.new(
@@ -316,6 +301,12 @@ defmodule Membrane.Core.Element.PadController do
         demand_counter: metadata.demand_counter
       })
 
+    :ok =
+      DemandCounter.set_sender_mode(
+        data.demand_counter,
+        EffectiveFlowController.pad_effective_flow_control(data.ref, state)
+      )
+
     data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, metadata, state))
 
     data =
@@ -334,7 +325,8 @@ defmodule Membrane.Core.Element.PadController do
         end)
 
       case data.direction do
-        :input -> DemandController.send_auto_demand_if_needed(endpoint.pad_ref, state)
+        # :input -> DemandController.send_auto_demand_if_needed(endpoint.pad_ref, state)
+        :input -> DemandController.increase_demand_counter_if_needed(endpoint.pad_ref, state)
         :output -> state
       end
     else
@@ -359,17 +351,21 @@ defmodule Membrane.Core.Element.PadController do
          _metadata,
          %State{}
        ) do
-    %{ref: ref, other_ref: other_ref, demand_unit: this_demand_unit, demand_counter: demand_counter} = data
+    %{
+      ref: ref,
+      other_ref: other_ref,
+      demand_unit: this_demand_unit,
+      demand_counter: demand_counter
+    } = data
 
     input_queue =
       InputQueue.init(%{
         inbound_demand_unit: other_info[:demand_unit] || this_demand_unit,
         outbound_demand_unit: this_demand_unit,
         demand_counter: demand_counter,
-        demand_pad: other_ref,
+        linked_output_ref: other_ref,
         log_tag: inspect(ref),
-        target_size: props.target_queue_size,
-        min_demand_factor: props.min_demand_factor
+        target_size: props.target_queue_size
       })
 
     %{input_queue: input_queue, demand: 0}
@@ -456,10 +452,13 @@ defmodule Membrane.Core.Element.PadController do
           |> PadModel.set_data!(pad_ref, :associated_pads, [])
 
         if pad_data.direction == :output do
+          Membrane.Logger.warn("UNLINKING PADS ASSOCIATIONS #{inspect(pad_data.associated_pads)}")
+
           Enum.reduce(
             pad_data.associated_pads,
             state,
-            &DemandController.send_auto_demand_if_needed/2
+            # &DemandController.send_auto_demand_if_needed/2
+            &DemandController.increase_demand_counter_if_needed/2
           )
         else
           state

@@ -8,6 +8,7 @@ defmodule Membrane.Core.Element.InputQueue do
 
   use Bunch
 
+  alias Membrane.Event
   alias Membrane.Core.Element.DemandCounter
   alias Membrane.Buffer
   alias Membrane.Core.Telemetry
@@ -24,30 +25,29 @@ defmodule Membrane.Core.Element.InputQueue do
           {:event | :stream_format, any} | {:buffers, list, pos_integer, pos_integer}
   @type output :: {:empty | :value, [output_value]}
 
+  @type queue_item() :: Buffer.t() | Event.t() | struct() | atom()
+
   @type t :: %__MODULE__{
           q: @qe.t(),
           log_tag: String.t(),
           target_size: pos_integer(),
           size: non_neg_integer(),
-          demand: integer(),
-          min_demand: pos_integer(),
           inbound_metric: module(),
-          outbound_metric: module()
+          outbound_metric: module(),
+          linked_output_ref: Pad.ref()
         }
 
   @enforce_keys [
     :q,
     :log_tag,
     :target_size,
-    :size,
-    :demand,
     :demand_counter,
-    :min_demand,
     :inbound_metric,
-    :outbound_metric
+    :outbound_metric,
+    :linked_output_ref
   ]
 
-  defstruct @enforce_keys
+  defstruct @enforce_keys ++ [size: 0, lacking_buffers: 0]
 
   @default_target_size_factor 40
 
@@ -58,20 +58,18 @@ defmodule Membrane.Core.Element.InputQueue do
           inbound_demand_unit: Buffer.Metric.unit(),
           outbound_demand_unit: Buffer.Metric.unit(),
           demand_counter: DemandCounter.t(),
-          demand_pad: Pad.ref(),
+          linked_output_ref: Pad.ref(),
           log_tag: String.t(),
-          target_size: pos_integer() | nil,
-          min_demand_factor: pos_integer() | nil
+          target_size: pos_integer() | nil
         }) :: t()
   def init(config) do
     %{
       inbound_demand_unit: inbound_demand_unit,
       outbound_demand_unit: outbound_demand_unit,
       demand_counter: demand_counter,
-      demand_pad: demand_pad,
+      linked_output_ref: linked_output_ref,
       log_tag: log_tag,
-      target_size: target_size,
-      min_demand_factor: min_demand_factor
+      target_size: target_size
     } = config
 
     inbound_metric = Buffer.Metric.from_unit(inbound_demand_unit)
@@ -81,24 +79,19 @@ defmodule Membrane.Core.Element.InputQueue do
 
     target_size = target_size || default_target_size
 
-    min_demand =
-      (target_size * (min_demand_factor || default_min_demand_factor())) |> ceil() |> max(1)
-
     %__MODULE__{
       q: @qe.new(),
       log_tag: log_tag,
       target_size: target_size,
-      size: 0,
-      demand: target_size,
-      min_demand: min_demand,
       inbound_metric: inbound_metric,
       outbound_metric: outbound_metric,
-      demand_counter: demand_counter
+      demand_counter: demand_counter,
+      linked_output_ref: linked_output_ref
     }
-    |> send_demands(demand_pad)
+    |> maybe_increase_demand_counter()
   end
 
-  @spec store(t(), atom(), any()) :: t()
+  @spec store(t(), atom(), queue_item() | [queue_item()]) :: t()
   def store(input_queue, type \\ :buffers, v)
 
   def store(input_queue, :buffers, v) when is_list(v) do
@@ -135,6 +128,7 @@ defmodule Membrane.Core.Element.InputQueue do
          %__MODULE__{
            q: q,
            size: size,
+           lacking_buffers: lacking_buffers,
            inbound_metric: inbound_metric,
            outbound_metric: outbound_metric
          } = input_queue,
@@ -150,24 +144,25 @@ defmodule Membrane.Core.Element.InputQueue do
     %__MODULE__{
       input_queue
       | q: q |> @qe.push({:buffers, v, inbound_metric_buffer_size, outbound_metric_buffer_size}),
-        size: size + inbound_metric_buffer_size
+        size: size + inbound_metric_buffer_size,
+        lacking_buffers: lacking_buffers - inbound_metric_buffer_size
     }
   end
 
-  @spec take_and_demand(t(), non_neg_integer(), Pad.ref()) :: {output(), t()}
-  def take_and_demand(
-        %__MODULE__{} = input_queue,
-        count,
-        demand_pad
-      )
-      when count >= 0 do
+  # w starej implementacji pole "demand" jest inkrementowane o tyle, ile wyciagniemy z kolejki
+  # wiec teraz trzeba podbic counter o tyle ile wyciagnelismy z kolejki
+  # wychodzi na to ze teraz pole "demand" jest wgl do wywalenia
+
+  def take(%__MODULE__{} = input_queue, count) when count >= 0 do
     "Taking #{inspect(count)} #{inspect(input_queue.outbound_metric)}"
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 
-    {out, %__MODULE__{size: new_size} = input_queue} = do_take(input_queue, count)
-    input_queue = send_demands(input_queue, demand_pad)
-    Telemetry.report_metric(:take_and_demand, new_size, input_queue.log_tag)
+    {out, input_queue} = do_take(input_queue, count)
+    input_queue = maybe_increase_demand_counter(input_queue)
+
+    Telemetry.report_metric(:take, input_queue.size, input_queue.log_tag)
+
     {out, input_queue}
   end
 
@@ -176,22 +171,53 @@ defmodule Membrane.Core.Element.InputQueue do
            q: q,
            size: size,
            inbound_metric: inbound_metric,
-           outbound_metric: outbound_metric,
-           demand: demand
+           outbound_metric: outbound_metric
          } = input_queue,
          count
        ) do
-    {out, nq, new_queue_size} = q |> q_pop(count, inbound_metric, outbound_metric, size)
-    new_demand_size = demand + (size - new_queue_size)
-
-    {out,
-     %__MODULE__{
-       input_queue
-       | q: nq,
-         size: new_queue_size,
-         demand: new_demand_size
-     }}
+    {out, nq, new_size} = q |> q_pop(count, inbound_metric, outbound_metric, size)
+    input_queue = %{input_queue | q: nq, size: new_size}
+    {out, input_queue}
   end
+
+  # @spec take_and_demand(t(), non_neg_integer(), Pad.ref()) :: {output(), t()}
+  # def take_and_demand(
+  #       %__MODULE__{} = input_queue,
+  #       count,
+  #       demand_pad
+  #     )
+  #     when count >= 0 do
+  #   "Taking #{inspect(count)} #{inspect(input_queue.outbound_metric)}"
+  #   |> mk_log(input_queue)
+  #   |> Membrane.Logger.debug_verbose()
+
+  #   {out, %__MODULE__{size: new_size} = input_queue} = do_take(input_queue, count)
+  #   input_queue = increase_demand_counter(input_queue, demand_pad)
+  #   Telemetry.report_metric(:take_and_demand, new_size, input_queue.log_tag)
+  #   {out, input_queue}
+  # end
+
+  # defp do_take(
+  #        %__MODULE__{
+  #          q: q,
+  #          size: size,
+  #          inbound_metric: inbound_metric,
+  #          outbound_metric: outbound_metric,
+  #          demand: demand
+  #        } = input_queue,
+  #        count
+  #      ) do
+  #   {out, nq, new_queue_size} = q |> q_pop(count, inbound_metric, outbound_metric, size)
+  #   new_demand_size = demand + (size - new_queue_size)
+
+  #   {out,
+  #    %__MODULE__{
+  #      input_queue
+  #      | q: nq,
+  #        size: new_queue_size,
+  #        demand: new_demand_size
+  #    }}
+  # end
 
   defp q_pop(
          q,
@@ -287,33 +313,31 @@ defmodule Membrane.Core.Element.InputQueue do
     end
   end
 
-  @spec send_demands(t(),  Pad.ref()) :: t()
-  defp send_demands(
+  @spec maybe_increase_demand_counter(t()) :: t()
+  defp maybe_increase_demand_counter(
          %__MODULE__{
            size: size,
            target_size: target_size,
-           demand: demand,
            demand_counter: demand_counter,
-           min_demand: min_demand
-         } = input_queue,
-                  linked_output_ref
+           lacking_buffers: lacking_buffers
+         } = input_queue
        )
-       when size < target_size and demand > 0 do
-    to_demand = max(demand, min_demand)
+       when target_size > size + lacking_buffers do
+    diff = target_size - size - lacking_buffers
 
     """
-    Sending demand of size #{inspect(to_demand)} to output #{inspect(linked_output_ref)}
+    Increasing DemandCounter linked to  #{inspect(input_queue.linked_output_ref)} by  #{inspect(diff)}
     """
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 
-    :ok = DemandCounter.increase(demand_counter, to_demand)
-    %__MODULE__{input_queue | demand: demand - to_demand}
+    lacking_buffers = lacking_buffers + diff
+    :ok = DemandCounter.increase(demand_counter, diff)
+
+    %{input_queue | lacking_buffers: lacking_buffers}
   end
 
-  defp send_demands(input_queue, _linked_output_ref) do
-    input_queue
-  end
+  defp maybe_increase_demand_counter(%__MODULE__{} = input_queue), do: input_queue
 
   # This function may be unused if particular logs are pruned
   @dialyzer {:no_unused, mk_log: 2}
@@ -321,7 +345,7 @@ defmodule Membrane.Core.Element.InputQueue do
     %__MODULE__{
       log_tag: log_tag,
       size: size,
-      target_size: target_size,
+      target_size: target_size
     } = input_queue
 
     [

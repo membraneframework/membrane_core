@@ -58,11 +58,12 @@ defmodule Membrane.Core.Element.BufferController do
   @spec do_handle_buffer(Pad.ref(), PadModel.pad_data(), [Buffer.t()] | Buffer.t(), State.t()) ::
           State.t()
   defp do_handle_buffer(pad_ref, %{flow_control: :auto} = data, buffers, state) do
-    %{demand: demand, demand_unit: demand_unit} = data
+    %{lacking_buffers: lacking_buffers, demand_unit: demand_unit} = data
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
 
-    state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
-    state = DemandController.send_auto_demand_if_needed(pad_ref, state)
+    state = PadModel.set_data!(state, pad_ref, :lacking_buffers, lacking_buffers - buf_size)
+    # state = DemandController.send_auto_demand_if_needed(pad_ref, state)
+    state = DemandController.increase_demand_counter_if_needed(pad_ref, state)
     exec_buffer_callback(pad_ref, buffers, state)
   end
 

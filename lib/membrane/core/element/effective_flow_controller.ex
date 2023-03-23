@@ -55,7 +55,10 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
         state
 
       other_effective_flow_control == state.effective_flow_control ->
-        :ok = update_demand_counter_receiver_mode(my_pad_ref, state)
+        :ok =
+          PadModel.get_data!(state, my_pad_ref, :demand_counter)
+          |> DemandCounter.set_receiver_mode(state.effective_flow_control)
+
         state
 
       other_effective_flow_control == :pull ->
@@ -98,13 +101,16 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
     Enum.each(state.pads_data, fn
       {_ref, %{flow_control: :auto, direction: :output} = pad_data} ->
+        :ok = DemandCounter.set_sender_mode(pad_data.demand_counter, new_effective_flow_control)
+        :ok = DemandCounter.set_receiver_mode(pad_data.demand_counter, :to_be_resolved)
+
         Message.send(pad_data.pid, :other_effective_flow_control_resolved, [
           pad_data.other_ref,
           new_effective_flow_control
         ])
 
-      {_ref, %{flow_control: :auto, direction: :input} = pad_data} ->
-        :ok = update_demand_counter_receiver_mode(pad_data.ref, state)
+      {_ref, %{flow_control: :auto, direction: :input, demand_counter: demand_counter}} ->
+        :ok = DemandCounter.set_receiver_mode(demand_counter, new_effective_flow_control)
 
       _pad_entry ->
         :ok
@@ -112,15 +118,16 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
     Enum.reduce(state.pads_data, state, fn
       {pad_ref, %{flow_control: :auto, direction: :input}}, state ->
-        DemandController.send_auto_demand_if_needed(pad_ref, state)
+        # DemandController.send_auto_demand_if_needed(pad_ref, state)
+        DemandController.increase_demand_counter_if_needed(pad_ref, state)
 
       _pad_entry, state ->
         state
     end)
   end
 
-  defp update_demand_counter_receiver_mode(pad_ref, state) do
-    PadModel.get_data!(state, pad_ref, [:demand_counter])
-    |> DemandCounter.set_receiver_mode(state.effective_flow_control)
-  end
+  # defp update_demand_counter_receiver_mode(pad_ref, state) do
+  #   PadModel.get_data!(state, pad_ref, [:demand_counter])
+  #   |> DemandCounter.set_receiver_mode(state.effective_flow_control)
+  # end
 end

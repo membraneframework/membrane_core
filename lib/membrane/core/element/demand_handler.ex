@@ -35,7 +35,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   def handle_redemand(pad_ref, state) do
-    DemandController.handle_demand(pad_ref, 0, state)
+    DemandController.redemand(pad_ref, state)
   end
 
   @doc """
@@ -81,10 +81,10 @@ defmodule Membrane.Core.Element.DemandHandler do
     pad_data = state |> PadModel.get_data!(pad_ref)
 
     {{_queue_status, data}, new_input_queue} =
-      InputQueue.take_and_demand(
+      InputQueue.take(
         pad_data.input_queue,
-        pad_data.demand,
-        pad_data.other_ref
+        pad_data.demand #,
+        # pad_data.other_ref
       )
 
     state = PadModel.set_data!(state, pad_ref, :input_queue, new_input_queue)
@@ -107,28 +107,33 @@ defmodule Membrane.Core.Element.DemandHandler do
     %{other_demand_unit: other_demand_unit, demand: demand} = data
     buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
     state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
-    fill_toilet_if_exists(pad_ref, data.toilet, buf_size, state)
+
+    # fill_toilet_if_exists(pad_ref, data.toilet, buf_size, state)
+    DemandController.decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state)
   end
 
-  def handle_outgoing_buffers(pad_ref, %{flow_control: :push} = data, buffers, state) do
-    %{other_demand_unit: other_demand_unit} = data
-    buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-    fill_toilet_if_exists(pad_ref, data.toilet, buf_size, state)
+  def handle_outgoing_buffers(pad_ref, %{flow_control: :push} = _data, buffers, state) do
+    # %{other_demand_unit: other_demand_unit} = data
+    # buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
+    # fill_toilet_if_exists(pad_ref, data.toilet, buf_size, state)
+
+    DemandController.decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state)
+
   end
 
-  defp fill_toilet_if_exists(pad_ref, toilet, buf_size, state) when toilet != nil do
-    case Toilet.fill(toilet, buf_size) do
-      {:ok, toilet} ->
-        PadModel.set_data!(state, pad_ref, :toilet, toilet)
+  # defp fill_toilet_if_exists(pad_ref, toilet, buf_size, state) when toilet != nil do
+  #   case Toilet.fill(toilet, buf_size) do
+  #     {:ok, toilet} ->
+  #       PadModel.set_data!(state, pad_ref, :toilet, toilet)
 
-      {:overflow, _toilet} ->
-        # if the toilet has overflowed, we remove it so it didn't overflow again
-        # and let the parent handle that situation by unlinking this output pad or crashing
-        PadModel.set_data!(state, pad_ref, :toilet, nil)
-    end
-  end
+  #     {:overflow, _toilet} ->
+  #       # if the toilet has overflowed, we remove it so it didn't overflow again
+  #       # and let the parent handle that situation by unlinking this output pad or crashing
+  #       PadModel.set_data!(state, pad_ref, :toilet, nil)
+  #   end
+  # end
 
-  defp fill_toilet_if_exists(_pad_ref, nil, _buf_size, state), do: state
+  # defp fill_toilet_if_exists(_pad_ref, nil, _buf_size, state), do: state
 
   defp update_demand(pad_ref, size, state) when is_integer(size) do
     PadModel.set_data!(state, pad_ref, :demand, size)

@@ -39,6 +39,7 @@ defmodule Membrane.Element.PadData do
           other_ref: private_field,
           input_queue: private_field,
           demand: integer() | nil,
+          incoming_demand: integer() | nil,
           demand_unit: private_field,
           other_demand_unit: private_field,
           auto_demand_size: private_field,
@@ -66,7 +67,8 @@ defmodule Membrane.Element.PadData do
   defstruct @enforce_keys ++
               [
                 input_queue: nil,
-                demand: nil,
+                demand: 0,
+                incoming_demand: nil,
                 demand_unit: nil,
                 start_of_stream?: false,
                 end_of_stream?: false,

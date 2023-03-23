@@ -293,10 +293,9 @@ defmodule Membrane.Core.Bin.PadController do
   def handle_unlink(pad_ref, state) do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
       state = maybe_handle_pad_removed(pad_ref, state)
-      endpoint = PadModel.get_data!(state, pad_ref, :endpoint)
       {pad_data, state} = PadModel.pop_data!(state, pad_ref)
 
-      if endpoint do
+      if endpoint = pad_data.endpoint do
         Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
         ChildLifeController.proceed_spec_startup(pad_data.spec_ref, state)
       else

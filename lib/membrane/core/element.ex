@@ -172,14 +172,19 @@ defmodule Membrane.Core.Element do
 
   @compile {:inline, do_handle_info: 2}
 
-  defp do_handle_info(Message.new(:demand, size, _opts) = msg, state) do
-    pad_ref = Message.for_pad(msg)
-    state = DemandController.handle_demand(pad_ref, size, state)
+  # defp do_handle_info(Message.new(:demand, size, _opts) = msg, state) do
+  #   pad_ref = Message.for_pad(msg)
+  #   state = DemandController.handle_demand(pad_ref, size, state)
+  #   {:noreply, state}
+  # end
+
+  defp do_handle_info(Message.new(:demand_counter_increased, pad_ref), state) do
+    state = DemandController.check_demand_counter(pad_ref, state)
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(:demand_counter_increased, pad_ref) = msg, state) do
-    state = DemandController.handle_demand_counter_increased(pad_ref, state)
+  defp do_handle_info(Message.new(:resume_handle_demand_loop), state) do
+    state = DemandController.exec_random_pad_handle_demand(state)
     {:noreply, state}
   end
 

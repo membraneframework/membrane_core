@@ -30,17 +30,22 @@ defmodule Membrane.Core.Element.PadControllerTest do
 
       assert {{:ok, _pad_info}, new_state} =
                @module.handle_link(
-                 :output,
-                 %{pad_ref: :output, pid: self(), pad_props: %{options: []}, child: :a},
+                 :input,
                  %{
-                   pad_ref: :other_input,
-                   pid: nil,
+                   pad_ref: :input,
+                   pid: self(),
+                   pad_props: %{min_demand_factor: 0.25, target_queue_size: 40, options: []},
+                   child: :a
+                 },
+                 %{
+                   pad_ref: :other_output,
+                   pid: spawn(fn -> :ok end),
                    child: :b,
                    pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
                  },
                  %{
                    initiator: :sibling,
-                   other_info: %{direction: :input, flow_control: :manual, demand_unit: :buffers},
+                   other_info: %{direction: :output, flow_control: :manual, demand_unit: :buffers},
                    link_metadata: %{toilet: make_ref(), observability_metadata: %{}},
                    stream_format_validation_params: [],
                    other_effective_flow_control: :pull
@@ -49,7 +54,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
                )
 
       assert %{new_state | pads_data: nil} == %{state | pads_data: nil}
-      assert PadModel.assert_instance(new_state, :output) == :ok
+      assert PadModel.assert_instance(new_state, :input) == :ok
     end
 
     test "when pad is does not exist in the element" do

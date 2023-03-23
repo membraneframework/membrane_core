@@ -1,8 +1,8 @@
 defmodule Membrane.Core.Element.EventControllerTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Element.{EventController, InputQueue, State}
-  alias Membrane.Core.{Events, Message}
+  alias Membrane.Core.Element.{DemandCounter, EventController, InputQueue, State}
+  alias Membrane.Core.Events
   alias Membrane.Event
 
   require Membrane.Core.Message
@@ -19,14 +19,23 @@ defmodule Membrane.Core.Element.EventControllerTest do
   end
 
   setup do
+    demand_counter =
+      DemandCounter.new(
+        :pull,
+        spawn(fn -> :ok end),
+        :buffers,
+        spawn(fn -> :ok end),
+        :output,
+        -300
+      )
+
     input_queue =
       InputQueue.init(%{
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :buffers,
-        demand_pid: self(),
         demand_pad: :some_pad,
         log_tag: "test",
-        demand_counter: :demand_counter,
+        demand_counter: demand_counter,
         target_size: nil,
         min_demand_factor: nil
       })
@@ -54,7 +63,8 @@ defmodule Membrane.Core.Element.EventControllerTest do
         }
       )
 
-    assert_received Message.new(:demand, _size, for_pad: :some_pad)
+    assert DemandCounter.get(demand_counter) > 0
+
     [state: state]
   end
 

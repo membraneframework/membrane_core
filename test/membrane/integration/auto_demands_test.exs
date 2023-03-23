@@ -109,6 +109,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     refute_sink_buffer(pipeline, :left_sink, %{payload: 25_000})
   end
 
+  @tag :dupa
   test "handle removed branch" do
     import Membrane.ChildrenSpec
 

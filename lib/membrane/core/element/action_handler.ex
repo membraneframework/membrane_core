@@ -406,6 +406,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     with %{direction: :output, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
       DemandHandler.handle_redemand(pad_ref, state)
+      # Membrane.Core.Element.DemandController.redemand(pad_ref, state)
     else
       %{direction: :input} ->
         raise ElementError, "Tried to make a redemand on input pad #{inspect(pad_ref)}"
