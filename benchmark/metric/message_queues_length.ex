@@ -1,7 +1,7 @@
 defmodule Benchmark.Metric.MessageQueuesLength do
   @behaviour Benchmark.Metric
 
-  @(@tolerance_factor 0.5)
+  @tolerance_factor 0.5
   @sampling_period 100
 
   @impl true
@@ -10,7 +10,7 @@ defmodule Benchmark.Metric.MessageQueuesLength do
     cumulative_queues_length_ref = integrate(queues_lengths_ref)
 
     if cumulative_queues_length >
-         cumulative_queues_length_ref * (1 + @@tolerance_factor),
+         cumulative_queues_length_ref * (1 + @tolerance_factor),
        do:
          raise(
            "The cumulative queues length has got worse! For test case: #{inspect(test_case, pretty: true)}
