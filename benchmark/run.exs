@@ -72,7 +72,7 @@ defmodule Benchmark.Run do
       reductions: 1_000,
       max_random: 1,
       number_of_filters: 100,
-      number_of_buffers: 50000,
+      number_of_buffers: 50_000,
       buffer_size: 1
     ],
     linear: [
@@ -92,7 +92,7 @@ defmodule Benchmark.Run do
     with_branches: [
       struct: [{1, 2}, {1, 2}, {2, 1}, {2, 1}],
       reductions: 100,
-      number_of_buffers: 50_000,
+      number_of_buffers: 500_000,
       buffer_size: 1,
       max_random: 10
     ]
