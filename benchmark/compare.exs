@@ -8,7 +8,7 @@
 defmodule Benchmark.Compare do
   require Logger
 
-  def run(results, ref_results) do
+  def run(results, ref_results, results_name, ref_results_name) do
     if Map.keys(results) != Map.keys(ref_results),
       do: raise("Incompatible performance test result files!")
 
@@ -20,17 +20,17 @@ defmodule Benchmark.Compare do
         Enum.map(Map.keys(test_case_results), fn metric_module ->
           """
           METRIC: #{metric_module}
-          #{inspect(Map.get(test_case_results, metric_module), pretty: true)}
-          vs
-          #{inspect(Map.get(test_case_results_ref, metric_module), pretty: true)}
-
+          1. In #{results_name}:
+          #{inspect(Map.get(test_case_results_ref, metric_module), pretty: true, limit: :infinity)}
+          2. In #{ref_results_name}:
+          #{inspect(Map.get(test_case_results, metric_module), pretty: true, limit: :infinity)}
           """
         end)
         |> Enum.join()
 
       Logger.debug("""
       TEST CASE:
-      #{inspect(test_case, pretty: true)}
+      #{inspect(test_case, pretty: true, limit: :infinity)}
 
       #{results_str}
 
@@ -50,4 +50,6 @@ end
 [results_filename, ref_results_filename] = System.argv() |> Enum.take(2)
 results = File.read!(results_filename) |> :erlang.binary_to_term()
 ref_results = File.read!(ref_results_filename) |> :erlang.binary_to_term()
-Benchmark.Compare.run(results, ref_results)
+results_name = String.split(results_filename, "/") |> Enum.at(-1)
+ref_results_name = String.split(ref_results_filename, "/") |> Enum.at(-1)
+Benchmark.Compare.run(results, ref_results, results_name, ref_results_name)
