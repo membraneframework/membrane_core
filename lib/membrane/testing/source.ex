@@ -43,14 +43,13 @@ defmodule Membrane.Testing.Source do
                 spec: Enum.t() | {initial_state :: any(), generator},
                 default: {0, &__MODULE__.default_buf_gen/2},
                 description: """
-                If `output` is an enumerable with elements being `t:Membrane.Buffer.t/0`,
-                then a sequence of these buffers will be sent through the
-                `:output` pad, followed by `t:Membrane.Element.Action.end_of_stream/0`.
-                Otherwise, if `output` is an enumerable with `t:Membrane.Payload.t/0` then
-                buffer containing those payloads will be sent through the
-                `:output` pad, followed by `t:Membrane.Element.Action.end_of_stream/0`.
+                If `output` is an enumerable with elements being `t:Membrane.Payload.t/0`,
+                then these elements that are not `t:Membrane.Buffer.t/0` structs,
+                will be put into `t:Membrane.Buffer.t/0` struct's `payload` field and such a list of
+                `Membrane.Buffer.t/0` buffers will be sent via `:output` pad, followed by
+                `t:Membrane.Element.Action.end_of_stream/0`.
 
-                If `output` is a `{initial_state, function}` tuple then the
+                Otherwise, if `output` is a `{initial_state, function}` tuple then the
                 the function will be invoked each time `handle_demand` is called.
                 It is an action generator that takes two arguments.
                 The first argument is the state that is initially set to
@@ -77,9 +76,8 @@ defmodule Membrane.Testing.Source do
       {initial_state, generator} when is_function(generator) ->
         {[], opts |> Map.merge(%{generator_state: initial_state, output: generator})}
 
-      enumerable_output ->
-        all_buffers_in_output = Enum.all?(enumerable_output, &match?(%Membrane.Buffer{}, &1))
-        {[], opts |> Map.put(:all_buffers_in_output?, all_buffers_in_output)}
+      _enumerable_output ->
+        {[], opts}
     end
   end
 
@@ -131,11 +129,10 @@ defmodule Membrane.Testing.Source do
     {to_output_now, rest} = Enum.split(output, size)
 
     buffers =
-      if state.all_buffers_in_output? do
-        to_output_now
-      else
-        Enum.map(to_output_now, &%Buffer{payload: &1})
-      end
+      Enum.map(
+        to_output_now,
+        &if(match?(%Membrane.Buffer{}, &1), do: &1, else: %Membrane.Buffer{payload: &1})
+      )
 
     actions =
       case rest do

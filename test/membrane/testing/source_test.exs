@@ -79,23 +79,13 @@ defmodule Membrane.Testing.SourceTest do
     assert %Buffer{payload: 1} == buffer
   end
 
-  test "Source wraps the elements of `Enum.t()` into `Membrane.Buffer.t()` if any of these elements is not a `Membrane.Buffer.t()`" do
+  test "source wraps the elements passed as `:output` that are not `Membrane.Buffer` structs into `Membrane.Buffer`" do
     pipeline = Pipeline.start_supervised!()
     output = [%Buffer{payload: 1}, 2, 3]
     spec = child(:source, %Source{output: output}) |> child(:sink, Sink)
     Pipeline.execute_actions(pipeline, spec: spec)
 
-    result_buffers = Enum.map(output, &%Buffer{payload: &1})
-    Enum.each(result_buffers, &assert_sink_buffer(pipeline, :sink, ^&1))
-  end
-
-  test "Source doesn't wrap the elements of `Enum.t()` into `Membrane.Buffer.t()` if all of these elements are `Membrane.Buffer.t()`" do
-    pipeline = Pipeline.start_supervised!()
-    output = [%Buffer{payload: 1}, %Buffer{payload: 2}, %Buffer{payload: 3}]
-    spec = child(:source, %Source{output: output}) |> child(:sink, Sink)
-    Pipeline.execute_actions(pipeline, spec: spec)
-
-    result_buffers = output
+    result_buffers = [%Buffer{payload: 1}, %Buffer{payload: 2}, %Buffer{payload: 3}]
     Enum.each(result_buffers, &assert_sink_buffer(pipeline, :sink, ^&1))
   end
 end
