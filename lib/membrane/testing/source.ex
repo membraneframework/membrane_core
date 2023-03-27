@@ -46,7 +46,7 @@ defmodule Membrane.Testing.Source do
                 If `output` is an enumerable with elements being `t:Membrane.Payload.t/0`,
                 then these elements that are not `t:Membrane.Buffer.t/0` structs,
                 will be put into `t:Membrane.Buffer.t/0` struct's `payload` field and such a list of
-                `Membrane.Buffer.t/0` buffers will be sent via `:output` pad, followed by
+                `t:Membrane.Buffer.t/0` buffers will be sent via `:output` pad, followed by
                 `t:Membrane.Element.Action.end_of_stream/0`.
 
                 Otherwise, if `output` is a `{initial_state, function}` tuple then the
