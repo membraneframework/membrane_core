@@ -22,7 +22,7 @@ defmodule Benchmark.Compare do
           METRIC: #{metric_module}
           1. In #{results_name}:
           #{inspect(Map.get(test_case_results_ref, metric_module), pretty: true, limit: :infinity)}
-          2. In #{refr_results_name}:
+          2. In #{ref_results_name}:
           #{inspect(Map.get(test_case_results, metric_module), pretty: true, limit: :infinity)}
           """
         end)
