@@ -1,7 +1,7 @@
 defmodule Benchmark.Metric.InProgressMemory do
   @behaviour Benchmark.Metric
 
-  @allowed_worsening_factor 0.5
+  @(@tolerance_factor 0.5)
   @sampling_period 100
 
   @impl true
@@ -9,7 +9,7 @@ defmodule Benchmark.Metric.InProgressMemory do
     cumulative_memory = integrate(memory_samples)
     cumulative_memory_ref = integrate(memory_samples_ref)
 
-    if cumulative_memory > cumulative_memory_ref * (1 + @allowed_worsening_factor),
+    if cumulative_memory > cumulative_memory_ref * (1 + @@tolerance_factor),
       do:
         raise(
           "The memory performance has got worse! For test case: #{inspect(test_case, pretty: true)}
