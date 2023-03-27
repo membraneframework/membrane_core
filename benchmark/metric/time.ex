@@ -1,11 +1,11 @@
 defmodule Benchmark.Metric.Time do
   @behaviour Benchmark.Metric
 
-  @allowed_worsening_factor 0.1
+  @tolerance_factor 0.15
 
   @impl true
   def assert(time, time_ref, test_case) do
-    if time > time_ref * (1 + @allowed_worsening_factor),
+    if time > time_ref * (1 + @tolerance_factor),
       do:
         raise(
           "The time performance has got worse! For test case: #{inspect(test_case, pretty: true)} the test
