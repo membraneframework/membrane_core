@@ -155,11 +155,11 @@ jobs:
           at: .
       - run: cp -r benchmark/ ~/benchmark_backup/
       - run: cp mix.exs ~/benchmark_backup/
-      - run: docker run -e MIX_ENV=benchmark -v ./:/root/app -v ~/results:/root/results -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/run.exs /root/results/feature_branch.res
+      - run: docker run -e MIX_ENV=benchmark -v ./:/root/app -v ~/results:/root/results -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/run.exs /root/results/feature_branch_results
       - run: git checkout -f master
       - run: cp  ~/benchmark_backup/mix.exs ~/app
-      - run: docker run -e MIX_ENV=benchmark -v ./:/root/app -v ~/results:/root/results -v ~/benchmark_backup/benchmark:/root/app/benchmark -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/run.exs /root/results/results_ref.res
-      - run: docker run -e MIX_ENV=benchmark -v ./:/root/app -v ~/results:/root/results -v ~/benchmark_backup/benchmark:/root/app/benchmark -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/compare.exs /root/results/feature_branch.res /root/results/results_ref.res
+      - run: docker run -e MIX_ENV=benchmark -v ./:/root/app -v ~/results:/root/results -v ~/benchmark_backup/benchmark:/root/app/benchmark -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/run.exs /root/results/master_results
+      - run: docker run -e MIX_ENV=benchmark -v ./:/root/app -v ~/results:/root/results -v ~/benchmark_backup/benchmark:/root/app/benchmark -w /root/app membraneframeworklabs/docker_membrane mix run benchmark/compare.exs /root/results/feature_branch_results /root/results/master_results
       - run: 
           command: rm ~/results/*
           when: always
