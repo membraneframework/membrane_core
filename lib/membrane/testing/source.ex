@@ -43,11 +43,11 @@ defmodule Membrane.Testing.Source do
                 spec: Enum.t() | {initial_state :: any(), generator},
                 default: {0, &__MODULE__.default_buf_gen/2},
                 description: """
-                If the `output` is an enumerable of elements that are of type `t:Membrane.Payload.t/0`,
-                then any of those elements that are not already `t:Membrane.Buffer.t/0` structures will
-                be enclosed in a `t:Membrane.Buffer.t/0` structure, and a list of these `t:Membrane.Buffer.t/0`
-                structures will be sent through the `:output` pad, followed by
-                `t:Membrane.Element.Action.end_of_stream/0` action.
+                If `output` is an Enumerable, then each element of it will be sent
+                through the `:output` pad, followed by `t:Membrane.Element.Action.end_of_stream/0`.
+                Each element of the Enumerable must be either `t:Membrane.Buffer.t/0`
+                or `t:Membrane.Payload.t/0`. In the latter case, it will be automatically wrapped into
+                `t:Membrane.Buffer.t/0` before sending.
 
                 Otherwise, if `output` is a `{initial_state, function}` tuple then the
                 the function will be invoked each time `handle_demand` is called.
