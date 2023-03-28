@@ -39,6 +39,7 @@ defmodule Membrane.Element.PadData do
           other_ref: private_field,
           input_queue: private_field,
           demand: integer() | nil,
+          handle_demand_executed?: boolean(),
           incoming_demand: integer() | nil,
           demand_unit: private_field,
           other_demand_unit: private_field,
@@ -68,6 +69,7 @@ defmodule Membrane.Element.PadData do
               [
                 input_queue: nil,
                 demand: 0,
+                handle_demand_executed?: false,
                 incoming_demand: nil,
                 demand_unit: nil,
                 start_of_stream?: false,

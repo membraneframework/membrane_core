@@ -4,6 +4,8 @@ defmodule Membrane.Support.DemandsTest.Filter do
 
   alias Membrane.Buffer
 
+  require Membrane.Logger
+
   def_output_pad :output, flow_control: :manual, accepted_format: _any
 
   def_input_pad :input, flow_control: :manual, demand_unit: :buffers, accepted_format: _any
@@ -20,11 +22,18 @@ defmodule Membrane.Support.DemandsTest.Filter do
 
   @impl true
   def handle_demand(:output, size, _unit, _ctx, state) do
+    # state.demand_generator.(size)
+    # |> IO.inspect(label: "FILTER DEMANDING ")
+
+    Membrane.Logger.warn("FILTER DEMADNING #{state.demand_generator.(size)}")
+
     {[demand: {:input, state.demand_generator.(size)}], state}
   end
 
   @impl true
   def handle_buffer(:input, %Buffer{payload: payload}, _ctx, state) do
+    state = Map.update(state, :i, 0, &(&1 + 1))
+    # IO.inspect(state.i, label: "FILTER HANDLE BUFFER NO")
     {[buffer: {:output, %Buffer{payload: payload <> <<255>>}}, redemand: :output], state}
   end
 

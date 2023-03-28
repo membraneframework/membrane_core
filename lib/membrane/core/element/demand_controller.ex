@@ -30,7 +30,7 @@ defmodule Membrane.Core.Element.DemandController do
   @lacking_buffers_lowerbound 2000
   @lacking_buffers_upperbound 4000
 
-  @handle_demand_loop_limit 20
+  @handle_demand_loop_limit 2
 
   @spec check_demand_counter(Pad.ref(), State.t()) :: State.t()
   def check_demand_counter(pad_ref, state) do
@@ -70,8 +70,12 @@ defmodule Membrane.Core.Element.DemandController do
   end
 
   defp do_check_demand_counter(%{flow_control: :manual} = pad_data, state) do
-    counter_value = pad_data.demand_counter |> DemandCounter.get()
-    handle_manual_output_pad_demand(pad_data.ref, counter_value, state)
+    # counter_value = pad_data.demand_counter |> DemandCounter.get()
+    # Membrane.Logger.debug("CHECKING DEMAND COUNTER #{counter_value}")
+    # handle_manual_output_pad_demand(pad_data.ref, counter_value, state)
+
+    snapshot_demand_counter(pad_data, state)
+    |> exec_random_pad_handle_demand()
   end
 
   defp do_check_demand_counter(_pad_data, state) do
@@ -95,36 +99,69 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
-  @spec handle_manual_output_pad_demand(Pad.ref(), integer(), State.t()) :: State.t()
-  defp handle_manual_output_pad_demand(pad_ref, counter_value, state) when counter_value > 0 do
-    with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
-         %State{playback: :playing} <- state do
-      pad_data =
-        cond do
-          counter_value > 0 and counter_value > pad_data.demand ->
-            %{pad_data | incoming_demand: counter_value - pad_data.demand, demand: counter_value}
+  # @spec handle_manual_output_pad_demand(Pad.ref(), integer(), State.t()) :: State.t()
+  # defp handle_manual_output_pad_demand(pad_ref, counter_value, state) when counter_value > 0 do
+  #   with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
+  #        %State{playback: :playing} <- state do
+  #     pad_data =
+  #       if counter_value > 0 and counter_value > pad_data.demand do
+  #         %{
+  #           pad_data
+  #           | incoming_demand: counter_value - pad_data.demand,
+  #             demand: counter_value,
+  #             handle_demand_executed?: false
+  #         }
+  #       else
+  #         pad_data
+  #       end
 
-          true ->
+  #     PadModel.set_data!(state, pad_ref, pad_data)
+  #     |> exec_random_pad_handle_demand()
+  #   else
+  #     {:error, :unknown_pad} ->
+  #       # We've got a :demand_counter_increased message on already unlinked pad
+  #       state
+
+  #     %State{playback: :stopped} ->
+  #       PlaybackQueue.store(&check_demand_counter(pad_ref, &1), state)
+  #   end
+  # end
+
+  # defp handle_manual_output_pad_demand(_pad_ref, _counter_value, state), do: state
+
+  defp snapshot_demand_counter(pad_data, state) do
+    d = pad_data.demand
+
+    state =
+      pad_data.demand_counter
+      |> DemandCounter.get()
+      |> case do
+        counter_value when counter_value > 0 and counter_value > pad_data.demand ->
+          PadModel.set_data!(state, pad_data.ref, %{
             pad_data
-        end
+            | incoming_demand: counter_value - pad_data.demand,
+              demand: counter_value,
+              handle_demand_executed?: false
+          })
 
-      PadModel.set_data!(state, pad_ref, pad_data)
-      |> exec_random_pad_handle_demand()
-    else
-      {:error, :unknown_pad} ->
-        # We've got a :demand_counter_increased message on already unlinked pad
-        state
+        _counter_value ->
+          state
+      end
 
-      %State{playback: :stopped} ->
-        PlaybackQueue.store(&check_demand_counter(pad_ref, &1), state)
-    end
+    pad_data = PadModel.get_data!(state, pad_data.ref)
+
+    Membrane.Logger.warn(
+      "PAD COUNTER DEMAND SNAPSHOT #{inspect(d)} -> #{inspect(pad_data.demand)}      (handle_demand_executed?: #{pad_data.handle_demand_executed?})"
+    )
+
+    state
   end
-
-  defp handle_manual_output_pad_demand(_pad_ref, _counter_value, state), do: state
 
   @spec exec_random_pad_handle_demand(State.t()) :: State.t()
   def exec_random_pad_handle_demand(%{handle_demand_loop_counter: counter} = state)
       when counter >= @handle_demand_loop_limit do
+    Membrane.Logger.warn("HANDLE DEMAND LOOP COUNTER LIMIT")
+
     Message.send(self(), :resume_handle_demand_loop)
     %{state | handle_demand_loop_counter: 0}
   end
@@ -135,15 +172,31 @@ defmodule Membrane.Core.Element.DemandController do
     pads_to_draw =
       Map.values(state.pads_data)
       |> Enum.filter(fn
-        %{direction: :output, flow_control: :manual, end_of_stream?: false, demand: demand} ->
+        %{
+          direction: :output,
+          flow_control: :manual,
+          end_of_stream?: false,
+          handle_demand_executed?: false,
+          demand: demand
+        } ->
           demand > 0
 
         _pad_data ->
           false
       end)
 
+    # Membrane.Logger.warn("PADS TO DRAW #{inspect(pads_to_draw)}")
+
     case pads_to_draw do
       [] ->
+        Membrane.Logger.warn("NO PAD TO DRAW")
+
+        with {:ok, data} <- PadModel.get_data(state, :output) do
+          Membrane.Logger.warn(
+            "PAD :output handle_demand_executed? #{data.handle_demand_executed?} demand #{data.demand}"
+          )
+        end
+
         %{state | handle_demand_loop_counter: 0}
 
       pads_to_draw ->
@@ -154,21 +207,35 @@ defmodule Membrane.Core.Element.DemandController do
 
   @spec redemand(Pad.ref(), State.t()) :: State.t()
   def redemand(pad_ref, state) do
-    case PadModel.get_data(state, pad_ref) do
+    with {:ok, %{direction: :output, flow_control: :manual} = pad_data} <-
+           PadModel.get_data(state, pad_ref) do
+      state = snapshot_demand_counter(pad_data, state)
+      pad_data = PadModel.get_data!(state, pad_ref)
+
+      if exec_handle_demand?(pad_data) do
+        exec_handle_demand(pad_data, state)
+      else
+        state
+      end
+    else
       {:ok, %{direction: :input}} ->
         raise "Cannot redemand input pad #{inspect(pad_ref)}."
 
-      {:ok, %{demand: demand} = pad_data} when demand > 0 ->
-        exec_handle_demand(pad_data, state)
+      {:ok, %{flow_control: mode}} when mode != :manual ->
+        raise "Cannot redemand pad #{inspect(pad_ref)} because it has #{inspect(mode)} flow control."
 
-      _error_or_non_positive_demand ->
+      {:error, :unknown_pad} ->
         state
     end
   end
 
   @spec exec_handle_demand(PadData.t(), State.t()) :: State.t()
   defp exec_handle_demand(pad_data, state) do
+    Membrane.Logger.warn("EXEC HANDLE DEMAND #{inspect(pad_data.ref)}")
+
     context = &CallbackContext.from_state(&1, incoming_demand: pad_data.incoming_demand)
+
+    state = PadModel.set_data!(state, pad_data.ref, :handle_demand_executed?, true)
 
     state =
       CallbackHandler.exec_and_handle_callback(
@@ -192,11 +259,13 @@ defmodule Membrane.Core.Element.DemandController do
       associated_pads: associated_pads
     } = pad_data
 
-
     Membrane.Logger.warn("\n\nDUPA #{inspect(flow_control == :auto)}")
     Membrane.Logger.warn("DUPA #{inspect(state.effective_flow_control)}")
     Membrane.Logger.warn("DUPA #{inspect(lacking_buffers)}")
-    Membrane.Logger.warn("DUPA #{inspect(Enum.all?(associated_pads, &demand_counter_positive?(&1, state)))}")
+
+    Membrane.Logger.warn(
+      "DUPA #{inspect(Enum.all?(associated_pads, &demand_counter_positive?(&1, state)))}"
+    )
 
     flow_control == :auto and
       state.effective_flow_control == :pull and

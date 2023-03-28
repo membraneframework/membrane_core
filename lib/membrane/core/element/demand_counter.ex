@@ -168,7 +168,7 @@ defmodule Membrane.Core.Element.DemandCounter do
     :overflow_limit
   ]
 
-  defstruct @enforce_keys ++ [ buffered_decrementation: 0, toilet_overflowed?: false]
+  defstruct @enforce_keys ++ [buffered_decrementation: 0, toilet_overflowed?: false]
 
   @spec new(
           receiver_mode :: EffectiveFlowController.effective_flow_control(),
@@ -242,10 +242,16 @@ defmodule Membrane.Core.Element.DemandCounter do
     )
 
     if old_counter_value <= 0 do
+      ref = make_ref()
+
+      Membrane.Logger.warn(
+        "SENDING DC NOTIFICATION #{inspect(Message.new(:demand_counter_increased, [ref, demand_counter.sender_pad_ref]))}"
+      )
+
       Message.send(
         demand_counter.sender_process,
         :demand_counter_increased,
-        demand_counter.sender_pad_ref
+        [ref, demand_counter.sender_pad_ref]
       )
     end
 
@@ -262,13 +268,15 @@ defmodule Membrane.Core.Element.DemandCounter do
     xd = get(demand_counter)
 
     dc =
-    if demand_counter.buffered_decrementation >= demand_counter.buffered_decrementation_limit do
-      flush_buffered_decrementation(demand_counter)
-    else
-      demand_counter
-    end
+      if demand_counter.buffered_decrementation >= demand_counter.buffered_decrementation_limit do
+        flush_buffered_decrementation(demand_counter)
+      else
+        demand_counter
+      end
 
-    Membrane.Logger.warn("DEMAND COUNTER AFTER DECREMENTATION #{inspect(get(dc))} old #{inspect(xd)}")
+    Membrane.Logger.warn(
+      "DEMAND COUNTER AFTER DECREMENTATION #{inspect(get(dc))} old #{inspect(xd)}"
+    )
 
     dc
   end
@@ -289,8 +297,8 @@ defmodule Membrane.Core.Element.DemandCounter do
     demand_counter = %{demand_counter | buffered_decrementation: 0}
 
     if not demand_counter.toilet_overflowed? and
-        get_receiver_mode(demand_counter) == :pull and
-        get_sender_mode(demand_counter) == :push and
+         get_receiver_mode(demand_counter) == :pull and
+         get_sender_mode(demand_counter) == :push and
          counter_value < demand_counter.overflow_limit do
       overflow(demand_counter, counter_value)
     else

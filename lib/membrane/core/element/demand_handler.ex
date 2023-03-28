@@ -83,7 +83,8 @@ defmodule Membrane.Core.Element.DemandHandler do
     {{_queue_status, data}, new_input_queue} =
       InputQueue.take(
         pad_data.input_queue,
-        pad_data.demand #,
+        # ,
+        pad_data.demand
         # pad_data.other_ref
       )
 
@@ -102,40 +103,42 @@ defmodule Membrane.Core.Element.DemandHandler do
           [Buffer.t()],
           State.t()
         ) :: State.t()
-  def handle_outgoing_buffers(pad_ref, %{flow_control: flow_control} = data, buffers, state)
-      when flow_control in [:auto, :manual] do
-    %{other_demand_unit: other_demand_unit, demand: demand} = data
-    buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-    state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
+  # def handle_outgoing_buffers(pad_ref, %{flow_control: flow_control} = _data, buffers, state)
+  #     when flow_control in [:auto, :manual] do
+  #   # %{other_demand_unit: other_demand_unit, demand: demand} = data
+  #   # buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
+  #   # state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
 
-    # fill_toilet_if_exists(pad_ref, data.toilet, buf_size, state)
-    DemandController.decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state)
-  end
+  #   # fill_toilet_if_exists(pad_ref, data.toilet, buf_size, state)
+  #   state = DemandController.decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state)
 
-  def handle_outgoing_buffers(pad_ref, %{flow_control: :push} = _data, buffers, state) do
-    # %{other_demand_unit: other_demand_unit} = data
-    # buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-    # fill_toilet_if_exists(pad_ref, data.toilet, buf_size, state)
-
-    DemandController.decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state)
-
-  end
-
-  # defp fill_toilet_if_exists(pad_ref, toilet, buf_size, state) when toilet != nil do
-  #   case Toilet.fill(toilet, buf_size) do
-  #     {:ok, toilet} ->
-  #       PadModel.set_data!(state, pad_ref, :toilet, toilet)
-
-  #     {:overflow, _toilet} ->
-  #       # if the toilet has overflowed, we remove it so it didn't overflow again
-  #       # and let the parent handle that situation by unlinking this output pad or crashing
-  #       PadModel.set_data!(state, pad_ref, :toilet, nil)
+  #   if PadModel.get_data!(state, pad_ref, :demand) <= 0 do
+  #     DemandController.check_demand_counter(pad_ref, state)
+  #   else
+  #     state
   #   end
   # end
 
-  # defp fill_toilet_if_exists(_pad_ref, nil, _buf_size, state), do: state
+  # def handle_outgoing_buffers(pad_ref, %{flow_control: :push} = _data, buffers, state) do
+  #   # %{other_demand_unit: other_demand_unit} = data
+  #   # buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
+  #   # fill_toilet_if_exists(pad_ref, data.toilet, buf_size, state)
+
+  #   DemandController.decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state)
+  # end
+
+  def handle_outgoing_buffers(pad_ref, data, buffers, state) do
+    state = DemandController.decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state)
+
+    if data.flow_control != :push and PadModel.get_data!(state, pad_ref, :demand) <= 0 do
+      DemandController.check_demand_counter(pad_ref, state)
+    else
+      state
+    end
+  end
 
   defp update_demand(pad_ref, size, state) when is_integer(size) do
+    # dupa: tutaj jest cos nie ten teges
     PadModel.set_data!(state, pad_ref, :demand, size)
   end
 
@@ -180,6 +183,12 @@ defmodule Membrane.Core.Element.DemandHandler do
           State.t()
         ) :: State.t()
   defp handle_input_queue_output(pad_ref, data, state) do
+    count = PadModel.get_data!(state, pad_ref, :demand)
+
+    Membrane.Logger.warn(
+      "HANDLE INPUT QUEUE OUTPUT SIZE #{inspect(Enum.count(data))} WHILE COUNT #{count}"
+    )
+
     Enum.reduce(data, state, fn v, state ->
       do_handle_input_queue_output(pad_ref, v, state)
     end)

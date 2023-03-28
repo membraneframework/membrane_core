@@ -178,7 +178,8 @@ defmodule Membrane.Core.Element do
   #   {:noreply, state}
   # end
 
-  defp do_handle_info(Message.new(:demand_counter_increased, pad_ref), state) do
+  defp do_handle_info(Message.new(:demand_counter_increased, [ref, pad_ref]) = msg, state) do
+    Membrane.Logger.warn("RECEIVING DC NOTIFICATION ON #{inspect(pad_ref)} #{inspect(msg)}")
     state = DemandController.check_demand_counter(pad_ref, state)
     {:noreply, state}
   end

@@ -86,6 +86,9 @@ defmodule Membrane.Testing.Source do
 
   @impl true
   def handle_demand(:output, size, :buffers, _ctx, state) do
+    require Membrane.Logger
+    Membrane.Logger.warn("HANDLE DEMAND #{size}")
+
     get_actions(state, size)
   end
 

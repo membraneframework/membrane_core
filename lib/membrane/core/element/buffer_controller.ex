@@ -69,8 +69,15 @@ defmodule Membrane.Core.Element.BufferController do
 
   defp do_handle_buffer(pad_ref, %{flow_control: :manual} = data, buffers, state) do
     %{input_queue: old_input_queue} = data
+
     input_queue = InputQueue.store(old_input_queue, buffers)
     state = PadModel.set_data!(state, pad_ref, :input_queue, input_queue)
+
+    require Membrane.Logger
+
+    Membrane.Logger.warn(
+      "HANDLE BUFFER #{inspect(Enum.count(buffers))} EMPTY QUEUE? #{inspect(old_input_queue |> InputQueue.empty?())}"
+    )
 
     if old_input_queue |> InputQueue.empty?() do
       DemandHandler.supply_demand(pad_ref, state)
