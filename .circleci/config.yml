@@ -147,7 +147,7 @@ jobs:
 
   test_performance: 
     machine: true
-    resource_class: membraneframework/core-performance-test
+    resource_class: membraneframework/core_performance_test_2
     working_directory: ~/app
 
     steps:
