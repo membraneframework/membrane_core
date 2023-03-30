@@ -307,7 +307,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          }
          when stream_format != nil <- pad_data do
       state =
-        DemandHandler.handle_outgoing_buffers(pad_ref, pad_data, buffers, state)
+        DemandHandler.handle_outgoing_buffers(pad_ref, buffers, state)
         |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
 
       Message.send(pid, :buffer, buffers, for_pad: other_ref)

@@ -18,6 +18,7 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
+  alias Membrane.Core.Element.DemandHandler
   alias Membrane.{Clock, Core, ResourceGuard, Sync}
 
   alias Membrane.Core.{SubprocessSupervisor, TimerController}
@@ -178,14 +179,14 @@ defmodule Membrane.Core.Element do
   #   {:noreply, state}
   # end
 
-  defp do_handle_info(Message.new(:demand_counter_increased, [ref, pad_ref]) = msg, state) do
+  defp do_handle_info(Message.new(:demand_counter_increased, [_msg_ref, pad_ref]) = msg, state) do
     Membrane.Logger.warn("RECEIVING DC NOTIFICATION ON #{inspect(pad_ref)} #{inspect(msg)}")
     state = DemandController.check_demand_counter(pad_ref, state)
     {:noreply, state}
   end
 
   defp do_handle_info(Message.new(:resume_handle_demand_loop), state) do
-    state = DemandController.exec_random_pad_handle_demand(state)
+    state = DemandHandler.handle_delayed_demands(state)
     {:noreply, state}
   end
 

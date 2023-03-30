@@ -4,11 +4,11 @@ defmodule Membrane.Core.Element.DemandHandler do
   # Module handling demands requested on output pads.
 
   alias Membrane.Buffer
-  alias Membrane.Core.Child.PadModel
 
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
+    DemandCounter,
     EventController,
     InputQueue,
     State,
@@ -18,8 +18,8 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   alias Membrane.Pad
 
-  require Membrane.Core.Child.PadModel
-  require Membrane.Core.Message
+  require Membrane.Core.Child.PadModel, as: PadModel
+  require Membrane.Core.Message, as: Message
   require Membrane.Logger
 
   @doc """
@@ -35,7 +35,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   def handle_redemand(pad_ref, state) do
-    DemandController.redemand(pad_ref, state)
+    DemandController.exec_handle_demand(pad_ref, state)
+    |> handle_delayed_demands()
   end
 
   @doc """
@@ -70,8 +71,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   def supply_demand(pad_ref, state) do
-    state = do_supply_demand(pad_ref, state)
-    handle_delayed_demands(state)
+    do_supply_demand(pad_ref, state)
+    |> handle_delayed_demands()
   end
 
   defp do_supply_demand(pad_ref, state) do
@@ -80,16 +81,11 @@ defmodule Membrane.Core.Element.DemandHandler do
 
     pad_data = state |> PadModel.get_data!(pad_ref)
 
-    {{_queue_status, data}, new_input_queue} =
-      InputQueue.take(
-        pad_data.input_queue,
-        # ,
-        pad_data.demand
-        # pad_data.other_ref
-      )
+    {{_queue_status, popped_data}, new_input_queue} =
+      InputQueue.take(pad_data.input_queue, pad_data.demand)
 
     state = PadModel.set_data!(state, pad_ref, :input_queue, new_input_queue)
-    state = handle_input_queue_output(pad_ref, data, state)
+    state = handle_input_queue_output(pad_ref, popped_data, state)
     %State{state | supplying_demand?: false}
   end
 
@@ -99,42 +95,24 @@ defmodule Membrane.Core.Element.DemandHandler do
   """
   @spec handle_outgoing_buffers(
           Pad.ref(),
-          PadModel.pad_data(),
           [Buffer.t()],
           State.t()
         ) :: State.t()
-  # def handle_outgoing_buffers(pad_ref, %{flow_control: flow_control} = _data, buffers, state)
-  #     when flow_control in [:auto, :manual] do
-  #   # %{other_demand_unit: other_demand_unit, demand: demand} = data
-  #   # buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-  #   # state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
+  def handle_outgoing_buffers(pad_ref, buffers, state) do
+    pad_data = PadModel.get_data!(state, pad_ref)
+    buffers_size = Buffer.Metric.from_unit(pad_data.other_demand_unit).buffers_size(buffers)
 
-  #   # fill_toilet_if_exists(pad_ref, data.toilet, buf_size, state)
-  #   state = DemandController.decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state)
+    demand = pad_data.demand - buffers_size
+    demand_counter = DemandCounter.decrease(pad_data.demand_counter, buffers_size)
 
-  #   if PadModel.get_data!(state, pad_ref, :demand) <= 0 do
-  #     DemandController.check_demand_counter(pad_ref, state)
-  #   else
-  #     state
-  #   end
-  # end
+    state =
+      PadModel.set_data!(
+        state,
+        pad_ref,
+        %{pad_data | demand: demand, demand_counter: demand_counter}
+      )
 
-  # def handle_outgoing_buffers(pad_ref, %{flow_control: :push} = _data, buffers, state) do
-  #   # %{other_demand_unit: other_demand_unit} = data
-  #   # buf_size = Buffer.Metric.from_unit(other_demand_unit).buffers_size(buffers)
-  #   # fill_toilet_if_exists(pad_ref, data.toilet, buf_size, state)
-
-  #   DemandController.decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state)
-  # end
-
-  def handle_outgoing_buffers(pad_ref, data, buffers, state) do
-    state = DemandController.decrease_demand_counter_by_outgoing_buffers(pad_ref, buffers, state)
-
-    if data.flow_control != :push and PadModel.get_data!(state, pad_ref, :demand) <= 0 do
-      DemandController.check_demand_counter(pad_ref, state)
-    else
-      state
-    end
+    DemandController.check_demand_counter(pad_ref, state)
   end
 
   defp update_demand(pad_ref, size, state) when is_integer(size) do
@@ -154,26 +132,61 @@ defmodule Membrane.Core.Element.DemandHandler do
     PadModel.set_data!(state, pad_ref, :demand, new_demand)
   end
 
+  @handle_demand_loop_limit 20
+
+  # dupa: upewnij sie, ze ta petla jest wykonywana tylko jak supplying_demand?: false
   @spec handle_delayed_demands(State.t()) :: State.t()
-  defp handle_delayed_demands(%State{delayed_demands: delayed_demands} = state) do
+  def handle_delayed_demands(%State{} = state) do
     # Taking random element of `:delayed_demands` is done to keep data flow
     # balanced among pads, i.e. to prevent situation where demands requested by
     # one pad are supplied right away while another one is waiting for buffers
     # potentially for a long time.
-    case Enum.take_random(state.delayed_demands, 1) do
-      [] ->
-        state
 
-      [{pad_ref, action} = entry] ->
-        state = %State{state | delayed_demands: MapSet.delete(delayed_demands, entry)}
+    # dupa: zalozenie do zweryfikowania: rzeczy wywolane w wyniku ponizszej petli bedą mialy `supplying_demand?: true`
+
+    cond do
+      state.supplying_demand? ->
+        raise "dupa 007"
+
+      state.handle_demand_loop_counter >= @handle_demand_loop_limit ->
+        Message.send(self(), :resume_handle_demand_loop)
+        %{state | handle_demand_loop_counter: 0}
+
+      state.delayed_demands == MapSet.new() ->
+        # dupa: czy to czy ustawiam counter na 0, czy go nie dotykam w tym case, coś zmienia?
+        %{state | handle_demand_loop_counter: 0}
+
+      true ->
+        [{pad_ref, action} = entry] = Enum.take_random(state.delayed_demands, 1)
 
         state =
-          case action do
-            :supply -> do_supply_demand(pad_ref, state)
-            :redemand -> handle_redemand(pad_ref, state)
-          end
+          state
+          |> Map.update!(:delayed_demands, &MapSet.delete(&1, entry))
+          |> Map.update!(:handle_demand_loop_counter, &(&1 + 1))
 
-        handle_delayed_demands(state)
+        case action do
+          :demand -> do_supply_demand(pad_ref, state)
+          :redemand -> handle_redemand(pad_ref, state)
+        end
+    end
+  end
+
+  @spec maybe_snapshot_demand_counter(Pad.ref(), State.t()) :: State.t()
+  def maybe_snapshot_demand_counter(pad_ref, state) do
+    with {:ok, %{flow_control: :manual, demand: demand, demand_counter: demand_counter}}
+         when demand <= 0 <- PadModel.get_data(state, pad_ref, :demand),
+         counter_value when counter_value > 0 and counter_value > demand <-
+           DemandCounter.get(demand_counter) do
+      state =
+        PadModel.update_data!(
+          state,
+          pad_ref,
+          &%{&1 | demand: counter_value, incoming_demand: counter_value - &1.demand}
+        )
+
+      handle_redemand(pad_ref, state)
+    else
+      _other -> state
     end
   end
 
@@ -182,15 +195,9 @@ defmodule Membrane.Core.Element.DemandHandler do
           [InputQueue.output_value()],
           State.t()
         ) :: State.t()
-  defp handle_input_queue_output(pad_ref, data, state) do
-    count = PadModel.get_data!(state, pad_ref, :demand)
-
-    Membrane.Logger.warn(
-      "HANDLE INPUT QUEUE OUTPUT SIZE #{inspect(Enum.count(data))} WHILE COUNT #{count}"
-    )
-
-    Enum.reduce(data, state, fn v, state ->
-      do_handle_input_queue_output(pad_ref, v, state)
+  defp handle_input_queue_output(pad_ref, queue_output, state) do
+    Enum.reduce(queue_output, state, fn item, state ->
+      do_handle_input_queue_output(pad_ref, item, state)
     end)
   end
 

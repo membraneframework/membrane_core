@@ -106,13 +106,7 @@ defmodule Membrane.Core.Element.BufferController do
   def exec_buffer_callback(pad_ref, buffers, %State{type: :filter} = state) do
     Telemetry.report_metric("buffer", 1, inspect(pad_ref))
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_buffers_batch,
-      ActionHandler,
-      %{context: &CallbackContext.from_state/1},
-      [pad_ref, buffers],
-      state
-    )
+    do_exec_buffer_callback(pad_ref, buffers, state)
   end
 
   def exec_buffer_callback(pad_ref, buffers, %State{type: type} = state)
@@ -120,6 +114,10 @@ defmodule Membrane.Core.Element.BufferController do
     Telemetry.report_metric(:buffer, length(List.wrap(buffers)))
     Telemetry.report_bitrate(buffers)
 
+    do_exec_buffer_callback(pad_ref, buffers, state)
+  end
+
+  defp do_exec_buffer_callback(pad_ref, buffers, state) do
     CallbackHandler.exec_and_handle_callback(
       :handle_buffers_batch,
       ActionHandler,

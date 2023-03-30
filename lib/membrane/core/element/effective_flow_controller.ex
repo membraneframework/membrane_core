@@ -118,16 +118,10 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
     Enum.reduce(state.pads_data, state, fn
       {pad_ref, %{flow_control: :auto, direction: :input}}, state ->
-        # DemandController.send_auto_demand_if_needed(pad_ref, state)
         DemandController.increase_demand_counter_if_needed(pad_ref, state)
 
       _pad_entry, state ->
         state
     end)
   end
-
-  # defp update_demand_counter_receiver_mode(pad_ref, state) do
-  #   PadModel.get_data!(state, pad_ref, [:demand_counter])
-  #   |> DemandCounter.set_receiver_mode(state.effective_flow_control)
-  # end
 end
