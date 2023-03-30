@@ -40,14 +40,16 @@ defmodule Membrane.Testing.Source do
   def_output_pad :output, flow_control: :manual, accepted_format: _any
 
   def_options output: [
-                spec: {initial_state :: any(), generator} | Enum.t(),
+                spec: Enum.t() | {initial_state :: any(), generator},
                 default: {0, &__MODULE__.default_buf_gen/2},
                 description: """
-                If `output` is an enumerable with `t:Membrane.Payload.t/0` then
-                buffer containing those payloads will be sent through the
-                `:output` pad and followed by `t:Membrane.Element.Action.end_of_stream/0`.
+                If `output` is an Enumerable, then each element of it will be sent
+                through the `:output` pad, followed by `t:Membrane.Element.Action.end_of_stream/0`.
+                Each element of the Enumerable must be either `t:Membrane.Buffer.t/0`
+                or `t:Membrane.Payload.t/0`. In the latter case, it will be automatically wrapped into
+                `t:Membrane.Buffer.t/0` before sending.
 
-                If `output` is a `{initial_state, function}` tuple then the
+                Otherwise, if `output` is a `{initial_state, function}` tuple then the
                 the function will be invoked each time `handle_demand` is called.
                 It is an action generator that takes two arguments.
                 The first argument is the state that is initially set to
@@ -124,15 +126,20 @@ defmodule Membrane.Testing.Source do
   end
 
   defp get_actions(%{output: output} = state, size) do
-    {payloads, output} = Enum.split(output, size)
-    buffers = Enum.map(payloads, &%Buffer{payload: &1})
+    {to_output_now, rest} = Enum.split(output, size)
+
+    buffers =
+      Enum.map(
+        to_output_now,
+        &if(match?(%Membrane.Buffer{}, &1), do: &1, else: %Membrane.Buffer{payload: &1})
+      )
 
     actions =
-      case output do
+      case rest do
         [] -> [buffer: {:output, buffers}, end_of_stream: :output]
         _non_empty -> [buffer: {:output, buffers}]
       end
 
-    {actions, %{state | output: output}}
+    {actions, %{state | output: rest}}
   end
 end
