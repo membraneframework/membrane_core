@@ -56,6 +56,7 @@ defmodule Membrane.Core.Element.DemandController do
 
     counter_value = demand_counter |> DemandCounter.get()
 
+    # todo: maybe also check if pad_data.demand <= 0 ?
     if counter_value > 0 do
       # todo: optimize lopp below
       Enum.reduce(associated_pads, state, &increase_demand_counter_if_needed/2)

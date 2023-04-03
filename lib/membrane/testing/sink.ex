@@ -71,7 +71,7 @@ defmodule Membrane.Testing.Sink do
     do: {notify({:end_of_stream, pad}), state}
 
   @impl true
-  def handle_stream_format(pad, stream_format, _context, state),
+  def handle_stream_format(pad, stream_format, _ctx, state),
     do: {notify({:stream_format, pad, stream_format}), state}
 
   @impl true

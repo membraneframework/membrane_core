@@ -97,6 +97,9 @@ defmodule Membrane.Testing.Source do
     buffers =
       generator_state..(size + generator_state - 1)
       |> Enum.map(fn generator_state ->
+        require Membrane.Logger
+        Membrane.Logger.warn("GENERATING BUFFER NO. #{inspect(generator_state)}")
+
         %Buffer{payload: <<generator_state::16>>}
       end)
 

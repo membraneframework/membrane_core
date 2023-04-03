@@ -33,7 +33,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
       InputQueue.init(%{
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :buffers,
-        demand_pad: :some_pad,
+        linked_output_ref: :some_pad,
         log_tag: "test",
         demand_counter: demand_counter,
         target_size: nil,

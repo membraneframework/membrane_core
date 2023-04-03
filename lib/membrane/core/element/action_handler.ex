@@ -20,7 +20,15 @@ defmodule Membrane.Core.Element.ActionHandler do
   }
 
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{DemandHandler, PadController, State, StreamFormatController}
+
+  alias Membrane.Core.Element.{
+    DemandController,
+    DemandHandler,
+    PadController,
+    State,
+    StreamFormatController
+  }
+
   alias Membrane.Core.{Events, Message, Telemetry, TimerController}
   alias Membrane.Element.Action
 
@@ -311,7 +319,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
 
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
-      state
+      DemandController.check_demand_counter(pad_ref, state)
     else
       %{direction: :input} ->
         raise PadDirectionError, action: :buffer, direction: :input, pad: pad_ref

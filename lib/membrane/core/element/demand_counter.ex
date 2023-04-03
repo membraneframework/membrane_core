@@ -29,13 +29,13 @@ defmodule Membrane.Core.Element.DemandCounter do
     @impl true
     def handle_call({:sub_get, atomic_ref, value}, _from, _state) do
       result = :atomics.sub_get(atomic_ref, 1, value)
-      {:sub_get, result, nil}
+      {:reply, result, nil}
     end
 
     @impl true
     def handle_call({:get, atomic_ref}, _from, _state) do
       result = :atomics.get(atomic_ref, 1)
-      {:sub_get, result, nil}
+      {:reply, result, nil}
     end
 
     @impl true
@@ -274,9 +274,7 @@ defmodule Membrane.Core.Element.DemandCounter do
         demand_counter
       end
 
-    Membrane.Logger.warn(
-      "DEMAND COUNTER AFTER DECREMENTATION #{inspect(get(dc))} old #{inspect(xd)}"
-    )
+    Membrane.Logger.warn("DEMAND COUNTER DECREMENTATION #{inspect(xd)} -> #{inspect(get(dc))}")
 
     dc
   end

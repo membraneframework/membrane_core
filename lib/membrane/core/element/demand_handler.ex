@@ -34,8 +34,11 @@ defmodule Membrane.Core.Element.DemandHandler do
     Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
   end
 
-  def handle_redemand(pad_ref, state) do
-    DemandController.exec_handle_demand(pad_ref, state)
+  def handle_redemand(pad_ref, %State{} = state) do
+    state
+    |> Map.put(:supplying_demand?, true)
+    |> then(&DemandController.exec_handle_demand(pad_ref, &1))
+    |> Map.put(:supplying_demand?, false)
     |> handle_delayed_demands()
   end
 
@@ -84,6 +87,10 @@ defmodule Membrane.Core.Element.DemandHandler do
     {{_queue_status, popped_data}, new_input_queue} =
       InputQueue.take(pad_data.input_queue, pad_data.demand)
 
+    Membrane.Logger.warn(
+      "TRYNIG TO TAKE #{pad_data.demand} from QUEUE, GOT #{inspect(popped_data, limit: :infinity, pretty: true)}"
+    )
+
     state = PadModel.set_data!(state, pad_ref, :input_queue, new_input_queue)
     state = handle_input_queue_output(pad_ref, popped_data, state)
     %State{state | supplying_demand?: false}
@@ -105,18 +112,17 @@ defmodule Membrane.Core.Element.DemandHandler do
     demand = pad_data.demand - buffers_size
     demand_counter = DemandCounter.decrease(pad_data.demand_counter, buffers_size)
 
-    state =
-      PadModel.set_data!(
-        state,
-        pad_ref,
-        %{pad_data | demand: demand, demand_counter: demand_counter}
-      )
+    # state =
+    PadModel.set_data!(
+      state,
+      pad_ref,
+      %{pad_data | demand: demand, demand_counter: demand_counter}
+    )
 
-    DemandController.check_demand_counter(pad_ref, state)
+    # DemandController.check_demand_counter(pad_ref, state)
   end
 
   defp update_demand(pad_ref, size, state) when is_integer(size) do
-    # dupa: tutaj jest cos nie ten teges
     PadModel.set_data!(state, pad_ref, :demand, size)
   end
 
@@ -134,7 +140,6 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   @handle_demand_loop_limit 20
 
-  # dupa: upewnij sie, ze ta petla jest wykonywana tylko jak supplying_demand?: false
   @spec handle_delayed_demands(State.t()) :: State.t()
   def handle_delayed_demands(%State{} = state) do
     # Taking random element of `:delayed_demands` is done to keep data flow
@@ -142,18 +147,18 @@ defmodule Membrane.Core.Element.DemandHandler do
     # one pad are supplied right away while another one is waiting for buffers
     # potentially for a long time.
 
-    # dupa: zalozenie do zweryfikowania: rzeczy wywolane w wyniku ponizszej petli bedą mialy `supplying_demand?: true`
+    # Membrane.Logger.warn("HANDLE DELAYED DEMANDS #{inspect(state.delayed_demands)}")
 
     cond do
       state.supplying_demand? ->
         raise "dupa 007"
 
       state.handle_demand_loop_counter >= @handle_demand_loop_limit ->
-        Message.send(self(), :resume_handle_demand_loop)
+        Message.self(:resume_handle_demand_loop)
+        Membrane.Logger.warn("SENDING RESUME LOOP MSG")
         %{state | handle_demand_loop_counter: 0}
 
       state.delayed_demands == MapSet.new() ->
-        # dupa: czy to czy ustawiam counter na 0, czy go nie dotykam w tym case, coś zmienia?
         %{state | handle_demand_loop_counter: 0}
 
       true ->
@@ -165,7 +170,7 @@ defmodule Membrane.Core.Element.DemandHandler do
           |> Map.update!(:handle_demand_loop_counter, &(&1 + 1))
 
         case action do
-          :demand -> do_supply_demand(pad_ref, state)
+          :supply -> supply_demand(pad_ref, state)
           :redemand -> handle_redemand(pad_ref, state)
         end
     end
@@ -173,10 +178,17 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   @spec maybe_snapshot_demand_counter(Pad.ref(), State.t()) :: State.t()
   def maybe_snapshot_demand_counter(pad_ref, state) do
+    Membrane.Logger.warn("MAYBE SNAPSHOT DEMAND COUNTER #{inspect(pad_ref)}")
+
+    # Membrane.Logger.warn(inspect(PadModel.get_data(state, pad_ref, :demand)))
+    # Membrane.Logger.warn("DEMAND COUNTER: ")
+
     with {:ok, %{flow_control: :manual, demand: demand, demand_counter: demand_counter}}
-         when demand <= 0 <- PadModel.get_data(state, pad_ref, :demand),
+         when demand <= 0 <- PadModel.get_data(state, pad_ref),
          counter_value when counter_value > 0 and counter_value > demand <-
            DemandCounter.get(demand_counter) do
+      Membrane.Logger.warn("BUMPING DEMAND #{inspect(demand)} -> #{inspect(counter_value)}")
+
       state =
         PadModel.update_data!(
           state,

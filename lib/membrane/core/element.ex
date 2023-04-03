@@ -186,6 +186,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:resume_handle_demand_loop), state) do
+    Membrane.Logger.warn("RECEIVING RESUME LOOP MSG")
     state = DemandHandler.handle_delayed_demands(state)
     {:noreply, state}
   end

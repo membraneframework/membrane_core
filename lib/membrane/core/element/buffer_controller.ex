@@ -5,6 +5,7 @@ defmodule Membrane.Core.Element.BufferController do
 
   use Bunch
 
+  alias Membrane.Core.Element.DemandCounter
   alias Membrane.{Buffer, Pad}
   alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
@@ -62,7 +63,6 @@ defmodule Membrane.Core.Element.BufferController do
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
 
     state = PadModel.set_data!(state, pad_ref, :lacking_buffers, lacking_buffers - buf_size)
-    # state = DemandController.send_auto_demand_if_needed(pad_ref, state)
     state = DemandController.increase_demand_counter_if_needed(pad_ref, state)
     exec_buffer_callback(pad_ref, buffers, state)
   end
@@ -70,13 +70,33 @@ defmodule Membrane.Core.Element.BufferController do
   defp do_handle_buffer(pad_ref, %{flow_control: :manual} = data, buffers, state) do
     %{input_queue: old_input_queue} = data
 
+    require Membrane.Logger
+
+    buf_num =
+      Enum.filter(buffers, &match?(%Membrane.Buffer{}, &1))
+      |> Enum.count()
+
+    Membrane.Logger.warn("STORING #{inspect(buf_num)} BUFFERS")
+
+    for %Membrane.Buffer{payload: <<i::16>> <> <<_::binary>>} <- buffers do
+      Membrane.Logger.warn("STORE IN INPUT_QUEUE BUFFER NO. #{inspect(i)}")
+    end
+
     input_queue = InputQueue.store(old_input_queue, buffers)
     state = PadModel.set_data!(state, pad_ref, :input_queue, input_queue)
 
     require Membrane.Logger
 
+    warn_sufix =
+      with {:ok, %{demand: demand, demand_counter: dc}} <- PadModel.get_data(state, :output) do
+        " OUTPUT DEMAND SNAPSHOT #{inspect(demand)} COUNTER #{inspect(DemandCounter.get(dc))}"
+      else
+        _ -> ""
+      end
+
     Membrane.Logger.warn(
-      "HANDLE BUFFER #{inspect(Enum.count(buffers))} EMPTY QUEUE? #{inspect(old_input_queue |> InputQueue.empty?())}"
+      "HANDLE BUFFER #{inspect(Enum.count(buffers))} EMPTY QUEUE? #{inspect(old_input_queue |> InputQueue.empty?())}" <>
+        warn_sufix
     )
 
     if old_input_queue |> InputQueue.empty?() do
