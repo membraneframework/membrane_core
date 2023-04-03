@@ -198,7 +198,9 @@ defmodule Membrane.Core.Element.DemandHandler do
 
       handle_redemand(pad_ref, state)
     else
-      _other -> state
+      other ->
+        Membrane.Logger.warn("NOT SNAPSHOTING BECAUSE #{inspect(other, pretty: true, limit: :infinity)}")
+        state
     end
   end
 

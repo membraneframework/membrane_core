@@ -65,23 +65,76 @@ defmodule Membrane.Core.ElementTest do
     state
   end
 
+  defmodule HelperServer do
+    use GenServer
+
+    @spec start!() :: pid()
+    def start!() do
+      {:ok, pid} = GenServer.start(__MODULE__, self())
+      pid
+    end
+
+    @impl true
+    def init(owner) do
+      ref = Process.monitor(owner)
+      {:ok, %{monitor_ref: ref, owner: owner}}
+    end
+
+    @impl true
+    def handle_cast({:set_reply, reply}, state), do: {:noreply, Map.put(state, :reply, reply)}
+
+    @impl true
+    def handle_call(_msg, _from, state), do: {:reply, state.reply, state}
+
+    @impl true
+    def handle_info({:DOWN, ref, _process, _pid, _reason}, %{monitor_ref: ref} = state) do
+      {:stop, :normal, state}
+    end
+
+    @impl true
+    def handle_info(msg, %{owner: owner} = state) do
+      send(owner, msg)
+      {:noreply, state}
+    end
+  end
+
   defp linked_state do
-    {:reply, {:ok, _reply}, state} =
+    helper_server = HelperServer.start!()
+
+    output_other_endpoint = %Endpoint{
+      pad_spec: :dynamic_input,
+      pad_ref: :dynamic_input,
+      pid: helper_server,
+      child: :other,
+      pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
+    }
+
+    other_info = %{direction: :input, flow_control: :manual, demand_unit: :buffers}
+
+    output_demand_counter =
+      Element.DemandCounter.new(:pull, helper_server, :buffers, self(), :output)
+
+    reply_link_metadata = %{
+      demand_counter: output_demand_counter,
+      observability_metadata: %{},
+      input_demand_unit: :buffers,
+      output_demand_unit: :buffers
+    }
+
+    handle_link_reply = {:ok, {output_other_endpoint, other_info, reply_link_metadata}}
+
+    GenServer.cast(helper_server, {:set_reply, handle_link_reply})
+
+    {:reply, :ok, state} =
       Element.handle_call(
         Message.new(:handle_link, [
           :output,
           %Endpoint{pad_spec: :output, pad_ref: :output, pad_props: %{options: []}, child: :this},
-          %Endpoint{
-            pad_spec: :dynamic_input,
-            pad_ref: :dynamic_input,
-            pid: self(),
-            child: :other,
-            pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
-          },
+          output_other_endpoint,
           %{
             initiator: :parent,
-            other_info: %{direction: :input, flow_control: :manual, demand_unit: :buffers},
-            link_metadata: %{toilet: nil, observability_metadata: %{}},
+            other_info: other_info,
+            link_metadata: %{demand_counter: output_demand_counter, observability_metadata: %{}},
             stream_format_validation_params: [],
             other_effective_flow_control: :pull
           }
@@ -151,9 +204,10 @@ defmodule Membrane.Core.ElementTest do
 
   test "should store demand/buffer/event/stream format when not playing" do
     initial_state = linked_state()
+    :ok = increase_output_demand_counter(initial_state, 10)
 
     [
-      Message.new(:demand, 10, for_pad: :output),
+      Message.new(:demand_counter_increased, [:dupa, :output]),
       Message.new(:buffer, %Membrane.Buffer{payload: <<>>}, for_pad: :dynamic_input),
       Message.new(:stream_format, %StreamFormat{}, for_pad: :dynamic_input),
       Message.new(:event, %Membrane.Testing.Event{}, for_pad: :dynamic_input),
@@ -168,8 +222,12 @@ defmodule Membrane.Core.ElementTest do
   end
 
   test "should update demand" do
-    msg = Message.new(:demand, 10, for_pad: :output)
-    assert {:noreply, state} = Element.handle_info(msg, playing_state())
+    state = playing_state()
+    :ok = increase_output_demand_counter(state, 10)
+
+    msg = Message.new(:demand_counter_increased, [:dupa, :output])
+    assert {:noreply, state} = Element.handle_info(msg, state)
+
     assert state.pads_data.output.demand == 10
   end
 
@@ -209,14 +267,14 @@ defmodule Membrane.Core.ElementTest do
     assert {:reply, {:ok, reply}, state} =
              Element.handle_call(
                Message.new(:handle_link, [
-                 :output,
+                 :input,
                  %{
-                   pad_ref: :output,
-                   pad_props: %{options: [], toilet_capacity: nil},
+                   pad_ref: :dynamic_input,
+                   pad_props: %{options: [], toilet_capacity: nil, target_queue_size: 40},
                    child: :this
                  },
                  %{
-                   pad_ref: :dynamic_input,
+                   pad_ref: :output,
                    pid: pid,
                    child: :other,
                    pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
@@ -237,23 +295,21 @@ defmodule Membrane.Core.ElementTest do
                get_state()
              )
 
-    assert {%{child: :this, pad_props: %{options: []}, pad_ref: :output},
+    assert {%{child: :this, pad_props: %{options: []}, pad_ref: :dynamic_input},
             %{
-              availability: :always,
+              availability: :on_request,
               flow_control: :manual,
-              direction: :output,
-              name: :output,
+              direction: :input,
+              name: :dynamic_input,
               options: nil
             },
-            %{toilet: toilet, output_demand_unit: :buffers, input_demand_unit: :buffers}} = reply
-
-    assert toilet != nil
+            %{demand_counter: %Element.DemandCounter{}, output_demand_unit: :buffers, input_demand_unit: :buffers}} = reply
 
     assert %Membrane.Element.PadData{
              pid: ^pid,
-             other_ref: :dynamic_input,
+             other_ref: :output,
              other_demand_unit: :buffers
-           } = state.pads_data.output
+           } = state.pads_data.dynamic_input
   end
 
   test "should handle unlinking pads" do
@@ -355,5 +411,11 @@ defmodule Membrane.Core.ElementTest do
       parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
       group: nil
     }
+  end
+
+  defp increase_output_demand_counter(state, value) do
+    :ok =
+      state.pads_data.output.demand_counter
+      |> Element.DemandCounter.increase(value)
   end
 end

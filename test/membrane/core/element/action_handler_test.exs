@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   use ExUnit.Case, async: true
 
   alias Membrane.{ActionError, Buffer, ElementError, PadDirectionError}
-  alias Membrane.Core.Element.{State, Toilet}
+  alias Membrane.Core.Element.{DemandCounter, State}
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
 
@@ -72,7 +72,11 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   end
 
   defp trivial_filter_state(_context) do
-    toilet = Toilet.new(100, :buffers, spawn(fn -> nil end), 1, :push, :push)
+    input_demand_counter =
+      DemandCounter.new(:push, self(), :buffers, spawn(fn -> :ok end), :output)
+
+    output_demand_counter =
+      DemandCounter.new(:push, spawn(fn -> :ok end), :bytes, self(), :output)
 
     state =
       struct(State,
@@ -92,7 +96,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             start_of_stream?: true,
             end_of_stream?: false,
             flow_control: :push,
-            toilet: toilet
+            demand_counter: output_demand_counter,
+            demand: 0
           },
           input: %{
             direction: :input,
@@ -102,7 +107,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             start_of_stream?: true,
             end_of_stream?: false,
             flow_control: :push,
-            toilet: :push
+            demand_counter: input_demand_counter,
+            demand: 0
           }
         },
         pads_info: %{
@@ -142,23 +148,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       end
     end
 
-    test "when element is moving to playing", %{state: state} do
-      state =
-        %{state | playback: :playing}
-        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
-
-      result =
-        @module.handle_action(
-          buffer_action(:output),
-          :handle_playing,
-          %{},
-          state
-        )
-
-      assert result == state
-      assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref)
-    end
-
     test "when element is playing", %{state: state} do
       state =
         %{state | playback: :playing}
@@ -172,7 +161,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
 
-      assert result == state
+      assert result.pads_data.output.demand < 0
+      assert DemandCounter.get(result.pads_data.output.demand_counter) < 0
+      assert put_in(result, [:pads_data, :output, :demand], 0) == state
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref)
     end
 
