@@ -303,7 +303,11 @@ defmodule Membrane.Core.ElementTest do
               name: :dynamic_input,
               options: nil
             },
-            %{demand_counter: %Element.DemandCounter{}, output_demand_unit: :buffers, input_demand_unit: :buffers}} = reply
+            %{
+              demand_counter: %Element.DemandCounter{},
+              output_demand_unit: :buffers,
+              input_demand_unit: :buffers
+            }} = reply
 
     assert %Membrane.Element.PadData{
              pid: ^pid,

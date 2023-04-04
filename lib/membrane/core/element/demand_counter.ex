@@ -14,6 +14,11 @@ defmodule Membrane.Core.Element.DemandCounter do
 
     use GenServer
 
+    @type t :: pid()
+
+    @spec start(pid()) :: {:ok, t}
+    def start(parent_pid), do: GenServer.start(__MODULE__, parent_pid)
+
     @impl true
     def init(parent_pid) do
       Process.monitor(parent_pid)
@@ -58,51 +63,67 @@ defmodule Membrane.Core.Element.DemandCounter do
     # The module allows to create and modify the value of a counter in the same manner both when the counter is about to be accessed
     # from the same node, and from different nodes.
 
-    @type t :: {pid(), :atomics.atomics_ref()}
+    @enforce_keys [:worker, :atomic_ref]
+    defstruct @enforce_keys
+
+    @type t :: %__MODULE__{worker: Worker.t(), atomic_ref: :atomics.atomics_ref()}
+
+    defguardp on_this_same_node_as_self(distributed_atomic)
+              when distributed_atomic.worker |> node() == self() |> node()
 
     @spec new(integer() | nil) :: t
     def new(initial_value \\ nil) do
       atomic_ref = :atomics.new(1, [])
-      {:ok, pid} = GenServer.start(Worker, self())
-      if initial_value, do: put({pid, atomic_ref}, initial_value)
+      {:ok, worker} = Worker.start(self())
 
-      {pid, atomic_ref}
+      distributed_atomic = %__MODULE__{
+        atomic_ref: atomic_ref,
+        worker: worker
+      }
+
+      if initial_value, do: put(distributed_atomic, initial_value)
+
+      distributed_atomic
     end
 
     @spec add_get(t, integer()) :: integer()
-    def add_get({pid, atomic_ref}, value) when node(pid) == node(self()) do
-      :atomics.add_get(atomic_ref, 1, value)
+    def add_get(%__MODULE__{} = distributed_atomic, value)
+        when on_this_same_node_as_self(distributed_atomic) do
+      :atomics.add_get(distributed_atomic.atomic_ref, 1, value)
     end
 
-    def add_get({pid, atomic_ref}, value) do
-      GenServer.call(pid, {:add_get, atomic_ref, value})
+    def add_get(%__MODULE__{} = distributed_atomic, value) do
+      GenServer.call(distributed_atomic.worker, {:add_get, distributed_atomic.atomic_ref, value})
     end
 
     @spec sub_get(t, integer()) :: integer()
-    def sub_get({pid, atomic_ref}, value) when node(pid) == node(self()) do
-      :atomics.sub_get(atomic_ref, 1, value)
+    def sub_get(%__MODULE__{} = distributed_atomic, value)
+        when on_this_same_node_as_self(distributed_atomic) do
+      :atomics.sub_get(distributed_atomic.atomic_ref, 1, value)
     end
 
-    def sub_get({pid, atomic_ref}, value) do
-      GenServer.cast(pid, {:sub_get, atomic_ref, value})
+    def sub_get(%__MODULE__{} = distributed_atomic, value) do
+      GenServer.cast(distributed_atomic.worker, {:sub_get, distributed_atomic.atomic_ref, value})
     end
 
     @spec put(t, integer()) :: :ok
-    def put({pid, atomic_ref}, value) when node(pid) == node(self()) do
-      :atomics.put(atomic_ref, 1, value)
+    def put(%__MODULE__{} = distributed_atomic, value)
+        when on_this_same_node_as_self(distributed_atomic) do
+      :atomics.put(distributed_atomic.atomic_ref, 1, value)
     end
 
-    def put({pid, atomic_ref}, value) do
-      GenServer.cast(pid, {:put, atomic_ref, value})
+    def put(%__MODULE__{} = distributed_atomic, value) do
+      GenServer.cast(distributed_atomic.worker, {:put, distributed_atomic.atomic_ref, value})
     end
 
     @spec get(t) :: integer()
-    def get({pid, atomic_ref}) when node(pid) == node(self()) do
-      :atomics.get(atomic_ref, 1)
+    def get(%__MODULE__{} = distributed_atomic)
+        when on_this_same_node_as_self(distributed_atomic) do
+      :atomics.get(distributed_atomic.atomic_ref, 1)
     end
 
-    def get({pid, atomic_ref}) do
-      GenServer.call(pid, {:get, atomic_ref})
+    def get(%__MODULE__{} = distributed_atomic) do
+      GenServer.call(distributed_atomic.worker, {:get, distributed_atomic.atomic_ref})
     end
   end
 
@@ -186,11 +207,11 @@ defmodule Membrane.Core.Element.DemandCounter do
         sender_pad_ref,
         overflow_limit \\ nil
       ) do
-    {counter_pid, _atomic} = counter = DistributedAtomic.new()
+    %DistributedAtomic{worker: worker} = counter = DistributedAtomic.new()
 
     buffered_decrementation_limit =
       if node(sender_process) ==
-           node(counter_pid),
+           node(worker),
          do: @default_buffered_decrementation_limit,
          else: @distributed_buffered_decrementation_limit
 

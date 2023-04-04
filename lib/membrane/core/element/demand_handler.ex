@@ -12,8 +12,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     EventController,
     InputQueue,
     State,
-    StreamFormatController,
-    Toilet
+    StreamFormatController
   }
 
   alias Membrane.Pad
@@ -199,7 +198,10 @@ defmodule Membrane.Core.Element.DemandHandler do
       handle_redemand(pad_ref, state)
     else
       other ->
-        Membrane.Logger.warn("NOT SNAPSHOTING BECAUSE #{inspect(other, pretty: true, limit: :infinity)}")
+        Membrane.Logger.warn(
+          "NOT SNAPSHOTING BECAUSE #{inspect(other, pretty: true, limit: :infinity)}"
+        )
+
         state
     end
   end
@@ -232,11 +234,6 @@ defmodule Membrane.Core.Element.DemandHandler do
          state
        ) do
     state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - outbound_metric_buf_size))
-
-    if toilet = PadModel.get_data!(state, pad_ref, :toilet) do
-      Toilet.drain(toilet, outbound_metric_buf_size)
-    end
-
     BufferController.exec_buffer_callback(pad_ref, buffers, state)
   end
 end

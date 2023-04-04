@@ -107,11 +107,6 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   defp do_handle_buffer(pad_ref, %{flow_control: :push} = data, buffers, state) do
-    if data.toilet do
-      buf_size = Buffer.Metric.from_unit(data.demand_unit).buffers_size(buffers)
-      Toilet.drain(data.toilet, buf_size)
-    end
-
     exec_buffer_callback(pad_ref, buffers, state)
   end
 
