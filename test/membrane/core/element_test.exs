@@ -207,7 +207,7 @@ defmodule Membrane.Core.ElementTest do
     :ok = increase_output_demand_counter(initial_state, 10)
 
     [
-      Message.new(:demand_counter_increased, [:dupa, :output]),
+      Message.new(:demand_counter_increased, :output),
       Message.new(:buffer, %Membrane.Buffer{payload: <<>>}, for_pad: :dynamic_input),
       Message.new(:stream_format, %StreamFormat{}, for_pad: :dynamic_input),
       Message.new(:event, %Membrane.Testing.Event{}, for_pad: :dynamic_input),
@@ -225,7 +225,7 @@ defmodule Membrane.Core.ElementTest do
     state = playing_state()
     :ok = increase_output_demand_counter(state, 10)
 
-    msg = Message.new(:demand_counter_increased, [:dupa, :output])
+    msg = Message.new(:demand_counter_increased, :output)
     assert {:noreply, state} = Element.handle_info(msg, state)
 
     assert state.pads_data.output.demand == 10

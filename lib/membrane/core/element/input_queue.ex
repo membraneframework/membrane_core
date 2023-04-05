@@ -180,45 +180,6 @@ defmodule Membrane.Core.Element.InputQueue do
     {out, input_queue}
   end
 
-  # @spec take_and_demand(t(), non_neg_integer(), Pad.ref()) :: {output(), t()}
-  # def take_and_demand(
-  #       %__MODULE__{} = input_queue,
-  #       count,
-  #       demand_pad
-  #     )
-  #     when count >= 0 do
-  #   "Taking #{inspect(count)} #{inspect(input_queue.outbound_metric)}"
-  #   |> mk_log(input_queue)
-  #   |> Membrane.Logger.debug_verbose()
-
-  #   {out, %__MODULE__{size: new_size} = input_queue} = do_take(input_queue, count)
-  #   input_queue = increase_demand_counter(input_queue, demand_pad)
-  #   Telemetry.report_metric(:take_and_demand, new_size, input_queue.log_tag)
-  #   {out, input_queue}
-  # end
-
-  # defp do_take(
-  #        %__MODULE__{
-  #          q: q,
-  #          size: size,
-  #          inbound_metric: inbound_metric,
-  #          outbound_metric: outbound_metric,
-  #          demand: demand
-  #        } = input_queue,
-  #        count
-  #      ) do
-  #   {out, nq, new_queue_size} = q |> q_pop(count, inbound_metric, outbound_metric, size)
-  #   new_demand_size = demand + (size - new_queue_size)
-
-  #   {out,
-  #    %__MODULE__{
-  #      input_queue
-  #      | q: nq,
-  #        size: new_queue_size,
-  #        demand: new_demand_size
-  #    }}
-  # end
-
   defp q_pop(
          q,
          size_to_take_in_outbound_metric,

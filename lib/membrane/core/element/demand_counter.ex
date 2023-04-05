@@ -263,16 +263,14 @@ defmodule Membrane.Core.Element.DemandCounter do
     )
 
     if old_counter_value <= 0 do
-      ref = make_ref()
-
       Membrane.Logger.warn(
-        "SENDING DC NOTIFICATION #{inspect(Message.new(:demand_counter_increased, [ref, demand_counter.sender_pad_ref]))}"
+        "SENDING DC NOTIFICATION #{inspect(Message.new(:demand_counter_increased, demand_counter.sender_pad_ref))}"
       )
 
       Message.send(
         demand_counter.sender_process,
         :demand_counter_increased,
-        [ref, demand_counter.sender_pad_ref]
+        demand_counter.sender_pad_ref
       )
     end
 
