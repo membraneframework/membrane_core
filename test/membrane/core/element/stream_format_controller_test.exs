@@ -22,7 +22,7 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
         demand_counter: demand_counter,
         linked_output_ref: :some_pad,
         log_tag: "test",
-        target_size: nil,
+        target_size: nil
       })
 
     state =
