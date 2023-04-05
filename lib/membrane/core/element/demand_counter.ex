@@ -281,10 +281,7 @@ defmodule Membrane.Core.Element.DemandCounter do
 
   @spec decrease(t, non_neg_integer()) :: t
   def decrease(%__MODULE__{} = demand_counter, value) do
-    demand_counter = %{
-      demand_counter
-      | buffered_decrementation: demand_counter.buffered_decrementation + value
-    }
+    demand_counter = Map.update!(demand_counter, :buffered_decrementation, &(&1 + value))
 
     xd = get(demand_counter)
 
@@ -305,8 +302,7 @@ defmodule Membrane.Core.Element.DemandCounter do
     DistributedAtomic.get(demand_counter.counter)
   end
 
-  @spec flush_buffered_decrementation(t) :: t
-  def flush_buffered_decrementation(demand_counter) do
+  defp flush_buffered_decrementation(demand_counter) do
     counter_value =
       DistributedAtomic.sub_get(
         demand_counter.counter,

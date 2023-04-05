@@ -323,8 +323,7 @@ defmodule Membrane.Core.Element.InputQueue do
          } = input_queue
        )
        when target_size > size + lacking_buffers do
-    diff = target_size - size - lacking_buffers
-    # diff = max(target_size - size - lacking_buffers, 10)
+    diff = max(target_size - size - lacking_buffers, div(target_size, 2))
 
     """
     Increasing DemandCounter linked to  #{inspect(input_queue.linked_output_ref)} by  #{inspect(diff)}
