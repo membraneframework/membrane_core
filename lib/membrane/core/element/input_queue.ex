@@ -32,6 +32,7 @@ defmodule Membrane.Core.Element.InputQueue do
           log_tag: String.t(),
           target_size: pos_integer(),
           size: non_neg_integer(),
+          lacking_buffers: non_neg_integer(),
           inbound_metric: module(),
           outbound_metric: module(),
           linked_output_ref: Pad.ref()
@@ -153,6 +154,7 @@ defmodule Membrane.Core.Element.InputQueue do
   # wiec teraz trzeba podbic counter o tyle ile wyciagnelismy z kolejki
   # wychodzi na to ze teraz pole "demand" jest wgl do wywalenia
 
+  @spec take(t, non_neg_integer()) :: {output(), t}
   def take(%__MODULE__{} = input_queue, count) when count >= 0 do
     "Taking #{inspect(count)} #{inspect(input_queue.outbound_metric)}"
     |> mk_log(input_queue)
@@ -287,7 +289,7 @@ defmodule Membrane.Core.Element.InputQueue do
     diff = max(target_size - size - lacking_buffers, div(target_size, 2))
 
     """
-    Increasing DemandCounter linked to  #{inspect(input_queue.linked_output_ref)} by  #{inspect(diff)}
+    Increasing DemandCounter linked to  #{inspect(input_queue.linked_output_ref)} by #{inspect(diff)}
     """
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
