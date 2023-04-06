@@ -24,8 +24,8 @@ defmodule Membrane.Core.Element.DemandController do
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
 
-  @lacking_buffers_lowerbound 2000
-  @lacking_buffers_upperbound 4000
+  @lacking_buffers_lowerbound 200
+  @lacking_buffers_upperbound 400
 
   @spec check_demand_counter(Pad.ref(), State.t()) :: State.t()
   def check_demand_counter(pad_ref, state) do
