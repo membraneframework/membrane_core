@@ -315,7 +315,7 @@ defmodule Membrane.Core.Element.ActionHandler do
          }
          when stream_format != nil <- pad_data do
       state =
-        DemandHandler.handle_outgoing_buffers(pad_ref, buffers, state)
+        DemandController.handle_outgoing_buffers(pad_ref, buffers, state)
         |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
 
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
@@ -414,7 +414,6 @@ defmodule Membrane.Core.Element.ActionHandler do
     with %{direction: :output, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
       DemandHandler.handle_redemand(pad_ref, state)
-      # Membrane.Core.Element.DemandController.redemand(pad_ref, state)
     else
       %{direction: :input} ->
         raise ElementError, "Tried to make a redemand on input pad #{inspect(pad_ref)}"

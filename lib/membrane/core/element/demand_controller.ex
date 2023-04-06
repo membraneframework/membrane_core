@@ -5,6 +5,7 @@ defmodule Membrane.Core.Element.DemandController do
 
   use Bunch
 
+  alias Membrane.Buffer
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Child.PadModel
 
@@ -55,9 +56,8 @@ defmodule Membrane.Core.Element.DemandController do
 
     counter_value = demand_counter |> DemandCounter.get()
 
-    # todo: maybe also check if pad_data.demand <= 0 ?
     if counter_value > 0 do
-      # todo: optimize lopp below
+      # TODO: think about optimizing lopp below
       Enum.reduce(associated_pads, state, &increase_demand_counter_if_needed/2)
     else
       state
@@ -65,7 +65,20 @@ defmodule Membrane.Core.Element.DemandController do
   end
 
   defp do_check_demand_counter(%{flow_control: :manual} = pad_data, state) do
-    DemandHandler.maybe_snapshot_demand_counter(pad_data.ref, state)
+    with %{demand: demand, demand_counter: demand_counter} when demand <= 0 <- pad_data,
+         counter_value when counter_value > 0 and counter_value > demand <-
+           DemandCounter.get(demand_counter) do
+      state =
+        PadModel.update_data!(
+          state,
+          pad_data.ref,
+          &%{&1 | demand: counter_value, incoming_demand: counter_value - &1.demand}
+        )
+
+      DemandHandler.handle_redemand(pad_data.ref, state)
+    else
+      _other -> state
+    end
   end
 
   defp do_check_demand_counter(_pad_data, state) do
@@ -84,6 +97,28 @@ defmodule Membrane.Core.Element.DemandController do
     else
       state
     end
+  end
+
+  @doc """
+  Decreases demand snapshot and demand counter on the output by the size of outgoing buffers.
+  """
+  @spec handle_outgoing_buffers(
+          Pad.ref(),
+          [Buffer.t()],
+          State.t()
+        ) :: State.t()
+  def handle_outgoing_buffers(pad_ref, buffers, state) do
+    pad_data = PadModel.get_data!(state, pad_ref)
+    buffers_size = Buffer.Metric.from_unit(pad_data.other_demand_unit).buffers_size(buffers)
+
+    demand = pad_data.demand - buffers_size
+    demand_counter = DemandCounter.decrease(pad_data.demand_counter, buffers_size)
+
+    PadModel.set_data!(
+      state,
+      pad_ref,
+      %{pad_data | demand: demand, demand_counter: demand_counter}
+    )
   end
 
   @spec exec_handle_demand(Pad.ref(), State.t()) :: State.t()

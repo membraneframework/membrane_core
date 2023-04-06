@@ -162,8 +162,6 @@ defmodule Membrane.Core.Element.PadController do
 
     if info.direction != :input, do: raise("pad direction #{inspect(info.direction)} is wrong")
 
-    true = info.direction == :input
-
     {output_demand_unit, input_demand_unit} = resolve_demand_units(other_info, info)
 
     link_metadata =

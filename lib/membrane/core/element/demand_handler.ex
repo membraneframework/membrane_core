@@ -3,12 +3,9 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   # Module handling demands requested on output pads.
 
-  alias Membrane.Buffer
-
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
-    DemandCounter,
     EventController,
     InputQueue,
     State,
@@ -34,11 +31,14 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   def handle_redemand(pad_ref, %State{} = state) do
-    state
-    |> Map.put(:supplying_demand?, true)
-    |> then(&DemandController.exec_handle_demand(pad_ref, &1))
-    |> Map.put(:supplying_demand?, false)
+    do_handle_redemand(pad_ref, state)
     |> handle_delayed_demands()
+  end
+
+  defp do_handle_redemand(pad_ref, state) do
+    state = %{state | supplying_demand?: true}
+    state = DemandController.exec_handle_demand(pad_ref, state)
+    %{state | supplying_demand?: false}
   end
 
   @doc """
@@ -91,28 +91,6 @@ defmodule Membrane.Core.Element.DemandHandler do
     %State{state | supplying_demand?: false}
   end
 
-  @doc """
-  Decreases demand snapshot and demand counter on the output by the size of outgoing buffers.
-  """
-  @spec handle_outgoing_buffers(
-          Pad.ref(),
-          [Buffer.t()],
-          State.t()
-        ) :: State.t()
-  def handle_outgoing_buffers(pad_ref, buffers, state) do
-    pad_data = PadModel.get_data!(state, pad_ref)
-    buffers_size = Buffer.Metric.from_unit(pad_data.other_demand_unit).buffers_size(buffers)
-
-    demand = pad_data.demand - buffers_size
-    demand_counter = DemandCounter.decrease(pad_data.demand_counter, buffers_size)
-
-    PadModel.set_data!(
-      state,
-      pad_ref,
-      %{pad_data | demand: demand, demand_counter: demand_counter}
-    )
-  end
-
   defp update_demand(pad_ref, size, state) when is_integer(size) do
     PadModel.set_data!(state, pad_ref, :demand, size)
   end
@@ -161,25 +139,6 @@ defmodule Membrane.Core.Element.DemandHandler do
           :supply -> supply_demand(pad_ref, state)
           :redemand -> handle_redemand(pad_ref, state)
         end
-    end
-  end
-
-  @spec maybe_snapshot_demand_counter(Pad.ref(), State.t()) :: State.t()
-  def maybe_snapshot_demand_counter(pad_ref, state) do
-    with {:ok, %{flow_control: :manual, demand: demand, demand_counter: demand_counter}}
-         when demand <= 0 <- PadModel.get_data(state, pad_ref),
-         counter_value when counter_value > 0 and counter_value > demand <-
-           DemandCounter.get(demand_counter) do
-      state =
-        PadModel.update_data!(
-          state,
-          pad_ref,
-          &%{&1 | demand: counter_value, incoming_demand: counter_value - &1.demand}
-        )
-
-      handle_redemand(pad_ref, state)
-    else
-      _other -> state
     end
   end
 
