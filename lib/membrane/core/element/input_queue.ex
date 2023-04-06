@@ -8,10 +8,10 @@ defmodule Membrane.Core.Element.InputQueue do
 
   use Bunch
 
-  alias Membrane.Event
-  alias Membrane.Core.Element.DemandCounter
   alias Membrane.Buffer
+  alias Membrane.Core.Element.DemandCounter
   alias Membrane.Core.Telemetry
+  alias Membrane.Event
   alias Membrane.Pad
 
   require Membrane.Core.Telemetry

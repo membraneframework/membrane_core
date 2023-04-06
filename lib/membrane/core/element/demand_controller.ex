@@ -5,8 +5,6 @@ defmodule Membrane.Core.Element.DemandController do
 
   use Bunch
 
-  alias Membrane.Core.Element.DemandHandler
-  alias Membrane.Element.PadData
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Child.PadModel
 
@@ -19,6 +17,7 @@ defmodule Membrane.Core.Element.DemandController do
     State
   }
 
+  alias Membrane.Element.PadData
   alias Membrane.Pad
 
   require Membrane.Core.Child.PadModel
