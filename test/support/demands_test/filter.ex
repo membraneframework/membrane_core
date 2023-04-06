@@ -22,8 +22,6 @@ defmodule Membrane.Support.DemandsTest.Filter do
 
   @impl true
   def handle_demand(:output, size, _unit, _ctx, state) do
-    Membrane.Logger.warn("FILTER DEMADNING #{state.demand_generator.(size)}")
-
     {[demand: {:input, state.demand_generator.(size)}], state}
   end
 

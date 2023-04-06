@@ -86,9 +86,6 @@ defmodule Membrane.Testing.Source do
 
   @impl true
   def handle_demand(:output, size, :buffers, _ctx, state) do
-    require Membrane.Logger
-    Membrane.Logger.warn("HANDLE DEMAND #{size}")
-
     get_actions(state, size)
   end
 
@@ -96,12 +93,7 @@ defmodule Membrane.Testing.Source do
   def default_buf_gen(generator_state, size) do
     buffers =
       generator_state..(size + generator_state - 1)
-      |> Enum.map(fn generator_state ->
-        require Membrane.Logger
-        Membrane.Logger.warn("GENERATING BUFFER NO. #{inspect(generator_state)}")
-
-        %Buffer{payload: <<generator_state::16>>}
-      end)
+      |> Enum.map(&%Buffer{payload: <<&1::16>>})
 
     action = [buffer: {:output, buffers}]
     {action, generator_state + size}

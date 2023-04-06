@@ -173,20 +173,12 @@ defmodule Membrane.Core.Element do
 
   @compile {:inline, do_handle_info: 2}
 
-  # defp do_handle_info(Message.new(:demand, size, _opts) = msg, state) do
-  #   pad_ref = Message.for_pad(msg)
-  #   state = DemandController.handle_demand(pad_ref, size, state)
-  #   {:noreply, state}
-  # end
-
-  defp do_handle_info(Message.new(:demand_counter_increased, pad_ref) = msg, state) do
-    Membrane.Logger.warn("RECEIVING DC NOTIFICATION ON #{inspect(pad_ref)} #{inspect(msg)}")
+  defp do_handle_info(Message.new(:demand_counter_increased, pad_ref), state) do
     state = DemandController.check_demand_counter(pad_ref, state)
     {:noreply, state}
   end
 
   defp do_handle_info(Message.new(:resume_handle_demand_loop), state) do
-    Membrane.Logger.warn("RECEIVING RESUME LOOP MSG")
     state = DemandHandler.handle_delayed_demands(state)
     {:noreply, state}
   end

@@ -258,15 +258,7 @@ defmodule Membrane.Core.Element.DemandCounter do
     new_counter_value = DistributedAtomic.add_get(demand_counter.counter, value)
     old_counter_value = new_counter_value - value
 
-    Membrane.Logger.warn(
-      "DEMAND COUNTER OLD NEW #{inspect({old_counter_value, new_counter_value})}"
-    )
-
     if old_counter_value <= 0 do
-      Membrane.Logger.warn(
-        "SENDING DC NOTIFICATION #{inspect(Message.new(:demand_counter_increased, demand_counter.sender_pad_ref))}"
-      )
-
       Message.send(
         demand_counter.sender_process,
         :demand_counter_increased,
@@ -281,18 +273,11 @@ defmodule Membrane.Core.Element.DemandCounter do
   def decrease(%__MODULE__{} = demand_counter, value) do
     demand_counter = Map.update!(demand_counter, :buffered_decrementation, &(&1 + value))
 
-    xd = get(demand_counter)
-
-    dc =
-      if demand_counter.buffered_decrementation >= demand_counter.buffered_decrementation_limit do
-        flush_buffered_decrementation(demand_counter)
-      else
-        demand_counter
-      end
-
-    Membrane.Logger.warn("DEMAND COUNTER DECREMENTATION #{inspect(xd)} -> #{inspect(get(dc))}")
-
-    dc
+    if demand_counter.buffered_decrementation >= demand_counter.buffered_decrementation_limit do
+      flush_buffered_decrementation(demand_counter)
+    else
+      demand_counter
+    end
   end
 
   @spec get(t) :: integer()

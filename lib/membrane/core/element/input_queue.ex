@@ -150,10 +150,6 @@ defmodule Membrane.Core.Element.InputQueue do
     }
   end
 
-  # w starej implementacji pole "demand" jest inkrementowane o tyle, ile wyciagniemy z kolejki
-  # wiec teraz trzeba podbic counter o tyle ile wyciagnelismy z kolejki
-  # wychodzi na to ze teraz pole "demand" jest wgl do wywalenia
-
   @spec take(t, non_neg_integer()) :: {output(), t}
   def take(%__MODULE__{} = input_queue, count) when count >= 0 do
     "Taking #{inspect(count)} #{inspect(input_queue.outbound_metric)}"

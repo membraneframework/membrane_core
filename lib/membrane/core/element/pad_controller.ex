@@ -161,9 +161,7 @@ defmodule Membrane.Core.Element.PadController do
       other_effective_flow_control: other_effective_flow_control
     } = link_props
 
-    # if info.direction != :input do
     if info.direction != :input, do: raise("pad direction #{inspect(info.direction)} is wrong")
-    # end
 
     true = info.direction == :input
 
@@ -325,7 +323,6 @@ defmodule Membrane.Core.Element.PadController do
         end)
 
       case data.direction do
-        # :input -> DemandController.send_auto_demand_if_needed(endpoint.pad_ref, state)
         :input -> DemandController.increase_demand_counter_if_needed(endpoint.pad_ref, state)
         :output -> state
       end
@@ -410,17 +407,6 @@ defmodule Membrane.Core.Element.PadController do
     }
   end
 
-  # defp init_pad_mode_data(
-  #        %{flow_control: :push, direction: :output},
-  #        _props,
-  #        %{flow_control: other_flow_control},
-  #        metadata,
-  #        _state
-  #      )
-  #      when other_flow_control in [:auto, :manual] do
-  #   %{toilet: metadata.toilet}
-  # end
-
   defp init_pad_mode_data(_data, _props, _other_info, _metadata, _state), do: %{}
 
   @doc """
@@ -452,12 +438,9 @@ defmodule Membrane.Core.Element.PadController do
           |> PadModel.set_data!(pad_ref, :associated_pads, [])
 
         if pad_data.direction == :output do
-          Membrane.Logger.warn("UNLINKING PADS ASSOCIATIONS #{inspect(pad_data.associated_pads)}")
-
           Enum.reduce(
             pad_data.associated_pads,
             state,
-            # &DemandController.send_auto_demand_if_needed/2
             &DemandController.increase_demand_counter_if_needed/2
           )
         else

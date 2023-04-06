@@ -99,8 +99,6 @@ defmodule Membrane.Core.Element.DemandController do
 
   @spec do_exec_handle_demand(PadData.t(), State.t()) :: State.t()
   defp do_exec_handle_demand(pad_data, state) do
-    Membrane.Logger.warn("EXEC HANDLE DEMAND #{inspect(pad_data.ref)}")
-
     context = &CallbackContext.from_state(&1, incoming_demand: pad_data.incoming_demand)
 
     CallbackHandler.exec_and_handle_callback(
