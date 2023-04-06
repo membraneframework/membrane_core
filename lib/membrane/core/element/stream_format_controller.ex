@@ -12,7 +12,6 @@ defmodule Membrane.Core.Element.StreamFormatController do
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Telemetry
-  require Membrane.Logger
 
   @type stream_format_validation_param() :: {module(), Pad.name()}
   @type stream_format_validation_params() :: [stream_format_validation_param()]

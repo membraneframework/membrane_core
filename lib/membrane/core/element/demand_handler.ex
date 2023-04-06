@@ -16,7 +16,6 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
-  require Membrane.Logger
 
   @doc """
   Called when redemand action was returned.

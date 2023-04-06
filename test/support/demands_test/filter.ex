@@ -4,8 +4,6 @@ defmodule Membrane.Support.DemandsTest.Filter do
 
   alias Membrane.Buffer
 
-  require Membrane.Logger
-
   def_output_pad :output, flow_control: :manual, accepted_format: _any
 
   def_input_pad :input, flow_control: :manual, demand_unit: :buffers, accepted_format: _any
