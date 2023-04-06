@@ -17,8 +17,7 @@ defmodule Membrane.Core.Element.PadController do
     EventController,
     InputQueue,
     State,
-    StreamFormatController,
-    Toilet
+    StreamFormatController
   }
 
   alias Membrane.Core.Parent.Link.Endpoint
@@ -37,7 +36,7 @@ defmodule Membrane.Core.Element.PadController do
           | %{
               initiator: :sibling,
               other_info: PadModel.pad_info() | nil,
-              link_metadata: %{toilet: Toilet.t() | nil},
+              link_metadata: %{},
               stream_format_validation_params:
                 StreamFormatController.stream_format_validation_params(),
               other_effective_flow_control: EffectiveFlowController.effective_flow_control()

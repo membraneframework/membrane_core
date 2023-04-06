@@ -92,8 +92,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @doc """
-  Decreases the demand on the output by the size of outgoing buffers. Checks for the toilet
-  overflow if the toilet is enabled.
+  Decreases demand snapshot and demand counter on the output by the size of outgoing buffers.
   """
   @spec handle_outgoing_buffers(
           Pad.ref(),

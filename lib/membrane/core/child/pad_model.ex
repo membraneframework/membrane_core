@@ -40,7 +40,6 @@ defmodule Membrane.Core.Child.PadModel do
           sticky_messages: [Membrane.Event.t()],
           input_queue: Membrane.Core.Element.InputQueue.t() | nil,
           options: %{optional(atom) => any},
-          toilet: Membrane.Core.Element.Toilet.t() | nil,
           auto_demand_size: pos_integer() | nil,
           associated_pads: [Pad.ref()] | nil,
           sticky_events: [Membrane.Event.t()]
