@@ -17,6 +17,8 @@ defmodule Membrane.Core.Element.DemandHandler do
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
 
+  @handle_demand_loop_limit 20
+
   @doc """
   Called when redemand action was returned.
     * If element is currently supplying demand, it means that after finishing `supply_demand` it will call
@@ -105,8 +107,6 @@ defmodule Membrane.Core.Element.DemandHandler do
 
     PadModel.set_data!(state, pad_ref, :demand, new_demand)
   end
-
-  @handle_demand_loop_limit 20
 
   @spec handle_delayed_demands(State.t()) :: State.t()
   def handle_delayed_demands(%State{} = state) do

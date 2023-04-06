@@ -25,7 +25,6 @@ defmodule Membrane.Support.DemandsTest.Filter do
 
   @impl true
   def handle_buffer(:input, %Buffer{payload: payload}, _ctx, state) do
-    state = Map.update(state, :i, 0, &(&1 + 1))
     {[buffer: {:output, %Buffer{payload: payload <> <<255>>}}, redemand: :output], state}
   end
 
