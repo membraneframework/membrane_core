@@ -242,6 +242,21 @@ defmodule Membrane.Time do
     Ratio.new(timestamp, timebase) |> round_rational()
   end
 
+  @doc """
+  Divides timestamp by a timebase. The result is rounded to the nearest integer.
+  Works this same as `divide_by_timebase/2`.
+
+  ## Examples:
+      iex> timestamp = 10 |> Membrane.Time.seconds()
+      iex> timebase = Ratio.new(Membrane.Time.second(), 30)
+      iex> Membrane.Time.round_to_timebase(timestamp, timebase)
+      300
+  """
+  @spec round_to_timebase(number | Ratio.t(), number | Ratio.t()) :: integer
+  def round_to_timebase(timestamp, timebase) do
+    divide_by_timebase(timestamp, timebase)
+  end
+
   Enum.map(@units, fn unit ->
     @doc """
     Returns one #{unit.singular} in `#{inspect(__MODULE__)}` units.
@@ -283,6 +298,17 @@ defmodule Membrane.Time do
         :exact -> Ratio.new(time, unquote(unit.duration))
         :round -> Ratio.new(time, unquote(unit.duration)) |> round_rational()
       end
+    end
+
+    round_fun_name = :"round_to_#{unit.plural}"
+
+    @doc """
+    Works as #{as_fun_name}/2 with `mode` argument set to `:round`.
+    """
+    @spec unquote(round_fun_name)(t) :: integer
+    # credo:disable-for-next-line Credo.Check.Readability.Specs
+    def unquote(round_fun_name)(time) when is_time(time) do
+      unquote(as_fun_name)(time, :round)
     end
   end)
 

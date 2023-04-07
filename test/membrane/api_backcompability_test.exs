@@ -21,4 +21,32 @@ defmodule Membrane.APIBackCompabilityTest do
 
     Testing.Pipeline.terminate(pipeline)
   end
+
+  test "if `Membrane.Time.round_to_*` functions work" do
+    module = Membrane.Time
+
+    for {old_function, new_function} <- [
+          round_to_days: :as_days,
+          round_to_hours: :as_hours,
+          round_to_minutes: :as_minutes,
+          round_to_seconds: :as_seconds,
+          round_to_milliseconds: :as_milliseconds,
+          round_to_microseconds: :as_microseconds,
+          round_to_nanoseconds: :as_nanoseconds
+        ],
+        timestamp_generator <- [:days, :microseconds] do
+      timestamp = apply(module, timestamp_generator, [3])
+
+      old_function_result = apply(module, old_function, [timestamp])
+      new_function_result = apply(module, new_function, [timestamp, :round])
+
+      assert old_function_result == new_function_result
+    end
+
+    timestamp = Membrane.Time.days(15) + Membrane.Time.nanoseconds(13)
+    timebase = Membrane.Time.milliseconds(2)
+
+    assert Membrane.Time.round_to_timebase(timestamp, timebase) ==
+             Membrane.Time.divide_by_timebase(timestamp, timebase)
+  end
 end
