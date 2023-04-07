@@ -41,7 +41,18 @@ defmodule Membrane.Pipeline.Action do
   as an argument.
   """
   @type remove_children ::
-          {:remove_children, Child.name() | [Child.name()]}
+          {:remove_children,
+           Child.ref()
+           | [Child.ref()]
+           | Membrane.Child.group()
+           | [Membrane.Child.group()]}
+
+  @type remove_child ::
+          {:remove_child,
+           Child.ref()
+           | [Child.ref()]
+           | Membrane.Child.group()
+           | [Membrane.Child.group()]}
 
   @typedoc """
   Action that removes link, which relates to specified child and pad.
@@ -135,6 +146,7 @@ defmodule Membrane.Pipeline.Action do
           | notify_child
           | spec
           | remove_children
+          | remove_child
           | remove_link
           | start_timer
           | timer_interval
