@@ -32,6 +32,26 @@ defmodule Membrane.Sink do
       @doc false
       @spec membrane_element_type() :: Membrane.Element.type()
       def membrane_element_type, do: :sink
+
+      @impl true
+      def handle_buffer(pad, buffer, ctx, state) do
+        apply(__MODULE__, :handle_write, [pad, buffer, ctx, state])
+      end
+
+      @impl true
+      def handle_buffers_batch(pad, buffers, ctx, state) do
+        apply(__MODULE__, :handle_write_list, [pad, buffers, ctx, state])
+      end
+
+      @impl true
+      def handle_write_list(pad, buffers, ctx, state) do
+        args_list = buffers |> Enum.map(&[pad, &1])
+        {[split: {:handle_buffer, args_list}], state}
+      end
+
+      defoverridable handle_buffer: 4,
+                     handle_buffers_batch: 4,
+                     handle_write_list: 4
     end
   end
 

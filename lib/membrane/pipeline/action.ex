@@ -21,6 +21,8 @@ defmodule Membrane.Pipeline.Action do
   """
   @type setup :: {:setup, :incomplete | :complete}
 
+  @type playback :: {:playback, :playing, :stopped, :prepared}
+
   @typedoc """
   Action that sends a message to a child identified by name.
   """
@@ -143,6 +145,7 @@ defmodule Membrane.Pipeline.Action do
   """
   @type t ::
           setup
+          | playback
           | notify_child
           | spec
           | remove_children

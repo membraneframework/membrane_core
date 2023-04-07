@@ -32,6 +32,11 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
     Core.LifecycleController.handle_setup_operation(operation, state)
   end
 
+  @impl true
+  def handle_action({:playback, _playback}, _cb, _params, state) do
+    state
+  end
+
   @impl CallbackHandler
   def handle_action({:notify_child, notification}, _cb, _params, state) do
     Parent.ChildLifeController.handle_notify_child(notification, state)

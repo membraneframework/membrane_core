@@ -39,19 +39,42 @@ defmodule Membrane.Filter do
       def membrane_element_type, do: :filter
 
       @impl true
-      def handle_stream_format(_pad, stream_format, _context, state),
-        do: {[forward: stream_format], state}
+      def handle_stream_format(_pad, stream_format, _context, state) do
+        {[forward: stream_format], state}
+      end
 
       @impl true
-      def handle_event(_pad, event, _context, state), do: {[forward: event], state}
+      def handle_event(_pad, event, _context, state) do
+        {[forward: event], state}
+      end
 
       @impl true
-      def handle_end_of_stream(pad, _context, state),
-        do: {[forward: :end_of_stream], state}
+      def handle_end_of_stream(pad, _context, state) do
+        {[forward: :end_of_stream], state}
+      end
+
+      @impl true
+      def handle_buffer(pad, buffer, ctx, state) do
+        apply(__MODULE__, :handle_write, [pad, buffer, ctx, state])
+      end
+
+      @impl true
+      def handle_buffers_batch(pad, buffers, ctx, state) do
+        apply(__MODULE__, :handle_write_list, [pad, buffers, ctx, state])
+      end
+
+      @impl true
+      def handle_write_list(pad, buffers, ctx, state) do
+        args_list = buffers |> Enum.map(&[pad, &1])
+        {[split: {:handle_buffer, args_list}], state}
+      end
 
       defoverridable handle_stream_format: 4,
                      handle_event: 4,
-                     handle_end_of_stream: 3
+                     handle_end_of_stream: 3,
+                     handle_buffer: 4,
+                     handle_buffers_batch: 4,
+                     handle_write_list: 4
     end
   end
 
