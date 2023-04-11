@@ -2,9 +2,9 @@ defmodule Membrane.APIBackCompabilityTest do
   # this module tests if API in membrane_core v0.12 has no breaking changes comparing to api in v0.11
   use ExUnit.Case, async: true
 
-  alias Membrane.Testing
-
   import Membrane.ChildrenSpec
+
+  alias Membrane.Testing
 
   test "if action :remove_child works" do
     defmodule Filter do
