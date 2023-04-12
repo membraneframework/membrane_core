@@ -186,11 +186,13 @@ defmodule Membrane.Core.Child.PadsSpecs do
             {:ok, config} <-
               config
               |> Bunch.Config.parse(
-                [
-                  availability: [in: [:always, :on_request], default: :always],
-                  accepted_formats_str: [],
-                  options: [default: nil]
-                ] ++ flow_control_parsing_options(config, direction, component)
+                availability: [in: [:always, :on_request], default: :always],
+                accepted_formats_str: [],
+                options: [default: nil],
+                flow_control: flow_control_parsing_options(direction, component),
+                mode: mode_parsing_options(component),
+                demand_mode: demand_mode_parsing_options(direction, component),
+                demand_unit: demand_unit_parsing_options(direction, component)
               ) do
       config
       |> Map.put(:direction, direction)
@@ -202,47 +204,57 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  defp flow_control_parsing_options(config, direction, component) do
-    old_api? = Keyword.has_key?(config, :mode) or Keyword.has_key?(config, :demand_mode)
-    auto_allowed? = direction == :input or component == :filter
-    mode_options = [mode: [in: [:pull, :push], default: :pull]]
-
-    demand_unit_options = [
-      demand_unit: fn config ->
-        manual? =
-          if old_api?,
-            do: config[:mode] != :push and config[:demand_mode] != :auto,
-            else: config[:flow_control] not in [:push, :auto]
-
-        cond do
-          component == :bin or not manual? ->
-            nil
-
-          direction == :input ->
-            [in: [:buffers, :bytes]]
-
-          direction == :output ->
-            [in: [:buffers, :bytes, nil], default: nil]
-        end
+  defp mode_parsing_options(component) do
+    fn config ->
+      cond do
+        component == :bin -> nil
+        old_api?(config) -> [in: [:pull, :push], default: :pull]
+        true -> nil
       end
-    ]
+    end
+  end
 
-    cond do
-      component == :bin ->
-        []
+  defp demand_mode_parsing_options(direction, component) do
+    fn config ->
+      cond do
+        component == :bin or not old_api?(config) -> nil
+        auto_allowed?(direction, component) -> [in: [:manual, :auto], default: :manual]
+        true -> [in: [:manual], default: :manual]
+      end
+    end
+  end
 
-      old_api? and auto_allowed? ->
-        [demand_mode: [in: [:manual, :auto], default: :manual]] ++ mode_options
+  defp flow_control_parsing_options(direction, component) do
+    fn config ->
+      cond do
+        component == :bin or old_api?(config) -> nil
+        auto_allowed?(direction, component) -> [in: [:auto, :manual, :push], default: :manual]
+        true -> [in: [:manual, :push], default: :manual]
+      end
+    end
+  end
 
-      old_api? ->
-        [demand_mode: [in: [:manual], default: :manual]] ++ mode_options
+  defp demand_unit_parsing_options(direction, component) do
+    fn config ->
+      manual? =
+        if old_api?(config),
+          do: config[:mode] != :push and config[:demand_mode] != :auto,
+          else: config[:flow_control] not in [:push, :auto]
 
-      auto_allowed? ->
-        [flow_control: [in: [:auto, :manual, :push], default: :manual]]
+      cond do
+        component == :bin or not manual? -> nil
+        direction == :input -> [in: [:buffers, :bytes]]
+        direction == :output -> [in: [:buffers, :bytes, nil], default: nil]
+      end
+    end
+  end
 
-      true ->
-        [flow_control: [in: [:manual, :push], default: :manual]]
-    end ++ demand_unit_options
+  defp old_api?(config) do
+    Map.has_key?(config, :mode) or Map.has_key?(config, :demand_mode)
+  end
+
+  defp auto_allowed?(direction, component) do
+    direction == :input or component == :filter
   end
 
   @doc """
