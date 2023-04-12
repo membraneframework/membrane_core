@@ -49,7 +49,6 @@ defmodule Membrane.Clock do
              non_neg_integer
              | ratio
              | {numerator :: non_neg_integer, denominator :: pos_integer()}}
-
   @typedoc """
   Ratio message sent by the Clock to all its subscribers. It contains the ratio
   of the custom clock time to the reference time.
@@ -118,7 +117,7 @@ defmodule Membrane.Clock do
 
     state =
       %{
-        ratio: Ratio.new(1),
+        ratio: 1,
         subscribers: %{},
         time_provider: options |> Keyword.get(:time_provider, fn -> Time.monotonic_time() end)
       }
@@ -140,7 +139,7 @@ defmodule Membrane.Clock do
         subscribe(proxy_for)
         state
       else
-        broadcast_and_update_ratio(Ratio.new(1), state)
+        broadcast_and_update_ratio(1, state)
       end
 
     {:noreply, state}
@@ -200,7 +199,7 @@ defmodule Membrane.Clock do
   defp get_proxy_options(true, _proxy_for), do: %{proxy: true, proxy_for: nil}
 
   defp get_proxy_options(_proxy, _proxy_for),
-    do: %{init_time: nil, clock_time: Ratio.new(0), till_next: nil, proxy: false}
+    do: %{init_time: nil, clock_time: 0, till_next: nil, proxy: false}
 
   defp handle_unsubscribe(pid, state) do
     Process.demonitor(state.subscribers[pid].monitor, [:flush])
@@ -212,13 +211,13 @@ defmodule Membrane.Clock do
   end
 
   defp handle_clock_update(till_next, state) do
-    till_next = Ratio.new(till_next)
+    use Ratio
 
-    if Ratio.lt?(till_next, 0) do
+    if till_next < 0 do
       raise "Clock update time cannot be negative, received: #{inspect(till_next)}"
     end
 
-    till_next = Ratio.mult(till_next, Ratio.new(Time.millisecond()))
+    till_next = till_next * Time.millisecond()
 
     case state.init_time do
       nil -> %{state | init_time: state.time_provider.(), till_next: till_next}
@@ -227,9 +226,10 @@ defmodule Membrane.Clock do
   end
 
   defp do_handle_clock_update(till_next, state) do
+    use Ratio
     %{till_next: from_previous, clock_time: clock_time} = state
-    clock_time = Ratio.add(clock_time, from_previous)
-    ratio = Ratio.div(clock_time, Ratio.new(state.time_provider.() - state.init_time))
+    clock_time = clock_time + from_previous
+    ratio = clock_time / (state.time_provider.() - state.init_time)
     state = %{state | clock_time: clock_time, till_next: till_next}
     broadcast_and_update_ratio(ratio, state)
   end
