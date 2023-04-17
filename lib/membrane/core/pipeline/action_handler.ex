@@ -11,7 +11,8 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   require Membrane.Logger
 
   @impl CallbackHandler
-  def handle_action({action, _args}, :handle_init, _params, _state) when action != :spec do
+  def handle_action({action, _args}, :handle_init, _params, _state)
+      when action not in [:spec, :playback] do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
   end
 

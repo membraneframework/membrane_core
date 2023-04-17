@@ -332,6 +332,14 @@ defmodule Membrane.Pipeline do
   @spec terminate(pipeline :: pid, timeout: timeout(), force?: boolean(), asynchronous?: boolean()) ::
           :ok | {:ok, pid()} | {:error, :timeout}
   def terminate(pipeline, opts \\ []) do
+    opts =
+      if Keyword.has_key?(opts, :blocking?) do
+        {blocking?, opts} = Keyword.pop!(opts, :blocking?)
+        Keyword.put(opts, :asynchronous?, not blocking?)
+      else
+        opts
+      end
+
     [asynchronous?: asynchronous?] ++ opts =
       Keyword.validate!(opts,
         asynchronous?: false,

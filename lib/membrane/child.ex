@@ -32,6 +32,12 @@ defmodule Membrane.Child do
       else: name
   end
 
+  @doc """
+  Returns a child name from a child reference.
+  """
+  def name_by_ref({Membrane.Child, _group, name}), do: name
+  def name_by_ref(name), do: name
+
   defp validate_name!(name) do
     if is_tuple(name) and elem(name, 0) == Membrane.Child do
       raise "Improper name: #{inspect(name)}. The name cannot match the reserved internal Membrane's pattern."

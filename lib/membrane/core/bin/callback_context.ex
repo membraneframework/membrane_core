@@ -1,6 +1,8 @@
 defmodule Membrane.Core.Bin.CallbackContext do
   @moduledoc false
 
+  alias Membrane.Child
+
   @type optional_fields :: [pad_options: map()]
 
   @spec from_state(Membrane.Core.Bin.State.t(), optional_fields()) ::
@@ -11,7 +13,8 @@ defmodule Membrane.Core.Bin.CallbackContext do
       clock: state.synchronization.clock,
       parent_clock: state.synchronization.parent_clock,
       pads: state.pads_data,
-      name: state.name,
+      name: Child.name_by_ref(state.name),
+      ref: state.name,
       children: state.children,
       playback: state.playback,
       resource_guard: state.resource_guard,
