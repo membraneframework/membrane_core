@@ -193,6 +193,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 flow_control: flow_control_parsing_options(config, direction, component),
                 mode: mode_parsing_options(config, component),
                 demand_mode: demand_mode_parsing_options(config, direction, component)
+                # demand_unit: demand_unit_parsing_options(config, direction, component)
               ) do
       case config do
         _config when component == :bin ->
@@ -221,26 +222,38 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   defp mode_parsing_options(config, component) do
-    cond do
-      component == :bin -> nil
-      old_api?(config) -> [in: [:pull, :push], default: :pull]
-      true -> nil
+    old? = old_api?(config)
+
+    fn _config ->
+      cond do
+        component == :bin -> nil
+        old? -> [in: [:pull, :push], default: :pull]
+        true -> nil
+      end
     end
   end
 
   defp demand_mode_parsing_options(config, direction, component) do
-    cond do
-      component == :bin or not old_api?(config) -> nil
-      auto_allowed?(direction, component) -> [in: [:manual, :auto], default: :manual]
-      true -> [in: [:manual], default: :manual]
+    old? = old_api?(config)
+
+    fn _config ->
+      cond do
+        component == :bin or not old? -> nil
+        auto_allowed?(direction, component) -> [in: [:manual, :auto], default: :manual]
+        true -> [in: [:manual], default: :manual]
+      end
     end
   end
 
   defp flow_control_parsing_options(config, direction, component) do
-    cond do
-      component == :bin or old_api?(config) -> nil
-      auto_allowed?(direction, component) -> [in: [:auto, :manual, :push], default: :manual]
-      true -> [in: [:manual, :push], default: :manual]
+    old? = old_api?(config)
+
+    fn _config ->
+      cond do
+        component == :bin or old? -> nil
+        auto_allowed?(direction, component) -> [in: [:auto, :manual, :push], default: :manual]
+        true -> [in: [:manual, :push], default: :manual]
+      end
     end
   end
 

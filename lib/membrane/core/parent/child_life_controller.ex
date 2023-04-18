@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   use Bunch
 
   alias __MODULE__.{CrashGroupUtils, LinkUtils, StartupUtils}
-  alias Membrane.{Child, ChildrenSpec}
+  alias Membrane.ChildrenSpec
   alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
 
   alias Membrane.Core.Parent.{
@@ -18,6 +18,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias Membrane.Pad
   alias Membrane.ParentError
 
+  require Membrane.Child, as: Child
   require Membrane.Core.Component
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
