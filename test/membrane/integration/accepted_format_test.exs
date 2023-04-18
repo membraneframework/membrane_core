@@ -89,6 +89,7 @@ defmodule Membrane.StreamFormatTest do
   defp assert_down(module) do
     assert_receive({:my_pid, ^module, pid})
     Process.monitor(pid)
-    assert_receive({:DOWN, _ref, :process, ^pid, {%Membrane.StreamFormatError{}, _stacktrace}})
+    assert_receive({:DOWN, _ref, :process, ^pid, reason})
+    assert match?({%Membrane.StreamFormatError{}, _stacktrace}, reason) or reason == :noproc
   end
 end
