@@ -243,13 +243,20 @@ defmodule Membrane.Element.Base do
 
   Options:
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
+    - `:bring_child?` - if true (default) requires and aliases `Membrane.Child`
   """
   defmacro __using__(options) do
     bring_pad =
       if options |> Keyword.get(:bring_pad?, true) do
         quote do
-          require Membrane.Pad
-          alias Membrane.Pad
+          require Membrane.Pad, as: Pad
+        end
+      end
+
+    bring_child =
+      if options |> Keyword.get(:bring_child?, true) do
+        quote do
+          require Membrane.Child, as: Child
         end
       end
 
@@ -267,6 +274,7 @@ defmodule Membrane.Element.Base do
       Membrane.Core.Child.PadsSpecs.ensure_default_membrane_pads()
 
       unquote(bring_pad)
+      unquote(bring_child)
 
       @doc false
       @spec membrane_element?() :: true
