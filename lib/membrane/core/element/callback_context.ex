@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.CallbackContext do
 
   @type optional_fields ::
           [incoming_demand: non_neg_integer()]
-          | [pad_options: map()]
+          | [options: map()]
           | [old_stream_format: Membrane.StreamFormat.t()]
 
   @spec from_state(Membrane.Core.Element.State.t(), optional_fields()) ::
