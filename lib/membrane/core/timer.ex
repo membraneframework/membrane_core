@@ -19,7 +19,12 @@ defmodule Membrane.Core.Timer do
         }
 
   @enforce_keys [:interval, :clock, :init_time, :id]
-  defstruct @enforce_keys ++ [next_tick_time: 0, ratio: 1, timer_ref: nil]
+  defstruct @enforce_keys ++
+              [
+                next_tick_time: 0,
+                ratio: %Ratio{denominator: 1, numerator: 1},
+                timer_ref: nil
+              ]
 
   @spec start(id, interval, Clock.t()) :: t
   def start(id, interval, clock) do
