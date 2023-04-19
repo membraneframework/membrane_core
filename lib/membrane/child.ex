@@ -21,12 +21,26 @@ defmodule Membrane.Child do
   Returns a reference to a child.
   """
   defmacro ref(name) do
+    case __CALLER__.context do
+      :match -> ref_in_a_match(name)
+      _not_match -> ref_outside_a_match(name)
+    end
+  end
+
+  defmacro ref(name, options) do
+    case __CALLER__.context do
+      :match -> ref_in_a_match(name, options)
+      _not_match -> ref_outside_a_match(name, options)
+    end
+  end
+
+  defp ref_in_a_match(name) do
     quote do
       unquote(name)
     end
   end
 
-  defmacro ref(name, group: group) do
+  defp ref_in_a_match(name, group: group) do
     quote do
       {
         unquote(__MODULE__),
@@ -36,9 +50,38 @@ defmodule Membrane.Child do
     end
   end
 
+  defp ref_outside_a_match(name) do
+    quote generated: true do
+      case unquote(name) do
+        {unquote(__MODULE__), _group, _child} ->
+          raise "Improper name: #{inspect(unquote(name))}. The name cannot match the reserved internal Membrane's pattern."
+
+        name ->
+          name
+      end
+    end
+  end
+
+  defp ref_outside_a_match(name, options) do
+    quote generated: true do
+      cond do
+        match?({unquote(__MODULE__), _group, _child}, unquote(name)) ->
+          raise "Improper name: #{inspect(unquote(name))}. The name cannot match the reserved internal Membrane's pattern."
+
+        not match?([group: _group], unquote(options)) ->
+          raise "Improper options: #{inspect(unquote(options))}. The options must be in form of [group: group]."
+
+        true ->
+          [group: group] = unquote(options)
+          {unquote(__MODULE__), group, unquote(name)}
+      end
+    end
+  end
+
   @doc """
-  Returns a child name from a child reference.
+  Returns a name of a child from its reference.
   """
+  @spec name_by_ref(ref()) :: name()
   def name_by_ref(ref(name, group: _group)), do: name
   def name_by_ref(ref(name)), do: name
 end

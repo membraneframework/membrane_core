@@ -445,6 +445,7 @@ defmodule Membrane.Pipeline do
   Options:
     - `:bring_spec?` - if true (default) imports and aliases `Membrane.ChildrenSpec`
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
+    - `:bring_child?` - if true (default) requires and aliases `Membrane.Child`
   """
   defmacro __using__(options) do
     bring_spec =
@@ -463,6 +464,13 @@ defmodule Membrane.Pipeline do
         end
       end
 
+    bring_child =
+      if options |> Keyword.get(:bring_child?, true) do
+        quote do
+          require Membrane.Child, as: Child
+        end
+      end
+
     # credo:disable-for-next-line Credo.Check.Refactor.LongQuoteBlocks
     quote do
       alias unquote(__MODULE__)
@@ -472,6 +480,7 @@ defmodule Membrane.Pipeline do
 
       unquote(bring_spec)
       unquote(bring_pad)
+      unquote(bring_child)
 
       @doc """
       Returns child specification for spawning under a supervisor

@@ -4,9 +4,10 @@ defmodule Membrane.Integration.LinkingTest do
   import Membrane.Testing.Assertions
   import Membrane.ChildrenSpec
 
-  alias Membrane.{Buffer, Child, Testing}
+  alias Membrane.{Buffer, Testing}
   alias Membrane.Support.Element.DynamicFilter
 
+  require Membrane.Child, as: Child
   require Membrane.Pad, as: Pad
 
   defmodule Element do
@@ -373,7 +374,6 @@ defmodule Membrane.Integration.LinkingTest do
     Membrane.Pipeline.terminate(pipeline)
   end
 
-  @tag :dupa
   test "Bin should crash if it doesn't link internally within timeout" do
     defmodule NoInternalLinkBin do
       use Membrane.Bin
