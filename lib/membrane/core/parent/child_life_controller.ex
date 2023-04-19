@@ -247,7 +247,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     Enum.map(specification_builders, fn specification_builder ->
       children =
         Enum.map(specification_builder.children, fn {child_name, child_definition, child_options} ->
-          IO.inspect({child_name, options})
           child_ref = get_child_ref(child_name, options)
           {child_ref, child_definition, child_options}
         end)
