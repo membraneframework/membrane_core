@@ -247,14 +247,14 @@ defmodule Membrane.Element.Base do
   """
   defmacro __using__(options) do
     bring_pad =
-      if options |> Keyword.get(:bring_pad?, true) do
+      if Keyword.get(options, :bring_pad?, true) do
         quote do
           require Membrane.Pad, as: Pad
         end
       end
 
     bring_child =
-      if options |> Keyword.get(:bring_child?, true) do
+      if Keyword.get(options, :bring_child?, true) do
         quote do
           require Membrane.Child, as: Child
         end

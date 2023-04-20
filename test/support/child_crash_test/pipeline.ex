@@ -76,11 +76,6 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
     children_names = Enum.map(children_names, fn name -> {group, name} end)
 
-    # Enum.chunk_every(children_names, 2, 1, [{nil, :center_filter}])
-    # |> Enum.map(fn [{first_elem_group, first_elem_name}, {second_elem_group, second_elem_name}] ->
-    #   get_child(Child.ref(first_elem_name, group: first_elem_group))
-    #   |> get_child(Child.ref(second_elem_name, group: second_elem_group))
-    # end)
     links =
       children_names
       |> Enum.map(fn {group, name} -> Child.ref(name, group: group) end)
