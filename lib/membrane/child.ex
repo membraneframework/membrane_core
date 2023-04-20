@@ -29,8 +29,16 @@ defmodule Membrane.Child do
 
   defmacro ref(name, options) do
     case __CALLER__.context do
-      :match -> ref_in_a_match(name, options)
-      _not_match -> ref_outside_a_match(name, options)
+      :match ->
+        Macro.expand(options, __CALLER__)
+        |> Access.fetch(:group)
+        |> case do
+          {:ok, group_ast} -> ref_in_a_match(name, group_ast)
+          :error -> raise "Improper options. The options must be in form of [group: group]."
+        end
+
+      _not_match ->
+        ref_outside_a_match(name, options)
     end
   end
 
@@ -40,7 +48,7 @@ defmodule Membrane.Child do
     end
   end
 
-  defp ref_in_a_match(name, group: group) do
+  defp ref_in_a_match(name, group) do
     quote do
       {
         unquote(__MODULE__),
