@@ -53,6 +53,7 @@ defmodule Membrane.Core.Child.PadModel do
           required(:availability) => Pad.availability(),
           required(:direction) => Pad.direction(),
           required(:name) => Pad.name(),
+          required(:accepted_formats_str) => String.t(),
           optional(:flow_control) => Pad.flow_control(),
           optional(:demand_unit) => Membrane.Buffer.Metric.unit(),
           optional(:other_demand_unit) => Membrane.Buffer.Metric.unit()
