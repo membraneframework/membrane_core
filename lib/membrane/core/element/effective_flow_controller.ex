@@ -14,8 +14,8 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
   @type effective_flow_control :: :push | :pull
 
-  @spec pad_effective_flow_control(Pad.ref(), State.t()) :: effective_flow_control()
-  def pad_effective_flow_control(pad_ref, state) do
+  @spec get_pad_effective_flow_control(Pad.ref(), State.t()) :: effective_flow_control()
+  def get_pad_effective_flow_control(pad_ref, state) do
     pad_name = Pad.name_by_ref(pad_ref)
 
     state.pads_info

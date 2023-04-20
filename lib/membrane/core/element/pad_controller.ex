@@ -89,7 +89,7 @@ defmodule Membrane.Core.Element.PadController do
          state
        ) do
     effective_flow_control =
-      EffectiveFlowController.pad_effective_flow_control(endpoint.pad_ref, state)
+      EffectiveFlowController.get_pad_effective_flow_control(endpoint.pad_ref, state)
 
     handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
@@ -169,7 +169,7 @@ defmodule Membrane.Core.Element.PadController do
       |> Map.put(:output_demand_unit, output_demand_unit)
 
     pad_effective_flow_control =
-      EffectiveFlowController.pad_effective_flow_control(endpoint.pad_ref, state)
+      EffectiveFlowController.get_pad_effective_flow_control(endpoint.pad_ref, state)
 
     demand_counter =
       DemandCounter.new(
@@ -299,7 +299,7 @@ defmodule Membrane.Core.Element.PadController do
     :ok =
       DemandCounter.set_sender_mode(
         data.demand_counter,
-        EffectiveFlowController.pad_effective_flow_control(data.ref, state)
+        EffectiveFlowController.get_pad_effective_flow_control(data.ref, state)
       )
 
     data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, metadata, state))

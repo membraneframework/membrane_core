@@ -41,10 +41,10 @@ defmodule Membrane.Core.Element.InputQueueTest do
                outbound_metric: context.expected_metric,
                linked_output_ref: context.linked_output_ref,
                size: 0,
-               lacking_buffers: context.target_queue_size
+               lacking_buffer_size: context.target_queue_size
              }
 
-      assert context.target_queue_size == context.demand_counter |> DemandCounter.get()
+      assert context.target_queue_size == DemandCounter.get(context.demand_counter)
 
       expected_message = Message.new(:demand_counter_increased, context.linked_output_ref)
       assert_received ^expected_message
@@ -87,14 +87,14 @@ defmodule Membrane.Core.Element.InputQueueTest do
     setup do
       {:ok,
        %{
-         lacking_buffers: 30,
+         lacking_buffer_size: 30,
          size: 10,
          q: Qex.new() |> Qex.push({:buffers, [], 3, 3}),
          payload: <<1, 2, 3>>
        }}
     end
 
-    test "updated properly `size` and `lacking_buffers` when `:metric` is `Buffer.Metric.Count`",
+    test "updated properly `size` and `lacking_buffer_size` when `:metric` is `Buffer.Metric.Count`",
          context do
       input_queue =
         struct(InputQueue,
@@ -102,17 +102,17 @@ defmodule Membrane.Core.Element.InputQueueTest do
           inbound_metric: Buffer.Metric.Count,
           outbound_metric: Buffer.Metric.Count,
           q: context.q,
-          lacking_buffers: context.lacking_buffers
+          lacking_buffer_size: context.lacking_buffer_size
         )
 
       v = [%Buffer{payload: context.payload}]
       updated_input_queue = InputQueue.store(input_queue, :buffers, v)
 
       assert updated_input_queue.size == context.size + 1
-      assert updated_input_queue.lacking_buffers == context.lacking_buffers - 1
+      assert updated_input_queue.lacking_buffer_size == context.lacking_buffer_size - 1
     end
 
-    test "updated properly `size` and `lacking_buffers` when `:metric` is `Buffer.Metric.ByteSize`",
+    test "updated properly `size` and `lacking_buffer_size` when `:metric` is `Buffer.Metric.ByteSize`",
          context do
       input_queue =
         struct(InputQueue,
@@ -120,7 +120,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
           inbound_metric: Buffer.Metric.ByteSize,
           outbound_metric: Buffer.Metric.ByteSize,
           q: context.q,
-          lacking_buffers: context.lacking_buffers
+          lacking_buffer_size: context.lacking_buffer_size
         )
 
       v = [%Buffer{payload: context.payload}]
@@ -128,8 +128,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
       assert updated_input_queue.size == context.size + byte_size(context.payload)
 
-      assert updated_input_queue.lacking_buffers ==
-               context.lacking_buffers - byte_size(context.payload)
+      assert updated_input_queue.lacking_buffer_size ==
+               context.lacking_buffer_size - byte_size(context.payload)
     end
 
     test "append buffer to the queue", context do
@@ -139,7 +139,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
           inbound_metric: Buffer.Metric.ByteSize,
           outbound_metric: Buffer.Metric.ByteSize,
           q: context.q,
-          lacking_buffers: context.lacking_buffers
+          lacking_buffer_size: context.lacking_buffer_size
         )
 
       v = [%Buffer{payload: context.payload}]
@@ -156,7 +156,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
           inbound_metric: Buffer.Metric.ByteSize,
           outbound_metric: Buffer.Metric.ByteSize,
           q: context.q,
-          lacking_buffers: context.lacking_buffers
+          lacking_buffer_size: context.lacking_buffer_size
         )
 
       v = %Event{}
@@ -173,7 +173,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
           inbound_metric: Buffer.Metric.ByteSize,
           outbound_metric: Buffer.Metric.ByteSize,
           q: context.q,
-          lacking_buffers: context.lacking_buffers
+          lacking_buffer_size: context.lacking_buffer_size
         )
 
       v = %Event{}
@@ -204,9 +204,9 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
     test "return {:empty, []} when the queue is empty", %{input_queue: input_queue} do
       old_counter_value = DemandCounter.get(input_queue.demand_counter)
-      old_lacking_buffers = input_queue.lacking_buffers
+      old_lacking_buffer_size = input_queue.lacking_buffer_size
 
-      assert {{:empty, []}, %InputQueue{size: 0, lacking_buffers: ^old_lacking_buffers}} =
+      assert {{:empty, []}, %InputQueue{size: 0, lacking_buffer_size: ^old_lacking_buffer_size}} =
                InputQueue.take(input_queue, 1)
 
       assert old_counter_value == DemandCounter.get(input_queue.demand_counter)
@@ -219,7 +219,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
                |> InputQueue.take(1)
 
       assert new_input_queue.size == 9
-      assert new_input_queue.lacking_buffers >= 31
+      assert new_input_queue.lacking_buffer_size >= 31
       assert DemandCounter.get(new_input_queue.demand_counter) >= 41
     end
   end
@@ -239,7 +239,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         struct(InputQueue,
           size: size,
-          lacking_buffers: 94,
+          lacking_buffer_size: 94,
           target_size: 100,
           inbound_metric: Buffer.Metric.Count,
           outbound_metric: Buffer.Metric.Count,
@@ -265,12 +265,12 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
     test "increase DemandCounter hen there are not enough buffers", context do
       old_counter_value = DemandCounter.get(context.input_queue.demand_counter)
-      old_lacking_buffers = context.input_queue.lacking_buffers
+      old_lacking_buffer_size = context.input_queue.lacking_buffer_size
 
       {_output, input_queue} = InputQueue.take(context.input_queue, 10)
 
       assert old_counter_value < DemandCounter.get(input_queue.demand_counter)
-      assert old_lacking_buffers < input_queue.lacking_buffers
+      assert old_lacking_buffer_size < input_queue.lacking_buffer_size
     end
 
     test "return `to_take` buffers from the queue when there are enough buffers and buffers don't have to be split",
@@ -314,7 +314,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
       })
 
     assert_receive Message.new(:demand_counter_increased, :output_pad_ref)
-    assert queue.lacking_buffers == 10
+    assert queue.lacking_buffer_size == 10
     queue = InputQueue.store(queue, [%Buffer{payload: "1234"}])
     assert queue.size == 4
     queue = InputQueue.store(queue, [%Buffer{payload: "12345678"}])
@@ -322,11 +322,11 @@ defmodule Membrane.Core.Element.InputQueueTest do
     queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
     queue = Map.update!(queue, :demand_counter, &DemandCounter.decrease(&1, 16))
     assert queue.size == 16
-    assert queue.lacking_buffers == -6
+    assert queue.lacking_buffer_size == -6
     {out, queue} = InputQueue.take(queue, 2)
     assert bufs_size(out, :buffers) == 2
     assert queue.size == 4
-    assert queue.lacking_buffers >= 6
+    assert queue.lacking_buffer_size >= 6
     assert_receive Message.new(:demand_counter_increased, :output_pad_ref)
 
     queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
@@ -334,7 +334,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     {out, queue} = InputQueue.take(queue, 1)
     assert bufs_size(out, :buffers) == 1
     assert queue.size == 8
-    assert queue.lacking_buffers >= 2
+    assert queue.lacking_buffer_size >= 2
   end
 
   test "if the queue works properly for :buffers input metric and :bytes output metric" do
@@ -351,7 +351,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
       })
 
     assert_receive Message.new(:demand_counter_increased, :output_pad_ref)
-    assert queue.lacking_buffers == 3
+    assert queue.lacking_buffer_size == 3
     queue = InputQueue.store(queue, [%Buffer{payload: "1234"}])
     assert queue.size == 1
     queue = InputQueue.store(queue, [%Buffer{payload: "12345678"}])
@@ -359,16 +359,16 @@ defmodule Membrane.Core.Element.InputQueueTest do
     queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
     queue = Map.update!(queue, :demand_counter, &DemandCounter.decrease(&1, 4))
     assert queue.size == 4
-    assert queue.lacking_buffers == -1
+    assert queue.lacking_buffer_size == -1
     {out, queue} = InputQueue.take(queue, 2)
     assert bufs_size(out, :bytes) == 2
     assert queue.size == 4
-    assert queue.lacking_buffers == -1
+    assert queue.lacking_buffer_size == -1
     refute_receive Message.new(:demand_counter_increased, :output_pad_ref)
     {out, queue} = InputQueue.take(queue, 11)
     assert bufs_size(out, :bytes) == 11
     assert queue.size == 2
-    assert queue.lacking_buffers == 1
+    assert queue.lacking_buffer_size == 1
     assert_receive Message.new(:demand_counter_increased, :output_pad_ref)
   end
 

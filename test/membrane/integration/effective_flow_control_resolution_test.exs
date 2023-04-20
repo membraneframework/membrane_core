@@ -8,7 +8,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
 
   require Membrane.Child, as: Child
 
-  defmodule DynamicFilter do
+  defmodule AutoFilter do
     use Membrane.Filter
 
     def_input_pad :input, availability: :on_request, accepted_format: _any
@@ -74,30 +74,35 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
 
   test "effective_flow_control is properly resolved in simple scenario" do
     spec_beggining = [
-      child({:filter_a, 0}, DynamicFilter),
-      child({:filter_b, 0}, DynamicFilter)
+      child({:filter_a, 0}, AutoFilter),
+      child({:filter_b, 0}, AutoFilter)
     ]
 
     spec =
       Enum.reduce(1..10, spec_beggining, fn idx, [predecessor_a, predecessor_b] ->
         [
           predecessor_a
-          |> child({:filter_a, idx}, DynamicFilter),
+          |> child({:filter_a, idx}, AutoFilter),
           predecessor_b
-          |> child({:filter_b, idx}, DynamicFilter)
+          |> child({:filter_b, idx}, AutoFilter)
         ]
       end)
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
-    Process.sleep(1000)
+    children_names =
+      for filter_type <- [:filter_a, :filter_b], idx <- 0..10 do
+        {filter_type, idx}
+      end
 
-    for idx <- 0..10, filter_type <- [:filter_a, :filter_b] do
-      child = {filter_type, idx}
-
+    children_names
+    |> Enum.map(fn child ->
       assert_pipeline_notified(pipeline, child, :playing)
+      child
+    end)
+    |> Enum.each(fn child ->
       assert_child_effective_flow_control(pipeline, child, :push)
-    end
+    end)
 
     Testing.Pipeline.execute_actions(pipeline,
       spec: [
@@ -110,9 +115,12 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
 
     Process.sleep(1000)
 
-    for idx <- 0..10, filter_type <- [:filter_a, :filter_b] do
-      child = {filter_type, idx}
-      expected = if filter_type == :filter_a, do: :push, else: :pull
+    for child <- children_names do
+      expected =
+        case child do
+          {:filter_a, _idx} -> :push
+          {:filter_b, _idx} -> :pull
+        end
 
       assert_child_effective_flow_control(pipeline, child, expected)
     end
@@ -123,7 +131,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
       Enum.reduce(
         1..10,
         child(:push_source, PushSource),
-        fn idx, last_child -> last_child |> child({:filter, idx}, DynamicFilter) end
+        fn idx, last_child -> last_child |> child({:filter, idx}, AutoFilter) end
       )
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
@@ -155,8 +163,8 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
   test "effective_flow_control is :pull, only when it should be" do
     spec = [
       child(:push_source, PushSource)
-      |> child(:filter_1, DynamicFilter)
-      |> child(:filter_2, DynamicFilter),
+      |> child(:filter_1, AutoFilter)
+      |> child(:filter_2, AutoFilter),
       child(:pull_source, PullSource)
       |> get_child(:filter_2)
     ]
@@ -172,7 +180,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
   test "Toilet does not overflow, when input pad effective flow control is :push" do
     spec =
       child(:source, BatchingSource)
-      |> child(:filter, DynamicFilter)
+      |> child(:filter, AutoFilter)
 
     pipeline = Testing.Pipeline.start_supervised!(spec: spec)
     Process.sleep(500)
@@ -186,7 +194,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
   test "Toilet overflows, when it should" do
     spec = {
       child(:pull_source, PullSource)
-      |> child(:filter, %DynamicFilter{lazy?: true}),
+      |> child(:filter, %AutoFilter{lazy?: true}),
       group: :group, crash_group_mode: :temporary
     }
 

@@ -10,11 +10,11 @@ defmodule Membrane.Core.Element.InputQueue do
 
   alias Membrane.Buffer
   alias Membrane.Core.Element.DemandCounter
-  alias Membrane.Core.Telemetry
   alias Membrane.Event
   alias Membrane.Pad
+  alias Membrane.StreamFormat
 
-  require Membrane.Core.Telemetry
+  require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
   @qe Qex
@@ -25,17 +25,18 @@ defmodule Membrane.Core.Element.InputQueue do
           {:event | :stream_format, any} | {:buffers, list, pos_integer, pos_integer}
   @type output :: {:empty | :value, [output_value]}
 
-  @type queue_item() :: Buffer.t() | Event.t() | struct() | atom()
+  @type queue_item() :: Buffer.t() | Event.t() | StreamFormat.t() | atom()
 
   @type t :: %__MODULE__{
           q: @qe.t(),
           log_tag: String.t(),
           target_size: pos_integer(),
           size: non_neg_integer(),
-          lacking_buffers: non_neg_integer(),
+          lacking_buffer_size: non_neg_integer(),
           inbound_metric: module(),
           outbound_metric: module(),
-          linked_output_ref: Pad.ref()
+          linked_output_ref: Pad.ref(),
+          demand_counter: DemandCounter.t()
         }
 
   @enforce_keys [
@@ -48,7 +49,7 @@ defmodule Membrane.Core.Element.InputQueue do
     :linked_output_ref
   ]
 
-  defstruct @enforce_keys ++ [size: 0, lacking_buffers: 0]
+  defstruct @enforce_keys ++ [size: 0, lacking_buffer_size: 0]
 
   @default_target_size_factor 40
 
@@ -129,7 +130,7 @@ defmodule Membrane.Core.Element.InputQueue do
          %__MODULE__{
            q: q,
            size: size,
-           lacking_buffers: lacking_buffers,
+           lacking_buffer_size: lacking_buffer_size,
            inbound_metric: inbound_metric,
            outbound_metric: outbound_metric
          } = input_queue,
@@ -146,7 +147,7 @@ defmodule Membrane.Core.Element.InputQueue do
       input_queue
       | q: q |> @qe.push({:buffers, v, inbound_metric_buffer_size, outbound_metric_buffer_size}),
         size: size + inbound_metric_buffer_size,
-        lacking_buffers: lacking_buffers - inbound_metric_buffer_size
+        lacking_buffer_size: lacking_buffer_size - inbound_metric_buffer_size
     }
   end
 
@@ -278,11 +279,11 @@ defmodule Membrane.Core.Element.InputQueue do
            size: size,
            target_size: target_size,
            demand_counter: demand_counter,
-           lacking_buffers: lacking_buffers
+           lacking_buffer_size: lacking_buffer_size
          } = input_queue
        )
-       when target_size > size + lacking_buffers do
-    diff = max(target_size - size - lacking_buffers, div(target_size, 2))
+       when target_size > size + lacking_buffer_size do
+    diff = max(target_size - size - lacking_buffer_size, div(target_size, 2))
 
     """
     Increasing DemandCounter linked to  #{inspect(input_queue.linked_output_ref)} by #{inspect(diff)}
@@ -290,10 +291,10 @@ defmodule Membrane.Core.Element.InputQueue do
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 
-    lacking_buffers = lacking_buffers + diff
+    lacking_buffer_size = lacking_buffer_size + diff
     :ok = DemandCounter.increase(demand_counter, diff)
 
-    %{input_queue | lacking_buffers: lacking_buffers}
+    %{input_queue | lacking_buffer_size: lacking_buffer_size}
   end
 
   defp maybe_increase_demand_counter(%__MODULE__{} = input_queue), do: input_queue

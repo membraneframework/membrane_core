@@ -24,17 +24,17 @@ defmodule Membrane.Core.Element.DemandController do
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
 
-  @lacking_buffers_lowerbound 200
-  @lacking_buffers_upperbound 400
+  @lacking_buffer_size_lowerbound 200
+  @lacking_buffer_size_upperbound 400
 
   @spec check_demand_counter(Pad.ref(), State.t()) :: State.t()
   def check_demand_counter(pad_ref, state) do
-    with {:ok, pad} <- PadModel.get_data(state, pad_ref),
+    with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
          %State{playback: :playing} <- state do
-      if pad.direction == :input,
+      if pad_data.direction == :input,
         do: raise("cannot check demand counter in input pad")
 
-      do_check_demand_counter(pad, state)
+      do_check_demand_counter(pad_data, state)
     else
       {:error, :unknown_pad} ->
         # We've got a :demand_counter_increased message on already unlinked pad
@@ -54,7 +54,7 @@ defmodule Membrane.Core.Element.DemandController do
       associated_pads: associated_pads
     } = pad_data
 
-    counter_value = demand_counter |> DemandCounter.get()
+    counter_value = DemandCounter.get(demand_counter)
 
     if counter_value > 0 do
       # TODO: think about optimizing lopp below
@@ -68,6 +68,8 @@ defmodule Membrane.Core.Element.DemandController do
     with %{demand: demand, demand_counter: demand_counter} when demand <= 0 <- pad_data,
          counter_value when counter_value > 0 and counter_value > demand <-
            DemandCounter.get(demand_counter) do
+      # pole demand powinno brac uwage konwersję demand unitu
+
       state =
         PadModel.update_data!(
           state,
@@ -90,10 +92,10 @@ defmodule Membrane.Core.Element.DemandController do
     pad_data = PadModel.get_data!(state, pad_ref)
 
     if increase_demand_counter?(pad_data, state) do
-      diff = @lacking_buffers_upperbound - pad_data.lacking_buffers
+      diff = @lacking_buffer_size_upperbound - pad_data.lacking_buffer_size
       :ok = DemandCounter.increase(pad_data.demand_counter, diff)
 
-      PadModel.set_data!(state, pad_ref, :lacking_buffers, @lacking_buffers_upperbound)
+      PadModel.set_data!(state, pad_ref, :lacking_buffer_size, @lacking_buffer_size_upperbound)
     else
       state
     end
@@ -150,13 +152,13 @@ defmodule Membrane.Core.Element.DemandController do
   defp increase_demand_counter?(pad_data, state) do
     %{
       flow_control: flow_control,
-      lacking_buffers: lacking_buffers,
+      lacking_buffer_size: lacking_buffer_size,
       associated_pads: associated_pads
     } = pad_data
 
     flow_control == :auto and
       state.effective_flow_control == :pull and
-      lacking_buffers < @lacking_buffers_lowerbound and
+      lacking_buffer_size < @lacking_buffer_size_lowerbound and
       Enum.all?(associated_pads, &demand_counter_positive?(&1, state))
   end
 
