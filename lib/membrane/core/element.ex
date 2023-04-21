@@ -174,7 +174,7 @@ defmodule Membrane.Core.Element do
   @compile {:inline, do_handle_info: 2}
 
   defp do_handle_info(Message.new(:demand_counter_increased, pad_ref), state) do
-    state = DemandController.check_demand_counter(pad_ref, state)
+    state = DemandController.snapshot_demand_counter(pad_ref, state)
     {:noreply, state}
   end
 

@@ -319,7 +319,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
 
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
-      DemandController.check_demand_counter(pad_ref, state)
+      DemandController.snapshot_demand_counter(pad_ref, state)
     else
       %{direction: :input} ->
         raise PadDirectionError, action: :buffer, direction: :input, pad: pad_ref

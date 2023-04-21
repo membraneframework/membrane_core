@@ -27,25 +27,25 @@ defmodule Membrane.Core.Element.DemandController do
   @lacking_buffer_size_lowerbound 200
   @lacking_buffer_size_upperbound 400
 
-  @spec check_demand_counter(Pad.ref(), State.t()) :: State.t()
-  def check_demand_counter(pad_ref, state) do
+  @spec snapshot_demand_counter(Pad.ref(), State.t()) :: State.t()
+  def snapshot_demand_counter(pad_ref, state) do
     with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
          %State{playback: :playing} <- state do
       if pad_data.direction == :input,
         do: raise("cannot check demand counter in input pad")
 
-      do_check_demand_counter(pad_data, state)
+      do_snapshot_demand_counter(pad_data, state)
     else
       {:error, :unknown_pad} ->
         # We've got a :demand_counter_increased message on already unlinked pad
         state
 
       %State{playback: :stopped} ->
-        PlaybackQueue.store(&check_demand_counter(pad_ref, &1), state)
+        PlaybackQueue.store(&snapshot_demand_counter(pad_ref, &1), state)
     end
   end
 
-  defp do_check_demand_counter(
+  defp do_snapshot_demand_counter(
          %{flow_control: :auto} = pad_data,
          %{effective_flow_control: :pull} = state
        ) do
@@ -54,17 +54,15 @@ defmodule Membrane.Core.Element.DemandController do
       associated_pads: associated_pads
     } = pad_data
 
-    counter_value = DemandCounter.get(demand_counter)
-
-    if counter_value > 0 do
-      # TODO: think about optimizing lopp below
+    if DemandCounter.get(demand_counter) > 0 do
+      # TODO: think about optimizing loop below
       Enum.reduce(associated_pads, state, &increase_demand_counter_if_needed/2)
     else
       state
     end
   end
 
-  defp do_check_demand_counter(%{flow_control: :manual} = pad_data, state) do
+  defp do_snapshot_demand_counter(%{flow_control: :manual} = pad_data, state) do
     with %{demand_snapshot: demand_snapshot, demand_counter: demand_counter}
          when demand_snapshot <= 0 <- pad_data,
          demand_counter_value
@@ -89,7 +87,7 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
-  defp do_check_demand_counter(_pad_data, state) do
+  defp do_snapshot_demand_counter(_pad_data, state) do
     state
   end
 
