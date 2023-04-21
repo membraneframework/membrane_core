@@ -29,12 +29,10 @@ defmodule Membrane.Core.Element.PadController do
 
   @type link_call_props ::
           %{
-            initiator: :parent,
             stream_format_validation_params:
               StreamFormatController.stream_format_validation_params()
           }
           | %{
-              initiator: :sibling,
               other_info: PadModel.pad_info() | nil,
               link_metadata: %{},
               stream_format_validation_params:
@@ -78,16 +76,10 @@ defmodule Membrane.Core.Element.PadController do
 
     :ok = Child.PadController.validate_pad_being_linked!(direction, info)
 
-    do_handle_link(endpoint, other_endpoint, info, link_props, state)
+    do_handle_link(direction, endpoint, other_endpoint, info, link_props, state)
   end
 
-  defp do_handle_link(
-         endpoint,
-         other_endpoint,
-         info,
-         %{initiator: :parent} = props,
-         state
-       ) do
+  defp do_handle_link(:output, endpoint, other_endpoint, info, props, state) do
     effective_flow_control =
       EffectiveFlowController.get_pad_effective_flow_control(endpoint.pad_ref, state)
 
@@ -97,7 +89,6 @@ defmodule Membrane.Core.Element.PadController do
         other_endpoint,
         endpoint,
         %{
-          initiator: :sibling,
           other_info: info,
           link_metadata: %{
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
@@ -146,13 +137,7 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  defp do_handle_link(
-         endpoint,
-         other_endpoint,
-         info,
-         %{initiator: :sibling} = link_props,
-         state
-       ) do
+  defp do_handle_link(:input, endpoint, other_endpoint, info, link_props, state) do
     %{
       other_info: other_info,
       link_metadata: link_metadata,

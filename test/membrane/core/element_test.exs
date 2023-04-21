@@ -132,7 +132,6 @@ defmodule Membrane.Core.ElementTest do
           %Endpoint{pad_spec: :output, pad_ref: :output, pad_props: %{options: []}, child: :this},
           output_other_endpoint,
           %{
-            initiator: :parent,
             other_info: other_info,
             link_metadata: %{demand_counter: output_demand_counter, observability_metadata: %{}},
             stream_format_validation_params: [],
@@ -163,7 +162,6 @@ defmodule Membrane.Core.ElementTest do
           },
           %Endpoint{pad_spec: :output, pad_ref: :output, pid: self(), child: :other},
           %{
-            initiator: :sibling,
             other_info: %{direction: :output, flow_control: :manual},
             link_metadata: %{toilet: nil, observability_metadata: %{}},
             stream_format_validation_params: [],
@@ -280,7 +278,6 @@ defmodule Membrane.Core.ElementTest do
                    pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
                  },
                  %{
-                   initiator: :sibling,
                    other_info: %{
                      direction: :input,
                      demand_unit: :buffers,

@@ -277,7 +277,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     if {Membrane.Bin, :itself} in [from.child, to.child] do
       state
     else
-      params = %{initiator: :parent, stream_format_validation_params: []}
+      params = %{stream_format_validation_params: []}
 
       case Message.call(from.pid, :handle_link, [:output, from, to, params]) do
         :ok ->

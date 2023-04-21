@@ -44,7 +44,6 @@ defmodule Membrane.Core.Element.PadControllerTest do
                    pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
                  },
                  %{
-                   initiator: :sibling,
                    other_info: %{direction: :output, flow_control: :manual, demand_unit: :buffers},
                    link_metadata: %{toilet: make_ref(), observability_metadata: %{}},
                    stream_format_validation_params: [],
@@ -65,7 +64,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
           :output,
           %{pad_ref: :invalid_pad_ref, child: :a},
           %{pad_ref: :x, child: :b},
-          %{link_initiator: :parent, stream_format_validation_params: []},
+          %{stream_format_validation_params: []},
           state
         )
       end
