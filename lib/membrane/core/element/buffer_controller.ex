@@ -12,7 +12,6 @@ defmodule Membrane.Core.Element.BufferController do
   alias Membrane.Core.Element.{
     ActionHandler,
     CallbackContext,
-    DemandController,
     DemandHandler,
     EventController,
     InputQueue,
@@ -20,6 +19,7 @@ defmodule Membrane.Core.Element.BufferController do
     State
   }
 
+  alias Membrane.Core.Element.DemandController.AutoFlowUtils
   alias Membrane.Core.Telemetry
 
   require Membrane.Core.Child.PadModel
@@ -63,7 +63,7 @@ defmodule Membrane.Core.Element.BufferController do
     state =
       PadModel.set_data!(state, pad_ref, :lacking_buffer_size, lacking_buffer_size - buf_size)
 
-    state = DemandController.increase_demand_counter_if_needed(pad_ref, state)
+    state = AutoFlowUtils.increase_demand_counter_if_needed(pad_ref, state)
     exec_buffer_callback(pad_ref, buffers, state)
   end
 

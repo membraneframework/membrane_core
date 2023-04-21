@@ -1,11 +1,8 @@
 defmodule Membrane.Core.Element.EffectiveFlowController do
   @moduledoc false
 
-  alias Membrane.Core.Element.{
-    DemandController,
-    DemandCounter,
-    State
-  }
+  alias Membrane.Core.Element.{DemandCounter, State}
+  alias Membrane.Core.Element.DemandController.AutoFlowUtils
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
@@ -116,12 +113,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
         :ok
     end)
 
-    Enum.reduce(state.pads_data, state, fn
-      {pad_ref, %{flow_control: :auto, direction: :input}}, state ->
-        DemandController.increase_demand_counter_if_needed(pad_ref, state)
-
-      _pad_entry, state ->
-        state
-    end)
+    Map.keys(state.pads_data)
+    |> AutoFlowUtils.increase_demand_counter_if_needed(state)
   end
 end

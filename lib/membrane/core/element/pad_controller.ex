@@ -11,7 +11,6 @@ defmodule Membrane.Core.Element.PadController do
   alias Membrane.Core.Element.{
     ActionHandler,
     CallbackContext,
-    DemandController,
     DemandCounter,
     EffectiveFlowController,
     EventController,
@@ -19,6 +18,8 @@ defmodule Membrane.Core.Element.PadController do
     State,
     StreamFormatController
   }
+
+  alias Membrane.Core.Element.DemandController.AutoFlowUtils
 
   alias Membrane.Core.Parent.Link.Endpoint
 
@@ -305,7 +306,7 @@ defmodule Membrane.Core.Element.PadController do
         end)
 
       case data.direction do
-        :input -> DemandController.increase_demand_counter_if_needed(endpoint.pad_ref, state)
+        :input -> AutoFlowUtils.increase_demand_counter_if_needed(endpoint.pad_ref, state)
         :output -> state
       end
     else
@@ -420,11 +421,7 @@ defmodule Membrane.Core.Element.PadController do
           |> PadModel.set_data!(pad_ref, :associated_pads, [])
 
         if pad_data.direction == :output do
-          Enum.reduce(
-            pad_data.associated_pads,
-            state,
-            &DemandController.increase_demand_counter_if_needed/2
-          )
+          AutoFlowUtils.increase_demand_counter_if_needed(pad_data.associated_pads, state)
         else
           state
         end

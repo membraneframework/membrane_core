@@ -3,9 +3,12 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   # Module handling demands requested on output pads.
 
+  alias Membrane.Core.CallbackHandler
+
   alias Membrane.Core.Element.{
+    ActionHandler,
     BufferController,
-    DemandController,
+    CallbackContext,
     EventController,
     InputQueue,
     State,
@@ -16,6 +19,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
+  require Membrane.Logger
 
   @handle_demand_loop_limit 20
 
@@ -38,7 +42,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   defp do_handle_redemand(pad_ref, state) do
     state = %{state | supplying_demand?: true}
-    state = DemandController.exec_handle_demand(pad_ref, state)
+    state = exec_handle_demand(pad_ref, state)
     %{state | supplying_demand?: false}
   end
 
@@ -172,5 +176,52 @@ defmodule Membrane.Core.Element.DemandHandler do
       PadModel.update_data!(state, pad_ref, :demand_snapshot, &(&1 - outbound_metric_buf_size))
 
     BufferController.exec_buffer_callback(pad_ref, buffers, state)
+  end
+
+  @spec exec_handle_demand(Pad.ref(), State.t()) :: State.t()
+  defp exec_handle_demand(pad_ref, state) do
+    with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
+         true <- exec_handle_demand?(pad_data) do
+      do_exec_handle_demand(pad_data, state)
+    else
+      _other -> state
+    end
+  end
+
+  @spec do_exec_handle_demand(PadData.t(), State.t()) :: State.t()
+  defp do_exec_handle_demand(pad_data, state) do
+    context = &CallbackContext.from_state(&1, incoming_demand: pad_data.incoming_demand)
+
+    CallbackHandler.exec_and_handle_callback(
+      :handle_demand,
+      ActionHandler,
+      %{
+        split_continuation_arbiter: &exec_handle_demand?(PadModel.get_data!(&1, pad_data.ref)),
+        context: context
+      },
+      [pad_data.ref, pad_data.demand_snapshot, pad_data.demand_unit],
+      state
+    )
+  end
+
+  defp exec_handle_demand?(%{end_of_stream?: true}) do
+    Membrane.Logger.debug_verbose("""
+    Demand controller: not executing handle_demand as :end_of_stream action has already been returned
+    """)
+
+    false
+  end
+
+  defp exec_handle_demand?(%{demand_snapshot: demand_snapshot}) when demand_snapshot <= 0 do
+    Membrane.Logger.debug_verbose("""
+    Demand controller: not executing handle_demand as demand_snapshot is not greater than 0,
+    demand_snapshot: #{inspect(demand_snapshot)}
+    """)
+
+    false
+  end
+
+  defp exec_handle_demand?(_pad_data) do
+    true
   end
 end
