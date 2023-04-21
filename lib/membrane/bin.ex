@@ -51,7 +51,7 @@ defmodule Membrane.Bin do
   Callback that is called when new pad has been added to bin. Executed
   ONLY for dynamic pads.
 
-  Context passed to this callback contains additional field `:options` and.
+  Context passed to this callback contains additional field `:options`.
   """
   @callback handle_pad_added(
               pad :: Pad.ref(),
