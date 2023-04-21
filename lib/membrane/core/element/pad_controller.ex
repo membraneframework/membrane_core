@@ -347,7 +347,7 @@ defmodule Membrane.Core.Element.PadController do
         target_size: props.target_queue_size
       })
 
-    %{input_queue: input_queue, demand: 0}
+    %{input_queue: input_queue, demand_snapshot: 0}
   end
 
   defp init_pad_mode_data(
@@ -357,7 +357,7 @@ defmodule Membrane.Core.Element.PadController do
          _metadata,
          _state
        ) do
-    %{demand: 0}
+    %{demand_snapshot: 0}
   end
 
   defp init_pad_mode_data(
@@ -383,7 +383,7 @@ defmodule Membrane.Core.Element.PadController do
       end
 
     %{
-      demand: 0,
+      demand_snapshot: 0,
       associated_pads: associated_pads,
       auto_demand_size: auto_demand_size
     }

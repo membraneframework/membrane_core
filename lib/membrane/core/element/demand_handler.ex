@@ -85,7 +85,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     pad_data = state |> PadModel.get_data!(pad_ref)
 
     {{_queue_status, popped_data}, new_input_queue} =
-      InputQueue.take(pad_data.input_queue, pad_data.demand)
+      InputQueue.take(pad_data.input_queue, pad_data.demand_snapshot)
 
     state = PadModel.set_data!(state, pad_ref, :input_queue, new_input_queue)
     state = handle_input_queue_output(pad_ref, popped_data, state)
@@ -93,19 +93,19 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   defp update_demand(pad_ref, size, state) when is_integer(size) do
-    PadModel.set_data!(state, pad_ref, :demand, size)
+    PadModel.set_data!(state, pad_ref, :demand_snapshot, size)
   end
 
   defp update_demand(pad_ref, size_fun, state) when is_function(size_fun) do
-    demand = PadModel.get_data!(state, pad_ref, :demand)
-    new_demand = size_fun.(demand)
+    demand_snapshot = PadModel.get_data!(state, pad_ref, :demand_snapshot)
+    new_demand_snapshot = size_fun.(demand_snapshot)
 
-    if new_demand < 0 do
+    if new_demand_snapshot < 0 do
       raise Membrane.ElementError,
             "Demand altering function requested negative demand on pad #{inspect(pad_ref)} in #{state.module}"
     end
 
-    PadModel.set_data!(state, pad_ref, :demand, new_demand)
+    PadModel.set_data!(state, pad_ref, :demand_snapshot, new_demand_snapshot)
   end
 
   @spec handle_delayed_demands(State.t()) :: State.t()
@@ -168,7 +168,9 @@ defmodule Membrane.Core.Element.DemandHandler do
          {:buffers, buffers, _inbound_metric_buf_size, outbound_metric_buf_size},
          state
        ) do
-    state = PadModel.update_data!(state, pad_ref, :demand, &(&1 - outbound_metric_buf_size))
+    state =
+      PadModel.update_data!(state, pad_ref, :demand_snapshot, &(&1 - outbound_metric_buf_size))
+
     BufferController.exec_buffer_callback(pad_ref, buffers, state)
   end
 end

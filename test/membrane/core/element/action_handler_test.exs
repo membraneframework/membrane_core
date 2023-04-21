@@ -30,7 +30,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
               direction: :input,
               pid: self(),
               flow_control: :manual,
-              demand: 0
+              demand_snapshot: 0
             ),
           input_push:
             struct(Membrane.Element.PadData,
@@ -54,7 +54,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "delaying demand", %{state: state} do
       state = %{state | playback: :playing, supplying_demand?: true}
       state = @module.handle_action({:demand, {:input, 10}}, :handle_info, %{}, state)
-      assert state.pads_data.input.demand == 10
+      assert state.pads_data.input.demand_snapshot == 10
       assert MapSet.new([{:input, :supply}]) == state.delayed_demands
     end
 
@@ -97,7 +97,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             end_of_stream?: false,
             flow_control: :push,
             demand_counter: output_demand_counter,
-            demand: 0
+            demand_snapshot: 0
           },
           input: %{
             direction: :input,
@@ -108,7 +108,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             end_of_stream?: false,
             flow_control: :push,
             demand_counter: input_demand_counter,
-            demand: 0
+            demand_snapshot: 0
           }
         },
         pads_info: %{
@@ -161,9 +161,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
 
-      assert result.pads_data.output.demand < 0
+      assert result.pads_data.output.demand_snapshot < 0
       assert DemandCounter.get(result.pads_data.output.demand_counter) < 0
-      assert put_in(result, [:pads_data, :output, :demand], 0) == state
+      assert put_in(result, [:pads_data, :output, :demand_snapshot], 0) == state
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref)
     end
 
@@ -481,7 +481,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             direction: :output,
             pid: self(),
             flow_control: :manual,
-            demand: 0
+            demand_snapshot: 0
           }
         },
         pads_info: %{

@@ -65,16 +65,22 @@ defmodule Membrane.Core.Element.DemandController do
   end
 
   defp do_check_demand_counter(%{flow_control: :manual} = pad_data, state) do
-    with %{demand: demand, demand_counter: demand_counter} when demand <= 0 <- pad_data,
-         counter_value when counter_value > 0 and counter_value > demand <-
+    with %{demand_snapshot: demand_snapshot, demand_counter: demand_counter}
+         when demand_snapshot <= 0 <- pad_data,
+         demand_counter_value
+         when demand_counter_value > 0 and demand_counter_value > demand_snapshot <-
            DemandCounter.get(demand_counter) do
-      # pole demand powinno brac uwage konwersję demand unitu
+      # pole demand_snapshot powinno brac uwage konwersję demand unitu
 
       state =
         PadModel.update_data!(
           state,
           pad_data.ref,
-          &%{&1 | demand: counter_value, incoming_demand: counter_value - &1.demand}
+          &%{
+            &1
+            | demand_snapshot: demand_counter_value,
+              incoming_demand: demand_counter_value - &1.demand_snapshot
+          }
         )
 
       DemandHandler.handle_redemand(pad_data.ref, state)
@@ -113,13 +119,13 @@ defmodule Membrane.Core.Element.DemandController do
     pad_data = PadModel.get_data!(state, pad_ref)
     buffers_size = Buffer.Metric.from_unit(pad_data.other_demand_unit).buffers_size(buffers)
 
-    demand = pad_data.demand - buffers_size
+    demand_snapshot = pad_data.demand_snapshot - buffers_size
     demand_counter = DemandCounter.decrease(pad_data.demand_counter, buffers_size)
 
     PadModel.set_data!(
       state,
       pad_ref,
-      %{pad_data | demand: demand, demand_counter: demand_counter}
+      %{pad_data | demand_snapshot: demand_snapshot, demand_counter: demand_counter}
     )
   end
 
@@ -144,7 +150,7 @@ defmodule Membrane.Core.Element.DemandController do
         split_continuation_arbiter: &exec_handle_demand?(PadModel.get_data!(&1, pad_data.ref)),
         context: context
       },
-      [pad_data.ref, pad_data.demand, pad_data.demand_unit],
+      [pad_data.ref, pad_data.demand_snapshot, pad_data.demand_unit],
       state
     )
   end
@@ -163,11 +169,11 @@ defmodule Membrane.Core.Element.DemandController do
   end
 
   defp demand_counter_positive?(pad_ref, state) do
-    counter_value =
+    demand_counter_value =
       PadModel.get_data!(state, pad_ref, :demand_counter)
       |> DemandCounter.get()
 
-    counter_value > 0
+    demand_counter_value > 0
   end
 
   defp exec_handle_demand?(%{end_of_stream?: true}) do
@@ -178,10 +184,10 @@ defmodule Membrane.Core.Element.DemandController do
     false
   end
 
-  defp exec_handle_demand?(%{demand: demand}) when demand <= 0 do
+  defp exec_handle_demand?(%{demand_snapshot: demand_snapshot}) when demand_snapshot <= 0 do
     Membrane.Logger.debug_verbose("""
-    Demand controller: not executing handle_demand as demand is not greater than 0,
-    demand: #{inspect(demand)}
+    Demand controller: not executing handle_demand as demand_snapshot is not greater than 0,
+    demand_snapshot: #{inspect(demand_snapshot)}
     """)
 
     false

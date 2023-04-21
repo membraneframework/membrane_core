@@ -25,7 +25,7 @@ defmodule Membrane.Core.Child.PadModel do
   @type element_pad_data :: %Membrane.Element.PadData{
           availability: Pad.availability(),
           stream_format: Membrane.StreamFormat.t() | nil,
-          demand: integer() | nil,
+          demand_snapshot: integer() | nil,
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
           direction: Pad.direction(),

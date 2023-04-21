@@ -226,7 +226,7 @@ defmodule Membrane.Core.ElementTest do
     msg = Message.new(:demand_counter_increased, :output)
     assert {:noreply, state} = Element.handle_info(msg, state)
 
-    assert state.pads_data.output.demand == 10
+    assert state.pads_data.output.demand_snapshot == 10
   end
 
   test "should store incoming buffers in dynamic_input buffer" do
