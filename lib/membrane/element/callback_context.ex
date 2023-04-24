@@ -20,7 +20,6 @@ defmodule Membrane.Element.CallbackContext do
           :clock => Membrane.Clock.t() | nil,
           :parent_clock => Membrane.Clock.t() | nil,
           :name => Membrane.Element.name(),
-          :ref => Membrane.Bin.name(),
           :playback => Membrane.Playback.t(),
           :resource_guard => Membrane.ResourceGuard.t(),
           :utility_supervisor => Membrane.UtilitySupervisor.t(),

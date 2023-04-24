@@ -9,7 +9,6 @@ defmodule Membrane.Core.CallbackHandler do
 
   alias Membrane.CallbackError
 
-  require Membrane.Child, as: Child
   require Membrane.Logger
 
   @type state :: %{
@@ -133,17 +132,6 @@ defmodule Membrane.Core.CallbackHandler do
       end
 
     args = args ++ maybe_context ++ [internal_state]
-
-    context =
-      Enum.reverse(args)
-      |> Enum.at(1)
-      |> Map.update(:name, nil, fn
-        {Child, _group, name} -> name
-        name -> name
-      end)
-
-    [s, _ctx] ++ tail = Enum.reverse(args)
-    args = Enum.reverse(tail) ++ [context, s]
 
     callback_result =
       try do

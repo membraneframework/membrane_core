@@ -1,8 +1,6 @@
 defmodule Membrane.Core.Element.CallbackContext do
   @moduledoc false
 
-  alias Membrane.Child
-
   @type optional_fields ::
           [incoming_demand: non_neg_integer()]
           | [options: map()]
@@ -16,8 +14,7 @@ defmodule Membrane.Core.Element.CallbackContext do
       pads: state.pads_data,
       clock: state.synchronization.clock,
       parent_clock: state.synchronization.parent_clock,
-      name: Child.name_by_ref(state.name),
-      ref: state.name,
+      name: state.name,
       playback: state.playback,
       resource_guard: state.resource_guard,
       utility_supervisor: state.subprocess_supervisor

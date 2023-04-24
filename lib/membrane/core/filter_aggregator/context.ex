@@ -3,7 +3,6 @@ defmodule Membrane.Core.FilterAggregator.Context do
 
   alias Membrane.Element
 
-  require Membrane.Child, as: Child
   require Membrane.Core.FilterAggregator.InternalAction, as: InternalAction
 
   @type t :: Element.CallbackContext.t()
@@ -40,8 +39,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
     %{
       pads: pads_data,
       clock: nil,
-      name: name |> Child.name_by_ref(),
-      ref: name,
+      name: name,
       parent_clock: nil,
       playback: :stopped,
       resource_guard: agg_ctx.resource_guard,

@@ -17,7 +17,6 @@ defmodule Membrane.Bin.CallbackContext do
           :parent_clock => Membrane.Clock.t(),
           :pads => %{Membrane.Pad.ref() => Membrane.Bin.PadData.t()},
           :name => Membrane.Bin.name(),
-          :ref => Membrane.Bin.name(),
           :children => %{Membrane.Child.name() => Membrane.ChildEntry.t()},
           :playback => Membrane.Playback.t(),
           :resource_guard => Membrane.ResourceGuard.t(),
