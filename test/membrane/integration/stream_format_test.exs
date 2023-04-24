@@ -91,7 +91,9 @@ defmodule Membrane.StreamFormatTest do
     monitor_ref = Process.monitor(monitor_pid)
     send(source_pid, :send_stream_format)
 
-    assert_receive({:DOWN, ^monitor_ref, :process, _pid, {%Membrane.StreamFormatError{}, _stacktrace}})
+    assert_receive(
+      {:DOWN, ^monitor_ref, :process, _pid, {%Membrane.StreamFormatError{}, _stacktrace}}
+    )
   end
 
   defp assert_down(module) do

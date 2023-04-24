@@ -31,5 +31,4 @@ defmodule Membrane.Support.AcceptedFormatTest.RestrictiveSource do
   def handle_info(:send_stream_format, _ctx, state) do
     {[stream_format: {:output, state.stream_format}], state}
   end
-
 end
