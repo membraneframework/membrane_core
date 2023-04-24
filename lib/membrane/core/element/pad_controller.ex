@@ -164,7 +164,7 @@ defmodule Membrane.Core.Element.PadController do
         input_demand_unit || :buffers,
         other_endpoint.pid,
         other_endpoint.pad_ref,
-        -300
+        endpoint.pad_props[:toilet_capacity]
       )
 
     # The sibiling was an initiator, we don't need to use the pid of a task spawned for observability

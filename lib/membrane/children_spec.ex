@@ -538,7 +538,7 @@ defmodule Membrane.ChildrenSpec do
   """
   @spec via_in(builder(), Pad.name() | Pad.ref(),
           options: pad_options(),
-          toilet_capacity: number | nil,
+          toilet_capacity: non_neg_integer() | float() | nil,
           target_queue_size: number | nil,
           min_demand_factor: number | nil,
           auto_demand_size: number | nil,

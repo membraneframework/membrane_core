@@ -16,7 +16,7 @@ defmodule Membrane.Core.Element.DemandCounterTest do
     assert DemandCounter.get(demand_counter) == -5
   end
 
-  test "if the receiving element uses DemandCounter with :atomics and the sending element with a interprocess message, when the DemandCounter is distributed" do
+  test "if DemandCounter.Worker works properly " do
     demand_counter = DemandCounter.new(:pull, self(), :buffers, self(), :output)
     :ok = DemandCounter.increase(demand_counter, 10)
 

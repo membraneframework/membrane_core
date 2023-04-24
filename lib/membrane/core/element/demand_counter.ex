@@ -11,7 +11,7 @@ defmodule Membrane.Core.Element.DemandCounter do
   require Membrane.Logger
   require Membrane.Pad, as: Pad
 
-  @default_overflow_limit_factor -200
+  @default_toilet_capacity_factor -200
   @default_buffered_decrementation_limit 1
   @distributed_buffered_decrementation_limit 150
 
@@ -22,10 +22,11 @@ defmodule Membrane.Core.Element.DemandCounter do
             sender_mode: DistributedFlowMode.t(),
             sender_process: Process.dest(),
             sender_pad_ref: Pad.ref(),
-            overflow_limit: neg_integer(),
+            toilet_capacity: neg_integer(),
             buffered_decrementation: non_neg_integer(),
             buffered_decrementation_limit: pos_integer(),
-            toilet_overflowed?: boolean()
+            toilet_overflowed?: boolean(),
+            receiver_demand_unit: Membrane.Buffer.Metric.unit()
           }
 
   @type flow_mode :: DistributedFlowMode.flow_mode_value()
@@ -38,7 +39,8 @@ defmodule Membrane.Core.Element.DemandCounter do
     :sender_process,
     :sender_pad_ref,
     :buffered_decrementation_limit,
-    :overflow_limit
+    :toilet_capacity,
+    :receiver_demand_unit
   ]
 
   defstruct @enforce_keys ++ [buffered_decrementation: 0, toilet_overflowed?: false]
@@ -49,7 +51,7 @@ defmodule Membrane.Core.Element.DemandCounter do
           receiver_demand_unit :: Membrane.Buffer.Metric.unit(),
           sender_process :: Process.dest(),
           sender_pad_ref :: Pad.ref(),
-          overflow_limit :: neg_integer() | nil
+          toilet_capacity :: neg_integer() | nil
         ) :: t
   def new(
         receiver_mode,
@@ -57,15 +59,14 @@ defmodule Membrane.Core.Element.DemandCounter do
         receiver_demand_unit,
         sender_process,
         sender_pad_ref,
-        overflow_limit \\ nil
+        toilet_capacity \\ nil
       ) do
     %DistributedAtomic{worker: worker} = counter = DistributedAtomic.new()
 
     buffered_decrementation_limit =
-      if node(sender_process) ==
-           node(worker),
-         do: @default_buffered_decrementation_limit,
-         else: @distributed_buffered_decrementation_limit
+      if node(sender_process) == node(worker),
+        do: @default_buffered_decrementation_limit,
+        else: @distributed_buffered_decrementation_limit
 
     %__MODULE__{
       counter: counter,
@@ -74,8 +75,9 @@ defmodule Membrane.Core.Element.DemandCounter do
       sender_mode: DistributedFlowMode.new(:to_be_resolved),
       sender_process: sender_process,
       sender_pad_ref: sender_pad_ref,
-      overflow_limit: overflow_limit || default_overflow_limit(receiver_demand_unit),
-      buffered_decrementation_limit: buffered_decrementation_limit
+      toilet_capacity: toilet_capacity || default_toilet_capacity(receiver_demand_unit),
+      buffered_decrementation_limit: buffered_decrementation_limit,
+      receiver_demand_unit: receiver_demand_unit
     }
   end
 
@@ -149,7 +151,7 @@ defmodule Membrane.Core.Element.DemandCounter do
     if not demand_counter.toilet_overflowed? and
          get_receiver_mode(demand_counter) == :pull and
          get_sender_mode(demand_counter) == :push and
-         counter_value < demand_counter.overflow_limit do
+         counter_value < demand_counter.toilet_capacity do
       overflow(demand_counter, counter_value)
     else
       demand_counter
@@ -186,7 +188,8 @@ defmodule Membrane.Core.Element.DemandCounter do
     Membrane.Logger.error("""
     Toilet overflow.
 
-    Reached the size of #{inspect(counter_value)}, which is below overflow limit (#{inspect(demand_counter.overflow_limit)})
+    Demand counter reached the size of #{inspect(counter_value)}, which means that there are #{inspect(-1 * counter_value)}
+    #{demand_counter.receiver_demand_unit} sent without demanding it, which is above toilet capacity (#{inspect(demand_counter.toilet_capacity)})
     when storing data from output working in push mode. It means that some element in the pipeline
     processes the stream too slow or doesn't process it at all.
     To have control over amount of buffers being produced, consider using output in :auto or :manual
@@ -199,8 +202,8 @@ defmodule Membrane.Core.Element.DemandCounter do
     %{demand_counter | toilet_overflowed?: true}
   end
 
-  defp default_overflow_limit(demand_unit) do
+  defp default_toilet_capacity(demand_unit) do
     Membrane.Buffer.Metric.from_unit(demand_unit).buffer_size_approximation() *
-      @default_overflow_limit_factor
+      @default_toilet_capacity_factor
   end
 end
