@@ -437,10 +437,11 @@ defmodule Membrane.Pipeline do
   Options:
     - `:bring_spec?` - if true (default) imports and aliases `Membrane.ChildrenSpec`
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
+    - `:bring_child?` - if true (default) requires and aliases `Membrane.Child`
   """
   defmacro __using__(options) do
     bring_spec =
-      if options |> Keyword.get(:bring_spec?, true) do
+      if Keyword.get(options, :bring_spec?, true) do
         quote do
           import Membrane.ChildrenSpec
           alias Membrane.ChildrenSpec
@@ -448,10 +449,17 @@ defmodule Membrane.Pipeline do
       end
 
     bring_pad =
-      if options |> Keyword.get(:bring_pad?, true) do
+      if Keyword.get(options, :bring_pad?, true) do
         quote do
           require Membrane.Pad
           alias Membrane.Pad
+        end
+      end
+
+    bring_child =
+      if Keyword.get(options, :bring_child?, true) do
+        quote do
+          require Membrane.Child, as: Child
         end
       end
 
@@ -464,6 +472,7 @@ defmodule Membrane.Pipeline do
 
       unquote(bring_spec)
       unquote(bring_pad)
+      unquote(bring_child)
 
       @doc """
       Returns child specification for spawning under a supervisor

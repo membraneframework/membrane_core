@@ -6,7 +6,6 @@ defmodule Membrane.Child do
   import Membrane.Bin, only: [is_bin_name?: 1]
 
   alias Membrane.{Bin, Element}
-  @default_ref_options [group: [default: nil]]
 
   @type name :: Element.name() | Bin.name()
   @type group() :: any()
@@ -21,22 +20,76 @@ defmodule Membrane.Child do
   @doc """
   Returns a reference to a child.
   """
-  @spec ref(name(), child_ref_options()) :: ref()
-  def ref(name, options \\ []) do
-    validate_name!(name)
-    {:ok, options} = Bunch.Config.parse(options, @default_ref_options)
-    validate_name!(options.group)
-
-    if options.group != nil,
-      do: {Membrane.Child, options.group, name},
-      else: name
-  end
-
-  defp validate_name!(name) do
-    if is_tuple(name) and elem(name, 0) == Membrane.Child do
-      raise "Improper name: #{inspect(name)}. The name cannot match the reserved internal Membrane's pattern."
+  defmacro ref(name) do
+    case __CALLER__.context do
+      :match -> ref_in_a_match(name)
+      _not_match -> ref_outside_a_match(name)
     end
-
-    :ok
   end
+
+  defmacro ref(name, options) do
+    case __CALLER__.context do
+      :match ->
+        Macro.expand(options, __CALLER__)
+        |> Access.fetch(:group)
+        |> case do
+          {:ok, group_ast} -> ref_in_a_match(name, group_ast)
+          :error -> raise "Improper options. The options must be in form of [group: group]."
+        end
+
+      _not_match ->
+        ref_outside_a_match(name, options)
+    end
+  end
+
+  defp ref_in_a_match(name) do
+    quote do
+      unquote(name)
+    end
+  end
+
+  defp ref_in_a_match(name, group) do
+    quote do
+      {
+        unquote(__MODULE__),
+        unquote(group),
+        unquote(name)
+      }
+    end
+  end
+
+  defp ref_outside_a_match(name) do
+    quote generated: true do
+      case unquote(name) do
+        {unquote(__MODULE__), _group, _child} ->
+          raise "Improper name: #{inspect(unquote(name))}. The name cannot match the reserved internal Membrane's pattern."
+
+        name ->
+          name
+      end
+    end
+  end
+
+  defp ref_outside_a_match(name, options) do
+    quote generated: true do
+      cond do
+        match?({unquote(__MODULE__), _group, _child}, unquote(name)) ->
+          raise "Improper name: #{inspect(unquote(name))}. The name cannot match the reserved internal Membrane's pattern."
+
+        not match?([group: _group], unquote(options)) ->
+          raise "Improper options: #{inspect(unquote(options))}. The options must be in form of [group: group]."
+
+        true ->
+          [group: group] = unquote(options)
+          {unquote(__MODULE__), group, unquote(name)}
+      end
+    end
+  end
+
+  @doc """
+  Returns a name of a child from its reference.
+  """
+  @spec name_by_ref(ref()) :: name()
+  def name_by_ref(ref(name, group: _group)), do: name
+  def name_by_ref(ref(name)), do: name
 end

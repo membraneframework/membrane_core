@@ -18,12 +18,17 @@ defmodule Membrane.Support.AcceptedFormatTest.Source do
 
   @impl true
   def handle_init(_ctx, %__MODULE__{test_pid: test_pid, stream_format: stream_format}) do
-    send(test_pid, {:my_pid, __MODULE__, self()})
     {[], %{test_pid: test_pid, stream_format: stream_format}}
   end
 
   @impl true
-  def handle_playing(_ctx, %{stream_format: stream_format} = state) do
-    {[stream_format: {:output, stream_format}], state}
+  def handle_playing(_ctx, state) do
+    send(state.test_pid, {:my_pid, __MODULE__, self()})
+    {[], state}
+  end
+
+  @impl true
+  def handle_info(:send_stream_format, _ctx, state) do
+    {[stream_format: {:output, state.stream_format}], state}
   end
 end

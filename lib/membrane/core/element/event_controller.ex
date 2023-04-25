@@ -75,17 +75,20 @@ defmodule Membrane.Core.Element.EventController do
   defp do_exec_handle_event(pad_ref, %event_type{} = event, params, state)
        when event_type in [Events.StartOfStream, Events.EndOfStream] do
     data = PadModel.get_data!(state, pad_ref)
-    context = CallbackContext.from_state(state)
     callback = stream_event_to_callback(event)
-    new_params = Map.put(params, :direction, data.direction)
-    args = [pad_ref, context]
+
+    new_params =
+      Map.merge(params, %{
+        context: &CallbackContext.from_state/1,
+        direction: data.direction
+      })
 
     state =
       CallbackHandler.exec_and_handle_callback(
         callback,
         ActionHandler,
         new_params,
-        args,
+        [pad_ref],
         state
       )
 
