@@ -567,7 +567,7 @@ defmodule Membrane.ChildrenSpec do
         min_demand_factor: [default: nil],
         auto_demand_size: [default: nil],
         toilet_capacity: [default: nil],
-        throttling_factor: [default: 1]
+        throttling_factor: [default: nil]
       )
       |> case do
         {:ok, props} ->

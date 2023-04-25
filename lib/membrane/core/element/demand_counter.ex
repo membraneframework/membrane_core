@@ -12,8 +12,8 @@ defmodule Membrane.Core.Element.DemandCounter do
   require Membrane.Pad, as: Pad
 
   @default_toilet_capacity_factor -200
-  @default_buffered_decrementation_limit 1
-  @distributed_buffered_decrementation_limit 150
+  @default_throttling_factor 1
+  @distributed_default_throttling_factor 150
 
   @opaque t :: %__MODULE__{
             counter: DistributedAtomic.t(),
@@ -24,7 +24,7 @@ defmodule Membrane.Core.Element.DemandCounter do
             sender_pad_ref: Pad.ref(),
             toilet_capacity: neg_integer(),
             buffered_decrementation: non_neg_integer(),
-            buffered_decrementation_limit: pos_integer(),
+            throttling_factor: pos_integer(),
             toilet_overflowed?: boolean(),
             receiver_demand_unit: Membrane.Buffer.Metric.unit()
           }
@@ -38,7 +38,7 @@ defmodule Membrane.Core.Element.DemandCounter do
     :sender_mode,
     :sender_process,
     :sender_pad_ref,
-    :buffered_decrementation_limit,
+    :throttling_factor,
     :toilet_capacity,
     :receiver_demand_unit
   ]
@@ -51,7 +51,8 @@ defmodule Membrane.Core.Element.DemandCounter do
           receiver_demand_unit :: Membrane.Buffer.Metric.unit(),
           sender_process :: Process.dest(),
           sender_pad_ref :: Pad.ref(),
-          toilet_capacity :: neg_integer() | nil
+          toilet_capacity :: non_neg_integer() | float() | nil,
+          throttling_factor :: pos_integer() | nil
         ) :: t
   def new(
         receiver_mode,
@@ -59,14 +60,17 @@ defmodule Membrane.Core.Element.DemandCounter do
         receiver_demand_unit,
         sender_process,
         sender_pad_ref,
-        toilet_capacity \\ nil
+        toilet_capacity \\ nil,
+        throttling_factor \\ nil
       ) do
     %DistributedAtomic{worker: worker} = counter = DistributedAtomic.new()
 
-    buffered_decrementation_limit =
-      if node(sender_process) == node(worker),
-        do: @default_buffered_decrementation_limit,
-        else: @distributed_buffered_decrementation_limit
+    throttling_factor =
+      cond do
+        throttling_factor != nil -> throttling_factor
+        node(sender_process) == node(worker) -> @default_throttling_factor
+        true -> @distributed_default_throttling_factor
+      end
 
     %__MODULE__{
       counter: counter,
@@ -76,7 +80,7 @@ defmodule Membrane.Core.Element.DemandCounter do
       sender_process: sender_process,
       sender_pad_ref: sender_pad_ref,
       toilet_capacity: toilet_capacity || default_toilet_capacity(receiver_demand_unit),
-      buffered_decrementation_limit: buffered_decrementation_limit,
+      throttling_factor: throttling_factor,
       receiver_demand_unit: receiver_demand_unit
     }
   end
@@ -127,7 +131,7 @@ defmodule Membrane.Core.Element.DemandCounter do
   def decrease(%__MODULE__{} = demand_counter, value) do
     demand_counter = Map.update!(demand_counter, :buffered_decrementation, &(&1 + value))
 
-    if demand_counter.buffered_decrementation >= demand_counter.buffered_decrementation_limit do
+    if demand_counter.buffered_decrementation >= demand_counter.throttling_factor do
       flush_buffered_decrementation(demand_counter)
     else
       demand_counter

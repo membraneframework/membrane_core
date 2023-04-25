@@ -6,7 +6,6 @@ defmodule Membrane.Element.PadData do
     - `:availability` - see `t:Membrane.Pad.availability/0`
     - `:stream_format` - the most recent `t:Membrane.StreamFormat.t/0` that have been sent (output) or received (input)
       on the pad. May be `nil` if not yet set.
-    - `:demand` - current demand requested on the pad working in `:auto` or `:manual` flow control mode.
     - `:direction` - see `t:Membrane.Pad.direction/0`
     - `:end_of_stream?` - flag determining whether the stream processing via the pad has been finished
     - `:flow_control` - see `t:Membrane.Pad.flow_control/0`.
@@ -44,7 +43,14 @@ defmodule Membrane.Element.PadData do
           other_demand_unit: private_field,
           auto_demand_size: private_field,
           sticky_messages: private_field,
+
+          # Instance of DemandCounter shared by both sides of link. Holds amount of data, that has been demanded by the element
+          # with input pad, but hasn't been sent yet by the element with output pad. Detects toilet overflow as well.
           demand_counter: private_field,
+
+          # Field used in DemandController.AutoFlowUtils and InputQueue, to caluclate, how much DemandCounter should be increased.
+          # Contains amount of data (:buffers/:bytes), that has been demanded from the element on the other side of link, but
+          # hasn't arrived yet. Unused for output pads.
           lacking_buffer_size: private_field,
           associated_pads: private_field,
           sticky_events: private_field,

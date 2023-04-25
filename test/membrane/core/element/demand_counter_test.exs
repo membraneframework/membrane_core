@@ -98,7 +98,7 @@ defmodule Membrane.Core.Element.DemandCounterTest do
     pid_on_another_node = Node.spawn(another_node, fn -> :ok end)
     demand_counter = DemandCounter.new(:push, self(), :buffers, pid_on_another_node, :output)
 
-    assert %DemandCounter{buffered_decrementation_limit: 150} = demand_counter
+    assert %DemandCounter{throttling_factor: 150} = demand_counter
 
     demand_counter = DemandCounter.decrease(demand_counter, 100)
 
