@@ -15,6 +15,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     StreamFormatController
   }
 
+  alias Membrane.Element.PadData
   alias Membrane.Pad
 
   require Membrane.Core.Child.PadModel, as: PadModel
