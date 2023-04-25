@@ -1,8 +1,8 @@
 defmodule Membrane.Core.Element.EffectiveFlowController do
   @moduledoc false
 
-  alias Membrane.Core.Element.{DemandCounter, State}
   alias Membrane.Core.Element.DemandController.AutoFlowUtils
+  alias Membrane.Core.Element.{DemandCounter, State}
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
