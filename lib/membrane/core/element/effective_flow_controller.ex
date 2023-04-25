@@ -1,6 +1,23 @@
 defmodule Membrane.Core.Element.EffectiveFlowController do
   @moduledoc false
 
+  # Module responsible for the mechanism of resolving effective flow control in elements with pads with auto flow control.
+  # Effective flow control of the element determines if the element's pads with auto flow control work in :push or in
+  # :pull mode. If the element's effective flow control is set to :push, then all of its auto pads work in :push. Analogically,
+  # if the element effective flow control is set to :pull, auto pads also work in :pull.
+
+  # If element A is linked via its input auto pads only to the :push output pads, then effective flow control of
+  # element A will be set to :push. Otherwise, if element A is linked via its input auto pads to at least one
+  # :pull output pad, element A will set itss effective flow control to :pull and will forward this information
+  # via its output auto pads.
+
+  # Resolving effective flow control is performed on
+  #  - entering playing playback
+  #  - adding and removing pad
+  #  - receiving information, that neighbour element effective flow control has changed
+
+  # Effective flow control of a single element can switch between :push and :pull many times during the element's lifetime.
+
   alias Membrane.Core.Element.DemandController.AutoFlowUtils
   alias Membrane.Core.Element.{DemandCounter, State}
 
