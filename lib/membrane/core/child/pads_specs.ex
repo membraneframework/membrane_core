@@ -193,12 +193,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 flow_control: flow_control_parsing_options(config, direction, component),
                 mode: mode_parsing_options(config, component),
                 demand_mode: demand_mode_parsing_options(config, direction, component)
-                # demand_unit: demand_unit_parsing_options(config, direction, component)
               ) do
       case config do
         _config when component == :bin ->
           config
-          |> Map.delete(:demand_unit)
+          |> Map.drop([:demand_unit, :mode, :demand_mode, :flow_control])
 
         %{mode: :push} ->
           config
@@ -225,10 +224,10 @@ defmodule Membrane.Core.Child.PadsSpecs do
     old? = old_api?(config)
 
     fn _config ->
-      cond do
-        component == :bin -> nil
-        old? -> [in: [:pull, :push], default: :pull]
-        true -> nil
+      if old? or component == :bin do
+        [in: [:pull, :push], default: :pull]
+      else
+        nil
       end
     end
   end
@@ -238,7 +237,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
     fn _config ->
       cond do
-        component == :bin or not old? -> nil
+        not old? -> nil
         auto_allowed?(direction, component) -> [in: [:manual, :auto], default: :manual]
         true -> [in: [:manual], default: :manual]
       end
@@ -250,7 +249,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
     fn _config ->
       cond do
-        component == :bin or old? -> nil
+        old? -> nil
         auto_allowed?(direction, component) -> [in: [:auto, :manual, :push], default: :manual]
         true -> [in: [:manual, :push], default: :manual]
       end
@@ -262,7 +261,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   end
 
   defp auto_allowed?(direction, component) do
-    direction == :input or component == :filter
+    direction == :input or component in [:filter, :bin]
   end
 
   @doc """
