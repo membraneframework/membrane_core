@@ -25,39 +25,30 @@ defmodule Membrane.StreamFormatTest do
   describe "Stream format should be accepted, when they match" do
     test "input pad :accepted_format in bins" do
       pipeline = start_test_pipeline(Source, OuterSinkBin, AcceptedByAll)
-
-      assert_pipeline_notified(
-        pipeline,
-        :sink,
-        {:stream_format_received, %StreamFormat{format: AcceptedByAll}}
-      )
+      assert_strean_format_accepted(pipeline, Source, AcceptedByAll)
     end
 
     test "output pad :accepted_format in bins" do
       pipeline = start_test_pipeline(OuterSourceBin, Sink, AcceptedByAll)
-
-      assert_pipeline_notified(
-        pipeline,
-        :sink,
-        {:stream_format_received, %StreamFormat{format: AcceptedByAll}}
-      )
+      assert_strean_format_accepted(pipeline, Source, AcceptedByAll)
     end
   end
 
   describe "Error should be raised, when stream format don't match" do
     test "input pad :accepted_format in element" do
       start_test_pipeline(Source, RestrictiveSink, AcceptedByOuterBins)
-      assert_down(RestrictiveSink)
+      assert_down(RestrictiveSink, source_module: Source)
     end
 
     test "input pad :accepted_format in inner bin" do
       start_test_pipeline(Source, OuterSinkBin, AcceptedByOuterBins)
-      assert_down(Sink)
+      assert_down(Sink, source_module: Source)
     end
 
+    @tag :dupa
     test "input pad :accepted_format in outer bin" do
       start_test_pipeline(Source, OuterSinkBin, AcceptedByInnerBins)
-      assert_down(Sink)
+      assert_down(Sink, source_module: Source)
     end
 
     test "output pad :accepted_format in element" do
@@ -86,10 +77,37 @@ defmodule Membrane.StreamFormatTest do
     Pipeline.start_supervised!(spec: spec)
   end
 
+  defp assert_down(module, source_module: source_module) do
+    {source_pid, monitor_pid} =
+      if module == source_module do
+        assert_receive({:my_pid, ^module, pid})
+        {pid, pid}
+      else
+        assert_receive({:my_pid, ^source_module, source_pid})
+        assert_receive({:my_pid, ^module, monitor_pid})
+        {source_pid, monitor_pid}
+      end
+
+    monitor_ref = Process.monitor(monitor_pid)
+    send(source_pid, :send_stream_format)
+
+    assert_receive(
+      {:DOWN, ^monitor_ref, :process, _pid, {%Membrane.StreamFormatError{}, _stacktrace}}
+    )
+  end
+
   defp assert_down(module) do
-    assert_receive({:my_pid, ^module, pid})
-    Process.monitor(pid)
-    assert_receive({:DOWN, _ref, :process, ^pid, reason})
-    assert match?({%Membrane.StreamFormatError{}, _stacktrace}, reason) or reason == :noproc
+    assert_down(module, source_module: module)
+  end
+
+  defp assert_strean_format_accepted(pipeline, source_module, stream_format_format) do
+    assert_receive({:my_pid, ^source_module, pid})
+    send(pid, :send_stream_format)
+
+    assert_pipeline_notified(
+      pipeline,
+      :sink,
+      {:stream_format_received, %StreamFormat{format: ^stream_format_format}}
+    )
   end
 end
