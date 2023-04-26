@@ -2,7 +2,7 @@
 
 Any contributions to Membrane Framework are welcome. If you would like contribute, but you're not sure how to start or have some questions, don't hesitate to contact us via channels described in [README](README.md#support-and-questions)
 
-Before submitting code please read our [Coding style guide](https://github.com/membraneframework/membrane_core/wiki/Internal-contribution-guide)
+Before submitting code please read our [Coding style guide](https://membrane.stream/guide/v0.9/contributing_guide.html)
 
 When contributing to existing repo:
 
