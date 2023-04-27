@@ -181,7 +181,13 @@ workflows:
             - get_deps
       - request_performance_test:
           type: approval
+          filters:
+            branches:
+              ignore: /pull\/[0-9]+/
       - test_performance:
+          filters:
+            branches:
+              ignore: /pull\/[0-9]+/
           requires:
             - get_deps
             - request_performance_test
