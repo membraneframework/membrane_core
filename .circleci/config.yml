@@ -183,13 +183,15 @@ workflows:
           type: approval
           filters:
             branches:
-              ignore: /pull\/[0-9]+/
-              ignore: /master/
+              ignore: 
+                - /pull\/[0-9]+/
+                - /master/
       - test_performance:
           filters:
             branches:
-              ignore: /pull\/[0-9]+/
-              ignore: /master/
+              ignore: 
+                - /pull\/[0-9]+/
+                - /master/
           requires:
             - get_deps
             - request_performance_test
