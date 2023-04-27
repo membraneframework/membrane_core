@@ -184,10 +184,12 @@ workflows:
           filters:
             branches:
               ignore: /pull\/[0-9]+/
+              ignore: /master/
       - test_performance:
           filters:
             branches:
               ignore: /pull\/[0-9]+/
+              ignore: /master/
           requires:
             - get_deps
             - request_performance_test
