@@ -181,7 +181,15 @@ workflows:
             - get_deps
       - request_performance_test:
           type: approval
+          filters:
+            branches:
+              # Forked pull requests have CIRCLE_BRANCH set to pull/XXX
+              ignore: /pull\/[0-9]+/
       - test_performance:
+          filters:
+            branches:
+              # Forked pull requests have CIRCLE_BRANCH set to pull/XXX
+              ignore: /pull\/[0-9]+/
           requires:
             - get_deps
             - request_performance_test
