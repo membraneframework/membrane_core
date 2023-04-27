@@ -3,7 +3,7 @@
 [![Hex.pm](https://img.shields.io/hexpm/v/membrane_core.svg)](https://hex.pm/packages/membrane_core)
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_core/)
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_core.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_core)
-
+Some change
 Multimedia processing framework that focuses on reliability, concurrency and scalability.
 
 An easy to use abstraction layer for assembling mostly server-side applications that have to consume, produce or process multimedia streams.
