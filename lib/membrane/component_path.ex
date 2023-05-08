@@ -1,9 +1,9 @@
 defmodule Membrane.ComponentPath do
   @moduledoc """
-  Path is a list consisting of following pipeline/bin/element names down the assembled pipeline.
-  Information is being stored in a process dictionary and can be set/appended to.
+  A list consisting of following pipeline/bin/element names down the assembled pipeline.
 
   It traces element's path inside a pipeline.
+  Information is being stored in a process dictionary and can be set/appended to.
   """
 
   @typedoc @moduledoc
