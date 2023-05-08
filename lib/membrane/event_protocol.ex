@@ -6,7 +6,7 @@ defprotocol Membrane.EventProtocol do
   """
 
   @typedoc """
-  A type describing all the types that implement the `Membrane.EventProtocol`.
+  A type describing all the types that implement the `Membrane.EventProtocol` protocol.
   """
   @type t :: struct
 

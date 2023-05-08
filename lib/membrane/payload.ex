@@ -24,7 +24,7 @@ defprotocol Membrane.Payload do
   end
 
   @typedoc """
-  A type describing all the types that are implementing `Membrane.Payload` protocol.
+  A type describing all the types that implement `Membrane.Payload` protocol.
   """
   @type t :: any()
 
