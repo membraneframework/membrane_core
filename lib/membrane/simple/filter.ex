@@ -27,47 +27,42 @@ defmodule Membrane.Simple.Filter do
   def_input_pad :input, accepted_format: _any, flow_control: :auto
   def_output_pad :output, accepted_format: _any, flow_control: :auto
 
-  def_options handle_buffer: [spec: (Buffer.t() -> Buffer.t()), default: & &1],
-              handle_event: [spec: (Event.t() -> Event.t()), default: & &1],
-              handle_stream_format: [spec: (StreamFormat.t() -> StreamFormat.t()), default: & &1]
+  @spec identity(any()) :: any()
+  def identity(arg), do: arg
+
+  def_options handle_buffer: [spec: (Buffer.t() -> Buffer.t()), default: &__MODULE__.identity/1],
+              handle_event: [spec: (Event.t() -> Event.t()), default: &__MODULE__.identity/1],
+              handle_stream_format: [
+                spec: (StreamFormat.t() -> StreamFormat.t()),
+                default: &__MODULE__.identity/1
+              ]
 
   @impl true
   def handle_init(_ctx, opts) do
-    {[], Map.new(opts)}
+    {[], Map.from_struct(opts)}
   end
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, state) do
-    handle_data(:input, buffer, state)
+    new_buffer = state.handle_buffer.(buffer)
+    {[buffer: {:output, new_buffer}], state}
   end
 
   @impl true
   def handle_event(pad, event, _ctx, state) do
-    handle_data(pad, event, state)
-  end
-
-  @impl true
-  def handle_stream_format(:input, stream_format, _ctx, state) do
-    handle_data(:input, stream_format, state)
-  end
-
-  defp handle_data(pad, data, state) do
     opposite_pad =
       case pad do
         :input -> :output
         :output -> :input
       end
 
-    {action, mapper} =
-      case data do
-        %Buffer{} -> {:buffer, state.handle_buffer}
-        %Event{} -> {:event, state.handle_event}
-        _stream_format -> {:stream_format, state.handle_stream_format}
-      end
+    new_event = state.handle_event.(event)
+    {[event: {opposite_pad, new_event}], state}
+  end
 
-    new_data = mapper.(data)
-
-    actions = [{action, {opposite_pad, new_data}}]
-    {actions, state}
+  @impl true
+  def handle_stream_format(:input, stream_format, _ctx, state) do
+    new_stream_format = state.handle_stream_format.(stream_format)
+    {[stream_format: {:output, new_stream_format}], state}
   end
 end

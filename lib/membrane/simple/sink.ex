@@ -25,13 +25,19 @@ defmodule Membrane.Simple.Sink do
 
   def_input_pad :input, accepted_format: _any, flow_control: :auto
 
-  def_options handle_buffer: [spec: (Buffer.t() -> any()), default: & &1],
-              handle_event: [spec: (Event.t() -> any()), default: & &1],
-              handle_stream_format: [spec: (StreamFormat.t() -> any()), default: & &1]
+  @spec identity(any()) :: any()
+  def identity(arg), do: arg
+
+  def_options handle_buffer: [spec: (Buffer.t() -> any()), default: &__MODULE__.identity/1],
+              handle_event: [spec: (Event.t() -> any()), default: &__MODULE__.identity/1],
+              handle_stream_format: [
+                spec: (StreamFormat.t() -> any()),
+                default: &__MODULE__.identity/1
+              ]
 
   @impl true
   def handle_init(_ctx, opts) do
-    {[], Map.new(opts)}
+    {[], Map.from_struct(opts)}
   end
 
   @impl true
