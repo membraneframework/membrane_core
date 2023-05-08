@@ -12,5 +12,7 @@ defmodule Membrane.Playback do
 
   Untils the setup lasts, the component won't enter `:playing` playback.
   """
+
+  @typedoc @moduledoc
   @type t :: :stopped | :playing
 end

@@ -23,6 +23,9 @@ defprotocol Membrane.Payload do
     @callback new(binary()) :: Membrane.Payload.t()
   end
 
+  @typedoc """
+  A type describing all the types that are implementing `Membrane.Payload` protocol.
+  """
   @type t :: any()
 
   @doc """

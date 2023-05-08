@@ -5,6 +5,9 @@ defmodule Membrane.RCMessage do
   Check `t:t/0` for available messages.
   """
 
+  @typedoc """
+  The type describing all possible `Membrane.RCMessage`s.
+  """
   @type t ::
           __MODULE__.Playing.t()
           | __MODULE__.StartOfStream.t()
@@ -16,6 +19,8 @@ defmodule Membrane.RCMessage do
     @moduledoc """
     Message sent when the pipeline starts playing
     """
+
+    @typedoc @moduledoc
     @type t :: %__MODULE__{from: pid()}
 
     @enforce_keys [:from]
@@ -26,6 +31,8 @@ defmodule Membrane.RCMessage do
     @moduledoc """
     Message sent when some element of the pipeline receives the start of stream event on some pad.
     """
+
+    @typedoc @moduledoc
     @type t :: %__MODULE__{
             from: pid(),
             element: Membrane.Element.name(),
@@ -40,6 +47,8 @@ defmodule Membrane.RCMessage do
     @moduledoc """
     Message sent when some element of the pipeline receives the start of stream event on some pad.
     """
+
+    @typedoc @moduledoc
     @type t :: %__MODULE__{
             from: pid(),
             element: Membrane.Element.name(),
@@ -54,6 +63,8 @@ defmodule Membrane.RCMessage do
     @moduledoc """
     Message sent when the some element of the pipeline receives a notification.
     """
+
+    @typedoc @moduledoc
     @type t :: %__MODULE__{
             from: pid(),
             element: Membrane.Element.name(),
@@ -68,6 +79,8 @@ defmodule Membrane.RCMessage do
     @moduledoc """
     Message sent when the pipeline gracefully terminates.
     """
+
+    @typedoc @moduledoc
     @type t :: %__MODULE__{from: pid()}
 
     @enforce_keys [:from]

@@ -5,6 +5,9 @@ defprotocol Membrane.EventProtocol do
   Each event has to implement or derive this protocol.
   """
 
+  @typedoc """
+  A type describing all the types that implement the `Membrane.EventProtocol`.
+  """
   @type t :: struct
 
   @doc """

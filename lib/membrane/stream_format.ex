@@ -8,5 +8,7 @@ defmodule Membrane.StreamFormat do
 
   To link two pads together, their capabilities have to be compatible.
   """
+
+  @typedoc @moduledoc
   @type t :: struct
 end
