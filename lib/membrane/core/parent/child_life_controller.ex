@@ -500,6 +500,25 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   def handle_remove_children(children_or_children_groups, state) do
     children_or_children_groups = Bunch.listify(children_or_children_groups)
 
+    all_children_and_children_groups =
+      state.children
+      |> Enum.flat_map(fn {ref, %{group: group}} -> [ref, group] end)
+      |> List.delete(nil)
+      |> Enum.uniq()
+
+    children_or_children_groups
+    |> Enum.find(&(&1 not in all_children_and_children_groups))
+    |> case do
+      nil ->
+        :ok
+
+      child_ref ->
+        raise Membrane.ParentError, """
+        Trying to remove child #{inspect(child_ref)}, while such a child or children group does not exist.
+        Existing children and children groups are: #{inspect(all_children_and_children_groups, pretty: true)}
+        """
+    end
+
     refs =
       state.children
       |> Enum.filter(fn {child_ref, child_entry} ->
