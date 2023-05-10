@@ -1,11 +1,12 @@
-defmodule Membrane.Integration.SimpleElementsTest do
+defmodule Membrane.Integration.LambdaElementsTest do
   use ExUnit.Case
 
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
-  alias Membrane.Simple
+  alias Membrane.LambdaFilter
+  alias Membrane.LambdaSink
   alias Membrane.Testing
 
   defmodule HelperSource do
@@ -33,7 +34,7 @@ defmodule Membrane.Integration.SimpleElementsTest do
     end
   end
 
-  test "Membrane.Simple.Filter maps buffers with function passed in :handle_buffer option" do
+  test "Membrane.LambdaFilter maps buffers with function passed in :handle_buffer option" do
     payload_suffix = "payload suffix"
 
     buffer_mapper = fn %Buffer{} = buffer ->
@@ -42,7 +43,7 @@ defmodule Membrane.Integration.SimpleElementsTest do
 
     spec =
       child(:source, HelperSource)
-      |> child(%Simple.Filter{handle_buffer: buffer_mapper})
+      |> child(%LambdaFilter{handle_buffer: buffer_mapper})
       |> child(:sink, Testing.Sink)
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
@@ -59,12 +60,12 @@ defmodule Membrane.Integration.SimpleElementsTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
-  test "Membrane.Simple.Sink calls function passed in :handle_buffer" do
+  test "Membrane.LambdaSink calls function passed in :handle_buffer" do
     test_pid = self()
 
     spec =
       child(:source, HelperSource)
-      |> child(:sink, %Simple.Sink{
+      |> child(:sink, %LambdaSink{
         handle_buffer: &send(test_pid, {:buffer, &1}),
         handle_stream_format: &send(test_pid, {:stream_format, &1})
       })
