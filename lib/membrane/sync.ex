@@ -33,6 +33,10 @@ defmodule Membrane.Sync do
 
   @no_sync :membrane_no_sync
 
+  @typedoc """
+  A type describing the the synchronization mechanism, used to synchronize multiple
+  processes, so that they could perform their jobs at the same time.
+  """
   @type t :: pid | :membrane_no_sync
   @type status :: :registered | :sync
 

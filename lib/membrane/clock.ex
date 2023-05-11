@@ -32,6 +32,7 @@ defmodule Membrane.Clock do
   alias Membrane.Core.Message
   alias Membrane.Time
 
+  @typedoc @moduledoc
   @type t :: pid
 
   @typedoc """

@@ -11,5 +11,6 @@ defmodule Membrane.KeyframeRequestEvent do
 
   defstruct []
 
+  @typedoc @moduledoc
   @type t :: %__MODULE__{}
 end

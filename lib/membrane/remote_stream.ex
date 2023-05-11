@@ -11,6 +11,8 @@ defmodule Membrane.RemoteStream do
   - `:type` - either `:bytestream` (continuous stream) or `:packetized` (each buffer
   contains exactly one specified unit of data)
   """
+
+  @typedoc @moduledoc
   @type t :: %__MODULE__{
           content_format: module | nil,
           type: :bytestream | :packetized

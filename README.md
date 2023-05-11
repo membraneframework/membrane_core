@@ -4,8 +4,6 @@
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_core/)
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_core.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_core)
 
-> Membrane Framework - if you asked me what it is, I have no idea. _- Jose Valim in [ElixirConf 2018 Keynote](https://www.youtube.com/watch?v=m7TWMFtDwHg&feature=youtu.be&t=11m18s)_
-
 Multimedia processing framework that focuses on reliability, concurrency and scalability.
 
 An easy to use abstraction layer for assembling mostly server-side applications that have to consume, produce or process multimedia streams.

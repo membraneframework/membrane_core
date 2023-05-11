@@ -8,6 +8,7 @@ defmodule Membrane.ChildNotification do
   `c:Membrane.Parent.handle_child_notification/4` callback.
   """
 
+  @typedoc @moduledoc
   @type t :: any
 end
 
@@ -20,6 +21,6 @@ defmodule Membrane.ParentNotification do
   A notification can be handled in child with `c:Membrane.Element.Base.handle_parent_notification/3` or
   `c:Membrane.Bin.handle_parent_notification/3` callback.
   """
-
+  @typedoc @moduledoc
   @type t :: any
 end

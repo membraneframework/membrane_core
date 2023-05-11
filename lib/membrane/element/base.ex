@@ -14,7 +14,9 @@ defmodule Membrane.Element.Base do
   receive (input pads) data. For more information on pads, see
   `Membrane.Pad`.
 
-  To implement an element, one of base modules (`Membrane.Source`,
+  Note: This module (`Membrane.Element.Base`) should not be `use`d directly.
+
+  To implement an element, one of the following base modules (`Membrane.Source`,
   `Membrane.Filter`, `Membrane.Endpoint` or `Membrane.Sink`)
   has to be `use`d, depending on the element type:
   - source, producing buffers (contain only output pads),
@@ -23,27 +25,6 @@ defmodule Membrane.Element.Base do
   - sink, consuming buffers (contain only input pads).
   For more information on each element type, check documentation for appropriate
   base module.
-
-  ## Behaviours
-  Element-specific behaviours are specified in modules:
-  - `Membrane.Element.Base` - this module, behaviour common to all
-  elements,
-  - `Membrane.Element.WithOutputPads` - behaviour common to sources,
-  filters and endpoints
-  - `Membrane.Element.WithInputPads` - behaviour common to sinks,
-  filters and endpoints
-  - Base modules (`Membrane.Source`, `Membrane.Filter`, `Membrane.Endpoint`,
-  `Membrane.Sink`) - behaviours specific to each element type.
-
-  ## Callbacks
-  Modules listed above provide specifications of callbacks that define elements
-  lifecycle. All of these callbacks have names with the `handle_` prefix.
-  They are used to define reaction to certain events that happen during runtime,
-  and indicate what actions framework should undertake as a result, besides
-  executing element-specific code.
-
-  For actions that can be returned by each callback, see `Membrane.Element.Action`
-  module.
   """
 
   use Bunch
