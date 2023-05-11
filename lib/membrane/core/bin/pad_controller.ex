@@ -81,9 +81,13 @@ defmodule Membrane.Core.Bin.PadController do
     state
   end
 
-  @spec remove_pad!(Pad.ref(), State.t()) :: State.t()
-  def remove_pad!(pad_ref, state) do
+  @spec remove_pad(Pad.ref(), State.t()) :: State.t()
+  def remove_pad(pad_ref, state) do
     cond do
+      # This is to handle case when bin removes his own pad and removes a child linked to this pad
+      Pad.is_dynamic_pad_ref(pad_ref) and PadModel.assert_instance(state, pad_ref) != :ok ->
+        state
+
       Pad.is_dynamic_pad_ref(pad_ref) ->
         Message.send(state.parent_pid, :child_pad_removed, [state.name, pad_ref])
 
@@ -103,7 +107,7 @@ defmodule Membrane.Core.Bin.PadController do
   @spec handle_linking_timeout(Pad.ref(), State.t()) :: :ok | no_return()
   def handle_linking_timeout(pad_ref, state) do
     case PadModel.get_data(state, pad_ref) do
-      {:ok, %{endpoint: nil}} = pad_data ->
+      {:ok, %{endpoint: nil} = pad_data} ->
         raise Membrane.LinkError,
               "Bin pad #{inspect(pad_ref)} wasn't linked internally within timeout. Pad data: #{inspect(pad_data, pretty: true)}"
 
