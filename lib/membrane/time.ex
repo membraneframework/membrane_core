@@ -16,6 +16,9 @@ defmodule Membrane.Time do
   @compile {:inline,
             native_units: 1, native_unit: 0, nanoseconds: 1, nanosecond: 0, second: 0, seconds: 1}
 
+  @typedoc """
+  The time represented in Membrane's time units.
+  """
   @type t :: integer
   @type non_neg :: non_neg_integer
 

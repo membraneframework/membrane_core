@@ -10,5 +10,7 @@ defmodule Membrane.Event.Underrun do
   """
   @derive Membrane.EventProtocol
   defstruct []
+
+  @typedoc @moduledoc
   @type t :: %__MODULE__{}
 end
