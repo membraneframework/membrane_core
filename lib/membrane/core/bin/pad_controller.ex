@@ -90,10 +90,7 @@ defmodule Membrane.Core.Bin.PadController do
 
       Pad.is_dynamic_pad_ref(pad_ref) ->
         Message.send(state.parent_pid, :child_pad_removed, [state.name, pad_ref])
-
-        with %{terminating?: false} <- state do
-          PadModel.delete_data!(state, pad_ref)
-        end
+        PadModel.delete_data!(state, pad_ref)
 
       Pad.is_static_pad_ref(pad_ref) and state.terminating? ->
         state
@@ -302,8 +299,8 @@ defmodule Membrane.Core.Bin.PadController do
       state = maybe_handle_pad_removed(pad_ref, state)
       {pad_data, state} = PadModel.pop_data!(state, pad_ref)
 
-      if endpoint = pad_data.endpoint do
-        Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+      if pad_data.endpoint do
+        Message.send(pad_data.endpoint.pid, :handle_unlink, pad_data.endpoint.pad_ref)
         ChildLifeController.proceed_spec_startup(pad_data.spec_ref, state)
       else
         Membrane.Logger.debug("""
@@ -378,8 +375,6 @@ defmodule Membrane.Core.Bin.PadController do
         spec_ref: nil,
         options: nil
       })
-
-    # |> IO.inspect(label: "data to PadData, #{state.module} #{inspect(pad_ref)}")
 
     data = struct!(Membrane.Bin.PadData, data)
 
