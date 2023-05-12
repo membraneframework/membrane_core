@@ -1,12 +1,11 @@
-defmodule Membrane.Integration.LambdaElementsTest do
+defmodule Membrane.Integration.DebugElementsTest do
   use ExUnit.Case
 
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
-  alias Membrane.LambdaFilter
-  alias Membrane.LambdaSink
+  alias Membrane.Debug.{Filter, Sink}
   alias Membrane.Testing
 
   defmodule HelperSource do
@@ -34,16 +33,12 @@ defmodule Membrane.Integration.LambdaElementsTest do
     end
   end
 
-  test "Membrane.LambdaFilter maps buffers with function passed in :handle_buffer option" do
-    payload_suffix = "payload suffix"
-
-    buffer_mapper = fn %Buffer{} = buffer ->
-      Map.update!(buffer, :payload, &(&1 <> payload_suffix))
-    end
+  test "Membrane.Debug.Filter calls function passed in :handle_buffer and forwards buffers on :output pad" do
+    test_pid = self()
 
     spec =
       child(:source, HelperSource)
-      |> child(%LambdaFilter{handle_buffer: buffer_mapper})
+      |> child(%Debug.Filter{handle_buffer: &send(test_pid, {:buffer, &1})})
       |> child(:sink, Testing.Sink)
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
@@ -53,19 +48,20 @@ defmodule Membrane.Integration.LambdaElementsTest do
     Testing.Pipeline.message_child(pipeline, :source, {:send_buffers, 100})
 
     for i <- 1..100 do
-      expected_payload = inspect(i) <> payload_suffix
+      expected_payload = inspect(i)
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: ^expected_payload})
+      assert_receive {:buffer, %Buffer{payload: ^expected_payload}}
     end
 
     Testing.Pipeline.terminate(pipeline)
   end
 
-  test "Membrane.LambdaSink calls function passed in :handle_buffer" do
+  test "Membrane.Debug.Sink calls function passed in :handle_buffer" do
     test_pid = self()
 
     spec =
       child(:source, HelperSource)
-      |> child(:sink, %LambdaSink{
+      |> child(:sink, %Debug.Sink{
         handle_buffer: &send(test_pid, {:buffer, &1}),
         handle_stream_format: &send(test_pid, {:stream_format, &1})
       })
