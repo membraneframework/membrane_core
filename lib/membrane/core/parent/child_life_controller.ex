@@ -500,24 +500,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   def handle_remove_children(children_or_children_groups, state) do
     children_or_children_groups = Bunch.listify(children_or_children_groups)
 
-    all_children_and_children_groups =
-      state.children
-      |> Enum.flat_map(fn {ref, %{group: group}} -> [ref, group] end)
-      |> Enum.uniq()
-      |> List.delete(nil)
-
-    children_or_children_groups
-    |> Enum.find(&(&1 not in all_children_and_children_groups))
-    |> case do
-      nil ->
-        :ok
-
-      child_ref ->
-        raise Membrane.ParentError, """
-        Trying to remove child #{inspect(child_ref)}, while such a child or children group does not exist.
-        Existing children and children groups are: #{inspect(all_children_and_children_groups, pretty: true)}
-        """
-    end
+    :ok = ensure_removed_children_exist!(children_or_children_groups, state)
 
     refs =
       state.children
@@ -551,6 +534,27 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = remove_children_from_specs(children_names, state)
 
     Parent.ChildrenModel.update_children!(state, refs, &%{&1 | terminating?: true})
+  end
+
+  defp ensure_removed_children_exist!(removed_children_or_groups, state) do
+    children_groups =
+      MapSet.new(state.children, fn {_ref, data} -> data.group end)
+      |> MapSet.delete(nil)
+
+    Enum.find(removed_children_or_groups, fn name ->
+      not Map.has_key?(state.children, name) and not MapSet.member?(children_groups, name)
+    end)
+    |> case do
+      nil ->
+        :ok
+
+      child_ref ->
+        raise Membrane.ParentError, """
+        Trying to remove child #{inspect(child_ref)}, while such a child or children group does not exist.
+        Existing children are: #{Map.keys(state.children) |> inspect(pretty: true)}
+        Existing children groups are: #{MapSet.to_list(children_groups) |> inspect(pretty: true)}
+        """
+    end
   end
 
   @spec handle_remove_link(Child.name(), Pad.ref(), Parent.state()) ::
