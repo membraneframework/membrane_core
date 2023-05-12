@@ -5,7 +5,7 @@ defmodule Membrane.Integration.DebugElementsTest do
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
-  alias Membrane.Debug.{Filter, Sink}
+  alias Membrane.Debug
   alias Membrane.Testing
 
   defmodule HelperSource do
