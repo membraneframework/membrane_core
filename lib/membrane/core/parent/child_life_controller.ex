@@ -503,8 +503,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     all_children_and_children_groups =
       state.children
       |> Enum.flat_map(fn {ref, %{group: group}} -> [ref, group] end)
-      |> List.delete(nil)
       |> Enum.uniq()
+      |> List.delete(nil)
 
     children_or_children_groups
     |> Enum.find(&(&1 not in all_children_and_children_groups))
