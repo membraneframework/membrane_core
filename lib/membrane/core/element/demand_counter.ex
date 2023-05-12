@@ -51,7 +51,7 @@ defmodule Membrane.Core.Element.DemandCounter do
           receiver_demand_unit :: Membrane.Buffer.Metric.unit(),
           sender_process :: Process.dest(),
           sender_pad_ref :: Pad.ref(),
-          toilet_capacity :: non_neg_integer() | float() | nil,
+          toilet_capacity :: non_neg_integer() | nil,
           throttling_factor :: pos_integer() | nil
         ) :: t
   def new(

@@ -128,7 +128,7 @@ defmodule Membrane.Core.Element.DemandHandler do
         Message.self(:resume_handle_demand_loop)
         %{state | handle_demand_loop_counter: 0}
 
-      state.delayed_demands == MapSet.new() ->
+      Enum.empty?(state.delayed_demands) ->
         %{state | handle_demand_loop_counter: 0}
 
       true ->

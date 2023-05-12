@@ -19,15 +19,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   @spec increase_demand_counter_if_needed(Pad.ref() | [Pad.ref()], State.t()) :: State.t()
   def increase_demand_counter_if_needed(pad_ref_list, state) when is_list(pad_ref_list) do
-    Enum.reduce(pad_ref_list, state, fn pad_ref, state ->
-      case PadModel.get_data(state, pad_ref) do
-        {:ok, pad_data} when is_input_auto_pad_data(pad_data) ->
-          do_increase_demand_counter_if_needed(pad_data, state)
-
-        _other ->
-          state
-      end
-    end)
+    Enum.reduce(pad_ref_list, state, &increase_demand_counter_if_needed/2)
   end
 
   def increase_demand_counter_if_needed(pad_ref, state) when Pad.is_pad_ref(pad_ref) do

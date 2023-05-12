@@ -27,7 +27,7 @@ defmodule Membrane.Core.Element.DemandController do
     with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
          %State{playback: :playing} <- state do
       if pad_data.direction == :input,
-        do: raise("cannot check demand counter in input pad")
+        do: raise("cannot snapshot demand counter in input pad")
 
       do_snapshot_demand_counter(pad_data, state)
     else

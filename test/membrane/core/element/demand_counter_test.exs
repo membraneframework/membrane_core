@@ -16,7 +16,7 @@ defmodule Membrane.Core.Element.DemandCounterTest do
     assert DemandCounter.get(demand_counter) == -5
   end
 
-  test "if DemandCounter.Worker works properly " do
+  test "if DemandCounter.DistributedAtomic.Worker works properly " do
     demand_counter = DemandCounter.new(:pull, self(), :buffers, self(), :output)
     :ok = DemandCounter.increase(demand_counter, 10)
 

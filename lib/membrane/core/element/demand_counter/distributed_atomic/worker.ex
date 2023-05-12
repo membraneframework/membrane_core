@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.DemandCounter.Worker do
+defmodule Membrane.Core.Element.DemandCounter.DistributedAtomic.Worker do
   @moduledoc false
 
   # This is a GenServer created when the counter is about to be accessed from different nodes - it's running on the same node,
@@ -8,12 +8,11 @@ defmodule Membrane.Core.Element.DemandCounter.Worker do
 
   @type t :: pid()
 
-  @spec start(pid()) :: {:ok, t}
-  def start(parent_pid), do: GenServer.start(__MODULE__, parent_pid)
+  @spec start_link() :: {:ok, t}
+  def start_link(), do: GenServer.start_link(__MODULE__, nil)
 
   @impl true
-  def init(parent_pid) do
-    Process.monitor(parent_pid)
+  def init(_arg) do
     {:ok, nil, :hibernate}
   end
 
@@ -39,10 +38,5 @@ defmodule Membrane.Core.Element.DemandCounter.Worker do
   def handle_cast({:put, atomic_ref, value}, _state) do
     :atomics.put(atomic_ref, 1, value)
     {:noreply, nil}
-  end
-
-  @impl true
-  def handle_info({:DOWN, _ref, :process, _object, _reason}, state) do
-    {:stop, :normal, state}
   end
 end

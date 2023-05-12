@@ -538,11 +538,11 @@ defmodule Membrane.ChildrenSpec do
   """
   @spec via_in(builder(), Pad.name() | Pad.ref(),
           options: pad_options(),
-          toilet_capacity: non_neg_integer() | float() | nil,
-          target_queue_size: number | nil,
-          min_demand_factor: number | nil,
-          auto_demand_size: number | nil,
-          throttling_factor: number | nil
+          toilet_capacity: non_neg_integer() | nil,
+          target_queue_size: non_neg_integer() | nil,
+          min_demand_factor: non_neg_integer() | nil,
+          auto_demand_size: non_neg_integer() | nil,
+          throttling_factor: non_neg_integer() | nil
         ) :: builder() | no_return
   def via_in(builder, pad, props \\ [])
 

@@ -6,8 +6,8 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
   # :pull mode. If the element's effective flow control is set to :push, then all of its auto pads work in :push. Analogically,
   # if the element effective flow control is set to :pull, auto pads also work in :pull.
 
-  # If element A is linked via its input auto pads only to the :push output pads, then effective flow control of
-  # element A will be set to :push. Otherwise, if element A is linked via its input auto pads to at least one
+  # If element A is linked via its input auto pads only to the :push output pads of other elements, then effective flow
+  # control of element A will be set to :push. Otherwise, if element A is linked via its input auto pads to at least one
   # :pull output pad, element A will set itss effective flow control to :pull and will forward this information
   # via its output auto pads.
 
@@ -41,28 +41,16 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
     end
   end
 
-  @spec handle_input_pad_added(Pad.ref(), State.t()) :: State.t()
-  def handle_input_pad_added(pad_ref, state) do
-    with %{pads_data: %{^pad_ref => %{flow_control: :auto, direction: :input} = pad_data}} <-
-           state do
-      handle_other_effective_flow_control(
-        pad_ref,
-        pad_data.other_effective_flow_control,
-        state
-      )
-    end
-  end
-
   @spec handle_other_effective_flow_control(
           Pad.ref(),
           effective_flow_control(),
           State.t()
         ) ::
           State.t()
-  def handle_other_effective_flow_control(my_pad_ref, other_effective_flow_control, state) do
-    pad_data = PadModel.get_data!(state, my_pad_ref)
+  def handle_other_effective_flow_control(input_pad_ref, other_effective_flow_control, state) do
+    pad_data = PadModel.get_data!(state, input_pad_ref)
     pad_data = %{pad_data | other_effective_flow_control: other_effective_flow_control}
-    state = PadModel.set_data!(state, my_pad_ref, pad_data)
+    state = PadModel.set_data!(state, input_pad_ref, pad_data)
 
     cond do
       state.playback != :playing or pad_data.direction != :input or pad_data.flow_control != :auto ->
@@ -70,7 +58,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
       other_effective_flow_control == state.effective_flow_control ->
         :ok =
-          PadModel.get_data!(state, my_pad_ref, :demand_counter)
+          PadModel.get_data!(state, input_pad_ref, :demand_counter)
           |> DemandCounter.set_receiver_mode(state.effective_flow_control)
 
         state
@@ -113,24 +101,24 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
     state = %{state | effective_flow_control: new_effective_flow_control}
 
-    Enum.each(state.pads_data, fn
-      {_ref, %{flow_control: :auto, direction: :output} = pad_data} ->
+    state.pads_data
+    |> Enum.filter(fn {_ref, %{flow_control: flow_control}} -> flow_control == :auto end)
+    |> Enum.reduce(state, fn
+      {_ref, %{direction: :output} = pad_data}, state ->
         :ok = DemandCounter.set_sender_mode(pad_data.demand_counter, new_effective_flow_control)
         :ok = DemandCounter.set_receiver_mode(pad_data.demand_counter, :to_be_resolved)
 
-        Message.send(pad_data.pid, :other_effective_flow_control_resolved, [
-          pad_data.other_ref,
-          new_effective_flow_control
-        ])
+        Message.send(
+          pad_data.pid,
+          :other_effective_flow_control_resolved,
+          [pad_data.other_ref, new_effective_flow_control]
+        )
 
-      {_ref, %{flow_control: :auto, direction: :input, demand_counter: demand_counter}} ->
-        :ok = DemandCounter.set_receiver_mode(demand_counter, new_effective_flow_control)
+        state
 
-      _pad_entry ->
-        :ok
+      {pad_ref, %{direction: :input} = pad_data}, state ->
+        :ok = DemandCounter.set_receiver_mode(pad_data.demand_counter, new_effective_flow_control)
+        AutoFlowUtils.increase_demand_counter_if_needed(pad_ref, state)
     end)
-
-    Map.keys(state.pads_data)
-    |> AutoFlowUtils.increase_demand_counter_if_needed(state)
   end
 end

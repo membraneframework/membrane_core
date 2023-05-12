@@ -6,7 +6,7 @@ defmodule Membrane.Core.Element.DemandCounter.DistributedAtomic do
   # The module allows to create and modify the value of a counter in the same manner both when the counter is about to be accessed
   # from the same node, and from different nodes.
 
-  alias Membrane.Core.Element.DemandCounter.Worker
+  alias __MODULE__.Worker
 
   @enforce_keys [:worker, :atomic_ref]
   defstruct @enforce_keys
@@ -19,7 +19,7 @@ defmodule Membrane.Core.Element.DemandCounter.DistributedAtomic do
   @spec new(integer() | nil) :: t
   def new(initial_value \\ nil) do
     atomic_ref = :atomics.new(1, [])
-    {:ok, worker} = Worker.start(self())
+    {:ok, worker} = Worker.start_link()
 
     distributed_atomic = %__MODULE__{
       atomic_ref: atomic_ref,

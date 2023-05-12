@@ -291,10 +291,8 @@ defmodule Membrane.Core.Element.InputQueue do
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 
-    lacking_buffer_size = lacking_buffer_size + diff
     :ok = DemandCounter.increase(demand_counter, diff)
-
-    %{input_queue | lacking_buffer_size: lacking_buffer_size}
+    %{input_queue | lacking_buffer_size: lacking_buffer_size + diff}
   end
 
   defp maybe_increase_demand_counter(%__MODULE__{} = input_queue), do: input_queue

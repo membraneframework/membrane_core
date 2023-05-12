@@ -4,6 +4,7 @@ defmodule Membrane.Core.Element.PadController do
   # Module handling linking and unlinking pads.
 
   use Bunch
+  alias Membrane.Core.Element.PadController
   alias Membrane.{LinkError, Pad}
   alias Membrane.Core.{CallbackHandler, Child, Events, Message, Observability}
   alias Membrane.Core.Child.PadModel
@@ -191,7 +192,7 @@ defmodule Membrane.Core.Element.PadController do
         state
       )
 
-    state = EffectiveFlowController.handle_input_pad_added(endpoint.pad_ref, state)
+    state = PadController.handle_input_pad_added(endpoint.pad_ref, state)
     state = maybe_handle_pad_added(endpoint.pad_ref, state)
     {{:ok, {endpoint, info, link_metadata}}, state}
   end
@@ -238,6 +239,18 @@ defmodule Membrane.Core.Element.PadController do
         )
 
         state
+    end
+  end
+
+  @spec handle_input_pad_added(Pad.ref(), State.t()) :: State.t()
+  def handle_input_pad_added(pad_ref, state) do
+    with %{pads_data: %{^pad_ref => %{flow_control: :auto, direction: :input} = pad_data}} <-
+           state do
+      EffectiveFlowController.handle_other_effective_flow_control(
+        pad_ref,
+        pad_data.other_effective_flow_control,
+        state
+      )
     end
   end
 
