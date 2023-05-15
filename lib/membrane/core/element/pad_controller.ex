@@ -319,10 +319,9 @@ defmodule Membrane.Core.Element.PadController do
           PadModel.update_data!(state, other_data.ref, :associated_pads, &[data.ref | &1])
         end)
 
-      case data.direction do
-        :input -> AutoFlowUtils.increase_demand_counter_if_needed(endpoint.pad_ref, state)
-        :output -> state
-      end
+      if data.direction == :input,
+        do: AutoFlowUtils.auto_adjust_demand_counter(endpoint.pad_ref, state),
+        else: state
     else
       state
     end
@@ -434,11 +433,9 @@ defmodule Membrane.Core.Element.PadController do
           end)
           |> PadModel.set_data!(pad_ref, :associated_pads, [])
 
-        if pad_data.direction == :output do
-          AutoFlowUtils.increase_demand_counter_if_needed(pad_data.associated_pads, state)
-        else
-          state
-        end
+        if pad_data.direction == :output,
+          do: AutoFlowUtils.auto_adjust_demand_counter(pad_data.associated_pads, state),
+          else: state
 
       _pad_data ->
         state

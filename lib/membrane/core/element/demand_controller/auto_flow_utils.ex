@@ -17,21 +17,17 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
                    pad_data.flow_control == :auto and is_map_key(pad_data, :direction) and
                    pad_data.direction == :input
 
-  @spec increase_demand_counter_if_needed(Pad.ref() | [Pad.ref()], State.t()) :: State.t()
-  def increase_demand_counter_if_needed(pad_ref_list, state) when is_list(pad_ref_list) do
-    Enum.reduce(pad_ref_list, state, &increase_demand_counter_if_needed/2)
+  @spec auto_adjust_demand_counter(Pad.ref() | [Pad.ref()], State.t()) :: State.t()
+  def auto_adjust_demand_counter(pad_ref_list, state) when is_list(pad_ref_list) do
+    Enum.reduce(pad_ref_list, state, &auto_adjust_demand_counter/2)
   end
 
-  def increase_demand_counter_if_needed(pad_ref, state) when Pad.is_pad_ref(pad_ref) do
-    with {:ok, pad_data} when is_input_auto_pad_data(pad_data) <-
-           PadModel.get_data(state, pad_ref) do
-      do_increase_demand_counter_if_needed(pad_data, state)
-    else
-      _other -> state
-    end
+  def auto_adjust_demand_counter(pad_ref, state) when Pad.is_pad_ref(pad_ref) do
+    PadModel.get_data!(state, pad_ref)
+    |> do_auto_adjust_demand_counter(state)
   end
 
-  defp do_increase_demand_counter_if_needed(pad_data, state) do
+  defp do_auto_adjust_demand_counter(pad_data, state) when is_input_auto_pad_data(pad_data) do
     if increase_demand_counter?(pad_data, state) do
       diff = @lacking_buffer_size_upperbound - pad_data.lacking_buffer_size
       :ok = DemandCounter.increase(pad_data.demand_counter, diff)
@@ -47,17 +43,14 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     end
   end
 
-  defp increase_demand_counter?(pad_data, state) do
-    %{
-      flow_control: flow_control,
-      lacking_buffer_size: lacking_buffer_size,
-      associated_pads: associated_pads
-    } = pad_data
+  defp do_auto_adjust_demand_counter(%{ref: ref}, _state) do
+    raise "#{__MODULE__}.auto_adjust_demand_counter/2 can be called only for auto input pads, while #{inspect(ref)} is not such a pad."
+  end
 
-    flow_control == :auto and
-      state.effective_flow_control == :pull and
-      lacking_buffer_size < @lacking_buffer_size_lowerbound and
-      Enum.all?(associated_pads, &demand_counter_positive?(&1, state))
+  defp increase_demand_counter?(pad_data, state) do
+    state.effective_flow_control == :pull and
+      pad_data.lacking_buffer_size < @lacking_buffer_size_lowerbound and
+      Enum.all?(pad_data.associated_pads, &demand_counter_positive?(&1, state))
   end
 
   defp demand_counter_positive?(pad_ref, state) do

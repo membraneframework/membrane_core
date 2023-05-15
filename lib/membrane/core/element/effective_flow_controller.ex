@@ -118,7 +118,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
       {pad_ref, %{direction: :input} = pad_data}, state ->
         :ok = DemandCounter.set_receiver_mode(pad_data.demand_counter, new_effective_flow_control)
-        AutoFlowUtils.increase_demand_counter_if_needed(pad_ref, state)
+        AutoFlowUtils.auto_adjust_demand_counter(pad_ref, state)
     end)
   end
 end

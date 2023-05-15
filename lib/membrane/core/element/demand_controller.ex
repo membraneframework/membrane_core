@@ -50,7 +50,7 @@ defmodule Membrane.Core.Element.DemandController do
     } = pad_data
 
     if DemandCounter.get(demand_counter) > 0 do
-      AutoFlowUtils.increase_demand_counter_if_needed(associated_pads, state)
+      AutoFlowUtils.auto_adjust_demand_counter(associated_pads, state)
     else
       state
     end

@@ -11,7 +11,7 @@ defmodule Membrane.Core.Element.DemandCounter do
   require Membrane.Logger
   require Membrane.Pad, as: Pad
 
-  @default_toilet_capacity_factor -200
+  @default_toilet_capacity_factor 200
   @default_throttling_factor 1
   @distributed_default_throttling_factor 150
 
@@ -155,7 +155,7 @@ defmodule Membrane.Core.Element.DemandCounter do
     if not demand_counter.toilet_overflowed? and
          get_receiver_mode(demand_counter) == :pull and
          get_sender_mode(demand_counter) == :push and
-         counter_value < demand_counter.toilet_capacity do
+         -1 * counter_value > demand_counter.toilet_capacity do
       overflow(demand_counter, counter_value)
     else
       demand_counter

@@ -63,7 +63,7 @@ defmodule Membrane.Core.Element.BufferController do
     state =
       PadModel.set_data!(state, pad_ref, :lacking_buffer_size, lacking_buffer_size - buf_size)
 
-    state = AutoFlowUtils.increase_demand_counter_if_needed(pad_ref, state)
+    state = AutoFlowUtils.auto_adjust_demand_counter(pad_ref, state)
     exec_buffer_callback(pad_ref, buffers, state)
   end
 
