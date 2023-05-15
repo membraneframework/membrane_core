@@ -52,7 +52,7 @@ defmodule Membrane.Core.Element.PadController do
           | {:error, {:neighbor_child_dead, reason :: any()}}
           | {:error, {:unknown_pad, name :: Membrane.Child.name(), pad_ref :: Pad.ref()}}
 
-  @default_auto_demand_size_factor 4000
+  @default_auto_demand_size_factor 400
 
   @doc """
   Verifies linked pad, initializes it's data.

@@ -37,12 +37,16 @@ defmodule Membrane.Element.PadData do
           pid: private_field,
           other_ref: private_field,
           input_queue: private_field,
-          demand_snapshot: integer() | nil,
           incoming_demand: integer() | nil,
           demand_unit: private_field,
           other_demand_unit: private_field,
           auto_demand_size: private_field,
           sticky_messages: private_field,
+
+          # Used only for output pads with :pull or :auto flow control. Holds the last captured value of DemandCounter,
+          # decreased by the size of buffers sent via specific pad since the last capture, expressed in the appropriate metric.
+          # Moment, when demand_snapshot value drops to 0 or less, triggers another capture of DemandCounter value.
+          demand_snapshot: integer() | nil,
 
           # Instance of DemandCounter shared by both sides of link. Holds amount of data, that has been demanded by the element
           # with input pad, but hasn't been sent yet by the element with output pad. Detects toilet overflow as well.

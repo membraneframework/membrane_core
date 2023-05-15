@@ -9,9 +9,6 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Pad, as: Pad
 
-  @lacking_buffer_size_lowerbound 200
-  @lacking_buffer_size_upperbound 400
-
   defguardp is_input_auto_pad_data(pad_data)
             when is_map(pad_data) and is_map_key(pad_data, :flow_control) and
                    pad_data.flow_control == :auto and is_map_key(pad_data, :direction) and
@@ -29,14 +26,14 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   defp do_auto_adjust_demand_counter(pad_data, state) when is_input_auto_pad_data(pad_data) do
     if increase_demand_counter?(pad_data, state) do
-      diff = @lacking_buffer_size_upperbound - pad_data.lacking_buffer_size
+      diff = pad_data.auto_demand_size - pad_data.lacking_buffer_size
       :ok = DemandCounter.increase(pad_data.demand_counter, diff)
 
       PadModel.set_data!(
         state,
         pad_data.ref,
         :lacking_buffer_size,
-        @lacking_buffer_size_upperbound
+        pad_data.auto_demand_size
       )
     else
       state
@@ -49,7 +46,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   defp increase_demand_counter?(pad_data, state) do
     state.effective_flow_control == :pull and
-      pad_data.lacking_buffer_size < @lacking_buffer_size_lowerbound and
+      pad_data.lacking_buffer_size < pad_data.auto_demand_size / 2 and
       Enum.all?(pad_data.associated_pads, &demand_counter_positive?(&1, state))
   end
 
