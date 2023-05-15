@@ -26,6 +26,7 @@ defmodule Membrane.Core.Child.PadModel do
           availability: Pad.availability(),
           stream_format: Membrane.StreamFormat.t() | nil,
           demand_snapshot: integer() | nil,
+          manual_demand_size: integer(),
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
           direction: Pad.direction(),

@@ -54,7 +54,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "delaying demand", %{state: state} do
       state = %{state | playback: :playing, supplying_demand?: true}
       state = @module.handle_action({:demand, {:input, 10}}, :handle_info, %{}, state)
-      assert state.pads_data.input.demand_snapshot == 10
+      assert state.pads_data.input.manual_demand_size == 10
       assert MapSet.new([{:input, :supply}]) == state.delayed_demands
     end
 
