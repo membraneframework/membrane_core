@@ -500,6 +500,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   def handle_remove_children(children_or_children_groups, state) do
     children_or_children_groups = Bunch.listify(children_or_children_groups)
 
+    :ok = ensure_removed_children_exist!(children_or_children_groups, state)
+
     refs =
       state.children
       |> Enum.filter(fn {child_ref, child_entry} ->
@@ -532,6 +534,28 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = remove_children_from_specs(children_names, state)
 
     Parent.ChildrenModel.update_children!(state, refs, &%{&1 | terminating?: true})
+  end
+
+  defp ensure_removed_children_exist!(removed_children_or_groups, state) do
+    children_groups =
+      MapSet.new(state.children, fn {_ref, data} -> data.group end)
+      |> MapSet.delete(nil)
+
+    removed_children_or_groups
+    |> Enum.reject(fn name ->
+      Map.has_key?(state.children, name) or MapSet.member?(children_groups, name)
+    end)
+    |> case do
+      [] ->
+        :ok
+
+      children_refs ->
+        raise Membrane.ParentError, """
+        Trying to remove children #{Enum.map_join(children_refs, ", ", &inspect/1)}, while such children or children groups do not exist.
+        Existing children are: #{Map.keys(state.children) |> inspect(pretty: true)}
+        Existing children groups are: #{MapSet.to_list(children_groups) |> inspect(pretty: true)}
+        """
+    end
   end
 
   @spec handle_remove_link(Child.name(), Pad.ref(), Parent.state()) ::
