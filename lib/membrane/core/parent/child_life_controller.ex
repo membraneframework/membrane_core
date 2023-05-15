@@ -541,16 +541,17 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       MapSet.new(state.children, fn {_ref, data} -> data.group end)
       |> MapSet.delete(nil)
 
-    Enum.find(removed_children_or_groups, fn name ->
-      not Map.has_key?(state.children, name) and not MapSet.member?(children_groups, name)
+    removed_children_or_groups
+    |> Enum.reject(fn name ->
+      Map.has_key?(state.children, name) or MapSet.member?(children_groups, name)
     end)
     |> case do
-      nil ->
+      [] ->
         :ok
 
-      child_ref ->
+      children_refs ->
         raise Membrane.ParentError, """
-        Trying to remove child #{inspect(child_ref)}, while such a child or children group does not exist.
+        Trying to remove children #{Enum.map_join(children_refs, ", ", &inspect/1)}, while such children or children groups do not exist.
         Existing children are: #{Map.keys(state.children) |> inspect(pretty: true)}
         Existing children groups are: #{MapSet.to_list(children_groups) |> inspect(pretty: true)}
         """
