@@ -1,6 +1,7 @@
 defmodule Membrane.Debug.Filter do
   @moduledoc """
   Membrane Filter, that can be used to create a child that will be used to debug data flowing thouth pipeline.
+
   Any buffers, stream formats and events arriving to #{__MODULE__} will be forwarded by it to the opposite
   side than the one from which they came.
 
@@ -64,16 +65,9 @@ defmodule Membrane.Debug.Filter do
   end
 
   @impl true
-  def handle_event(pad, event, _ctx, state) do
+  def handle_event(_pad, event, _ctx, state) do
     _ingored = state.handle_event.(event)
-
-    opposite_pad =
-      case pad do
-        :input -> :output
-        :output -> :input
-      end
-
-    {[event: {opposite_pad, event}], state}
+    {[forward: event], state}
   end
 
   @impl true
