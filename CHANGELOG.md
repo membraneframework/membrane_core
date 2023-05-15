@@ -19,6 +19,7 @@
  * Introduce support for crash groups in Bins. [#521](https://github.com/membraneframework/membrane_core/pull/521)
  * Remove `assert_pipeline_play/2` from `Membrane.Testing.Assertions`. [#528](https://github.com/membraneframework/membrane_core/pull/528)
  * Make sure enumerable with all elements being `Membrane.Buffer.t()`, passed as `:output` parameter for `Membrane.Testing.Source` won't get rewrapped in `Membrane.Buffer.t()` struct.
+ * Rename `Membrane.Testing.Pipeline.message_child/3` to `Membrane.Testing.Pipeline.notify_child/3`. [#555](https://github.com/membraneframework/membrane_core/pull/555)
  
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
