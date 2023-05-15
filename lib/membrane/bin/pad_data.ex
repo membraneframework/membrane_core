@@ -16,6 +16,7 @@ defmodule Membrane.Bin.PadData do
 
   @type private_field :: term()
 
+  @typedoc @moduledoc
   @type t :: %__MODULE__{
           ref: Membrane.Pad.ref(),
           options: Membrane.ChildrenSpec.pad_options(),

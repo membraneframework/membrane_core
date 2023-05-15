@@ -13,6 +13,7 @@ defmodule Membrane.Buffer do
 
   @type metadata :: map
 
+  @typedoc @moduledoc
   @type t :: %Buffer{
           pts: Time.t() | nil,
           dts: Time.t() | nil,

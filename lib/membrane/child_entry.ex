@@ -13,6 +13,7 @@ defmodule Membrane.ChildEntry do
   """
   use Bunch.Access
 
+  @typedoc @moduledoc
   @type t :: %__MODULE__{
           name: Membrane.Child.name(),
           module: module,

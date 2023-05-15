@@ -24,6 +24,9 @@ defmodule Membrane.ResourceGuard do
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
 
+  @typedoc """
+  Utility for handling resources that must be cleaned up after use
+  """
   @type t :: pid()
 
   @spec start_link(owner_pid :: pid) :: {:ok, t}

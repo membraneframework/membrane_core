@@ -24,6 +24,7 @@ defmodule Membrane.Element.PadData do
 
   @type private_field :: term()
 
+  @typedoc @moduledoc
   @type t :: %__MODULE__{
           availability: Pad.availability(),
           stream_format: StreamFormat.t() | nil,

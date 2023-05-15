@@ -17,6 +17,10 @@ defmodule Membrane.UtilitySupervisor do
       end
 
   """
+
+  @typedoc """
+  The pid of the `Membrane.UtilitySupervisor` process.
+  """
   @type t :: pid()
 
   @doc """
