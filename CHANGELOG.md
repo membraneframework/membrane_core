@@ -20,6 +20,7 @@
  * Remove `assert_pipeline_play/2` from `Membrane.Testing.Assertions`. [#528](https://github.com/membraneframework/membrane_core/pull/528)
  * Make sure enumerable with all elements being `Membrane.Buffer.t()`, passed as `:output` parameter for `Membrane.Testing.Source` won't get rewrapped in `Membrane.Buffer.t()` struct.
  * Rename `Membrane.Testing.Pipeline.message_child/3` to `Membrane.Testing.Pipeline.notify_child/3`. [#555](https://github.com/membraneframework/membrane_core/pull/555)
+ * Implement `Membrane.Debug.Filter` and `Membrane.Debug.Sink`. [#552](https://github.com/membraneframework/membrane_core/pull/552)
  
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
@@ -39,8 +40,7 @@
  * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)
  * Make `Membrane.Pipeline.{prepare, play, stop}` deprecated and add `:playback` action instead
  * Make `Membrane.Pipeline.stop_and_terminate` deprecated and add `Membrane.Pipeline.terminate/2` instead
- * Add `Membrane.RemoteControlled.Pipeline` - a basic implementation of a `Membrane.Pipeline` that </br>
-   can be spawned and controlled by an external process [#366](https://github.com/membraneframework/membrane_core/pull/366)
+ * Add `Membrane.RemoteControlled.Pipeline` - a basic implementation of a `Membrane.Pipeline` that can be spawned and controlled by an external process [#366](https://github.com/membraneframework/membrane_core/pull/366)
  * Disallow sending buffers without sending caps first [#341](https://github.com/membraneframework/membrane_core/issues/341)
  * Refine the `Membrane.Testing.Pipeline` API - deprecate the `Membrane.Testing.Pipeline.Options` usage, use keyword list as options in `Membrane.Testing.Pipeline.start/1` and `Membrane.Testing.Pipeline.start_link/1`
 
