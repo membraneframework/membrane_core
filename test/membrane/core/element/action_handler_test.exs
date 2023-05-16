@@ -92,6 +92,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             pid: self(),
             other_ref: :other_ref,
             stream_format: nil,
+            demand_unit: :bytes,
             other_demand_unit: :bytes,
             start_of_stream?: true,
             end_of_stream?: false,

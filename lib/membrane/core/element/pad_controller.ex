@@ -152,8 +152,10 @@ defmodule Membrane.Core.Element.PadController do
     {output_demand_unit, input_demand_unit} = resolve_demand_units(other_info, info)
 
     link_metadata =
-      Map.put(link_metadata, :input_demand_unit, input_demand_unit)
-      |> Map.put(:output_demand_unit, output_demand_unit)
+      Map.merge(link_metadata, %{
+        input_demand_unit: input_demand_unit,
+        output_demand_unit: output_demand_unit
+      })
 
     pad_effective_flow_control =
       EffectiveFlowController.get_pad_effective_flow_control(endpoint.pad_ref, state)
@@ -375,7 +377,7 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp init_pad_mode_data(
-         %{flow_control: :auto, direction: direction},
+         %{flow_control: :auto, direction: direction} = data,
          props,
          _other_info,
          _metadata,
@@ -388,12 +390,17 @@ defmodule Membrane.Core.Element.PadController do
       |> Enum.map(& &1.ref)
 
     auto_demand_size =
-      if direction == :input do
-        props.auto_demand_size ||
-          Membrane.Buffer.Metric.Count.buffer_size_approximation() *
-            @default_auto_demand_size_factor
-      else
-        nil
+      cond do
+        direction == :output ->
+          nil
+
+        props.auto_demand_size != nil ->
+          props.auto_demand_size
+
+        true ->
+          demand_unit = data.other_demand_unit || data.demand_unit || :buffers
+          metric = Membrane.Buffer.Metric.from_unit(demand_unit)
+          metric.buffer_size_approximation() * @default_auto_demand_size_factor
       end
 
     %{

@@ -62,8 +62,6 @@ defmodule Membrane.Core.Element.DemandController do
          demand_counter_value
          when demand_counter_value > 0 and demand_counter_value > demand_snapshot <-
            DemandCounter.get(demand_counter) do
-      # pole demand_snapshot powinno brac uwage konwersję demand unitu
-
       state =
         PadModel.update_data!(
           state,
@@ -91,7 +89,9 @@ defmodule Membrane.Core.Element.DemandController do
   @spec decrease_demand_by_outgoing_buffers(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
   def decrease_demand_by_outgoing_buffers(pad_ref, buffers, state) do
     pad_data = PadModel.get_data!(state, pad_ref)
-    buffers_size = Buffer.Metric.from_unit(pad_data.other_demand_unit).buffers_size(buffers)
+
+    demand_unit = pad_data.demand_unit || pad_data.other_demand_unit || :buffers
+    buffers_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
 
     demand_snapshot = pad_data.demand_snapshot - buffers_size
     demand_counter = DemandCounter.decrease(pad_data.demand_counter, buffers_size)
