@@ -84,7 +84,7 @@ defmodule Membrane.Core.Bin.PadController do
   @spec remove_pad(Pad.ref(), State.t()) :: State.t()
   def remove_pad(pad_ref, state) do
     cond do
-      # This is to handle case when bin removes his own pad and removes a child linked to this pad
+      # This is to handle the case when a bin pad is removed and then the bin removes its child linked to this pad
       Pad.is_dynamic_pad_ref(pad_ref) and PadModel.assert_instance(state, pad_ref) != :ok ->
         state
 
