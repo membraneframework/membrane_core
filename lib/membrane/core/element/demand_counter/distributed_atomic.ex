@@ -19,7 +19,7 @@ defmodule Membrane.Core.Element.DemandCounter.DistributedAtomic do
   @spec new(integer() | nil) :: t
   def new(initial_value \\ nil) do
     atomic_ref = :atomics.new(1, [])
-    {:ok, worker} = Worker.start_link()
+    {:ok, worker} = Worker.start_link(self())
 
     distributed_atomic = %__MODULE__{
       atomic_ref: atomic_ref,

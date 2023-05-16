@@ -8,12 +8,13 @@ defmodule Membrane.Core.Element.DemandCounter.DistributedAtomic.Worker do
 
   @type t :: pid()
 
-  @spec start_link() :: {:ok, t}
-  def start_link(), do: GenServer.start_link(__MODULE__, nil)
+  @spec start_link(pid()) :: {:ok, t}
+  def start_link(owner_pid), do: GenServer.start_link(__MODULE__, owner_pid)
 
   @impl true
-  def init(_arg) do
-    {:ok, nil, :hibernate}
+  def init(owner_pid) do
+    ref = Process.monitor(owner_pid)
+    {:ok, %{ref: ref}, :hibernate}
   end
 
   @impl true
@@ -38,5 +39,10 @@ defmodule Membrane.Core.Element.DemandCounter.DistributedAtomic.Worker do
   def handle_cast({:put, atomic_ref, value}, _state) do
     :atomics.put(atomic_ref, 1, value)
     {:noreply, nil}
+  end
+
+  @impl true
+  def handle_info({:DOWN, ref, _process, _pid, _reason}, %{ref: ref} = state) do
+    {:stop, :normal, state}
   end
 end
