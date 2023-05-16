@@ -14,7 +14,9 @@ defmodule Membrane.Element.Base do
   receive (input pads) data. For more information on pads, see
   `Membrane.Pad`.
 
-  To implement an element, one of base modules (`Membrane.Source`,
+  Note: This module (`Membrane.Element.Base`) should not be `use`d directly.
+
+  To implement an element, one of the following base modules (`Membrane.Source`,
   `Membrane.Filter`, `Membrane.Endpoint` or `Membrane.Sink`)
   has to be `use`d, depending on the element type:
   - source, producing buffers (contain only output pads),
@@ -23,27 +25,6 @@ defmodule Membrane.Element.Base do
   - sink, consuming buffers (contain only input pads).
   For more information on each element type, check documentation for appropriate
   base module.
-
-  ## Behaviours
-  Element-specific behaviours are specified in modules:
-  - `Membrane.Element.Base` - this module, behaviour common to all
-  elements,
-  - `Membrane.Element.WithOutputPads` - behaviour common to sources,
-  filters and endpoints
-  - `Membrane.Element.WithInputPads` - behaviour common to sinks,
-  filters and endpoints
-  - Base modules (`Membrane.Source`, `Membrane.Filter`, `Membrane.Endpoint`,
-  `Membrane.Sink`) - behaviours specific to each element type.
-
-  ## Callbacks
-  Modules listed above provide specifications of callbacks that define elements
-  lifecycle. All of these callbacks have names with the `handle_` prefix.
-  They are used to define reaction to certain events that happen during runtime,
-  and indicate what actions framework should undertake as a result, besides
-  executing element-specific code.
-
-  For actions that can be returned by each callback, see `Membrane.Element.Action`
-  module.
   """
 
   use Bunch
@@ -243,13 +224,20 @@ defmodule Membrane.Element.Base do
 
   Options:
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
+    - `:bring_child?` - if true (default) requires and aliases `Membrane.Child`
   """
   defmacro __using__(options) do
     bring_pad =
-      if options |> Keyword.get(:bring_pad?, true) do
+      if Keyword.get(options, :bring_pad?, true) do
         quote do
-          require Membrane.Pad
-          alias Membrane.Pad
+          require Membrane.Pad, as: Pad
+        end
+      end
+
+    bring_child =
+      if Keyword.get(options, :bring_child?, true) do
+        quote do
+          require Membrane.Child, as: Child
         end
       end
 
@@ -267,6 +255,7 @@ defmodule Membrane.Element.Base do
       Membrane.Core.Child.PadsSpecs.ensure_default_membrane_pads()
 
       unquote(bring_pad)
+      unquote(bring_child)
 
       @doc false
       @spec membrane_element?() :: true

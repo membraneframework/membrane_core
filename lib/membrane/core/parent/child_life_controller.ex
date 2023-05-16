@@ -3,7 +3,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   use Bunch
 
   alias __MODULE__.{CrashGroupUtils, LinkUtils, StartupUtils}
-  alias Membrane.{Child, ChildrenSpec}
+  alias Membrane.ChildrenSpec
   alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
 
   alias Membrane.Core.Parent.{
@@ -18,6 +18,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias Membrane.Pad
   alias Membrane.ParentError
 
+  require Membrane.Child, as: Child
   require Membrane.Core.Component
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
@@ -208,6 +209,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {:ok, options} =
       Bunch.Config.parse(options_keywords_list, @children_spec_options_fields_specs)
 
+    this_level_specs = equip_spec_with_children_refs(this_level_specs, options)
+
     options = Map.merge(defaults, options)
 
     options_to_pass_to_nested =
@@ -215,8 +218,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       |> Map.new()
 
     defaults_for_nested = Map.merge(@default_children_spec_options, options_to_pass_to_nested)
-
-    this_level_specs = equip_spec_with_children_refs(this_level_specs, options.group)
 
     [{this_level_specs, options}] ++
       Enum.flat_map(inner_specs, &make_canonical(&1, defaults_for_nested))
@@ -229,42 +230,48 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp make_canonical(spec, defaults) do
     spec = Bunch.listify(spec)
     {:ok, options} = Bunch.Config.parse([], @children_spec_options_fields_specs)
+    spec = equip_spec_with_children_refs(spec, options)
     options = Map.merge(defaults, options)
-    spec = equip_spec_with_children_refs(spec, options.group)
     [{spec, options}]
   end
 
-  defp equip_spec_with_children_refs(specification_builders, group) do
+  defp equip_spec_with_children_refs(specification_builders, options) do
     Enum.map(specification_builders, fn specification_builder ->
       children =
-        Enum.map(specification_builder.children, fn {child_name, child_definition, options} ->
-          child_ref = get_child_ref(child_name, group)
-          {child_ref, child_definition, options}
+        Enum.map(specification_builder.children, fn {child_name, child_definition, child_options} ->
+          child_ref = get_child_ref(child_name, options)
+          {child_ref, child_definition, child_options}
         end)
 
-      links = Enum.map(specification_builder.links, &equip_link_with_child_ref(&1, group))
+      links = Enum.map(specification_builder.links, &equip_link_with_child_ref(&1, options))
       %{specification_builder | children: children, links: links}
     end)
   end
 
-  defp equip_link_with_child_ref(link, group) do
+  defp equip_link_with_child_ref(link, options) do
     Bunch.Access.put_in(
       link,
       [:from],
-      get_child_ref(link.from, group)
+      get_child_ref(link.from, options)
     )
     |> Bunch.Access.put_in(
       [:to],
-      get_child_ref(link.to, group)
+      get_child_ref(link.to, options)
     )
   end
 
-  defp get_child_ref(child_name_or_ref, group) do
+  defp get_child_ref(child_name_or_ref, options) do
     case child_name_or_ref do
       # child name created with child(...)
-      {:child_name, child_name} -> Child.ref(child_name, group: group)
+      {:child_name, child_name} when is_map_key(options, :group) ->
+        Child.ref(child_name, group: options.group)
+
+      {:child_name, child_name} ->
+        Child.ref(child_name)
+
       # child name created with get_child(...), bin_input() and bin_output()
-      {:child_ref, ref} -> ref
+      {:child_ref, ref} ->
+        ref
     end
   end
 
@@ -493,6 +500,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   def handle_remove_children(children_or_children_groups, state) do
     children_or_children_groups = Bunch.listify(children_or_children_groups)
 
+    :ok = ensure_removed_children_exist!(children_or_children_groups, state)
+
     refs =
       state.children
       |> Enum.filter(fn {child_ref, child_entry} ->
@@ -525,6 +534,28 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = remove_children_from_specs(children_names, state)
 
     Parent.ChildrenModel.update_children!(state, refs, &%{&1 | terminating?: true})
+  end
+
+  defp ensure_removed_children_exist!(removed_children_or_groups, state) do
+    children_groups =
+      MapSet.new(state.children, fn {_ref, data} -> data.group end)
+      |> MapSet.delete(nil)
+
+    removed_children_or_groups
+    |> Enum.reject(fn name ->
+      Map.has_key?(state.children, name) or MapSet.member?(children_groups, name)
+    end)
+    |> case do
+      [] ->
+        :ok
+
+      children_refs ->
+        raise Membrane.ParentError, """
+        Trying to remove children #{Enum.map_join(children_refs, ", ", &inspect/1)}, while such children or children groups do not exist.
+        Existing children are: #{Map.keys(state.children) |> inspect(pretty: true)}
+        Existing children groups are: #{MapSet.to_list(children_groups) |> inspect(pretty: true)}
+        """
+    end
   end
 
   @spec handle_remove_link(Child.name(), Pad.ref(), Parent.state()) ::

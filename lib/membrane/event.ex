@@ -10,6 +10,7 @@ defmodule Membrane.Event do
 
   alias Membrane.EventProtocol
 
+  @typedoc @moduledoc
   @type t :: EventProtocol.t()
 
   @spec event?(t()) :: boolean

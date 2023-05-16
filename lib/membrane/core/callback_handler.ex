@@ -54,7 +54,7 @@ defmodule Membrane.Core.CallbackHandler do
   def exec_and_handle_callback(
         callback,
         handler_module,
-        handler_params \\ %{},
+        handler_params,
         args,
         state
       )
@@ -75,7 +75,7 @@ defmodule Membrane.Core.CallbackHandler do
         callback,
         original_callback,
         handler_module,
-        handler_params \\ %{},
+        handler_params,
         args_list,
         state
       )
@@ -122,16 +122,10 @@ defmodule Membrane.Core.CallbackHandler do
   defp exec_callback(
          callback,
          args,
-         handler_params,
+         %{context: context_fun},
          %{module: module, internal_state: internal_state} = state
        ) do
-    maybe_context =
-      case handler_params do
-        %{context: context_fun} -> [context_fun.(state)]
-        _params -> []
-      end
-
-    args = args ++ maybe_context ++ [internal_state]
+    args = args ++ [context_fun.(state), internal_state]
 
     callback_result =
       try do

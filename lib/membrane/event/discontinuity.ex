@@ -16,5 +16,6 @@ defmodule Membrane.Event.Discontinuity do
 
   defstruct duration: nil
 
+  @typedoc @moduledoc
   @type t :: %__MODULE__{duration: duration}
 end
