@@ -1,10 +1,11 @@
 defmodule Membrane.Core.Element.DemandCounter do
   @moduledoc false
+  alias Membrane.Core.Element.DemandCounter.DistributedFlowStatus
   alias Membrane.Core.Element.EffectiveFlowController
 
   alias __MODULE__.{
     DistributedAtomic,
-    DistributedFlowMode
+    DistributedFlowStatus
   }
 
   require Membrane.Core.Message, as: Message
@@ -17,9 +18,9 @@ defmodule Membrane.Core.Element.DemandCounter do
 
   @opaque t :: %__MODULE__{
             counter: DistributedAtomic.t(),
-            receiver_mode: DistributedFlowMode.t(),
+            receiver_status: DistributedFlowStatus.t(),
             receiver_process: Process.dest(),
-            sender_mode: DistributedFlowMode.t(),
+            sender_status: DistributedFlowStatus.t(),
             sender_process: Process.dest(),
             sender_pad_ref: Pad.ref(),
             toilet_capacity: neg_integer(),
@@ -29,13 +30,13 @@ defmodule Membrane.Core.Element.DemandCounter do
             receiver_demand_unit: Membrane.Buffer.Metric.unit()
           }
 
-  @type flow_mode :: DistributedFlowMode.flow_mode_value()
+  @type flow_mode :: DistributedFlowStatus.value()
 
   @enforce_keys [
     :counter,
-    :receiver_mode,
+    :receiver_status,
     :receiver_process,
-    :sender_mode,
+    :sender_status,
     :sender_process,
     :sender_pad_ref,
     :throttling_factor,
@@ -46,7 +47,7 @@ defmodule Membrane.Core.Element.DemandCounter do
   defstruct @enforce_keys ++ [buffered_decrementation: 0, toilet_overflowed?: false]
 
   @spec new(
-          receiver_mode :: EffectiveFlowController.effective_flow_control(),
+          receiver_effective_flow_control :: EffectiveFlowController.effective_flow_control(),
           receiver_process :: Process.dest(),
           receiver_demand_unit :: Membrane.Buffer.Metric.unit(),
           sender_process :: Process.dest(),
@@ -55,7 +56,7 @@ defmodule Membrane.Core.Element.DemandCounter do
           throttling_factor :: pos_integer() | nil
         ) :: t
   def new(
-        receiver_mode,
+        receiver_effective_flow_control,
         receiver_process,
         receiver_demand_unit,
         sender_process,
@@ -72,11 +73,13 @@ defmodule Membrane.Core.Element.DemandCounter do
         true -> @distributed_default_throttling_factor
       end
 
+    receiver_status = DistributedFlowStatus.new({:resolved, receiver_effective_flow_control})
+
     %__MODULE__{
       counter: counter,
-      receiver_mode: DistributedFlowMode.new(receiver_mode),
+      receiver_status: receiver_status,
       receiver_process: receiver_process,
-      sender_mode: DistributedFlowMode.new(:to_be_resolved),
+      sender_status: DistributedFlowStatus.new(:to_be_resolved),
       sender_process: sender_process,
       sender_pad_ref: sender_pad_ref,
       toilet_capacity: toilet_capacity || default_toilet_capacity(receiver_demand_unit),
@@ -85,30 +88,30 @@ defmodule Membrane.Core.Element.DemandCounter do
     }
   end
 
-  @spec set_sender_mode(t, EffectiveFlowController.effective_flow_control()) :: :ok
-  def set_sender_mode(%__MODULE__{} = demand_counter, mode) do
-    DistributedFlowMode.put(
-      demand_counter.sender_mode,
+  @spec set_sender_status(t, DistributedFlowStatus.value()) :: :ok
+  def set_sender_status(%__MODULE__{} = demand_counter, mode) do
+    DistributedFlowStatus.put(
+      demand_counter.sender_status,
       mode
     )
   end
 
-  @spec get_sender_mode(t) :: flow_mode()
-  def get_sender_mode(%__MODULE__{} = demand_counter) do
-    DistributedFlowMode.get(demand_counter.sender_mode)
+  @spec get_sender_status(t) :: DistributedFlowStatus.value()
+  def get_sender_status(%__MODULE__{} = demand_counter) do
+    DistributedFlowStatus.get(demand_counter.sender_status)
   end
 
-  @spec set_receiver_mode(t, flow_mode()) :: :ok
-  def set_receiver_mode(%__MODULE__{} = demand_counter, mode) do
-    DistributedFlowMode.put(
-      demand_counter.receiver_mode,
+  @spec set_receiver_status(t, DistributedFlowStatus.value()) :: :ok
+  def set_receiver_status(%__MODULE__{} = demand_counter, mode) do
+    DistributedFlowStatus.put(
+      demand_counter.receiver_status,
       mode
     )
   end
 
-  @spec get_receiver_mode(t) :: flow_mode()
-  def get_receiver_mode(%__MODULE__{} = demand_counter) do
-    DistributedFlowMode.get(demand_counter.receiver_mode)
+  @spec get_receiver_status(t) :: DistributedFlowStatus.value()
+  def get_receiver_status(%__MODULE__{} = demand_counter) do
+    DistributedFlowStatus.get(demand_counter.receiver_status)
   end
 
   @spec increase(t, non_neg_integer()) :: :ok
@@ -153,8 +156,8 @@ defmodule Membrane.Core.Element.DemandCounter do
     demand_counter = %{demand_counter | buffered_decrementation: 0}
 
     if not demand_counter.toilet_overflowed? and
-         get_receiver_mode(demand_counter) == :pull and
-         get_sender_mode(demand_counter) == :push and
+         get_receiver_status(demand_counter) == {:resolved, :pull} and
+         get_sender_status(demand_counter) == {:resolved, :push} and
          -1 * counter_value > demand_counter.toilet_capacity do
       overflow(demand_counter, counter_value)
     else

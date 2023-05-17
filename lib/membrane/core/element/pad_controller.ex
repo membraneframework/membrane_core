@@ -194,7 +194,19 @@ defmodule Membrane.Core.Element.PadController do
         state
       )
 
-    state = PadController.handle_input_pad_added(endpoint.pad_ref, state)
+    state =
+      case PadModel.get_data!(state, endpoint.pad_ref) do
+        %{flow_control: :auto, direction: :input} = pad_data ->
+          EffectiveFlowController.handle_sender_effective_flow_control(
+            pad_data.ref,
+            pad_data.other_effective_flow_control,
+            state
+          )
+
+        _pad_data ->
+          state
+      end
+
     state = maybe_handle_pad_added(endpoint.pad_ref, state)
     {{:ok, {endpoint, info, link_metadata}}, state}
   end
@@ -244,18 +256,6 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  @spec handle_input_pad_added(Pad.ref(), State.t()) :: State.t()
-  def handle_input_pad_added(pad_ref, state) do
-    with %{pads_data: %{^pad_ref => %{flow_control: :auto, direction: :input} = pad_data}} <-
-           state do
-      EffectiveFlowController.handle_sender_effective_flow_control(
-        pad_ref,
-        pad_data.other_effective_flow_control,
-        state
-      )
-    end
-  end
-
   defp resolve_demand_units(output_info, input_info) do
     output_demand_unit =
       if output_info[:flow_control] == :push,
@@ -299,9 +299,9 @@ defmodule Membrane.Core.Element.PadController do
       })
 
     :ok =
-      DemandCounter.set_sender_mode(
+      DemandCounter.set_sender_status(
         data.demand_counter,
-        EffectiveFlowController.get_pad_effective_flow_control(data.ref, state)
+        {:resolved, EffectiveFlowController.get_pad_effective_flow_control(data.ref, state)}
       )
 
     data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, metadata, state))

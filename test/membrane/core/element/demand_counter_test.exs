@@ -44,17 +44,25 @@ defmodule Membrane.Core.Element.DemandCounterTest do
   test "if setting receiver and sender modes works properly" do
     demand_counter = DemandCounter.new(:pull, self(), :buffers, self(), :output)
 
-    :ok = DemandCounter.set_receiver_mode(demand_counter, :push)
-    assert DemandCounter.DistributedFlowMode.get(demand_counter.receiver_mode) == :push
+    :ok = DemandCounter.set_receiver_status(demand_counter, {:resolved, :push})
 
-    :ok = DemandCounter.set_receiver_mode(demand_counter, :pull)
-    assert DemandCounter.DistributedFlowMode.get(demand_counter.receiver_mode) == :pull
+    assert DemandCounter.DistributedFlowStatus.get(demand_counter.receiver_status) ==
+             {:resolved, :push}
 
-    :ok = DemandCounter.set_sender_mode(demand_counter, :push)
-    assert DemandCounter.DistributedFlowMode.get(demand_counter.sender_mode) == :push
+    :ok = DemandCounter.set_receiver_status(demand_counter, {:resolved, :pull})
 
-    :ok = DemandCounter.set_sender_mode(demand_counter, :pull)
-    assert DemandCounter.DistributedFlowMode.get(demand_counter.sender_mode) == :pull
+    assert DemandCounter.DistributedFlowStatus.get(demand_counter.receiver_status) ==
+             {:resolved, :pull}
+
+    :ok = DemandCounter.set_sender_status(demand_counter, {:resolved, :push})
+
+    assert DemandCounter.DistributedFlowStatus.get(demand_counter.sender_status) ==
+             {:resolved, :push}
+
+    :ok = DemandCounter.set_sender_status(demand_counter, {:resolved, :pull})
+
+    assert DemandCounter.DistributedFlowStatus.get(demand_counter.sender_status) ==
+             {:resolved, :pull}
   end
 
   test "if toilet overflows, only and only when it should" do
@@ -64,21 +72,21 @@ defmodule Membrane.Core.Element.DemandCounterTest do
 
     demand_counter = DemandCounter.new(:pull, sleeping_process, :buffers, self(), :output)
 
-    :ok = DemandCounter.set_sender_mode(demand_counter, :push)
+    :ok = DemandCounter.set_sender_status(demand_counter, {:resolved, :push})
     demand_counter = DemandCounter.decrease(demand_counter, 100)
 
     refute_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
 
-    possible_modes = [:push, :pull, :to_be_resolved]
+    possible_statuses = [{:resolved, :push}, {:resolved, :pull}, :to_be_resolved]
 
     demand_counter =
-      for mode_1 <- possible_modes, mode_2 <- possible_modes do
-        {mode_1, mode_2}
+      for status_1 <- possible_statuses, status_2 <- possible_statuses do
+        {status_1, status_2}
       end
-      |> List.delete({:push, :pull})
-      |> Enum.reduce(demand_counter, fn {sender_mode, receiver_mode}, demand_counter ->
-        :ok = DemandCounter.set_sender_mode(demand_counter, sender_mode)
-        :ok = DemandCounter.set_receiver_mode(demand_counter, receiver_mode)
+      |> List.delete({{:resolved, :push}, {:resolved, :pull}})
+      |> Enum.reduce(demand_counter, fn {sender_status, receiver_status}, demand_counter ->
+        :ok = DemandCounter.set_sender_status(demand_counter, sender_status)
+        :ok = DemandCounter.set_receiver_status(demand_counter, receiver_status)
         demand_counter = DemandCounter.decrease(demand_counter, 1000)
 
         refute_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
@@ -86,8 +94,8 @@ defmodule Membrane.Core.Element.DemandCounterTest do
         demand_counter
       end)
 
-    :ok = DemandCounter.set_sender_mode(demand_counter, :push)
-    :ok = DemandCounter.set_receiver_mode(demand_counter, :pull)
+    :ok = DemandCounter.set_sender_status(demand_counter, {:resolved, :push})
+    :ok = DemandCounter.set_receiver_status(demand_counter, {:resolved, :pull})
     _demand_counter = DemandCounter.decrease(demand_counter, 1000)
 
     assert_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
