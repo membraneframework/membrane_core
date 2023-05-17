@@ -222,14 +222,14 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(
-         Message.new(:other_effective_flow_control_resolved, [
+         Message.new(:sender_effective_flow_control_resolved, [
            input_pad_ref,
            effective_flow_control
          ]),
          state
        ) do
     state =
-      EffectiveFlowController.handle_other_effective_flow_control(
+      EffectiveFlowController.handle_sender_effective_flow_control(
         input_pad_ref,
         effective_flow_control,
         state

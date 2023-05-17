@@ -41,13 +41,13 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
     end
   end
 
-  @spec handle_other_effective_flow_control(
+  @spec handle_sender_effective_flow_control(
           Pad.ref(),
           effective_flow_control(),
           State.t()
         ) ::
           State.t()
-  def handle_other_effective_flow_control(input_pad_ref, other_effective_flow_control, state) do
+  def handle_sender_effective_flow_control(input_pad_ref, other_effective_flow_control, state) do
     pad_data = PadModel.get_data!(state, input_pad_ref)
     pad_data = %{pad_data | other_effective_flow_control: other_effective_flow_control}
     state = PadModel.set_data!(state, input_pad_ref, pad_data)
@@ -64,15 +64,15 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
         state
 
       other_effective_flow_control == :pull ->
-        set_effective_flow_control(:pull, state)
+        set_effective_flow_control(:pull, input_pad_ref, state)
 
       other_effective_flow_control == :push ->
-        resolve_effective_flow_control(state)
+        resolve_effective_flow_control(input_pad_ref, state)
     end
   end
 
-  @spec resolve_effective_flow_control(State.t()) :: State.t()
-  def resolve_effective_flow_control(state) do
+  @spec resolve_effective_flow_control(Pad.ref(), State.t()) :: State.t()
+  def resolve_effective_flow_control(last_changed_pad \\ nil, state) do
     senders_flow_modes =
       Map.values(state.pads_data)
       |> Enum.filter(&(&1.direction == :input && &1.flow_control == :auto))
@@ -85,16 +85,17 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
         true -> state.effective_flow_control
       end
 
-    set_effective_flow_control(new_effective_flow_control, state)
+    set_effective_flow_control(new_effective_flow_control, last_changed_pad, state)
   end
 
   defp set_effective_flow_control(
          effective_flow_control,
+         _last_changed_pad,
          %{effective_flow_control: effective_flow_control} = state
        ),
        do: state
 
-  defp set_effective_flow_control(new_effective_flow_control, state) do
+  defp set_effective_flow_control(new_effective_flow_control, last_changed_pad, state) do
     Membrane.Logger.debug(
       "Transiting `flow_control: :auto` pads to #{inspect(new_effective_flow_control)} effective flow control"
     )
@@ -110,11 +111,20 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
         Message.send(
           pad_data.pid,
-          :other_effective_flow_control_resolved,
+          :sender_effective_flow_control_resolved,
           [pad_data.other_ref, new_effective_flow_control]
         )
 
         state
+
+      {pad_ref, %{direction: :input} = pad_data}, state when last_changed_pad != nil ->
+        if pad_ref == last_changed_pad or
+             DemandCounter.get_receiver_mode(pad_data.demand_counter) != :to_be_resolved do
+          :ok =
+            DemandCounter.set_receiver_mode(pad_data.demand_counter, new_effective_flow_control)
+        end
+
+        AutoFlowUtils.auto_adjust_demand_counter(pad_ref, state)
 
       {pad_ref, %{direction: :input} = pad_data}, state ->
         :ok = DemandCounter.set_receiver_mode(pad_data.demand_counter, new_effective_flow_control)

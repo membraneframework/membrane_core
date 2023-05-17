@@ -248,7 +248,7 @@ defmodule Membrane.Core.Element.PadController do
   def handle_input_pad_added(pad_ref, state) do
     with %{pads_data: %{^pad_ref => %{flow_control: :auto, direction: :input} = pad_data}} <-
            state do
-      EffectiveFlowController.handle_other_effective_flow_control(
+      EffectiveFlowController.handle_sender_effective_flow_control(
         pad_ref,
         pad_data.other_effective_flow_control,
         state
