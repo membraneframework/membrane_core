@@ -29,14 +29,12 @@ defmodule Membrane.Core.SubprocessSupervisor do
   Starts a Membrane component under the supervisor
   """
   @spec start_component(
-          pid(),
+          supervisor_pid :: pid(),
           name :: Membrane.Child.name(),
-          # (supervisor_pid, parent_supervisor_pid -> {:ok, child_pid} | {:error, reason :: any()})
           component_module :: Core.Bin | Core.Element,
-          options :: Core.Bin.options() | Core.Element.options()
+          options :: map()
         ) ::
-          {:ok, pid()} | {:error, reason :: any()}
-  # when child_pid: pid(), supervisor_pid: pid(), parent_supervisor_pid: pid
+          {:ok, child_pid :: pid()} | {:error, reason :: any()}
   def start_component(supervisor, name, component_module, options) do
     Message.call!(supervisor, :start_component, [name, component_module, options])
   end
