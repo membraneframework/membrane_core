@@ -205,7 +205,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       log_metadata: log_metadata
     }
 
-    server_module =
+    component_module =
       case child.component_type do
         :element ->
           Core.Element
@@ -220,17 +220,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
           Core.Bin
       end
 
-    start_fun = fn supervisor, parent_supervisor ->
-      server_module.start(
-        Map.merge(params, %{
-          subprocess_supervisor: supervisor,
-          parent_supervisor: parent_supervisor
-        })
-      )
-    end
-
     with {:ok, child_pid} <-
-           SubprocessSupervisor.start_component(supervisor, name, start_fun),
+           SubprocessSupervisor.start_component(supervisor, name, component_module, params),
          {:ok, clock} <- receive_clock(name) do
       %ChildEntry{
         child
