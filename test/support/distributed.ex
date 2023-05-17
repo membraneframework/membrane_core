@@ -64,11 +64,7 @@ defmodule Membrane.Support.Distributed do
 
     @impl true
     def handle_init(_ctx, _opts) do
-      spec =
-        bin_input()
-        |> via_in(:input, toilet_capacity: 100, throttling_factor: 50)
-        |> child(:sink, Sink)
-
+      spec = bin_input() |> child(:sink, Sink)
       {[spec: spec], %{}}
     end
 

@@ -225,18 +225,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
 
       node ->
         {:ok, pid} = :rpc.call(node, GenServer, :start, [__MODULE__, self()])
-
-        try do
-          Process.link(pid)
-        rescue
-          e in ErlangError ->
-            with %ErlangError{original: :noproc} <- e do
-              send(self(), {:EXIT, pid, e.reason})
-            else
-              e -> reraise e, __STACKTRACE__
-            end
-        end
-
+        Process.link(pid)
         pid
     end
   end

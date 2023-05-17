@@ -7,9 +7,9 @@ defmodule Membrane.Integration.DistributedPipelineTest do
   alias Membrane.Testing
 
   setup do
-    {my_node, another_node} = start_nodes()
+    another_node = start_another_node()
     on_exit(fn -> kill_node(another_node) end)
-    [first_node: my_node, second_node: another_node]
+    [first_node: node(self()), second_node: another_node]
   end
 
   test "if distributed pipeline works properly", context do
@@ -38,12 +38,12 @@ defmodule Membrane.Integration.DistributedPipelineTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
-  defp start_nodes() do
+  defp start_another_node() do
     System.cmd("epmd", ["-daemon"])
     _start_result = Node.start(:"first@127.0.0.1", :longnames)
     {:ok, _pid, hostname} = :peer.start(%{host: ~c"127.0.0.1", name: :second})
     :rpc.block_call(hostname, :code, :add_paths, [:code.get_path()])
-    {node(self()), hostname}
+    hostname
   end
 
   defp kill_node(node) do
