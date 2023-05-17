@@ -1,10 +1,10 @@
 defmodule Membrane.Integration.DistributedPipelineTest do
   use ExUnit.Case
 
-  alias Membrane.Testing
-  alias Membrane.Support.Distributed
-
   import Membrane.Testing.Assertions
+
+  alias Membrane.Support.Distributed
+  alias Membrane.Testing
 
   setup do
     {my_node, another_node} = start_nodes()

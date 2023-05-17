@@ -41,7 +41,6 @@ defmodule Membrane.Support.Distributed do
 
   defmodule Sink do
     @moduledoc false
-
     use Membrane.Sink
 
     def_input_pad :input, flow_control: :manual, accepted_format: _any, demand_unit: :buffers
@@ -58,6 +57,7 @@ defmodule Membrane.Support.Distributed do
   end
 
   defmodule SinkBin do
+    @moduledoc false
     use Membrane.Bin
 
     def_input_pad :input, accepted_format: _any
@@ -79,6 +79,7 @@ defmodule Membrane.Support.Distributed do
   end
 
   defmodule Pipeline do
+    @moduledoc false
     use Membrane.Pipeline
 
     @impl true
