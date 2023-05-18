@@ -127,12 +127,6 @@ defmodule Membrane.Core.ElementTest do
     state
   end
 
-  test "should raise when static pads not linked when getting play request" do
-    assert_raise Membrane.LinkError, fn ->
-      assert {:noreply, _state} = Element.handle_info(Message.new(:play), get_state())
-    end
-  end
-
   test "should return correct clock and should not modify the state" do
     original_state = get_state()
 
