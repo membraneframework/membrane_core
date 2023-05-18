@@ -26,13 +26,13 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   defp do_auto_adjust_demand_counter(pad_data, state) when is_input_auto_pad_data(pad_data) do
     if increase_demand_counter?(pad_data, state) do
-      diff = pad_data.auto_demand_size - pad_data.lacking_buffer_size
+      diff = pad_data.auto_demand_size - pad_data.demand
       :ok = DemandCounter.increase(pad_data.demand_counter, diff)
 
       PadModel.set_data!(
         state,
         pad_data.ref,
-        :lacking_buffer_size,
+        :demand,
         pad_data.auto_demand_size
       )
     else
@@ -46,7 +46,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   defp increase_demand_counter?(pad_data, state) do
     state.effective_flow_control == :pull and
-      pad_data.lacking_buffer_size < pad_data.auto_demand_size / 2 and
+      pad_data.demand < pad_data.auto_demand_size / 2 and
       Enum.all?(pad_data.associated_pads, &demand_counter_positive?(&1, state))
   end
 

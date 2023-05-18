@@ -32,7 +32,7 @@ defmodule Membrane.Core.Element.InputQueue do
           log_tag: String.t(),
           target_size: pos_integer(),
           size: non_neg_integer(),
-          lacking_buffer_size: non_neg_integer(),
+          demand: non_neg_integer(),
           inbound_metric: module(),
           outbound_metric: module(),
           linked_output_ref: Pad.ref(),
@@ -49,7 +49,7 @@ defmodule Membrane.Core.Element.InputQueue do
     :linked_output_ref
   ]
 
-  defstruct @enforce_keys ++ [size: 0, lacking_buffer_size: 0]
+  defstruct @enforce_keys ++ [size: 0, demand: 0]
 
   @default_target_size_factor 40
 
@@ -130,7 +130,7 @@ defmodule Membrane.Core.Element.InputQueue do
          %__MODULE__{
            q: q,
            size: size,
-           lacking_buffer_size: lacking_buffer_size,
+           demand: demand,
            inbound_metric: inbound_metric,
            outbound_metric: outbound_metric
          } = input_queue,
@@ -147,7 +147,7 @@ defmodule Membrane.Core.Element.InputQueue do
       input_queue
       | q: q |> @qe.push({:buffers, v, inbound_metric_buffer_size, outbound_metric_buffer_size}),
         size: size + inbound_metric_buffer_size,
-        lacking_buffer_size: lacking_buffer_size - inbound_metric_buffer_size
+        demand: demand - inbound_metric_buffer_size
     }
   end
 
@@ -279,11 +279,11 @@ defmodule Membrane.Core.Element.InputQueue do
            size: size,
            target_size: target_size,
            demand_counter: demand_counter,
-           lacking_buffer_size: lacking_buffer_size
+           demand: demand
          } = input_queue
        )
-       when target_size > size + lacking_buffer_size do
-    diff = max(target_size - size - lacking_buffer_size, div(target_size, 2))
+       when target_size > size + demand do
+    diff = max(target_size - size - demand, div(target_size, 2))
 
     """
     Increasing DemandCounter linked to  #{inspect(input_queue.linked_output_ref)} by #{inspect(diff)}
@@ -292,7 +292,7 @@ defmodule Membrane.Core.Element.InputQueue do
     |> Membrane.Logger.debug_verbose()
 
     :ok = DemandCounter.increase(demand_counter, diff)
-    %{input_queue | lacking_buffer_size: lacking_buffer_size + diff}
+    %{input_queue | demand: demand + diff}
   end
 
   defp maybe_increase_demand_counter(%__MODULE__{} = input_queue), do: input_queue

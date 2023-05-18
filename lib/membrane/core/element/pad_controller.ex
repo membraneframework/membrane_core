@@ -4,7 +4,6 @@ defmodule Membrane.Core.Element.PadController do
   # Module handling linking and unlinking pads.
 
   use Bunch
-  alias Membrane.Core.Element.PadController
   alias Membrane.{LinkError, Pad}
   alias Membrane.Core.{CallbackHandler, Child, Events, Message, Observability}
   alias Membrane.Core.Child.PadModel
