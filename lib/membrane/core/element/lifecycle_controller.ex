@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   use Bunch
 
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.{CallbackHandler, Child, Element, Message}
+  alias Membrane.Core.{CallbackHandler, Element, Message}
   alias Membrane.Core.Element.{ActionHandler, CallbackContext, PlaybackQueue, State}
 
   require Membrane.Core.Child.PadModel
