@@ -256,15 +256,8 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp resolve_demand_units(output_info, input_info) do
-    output_demand_unit =
-      if output_info[:flow_control] == :push,
-        do: nil,
-        else: output_info[:demand_unit] || input_info[:demand_unit] || :buffers
-
-    input_demand_unit =
-      if input_info[:flow_control] == :push,
-        do: nil,
-        else: input_info[:demand_unit] || output_info[:demand_unit] || :buffers
+    output_demand_unit = output_info[:demand_unit] || input_info[:demand_unit] || :buffers
+    input_demand_unit = input_info[:demand_unit] || output_info[:demand_unit] || :buffers
 
     {output_demand_unit, input_demand_unit}
   end

@@ -89,14 +89,7 @@ defmodule Membrane.Core.Element.DemandController do
   @spec decrease_demand_by_outgoing_buffers(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
   def decrease_demand_by_outgoing_buffers(pad_ref, buffers, state) do
     pad_data = PadModel.get_data!(state, pad_ref)
-
-    demand_unit =
-      case pad_data.flow_control do
-        :push -> pad_data.other_demand_unit || :buffers
-        _pull_or_auto -> pad_data.demand_unit
-      end
-
-    buffers_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
+    buffers_size = Buffer.Metric.from_unit(pad_data.demand_unit).buffers_size(buffers)
 
     demand_snapshot = pad_data.demand_snapshot - buffers_size
     demand_counter = DemandCounter.decrease(pad_data.demand_counter, buffers_size)

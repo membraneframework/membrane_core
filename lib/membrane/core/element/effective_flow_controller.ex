@@ -72,7 +72,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
   end
 
   @spec resolve_effective_flow_control(Pad.ref(), State.t()) :: State.t()
-  def resolve_effective_flow_control(last_changed_pad \\ nil, state) do
+  def resolve_effective_flow_control(triggering_pad \\ nil, state) do
     senders_flow_modes =
       Map.values(state.pads_data)
       |> Enum.filter(&(&1.direction == :input && &1.flow_control == :auto))
@@ -85,17 +85,17 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
         true -> state.effective_flow_control
       end
 
-    set_effective_flow_control(new_effective_flow_control, last_changed_pad, state)
+    set_effective_flow_control(new_effective_flow_control, triggering_pad, state)
   end
 
   defp set_effective_flow_control(
          effective_flow_control,
-         _last_changed_pad,
+         _triggering_pad,
          %{effective_flow_control: effective_flow_control} = state
        ),
        do: state
 
-  defp set_effective_flow_control(new_effective_flow_control, last_changed_pad, state) do
+  defp set_effective_flow_control(new_effective_flow_control, triggering_pad, state) do
     Membrane.Logger.debug(
       "Transiting `flow_control: :auto` pads to #{inspect(new_effective_flow_control)} effective flow control"
     )
@@ -122,8 +122,8 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
         state
 
-      {pad_ref, %{direction: :input} = pad_data}, state when last_changed_pad != nil ->
-        if pad_ref == last_changed_pad or
+      {pad_ref, %{direction: :input} = pad_data}, state ->
+        if triggering_pad in [pad_ref, nil] or
              DemandCounter.get_receiver_status(pad_data.demand_counter) != :to_be_resolved do
           :ok =
             DemandCounter.set_receiver_status(
@@ -131,15 +131,6 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
               {:resolved, new_effective_flow_control}
             )
         end
-
-        AutoFlowUtils.auto_adjust_demand_counter(pad_ref, state)
-
-      {pad_ref, %{direction: :input} = pad_data}, state ->
-        :ok =
-          DemandCounter.set_receiver_status(
-            pad_data.demand_counter,
-            {:resolved, new_effective_flow_control}
-          )
 
         AutoFlowUtils.auto_adjust_demand_counter(pad_ref, state)
     end)
