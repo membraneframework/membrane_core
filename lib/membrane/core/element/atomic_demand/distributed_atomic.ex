@@ -6,8 +6,8 @@ defmodule Membrane.Core.Element.AtomicDemand.DistributedAtomic do
   # The module allows to create and modify the value of a counter in the same manner both when the counter is about to be accessed
   # from the same node, and from different nodes.
 
-  alias Membrane.Core.SubprocessSupervisor
   alias __MODULE__.Worker
+  alias Membrane.Core.SubprocessSupervisor
 
   @enforce_keys [:worker, :atomic_ref]
   defstruct @enforce_keys
