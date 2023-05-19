@@ -41,7 +41,6 @@ defmodule Membrane.Support.Distributed do
 
   defmodule Sink do
     @moduledoc false
-
     use Membrane.Sink
 
     def_input_pad :input, flow_control: :manual, accepted_format: _any, demand_unit: :buffers
@@ -54,6 +53,45 @@ defmodule Membrane.Support.Distributed do
     @impl true
     def handle_buffer(_pad, _buffer, _ctx, state) do
       {[demand: {:input, 1}], state}
+    end
+  end
+
+  defmodule SinkBin do
+    @moduledoc false
+    use Membrane.Bin
+
+    def_input_pad :input, accepted_format: _any
+
+    @impl true
+    def handle_init(_ctx, _opts) do
+      spec = bin_input() |> child(:sink, Sink)
+      {[spec: spec], %{}}
+    end
+
+    @impl true
+    def handle_element_end_of_stream(:sink, :input, _ctx, state) do
+      {[notify_parent: :end_of_stream], state}
+    end
+  end
+
+  defmodule Pipeline do
+    @moduledoc false
+    use Membrane.Pipeline
+
+    @impl true
+    def handle_init(_ctx, opts) do
+      first_node = opts.first_node
+      second_node = opts.second_node
+
+      {[
+         spec: [
+           {child(:source, %Source{output: [1, 2, 3, 4, 5]}), node: first_node},
+           {
+             get_child(:source) |> child(:sink_bin, SinkBin),
+             node: second_node
+           }
+         ]
+       ], %{}}
     end
   end
 end

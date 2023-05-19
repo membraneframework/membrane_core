@@ -3,45 +3,47 @@ defmodule Membrane.Integration.DistributedPipelineTest do
 
   import Membrane.Testing.Assertions
 
+  alias Membrane.Support.Distributed
+  alias Membrane.Testing
+
   setup do
-    {my_node, another_node} = start_nodes()
+    another_node = start_another_node()
     on_exit(fn -> kill_node(another_node) end)
-    [first_node: my_node, second_node: another_node]
+    [first_node: node(self()), second_node: another_node]
   end
 
   test "if distributed pipeline works properly", context do
-    defmodule Pipeline do
-      use Membrane.Pipeline
-      alias Membrane.Support.Distributed.{Sink, Source}
-
-      @impl true
-      def handle_init(_ctx, opts) do
-        first_node = opts[:first_node]
-        second_node = opts[:second_node]
-
-        {[
-           spec: [
-             {child(:source, %Source{output: [1, 2, 3, 4, 5]}), node: first_node},
-             {get_child(:source)
-              |> via_in(:input, toilet_capacity: 100, throttling_factor: 50)
-              |> child(:sink, Sink), node: second_node}
-           ]
-         ], %{}}
-      end
-    end
-
     pipeline =
-      Membrane.Testing.Pipeline.start_link_supervised!(module: Pipeline, custom_args: context)
+      Testing.Pipeline.start_link_supervised!(
+        module: Distributed.Pipeline,
+        custom_args: context
+      )
 
-    assert_end_of_stream(pipeline, :sink)
+    assert_pipeline_notified(pipeline, :sink_bin, :end_of_stream)
+
+    assert context.first_node == node(pipeline)
+
+    assert context.first_node ==
+             Testing.Pipeline.get_child_pid!(pipeline, :source)
+             |> node()
+
+    assert context.second_node ==
+             Testing.Pipeline.get_child_pid!(pipeline, :sink_bin)
+             |> node()
+
+    assert context.second_node ==
+             Testing.Pipeline.get_child_pid!(pipeline, [:sink_bin, :sink])
+             |> node()
+
+    Testing.Pipeline.terminate(pipeline)
   end
 
-  defp start_nodes() do
+  defp start_another_node() do
     System.cmd("epmd", ["-daemon"])
     _start_result = Node.start(:"first@127.0.0.1", :longnames)
     {:ok, _pid, hostname} = :peer.start(%{host: ~c"127.0.0.1", name: :second})
     :rpc.block_call(hostname, :code, :add_paths, [:code.get_path()])
-    {node(self()), hostname}
+    hostname
   end
 
   defp kill_node(node) do
