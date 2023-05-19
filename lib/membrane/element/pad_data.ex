@@ -44,16 +44,16 @@ defmodule Membrane.Element.PadData do
           auto_demand_size: private_field,
           sticky_messages: private_field,
 
-          # Used only for output pads with :pull or :auto flow control. Holds the last captured value of DemandCounter,
+          # Used only for output pads with :pull or :auto flow control. Holds the last captured value of AtomicDemand,
           # decreased by the size of buffers sent via specific pad since the last capture, expressed in the appropriate metric.
-          # Moment, when demand_snapshot value drops to 0 or less, triggers another capture of DemandCounter value.
+          # Moment, when demand_snapshot value drops to 0 or less, triggers another capture of AtomicDemand value.
           demand_snapshot: integer() | nil,
 
-          # Instance of DemandCounter shared by both sides of link. Holds amount of data, that has been demanded by the element
+          # Instance of AtomicDemand shared by both sides of link. Holds amount of data, that has been demanded by the element
           # with input pad, but hasn't been sent yet by the element with output pad. Detects toilet overflow as well.
-          demand_counter: private_field,
+          atomic_demand: private_field,
 
-          # Field used in DemandController.AutoFlowUtils and InputQueue, to caluclate, how much DemandCounter should be increased.
+          # Field used in DemandController.AutoFlowUtils and InputQueue, to caluclate, how much AtomicDemand should be increased.
           # Contains amount of data (:buffers/:bytes), that has been demanded from the element on the other side of link, but
           # hasn't arrived yet. Unused for output pads.
           demand: private_field,
@@ -85,7 +85,7 @@ defmodule Membrane.Element.PadData do
                 end_of_stream?: false,
                 auto_demand_size: nil,
                 sticky_messages: [],
-                demand_counter: nil,
+                atomic_demand: nil,
                 demand: 0,
                 manual_demand_size: 0,
                 associated_pads: [],

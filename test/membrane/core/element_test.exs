@@ -111,11 +111,11 @@ defmodule Membrane.Core.ElementTest do
 
     other_info = %{direction: :input, flow_control: :manual, demand_unit: :buffers}
 
-    output_demand_counter =
-      Element.DemandCounter.new(:pull, helper_server, :buffers, self(), :output)
+    output_atomic_demand =
+      Element.AtomicDemand.new(:pull, helper_server, :buffers, self(), :output)
 
     reply_link_metadata = %{
-      demand_counter: output_demand_counter,
+      atomic_demand: output_atomic_demand,
       observability_metadata: %{},
       input_demand_unit: :buffers,
       output_demand_unit: :buffers
@@ -133,7 +133,7 @@ defmodule Membrane.Core.ElementTest do
           output_other_endpoint,
           %{
             other_info: other_info,
-            link_metadata: %{demand_counter: output_demand_counter, observability_metadata: %{}},
+            link_metadata: %{atomic_demand: output_atomic_demand, observability_metadata: %{}},
             stream_format_validation_params: [],
             other_effective_flow_control: :pull
           }
@@ -202,10 +202,10 @@ defmodule Membrane.Core.ElementTest do
 
   test "should store demand/buffer/event/stream format when not playing" do
     initial_state = linked_state()
-    :ok = increase_output_demand_counter(initial_state, 10)
+    :ok = increase_output_atomic_demand(initial_state, 10)
 
     [
-      Message.new(:demand_counter_increased, :output),
+      Message.new(:atomic_demand_increased, :output),
       Message.new(:buffer, %Membrane.Buffer{payload: <<>>}, for_pad: :dynamic_input),
       Message.new(:stream_format, %StreamFormat{}, for_pad: :dynamic_input),
       Message.new(:event, %Membrane.Testing.Event{}, for_pad: :dynamic_input),
@@ -221,9 +221,9 @@ defmodule Membrane.Core.ElementTest do
 
   test "should update demand" do
     state = playing_state()
-    :ok = increase_output_demand_counter(state, 10)
+    :ok = increase_output_atomic_demand(state, 10)
 
-    msg = Message.new(:demand_counter_increased, :output)
+    msg = Message.new(:atomic_demand_increased, :output)
     assert {:noreply, state} = Element.handle_info(msg, state)
 
     assert state.pads_data.output.demand_snapshot == 10
@@ -301,7 +301,7 @@ defmodule Membrane.Core.ElementTest do
               options: nil
             },
             %{
-              demand_counter: %Element.DemandCounter{},
+              atomic_demand: %Element.AtomicDemand{},
               output_demand_unit: :buffers,
               input_demand_unit: :buffers
             }} = reply
@@ -414,9 +414,9 @@ defmodule Membrane.Core.ElementTest do
     }
   end
 
-  defp increase_output_demand_counter(state, value) do
+  defp increase_output_atomic_demand(state, value) do
     :ok =
-      state.pads_data.output.demand_counter
-      |> Element.DemandCounter.increase(value)
+      state.pads_data.output.atomic_demand
+      |> Element.AtomicDemand.increase(value)
   end
 end

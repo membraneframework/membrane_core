@@ -1,7 +1,7 @@
-defmodule Membrane.Core.Element.DemandCounter.DistributedFlowStatus do
+defmodule Membrane.Core.Element.AtomicDemand.AtomicFlowStatus do
   @moduledoc false
 
-  alias Membrane.Core.Element.DemandCounter.DistributedAtomic
+  alias Membrane.Core.Element.AtomicDemand.DistributedAtomic
   alias Membrane.Core.Element.EffectiveFlowController
 
   @type t :: DistributedAtomic.t()

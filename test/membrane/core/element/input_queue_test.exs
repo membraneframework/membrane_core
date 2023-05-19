@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
   use ExUnit.Case, async: true
 
   alias Membrane.Buffer
-  alias Membrane.Core.Element.{DemandCounter, InputQueue}
+  alias Membrane.Core.Element.{AtomicDemand, InputQueue}
   alias Membrane.Core.Message
   alias Membrane.Testing.Event
 
@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
   describe ".init/6 should" do
     setup do
-      demand_counter = DemandCounter.new(:pull, self(), :bytes, self(), :output_pad_ref)
+      atomic_demand = AtomicDemand.new(:pull, self(), :bytes, self(), :output_pad_ref)
 
       {:ok,
        %{
@@ -19,7 +19,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
          inbound_demand_unit: :bytes,
          outbound_demand_unit: :bytes,
          linked_output_ref: :output_pad_ref,
-         demand_counter: demand_counter,
+         atomic_demand: atomic_demand,
          expected_metric: Buffer.Metric.from_unit(:bytes)
        }}
     end
@@ -30,13 +30,13 @@ defmodule Membrane.Core.Element.InputQueueTest do
                outbound_demand_unit: context.outbound_demand_unit,
                linked_output_ref: context.linked_output_ref,
                log_tag: context.log_tag,
-               demand_counter: context.demand_counter,
+               atomic_demand: context.atomic_demand,
                target_size: context.target_queue_size
              }) == %InputQueue{
                q: Qex.new(),
                log_tag: context.log_tag,
                target_size: context.target_queue_size,
-               demand_counter: context.demand_counter,
+               atomic_demand: context.atomic_demand,
                inbound_metric: context.expected_metric,
                outbound_metric: context.expected_metric,
                linked_output_ref: context.linked_output_ref,
@@ -44,9 +44,9 @@ defmodule Membrane.Core.Element.InputQueueTest do
                demand: context.target_queue_size
              }
 
-      assert context.target_queue_size == DemandCounter.get(context.demand_counter)
+      assert context.target_queue_size == AtomicDemand.get(context.atomic_demand)
 
-      expected_message = Message.new(:demand_counter_increased, context.linked_output_ref)
+      expected_message = Message.new(:atomic_demand_increased, context.linked_output_ref)
       assert_received ^expected_message
     end
   end
@@ -185,7 +185,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
   describe ".take/2 should" do
     setup do
       output_pad = :pad
-      demand_counter = DemandCounter.new(:pull, self(), :bytes, self(), output_pad)
+      atomic_demand = AtomicDemand.new(:pull, self(), :bytes, self(), output_pad)
 
       input_queue =
         InputQueue.init(%{
@@ -193,23 +193,23 @@ defmodule Membrane.Core.Element.InputQueueTest do
           outbound_demand_unit: :buffers,
           linked_output_ref: output_pad,
           log_tag: "test",
-          demand_counter: demand_counter,
+          atomic_demand: atomic_demand,
           target_size: 40
         })
 
-      assert_received Message.new(:demand_counter_increased, ^output_pad)
+      assert_received Message.new(:atomic_demand_increased, ^output_pad)
 
       [input_queue: input_queue]
     end
 
     test "return {:empty, []} when the queue is empty", %{input_queue: input_queue} do
-      old_counter_value = DemandCounter.get(input_queue.demand_counter)
+      old_atomic_demand_value = AtomicDemand.get(input_queue.atomic_demand)
       old_demand = input_queue.demand
 
       assert {{:empty, []}, %InputQueue{size: 0, demand: ^old_demand}} =
                InputQueue.take(input_queue, 1)
 
-      assert old_counter_value == DemandCounter.get(input_queue.demand_counter)
+      assert old_atomic_demand_value == AtomicDemand.get(input_queue.atomic_demand)
     end
 
     test "send demands to the pid and updates demand", %{input_queue: input_queue} do
@@ -220,7 +220,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
       assert new_input_queue.size == 9
       assert new_input_queue.demand >= 31
-      assert DemandCounter.get(new_input_queue.demand_counter) >= 41
+      assert AtomicDemand.get(new_input_queue.atomic_demand) >= 41
     end
   end
 
@@ -231,10 +231,10 @@ defmodule Membrane.Core.Element.InputQueueTest do
       buffers2 = {:buffers, [:b4, :b5, :b6], 3, 3}
       q = Qex.new() |> Qex.push(buffers1) |> Qex.push(buffers2)
       output_pad = :pad
-      demand_counter = DemandCounter.new(:pull, self(), :bytes, self(), output_pad)
+      atomic_demand = AtomicDemand.new(:pull, self(), :bytes, self(), output_pad)
 
-      :ok = DemandCounter.increase(demand_counter, 94)
-      assert_received Message.new(:demand_counter_increased, ^output_pad)
+      :ok = AtomicDemand.increase(atomic_demand, 94)
+      assert_received Message.new(:atomic_demand_increased, ^output_pad)
 
       input_queue =
         struct(InputQueue,
@@ -245,7 +245,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
           outbound_metric: Buffer.Metric.Count,
           q: q,
           linked_output_ref: output_pad,
-          demand_counter: demand_counter
+          atomic_demand: atomic_demand
         )
 
       {:ok, %{input_queue: input_queue, q: q, size: size, buffers1: buffers1, buffers2: buffers2}}
@@ -263,13 +263,13 @@ defmodule Membrane.Core.Element.InputQueueTest do
       assert new_size == 0
     end
 
-    test "increase DemandCounter hen there are not enough buffers", context do
-      old_counter_value = DemandCounter.get(context.input_queue.demand_counter)
+    test "increase AtomicDemand hen there are not enough buffers", context do
+      old_atomic_demand_value = AtomicDemand.get(context.input_queue.atomic_demand)
       old_demand = context.input_queue.demand
 
       {_output, input_queue} = InputQueue.take(context.input_queue, 10)
 
-      assert old_counter_value < DemandCounter.get(input_queue.demand_counter)
+      assert old_atomic_demand_value < AtomicDemand.get(input_queue.atomic_demand)
       assert old_demand < input_queue.demand
     end
 
@@ -301,33 +301,33 @@ defmodule Membrane.Core.Element.InputQueueTest do
   end
 
   test "if the queue works properly for :bytes input metric and :buffers output metric" do
-    demand_counter = DemandCounter.new(:pull, self(), :bytes, self(), :output_pad_ref)
+    atomic_demand = AtomicDemand.new(:pull, self(), :bytes, self(), :output_pad_ref)
 
     queue =
       InputQueue.init(%{
         inbound_demand_unit: :bytes,
         outbound_demand_unit: :buffers,
-        demand_counter: demand_counter,
+        atomic_demand: atomic_demand,
         linked_output_ref: :output_pad_ref,
         log_tag: nil,
         target_size: 10
       })
 
-    assert_receive Message.new(:demand_counter_increased, :output_pad_ref)
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
     assert queue.demand == 10
     queue = InputQueue.store(queue, [%Buffer{payload: "1234"}])
     assert queue.size == 4
     queue = InputQueue.store(queue, [%Buffer{payload: "12345678"}])
     queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
     queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
-    queue = Map.update!(queue, :demand_counter, &DemandCounter.decrease(&1, 16))
+    queue = Map.update!(queue, :atomic_demand, &AtomicDemand.decrease(&1, 16))
     assert queue.size == 16
     assert queue.demand == -6
     {out, queue} = InputQueue.take(queue, 2)
     assert bufs_size(out, :buffers) == 2
     assert queue.size == 4
     assert queue.demand >= 6
-    assert_receive Message.new(:demand_counter_increased, :output_pad_ref)
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
 
     queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
     queue = InputQueue.store(queue, [%Buffer{payload: "1234"}])
@@ -338,38 +338,38 @@ defmodule Membrane.Core.Element.InputQueueTest do
   end
 
   test "if the queue works properly for :buffers input metric and :bytes output metric" do
-    demand_counter = DemandCounter.new(:pull, self(), :bytes, self(), :output_pad_ref)
+    atomic_demand = AtomicDemand.new(:pull, self(), :bytes, self(), :output_pad_ref)
 
     queue =
       InputQueue.init(%{
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :bytes,
-        demand_counter: demand_counter,
+        atomic_demand: atomic_demand,
         linked_output_ref: :output_pad_ref,
         log_tag: nil,
         target_size: 3
       })
 
-    assert_receive Message.new(:demand_counter_increased, :output_pad_ref)
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
     assert queue.demand == 3
     queue = InputQueue.store(queue, [%Buffer{payload: "1234"}])
     assert queue.size == 1
     queue = InputQueue.store(queue, [%Buffer{payload: "12345678"}])
     queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
     queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
-    queue = Map.update!(queue, :demand_counter, &DemandCounter.decrease(&1, 4))
+    queue = Map.update!(queue, :atomic_demand, &AtomicDemand.decrease(&1, 4))
     assert queue.size == 4
     assert queue.demand == -1
     {out, queue} = InputQueue.take(queue, 2)
     assert bufs_size(out, :bytes) == 2
     assert queue.size == 4
     assert queue.demand == -1
-    refute_receive Message.new(:demand_counter_increased, :output_pad_ref)
+    refute_receive Message.new(:atomic_demand_increased, :output_pad_ref)
     {out, queue} = InputQueue.take(queue, 11)
     assert bufs_size(out, :bytes) == 11
     assert queue.size == 2
     assert queue.demand == 1
-    assert_receive Message.new(:demand_counter_increased, :output_pad_ref)
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
   end
 
   defp bufs_size(output, unit) do

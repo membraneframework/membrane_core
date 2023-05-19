@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   use ExUnit.Case, async: true
 
   alias Membrane.{ActionError, Buffer, ElementError, PadDirectionError}
-  alias Membrane.Core.Element.{DemandCounter, State}
+  alias Membrane.Core.Element.{AtomicDemand, State}
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
 
@@ -72,11 +72,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   end
 
   defp trivial_filter_state(_context) do
-    input_demand_counter =
-      DemandCounter.new(:push, self(), :buffers, spawn(fn -> :ok end), :output)
+    input_atomic_demand = AtomicDemand.new(:push, self(), :buffers, spawn(fn -> :ok end), :output)
 
-    output_demand_counter =
-      DemandCounter.new(:push, spawn(fn -> :ok end), :bytes, self(), :output)
+    output_atomic_demand = AtomicDemand.new(:push, spawn(fn -> :ok end), :bytes, self(), :output)
 
     state =
       struct(State,
@@ -97,7 +95,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             start_of_stream?: true,
             end_of_stream?: false,
             flow_control: :push,
-            demand_counter: output_demand_counter,
+            atomic_demand: output_atomic_demand,
             demand_snapshot: 0
           },
           input: %{
@@ -108,7 +106,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             start_of_stream?: true,
             end_of_stream?: false,
             flow_control: :push,
-            demand_counter: input_demand_counter,
+            atomic_demand: input_atomic_demand,
             demand_snapshot: 0
           }
         },
@@ -163,7 +161,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
 
       assert result.pads_data.output.demand_snapshot < 0
-      assert DemandCounter.get(result.pads_data.output.demand_counter) < 0
+      assert AtomicDemand.get(result.pads_data.output.atomic_demand) < 0
       assert put_in(result, [:pads_data, :output, :demand_snapshot], 0) == state
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref)
     end

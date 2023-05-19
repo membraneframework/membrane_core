@@ -19,7 +19,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
   # Effective flow control of a single element can switch between :push and :pull many times during the element's lifetime.
 
   alias Membrane.Core.Element.DemandController.AutoFlowUtils
-  alias Membrane.Core.Element.{DemandCounter, State}
+  alias Membrane.Core.Element.{AtomicDemand, State}
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
@@ -58,8 +58,8 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
       other_effective_flow_control == state.effective_flow_control ->
         :ok =
-          PadModel.get_data!(state, input_pad_ref, :demand_counter)
-          |> DemandCounter.set_receiver_status({:resolved, state.effective_flow_control})
+          PadModel.get_data!(state, input_pad_ref, :atomic_demand)
+          |> AtomicDemand.set_receiver_status({:resolved, state.effective_flow_control})
 
         state
 
@@ -107,12 +107,12 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
     |> Enum.reduce(state, fn
       {_ref, %{direction: :output} = pad_data}, state ->
         :ok =
-          DemandCounter.set_sender_status(
-            pad_data.demand_counter,
+          AtomicDemand.set_sender_status(
+            pad_data.atomic_demand,
             {:resolved, new_effective_flow_control}
           )
 
-        :ok = DemandCounter.set_receiver_status(pad_data.demand_counter, :to_be_resolved)
+        :ok = AtomicDemand.set_receiver_status(pad_data.atomic_demand, :to_be_resolved)
 
         Message.send(
           pad_data.pid,
@@ -124,15 +124,15 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
       {pad_ref, %{direction: :input} = pad_data}, state ->
         if triggering_pad in [pad_ref, nil] or
-             DemandCounter.get_receiver_status(pad_data.demand_counter) != :to_be_resolved do
+             AtomicDemand.get_receiver_status(pad_data.atomic_demand) != :to_be_resolved do
           :ok =
-            DemandCounter.set_receiver_status(
-              pad_data.demand_counter,
+            AtomicDemand.set_receiver_status(
+              pad_data.atomic_demand,
               {:resolved, new_effective_flow_control}
             )
         end
 
-        AutoFlowUtils.auto_adjust_demand_counter(pad_ref, state)
+        AutoFlowUtils.auto_adjust_atomic_demand(pad_ref, state)
     end)
   end
 end

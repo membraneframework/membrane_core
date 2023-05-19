@@ -1,67 +1,67 @@
-defmodule Membrane.Core.Element.DemandCounterTest do
+defmodule Membrane.Core.Element.AtomicDemandTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Element.DemandCounter
+  alias Membrane.Core.Element.AtomicDemand
 
-  test "if DemandCounter is implemented as :atomics for elements put on the same node" do
-    demand_counter = DemandCounter.new(:pull, self(), :buffers, self(), :output)
-    :ok = DemandCounter.increase(demand_counter, 10)
+  test "if AtomicDemand is implemented as :atomics for elements put on the same node" do
+    atomic_demand = AtomicDemand.new(:pull, self(), :buffers, self(), :output)
+    :ok = AtomicDemand.increase(atomic_demand, 10)
 
-    assert get_atomic_value(demand_counter) == 10
+    assert get_atomic_value(atomic_demand) == 10
 
-    demand_counter = DemandCounter.decrease(demand_counter, 15)
+    atomic_demand = AtomicDemand.decrease(atomic_demand, 15)
 
-    assert demand_counter.buffered_decrementation == 0
-    assert get_atomic_value(demand_counter) == -5
-    assert DemandCounter.get(demand_counter) == -5
+    assert atomic_demand.buffered_decrementation == 0
+    assert get_atomic_value(atomic_demand) == -5
+    assert AtomicDemand.get(atomic_demand) == -5
   end
 
-  test "if DemandCounter.DistributedAtomic.Worker works properly " do
-    demand_counter = DemandCounter.new(:pull, self(), :buffers, self(), :output)
-    :ok = DemandCounter.increase(demand_counter, 10)
+  test "if AtomicDemand.DistributedAtomic.Worker works properly " do
+    atomic_demand = AtomicDemand.new(:pull, self(), :buffers, self(), :output)
+    :ok = AtomicDemand.increase(atomic_demand, 10)
 
     assert GenServer.call(
-             demand_counter.counter.worker,
-             {:get, demand_counter.counter.atomic_ref}
+             atomic_demand.counter.worker,
+             {:get, atomic_demand.counter.atomic_ref}
            ) == 10
 
     assert GenServer.call(
-             demand_counter.counter.worker,
-             {:sub_get, demand_counter.counter.atomic_ref, 15}
+             atomic_demand.counter.worker,
+             {:sub_get, atomic_demand.counter.atomic_ref, 15}
            ) == -5
 
-    assert get_atomic_value(demand_counter) == -5
+    assert get_atomic_value(atomic_demand) == -5
 
     assert GenServer.call(
-             demand_counter.counter.worker,
-             {:add_get, demand_counter.counter.atomic_ref, 55}
+             atomic_demand.counter.worker,
+             {:add_get, atomic_demand.counter.atomic_ref, 55}
            ) == 50
 
-    assert get_atomic_value(demand_counter) == 50
-    assert DemandCounter.get(demand_counter) == 50
+    assert get_atomic_value(atomic_demand) == 50
+    assert AtomicDemand.get(atomic_demand) == 50
   end
 
   test "if setting receiver and sender modes works properly" do
-    demand_counter = DemandCounter.new(:pull, self(), :buffers, self(), :output)
+    atomic_demand = AtomicDemand.new(:pull, self(), :buffers, self(), :output)
 
-    :ok = DemandCounter.set_receiver_status(demand_counter, {:resolved, :push})
+    :ok = AtomicDemand.set_receiver_status(atomic_demand, {:resolved, :push})
 
-    assert DemandCounter.DistributedFlowStatus.get(demand_counter.receiver_status) ==
+    assert AtomicDemand.AtomicFlowStatus.get(atomic_demand.receiver_status) ==
              {:resolved, :push}
 
-    :ok = DemandCounter.set_receiver_status(demand_counter, {:resolved, :pull})
+    :ok = AtomicDemand.set_receiver_status(atomic_demand, {:resolved, :pull})
 
-    assert DemandCounter.DistributedFlowStatus.get(demand_counter.receiver_status) ==
+    assert AtomicDemand.AtomicFlowStatus.get(atomic_demand.receiver_status) ==
              {:resolved, :pull}
 
-    :ok = DemandCounter.set_sender_status(demand_counter, {:resolved, :push})
+    :ok = AtomicDemand.set_sender_status(atomic_demand, {:resolved, :push})
 
-    assert DemandCounter.DistributedFlowStatus.get(demand_counter.sender_status) ==
+    assert AtomicDemand.AtomicFlowStatus.get(atomic_demand.sender_status) ==
              {:resolved, :push}
 
-    :ok = DemandCounter.set_sender_status(demand_counter, {:resolved, :pull})
+    :ok = AtomicDemand.set_sender_status(atomic_demand, {:resolved, :pull})
 
-    assert DemandCounter.DistributedFlowStatus.get(demand_counter.sender_status) ==
+    assert AtomicDemand.AtomicFlowStatus.get(atomic_demand.sender_status) ==
              {:resolved, :pull}
   end
 
@@ -70,33 +70,33 @@ defmodule Membrane.Core.Element.DemandCounterTest do
     sleeping_process = spawn(fn -> Process.sleep(hour_in_millis) end)
     monitor_ref = Process.monitor(sleeping_process)
 
-    demand_counter = DemandCounter.new(:pull, sleeping_process, :buffers, self(), :output)
+    atomic_demand = AtomicDemand.new(:pull, sleeping_process, :buffers, self(), :output)
 
-    :ok = DemandCounter.set_sender_status(demand_counter, {:resolved, :push})
-    demand_counter = DemandCounter.decrease(demand_counter, 100)
+    :ok = AtomicDemand.set_sender_status(atomic_demand, {:resolved, :push})
+    atomic_demand = AtomicDemand.decrease(atomic_demand, 100)
 
     refute_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
 
     possible_statuses = [{:resolved, :push}, {:resolved, :pull}, :to_be_resolved]
 
-    demand_counter =
+    atomic_demand =
       for status_1 <- possible_statuses, status_2 <- possible_statuses do
         {status_1, status_2}
       end
       |> List.delete({{:resolved, :push}, {:resolved, :pull}})
-      |> Enum.reduce(demand_counter, fn {sender_status, receiver_status}, demand_counter ->
-        :ok = DemandCounter.set_sender_status(demand_counter, sender_status)
-        :ok = DemandCounter.set_receiver_status(demand_counter, receiver_status)
-        demand_counter = DemandCounter.decrease(demand_counter, 1000)
+      |> Enum.reduce(atomic_demand, fn {sender_status, receiver_status}, atomic_demand ->
+        :ok = AtomicDemand.set_sender_status(atomic_demand, sender_status)
+        :ok = AtomicDemand.set_receiver_status(atomic_demand, receiver_status)
+        atomic_demand = AtomicDemand.decrease(atomic_demand, 1000)
 
         refute_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
 
-        demand_counter
+        atomic_demand
       end)
 
-    :ok = DemandCounter.set_sender_status(demand_counter, {:resolved, :push})
-    :ok = DemandCounter.set_receiver_status(demand_counter, {:resolved, :pull})
-    _demand_counter = DemandCounter.decrease(demand_counter, 1000)
+    :ok = AtomicDemand.set_sender_status(atomic_demand, {:resolved, :push})
+    :ok = AtomicDemand.set_receiver_status(atomic_demand, {:resolved, :pull})
+    _atomic_demand = AtomicDemand.decrease(atomic_demand, 1000)
 
     assert_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
   end
@@ -104,24 +104,24 @@ defmodule Membrane.Core.Element.DemandCounterTest do
   test "if buffering decrementation works properly with distribution" do
     another_node = setup_another_node()
     pid_on_another_node = Node.spawn(another_node, fn -> :ok end)
-    demand_counter = DemandCounter.new(:push, self(), :buffers, pid_on_another_node, :output)
+    atomic_demand = AtomicDemand.new(:push, self(), :buffers, pid_on_another_node, :output)
 
-    assert %DemandCounter{throttling_factor: 150} = demand_counter
+    assert %AtomicDemand{throttling_factor: 150} = atomic_demand
 
-    demand_counter = DemandCounter.decrease(demand_counter, 100)
+    atomic_demand = AtomicDemand.decrease(atomic_demand, 100)
 
-    assert %DemandCounter{buffered_decrementation: 100} = demand_counter
-    assert get_atomic_value(demand_counter) == 0
+    assert %AtomicDemand{buffered_decrementation: 100} = atomic_demand
+    assert get_atomic_value(atomic_demand) == 0
 
-    demand_counter = DemandCounter.decrease(demand_counter, 49)
+    atomic_demand = AtomicDemand.decrease(atomic_demand, 49)
 
-    assert %DemandCounter{buffered_decrementation: 149} = demand_counter
-    assert get_atomic_value(demand_counter) == 0
+    assert %AtomicDemand{buffered_decrementation: 149} = atomic_demand
+    assert get_atomic_value(atomic_demand) == 0
 
-    demand_counter = DemandCounter.decrease(demand_counter, 51)
+    atomic_demand = AtomicDemand.decrease(atomic_demand, 51)
 
-    assert %DemandCounter{buffered_decrementation: 0} = demand_counter
-    assert get_atomic_value(demand_counter) == -200
+    assert %AtomicDemand{buffered_decrementation: 0} = atomic_demand
+    assert get_atomic_value(atomic_demand) == -200
   end
 
   defp setup_another_node() do
@@ -135,8 +135,8 @@ defmodule Membrane.Core.Element.DemandCounterTest do
     another_node
   end
 
-  defp get_atomic_value(demand_counter) do
-    demand_counter.counter.atomic_ref
+  defp get_atomic_value(atomic_demand) do
+    atomic_demand.counter.atomic_ref
     |> :atomics.get(1)
   end
 end

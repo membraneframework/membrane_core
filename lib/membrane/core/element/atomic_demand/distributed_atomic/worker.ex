@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.DemandCounter.DistributedAtomic.Worker do
+defmodule Membrane.Core.Element.AtomicDemand.DistributedAtomic.Worker do
   @moduledoc false
 
   # This is a GenServer created when the counter is about to be accessed from different nodes - it's running on the same node,

@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Element.EventControllerTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Element.{DemandCounter, EventController, InputQueue, State}
+  alias Membrane.Core.Element.{AtomicDemand, EventController, InputQueue, State}
   alias Membrane.Core.Events
   alias Membrane.Event
 
@@ -19,8 +19,8 @@ defmodule Membrane.Core.Element.EventControllerTest do
   end
 
   setup do
-    demand_counter =
-      DemandCounter.new(
+    atomic_demand =
+      AtomicDemand.new(
         :pull,
         spawn(fn -> :ok end),
         :buffers,
@@ -35,7 +35,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
         outbound_demand_unit: :buffers,
         linked_output_ref: :some_pad,
         log_tag: "test",
-        demand_counter: demand_counter,
+        atomic_demand: atomic_demand,
         target_size: nil,
         min_demand_factor: nil
       })
@@ -63,7 +63,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
         }
       )
 
-    assert DemandCounter.get(demand_counter) > 0
+    assert AtomicDemand.get(atomic_demand) > 0
 
     [state: state]
   end

@@ -11,7 +11,7 @@ defmodule Membrane.Core.Element.PadController do
   alias Membrane.Core.Element.{
     ActionHandler,
     CallbackContext,
-    DemandCounter,
+    AtomicDemand,
     EffectiveFlowController,
     EventController,
     InputQueue,
@@ -42,7 +42,7 @@ defmodule Membrane.Core.Element.PadController do
             }
 
   @type link_call_reply_props ::
-          {Endpoint.t(), PadModel.pad_info(), %{demand_counter: DemandCounter.t()}}
+          {Endpoint.t(), PadModel.pad_info(), %{atomic_demand: AtomicDemand.t()}}
 
   @type link_call_reply ::
           :ok
@@ -159,8 +159,8 @@ defmodule Membrane.Core.Element.PadController do
     pad_effective_flow_control =
       EffectiveFlowController.get_pad_effective_flow_control(endpoint.pad_ref, state)
 
-    demand_counter =
-      DemandCounter.new(
+    atomic_demand =
+      AtomicDemand.new(
         pad_effective_flow_control,
         self(),
         input_demand_unit || :buffers,
@@ -173,7 +173,7 @@ defmodule Membrane.Core.Element.PadController do
     # The sibiling was an initiator, we don't need to use the pid of a task spawned for observability
     _metadata = Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
 
-    link_metadata = Map.put(link_metadata, :demand_counter, demand_counter)
+    link_metadata = Map.put(link_metadata, :atomic_demand, atomic_demand)
 
     :ok =
       Child.PadController.validate_pad_mode!(
@@ -287,12 +287,12 @@ defmodule Membrane.Core.Element.PadController do
         start_of_stream?: false,
         end_of_stream?: false,
         associated_pads: [],
-        demand_counter: metadata.demand_counter
+        atomic_demand: metadata.atomic_demand
       })
 
     :ok =
-      DemandCounter.set_sender_status(
-        data.demand_counter,
+      AtomicDemand.set_sender_status(
+        data.atomic_demand,
         {:resolved, EffectiveFlowController.get_pad_effective_flow_control(data.ref, state)}
       )
 
@@ -314,7 +314,7 @@ defmodule Membrane.Core.Element.PadController do
         end)
 
       if data.direction == :input,
-        do: AutoFlowUtils.auto_adjust_demand_counter(endpoint.pad_ref, state),
+        do: AutoFlowUtils.auto_adjust_atomic_demand(endpoint.pad_ref, state),
         else: state
     else
       state
@@ -342,14 +342,14 @@ defmodule Membrane.Core.Element.PadController do
       ref: ref,
       other_ref: other_ref,
       demand_unit: this_demand_unit,
-      demand_counter: demand_counter
+      atomic_demand: atomic_demand
     } = data
 
     input_queue =
       InputQueue.init(%{
         inbound_demand_unit: other_info[:demand_unit] || this_demand_unit,
         outbound_demand_unit: this_demand_unit,
-        demand_counter: demand_counter,
+        atomic_demand: atomic_demand,
         linked_output_ref: other_ref,
         log_tag: inspect(ref),
         target_size: props.target_queue_size
@@ -433,7 +433,7 @@ defmodule Membrane.Core.Element.PadController do
           |> PadModel.set_data!(pad_ref, :associated_pads, [])
 
         if pad_data.direction == :output,
-          do: AutoFlowUtils.auto_adjust_demand_counter(pad_data.associated_pads, state),
+          do: AutoFlowUtils.auto_adjust_atomic_demand(pad_data.associated_pads, state),
           else: state
 
       _pad_data ->

@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.InputQueue do
   use Bunch
 
   alias Membrane.Buffer
-  alias Membrane.Core.Element.DemandCounter
+  alias Membrane.Core.Element.AtomicDemand
   alias Membrane.Event
   alias Membrane.Pad
   alias Membrane.StreamFormat
@@ -36,14 +36,14 @@ defmodule Membrane.Core.Element.InputQueue do
           inbound_metric: module(),
           outbound_metric: module(),
           linked_output_ref: Pad.ref(),
-          demand_counter: DemandCounter.t()
+          atomic_demand: AtomicDemand.t()
         }
 
   @enforce_keys [
     :q,
     :log_tag,
     :target_size,
-    :demand_counter,
+    :atomic_demand,
     :inbound_metric,
     :outbound_metric,
     :linked_output_ref
@@ -59,7 +59,7 @@ defmodule Membrane.Core.Element.InputQueue do
   @spec init(%{
           inbound_demand_unit: Buffer.Metric.unit(),
           outbound_demand_unit: Buffer.Metric.unit(),
-          demand_counter: DemandCounter.t(),
+          atomic_demand: AtomicDemand.t(),
           linked_output_ref: Pad.ref(),
           log_tag: String.t(),
           target_size: pos_integer() | nil
@@ -68,7 +68,7 @@ defmodule Membrane.Core.Element.InputQueue do
     %{
       inbound_demand_unit: inbound_demand_unit,
       outbound_demand_unit: outbound_demand_unit,
-      demand_counter: demand_counter,
+      atomic_demand: atomic_demand,
       linked_output_ref: linked_output_ref,
       log_tag: log_tag,
       target_size: target_size
@@ -87,10 +87,10 @@ defmodule Membrane.Core.Element.InputQueue do
       target_size: target_size,
       inbound_metric: inbound_metric,
       outbound_metric: outbound_metric,
-      demand_counter: demand_counter,
+      atomic_demand: atomic_demand,
       linked_output_ref: linked_output_ref
     }
-    |> maybe_increase_demand_counter()
+    |> maybe_increase_atomic_demand()
   end
 
   @spec store(t(), atom(), queue_item() | [queue_item()]) :: t()
@@ -158,7 +158,7 @@ defmodule Membrane.Core.Element.InputQueue do
     |> Membrane.Logger.debug_verbose()
 
     {out, input_queue} = do_take(input_queue, count)
-    input_queue = maybe_increase_demand_counter(input_queue)
+    input_queue = maybe_increase_atomic_demand(input_queue)
 
     Telemetry.report_metric(:take, input_queue.size, input_queue.log_tag)
 
@@ -273,12 +273,12 @@ defmodule Membrane.Core.Element.InputQueue do
     end
   end
 
-  @spec maybe_increase_demand_counter(t()) :: t()
-  defp maybe_increase_demand_counter(
+  @spec maybe_increase_atomic_demand(t()) :: t()
+  defp maybe_increase_atomic_demand(
          %__MODULE__{
            size: size,
            target_size: target_size,
-           demand_counter: demand_counter,
+           atomic_demand: atomic_demand,
            demand: demand
          } = input_queue
        )
@@ -286,16 +286,16 @@ defmodule Membrane.Core.Element.InputQueue do
     diff = max(target_size - size - demand, div(target_size, 2))
 
     """
-    Increasing DemandCounter linked to  #{inspect(input_queue.linked_output_ref)} by #{inspect(diff)}
+    Increasing AtomicDemand linked to  #{inspect(input_queue.linked_output_ref)} by #{inspect(diff)}
     """
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 
-    :ok = DemandCounter.increase(demand_counter, diff)
+    :ok = AtomicDemand.increase(atomic_demand, diff)
     %{input_queue | demand: demand + diff}
   end
 
-  defp maybe_increase_demand_counter(%__MODULE__{} = input_queue), do: input_queue
+  defp maybe_increase_atomic_demand(%__MODULE__{} = input_queue), do: input_queue
 
   # This function may be unused if particular logs are pruned
   @dialyzer {:no_unused, mk_log: 2}

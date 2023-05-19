@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Element.DemandController do
   @moduledoc false
 
-  # Module handling changes in values of output pads demand counters
+  # Module handling changes in values of output pads demand atomics
 
   use Bunch
 
@@ -11,7 +11,7 @@ defmodule Membrane.Core.Element.DemandController do
   alias Membrane.Core.Child.PadModel
 
   alias Membrane.Core.Element.{
-    DemandCounter,
+    AtomicDemand,
     DemandHandler,
     PlaybackQueue,
     State
@@ -22,54 +22,54 @@ defmodule Membrane.Core.Element.DemandController do
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
 
-  @spec snapshot_demand_counter(Pad.ref(), State.t()) :: State.t()
-  def snapshot_demand_counter(pad_ref, state) do
+  @spec snapshot_atomic_demand(Pad.ref(), State.t()) :: State.t()
+  def snapshot_atomic_demand(pad_ref, state) do
     with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
          %State{playback: :playing} <- state do
       if pad_data.direction == :input,
-        do: raise("cannot snapshot demand counter in input pad")
+        do: raise("cannot snapshot atomic counter in input pad")
 
-      do_snapshot_demand_counter(pad_data, state)
+      do_snapshot_atomic_demand(pad_data, state)
     else
       {:error, :unknown_pad} ->
-        # We've got a :demand_counter_increased message on already unlinked pad
+        # We've got a :atomic_demand_increased message on already unlinked pad
         state
 
       %State{playback: :stopped} ->
-        PlaybackQueue.store(&snapshot_demand_counter(pad_ref, &1), state)
+        PlaybackQueue.store(&snapshot_atomic_demand(pad_ref, &1), state)
     end
   end
 
-  defp do_snapshot_demand_counter(
+  defp do_snapshot_atomic_demand(
          %{flow_control: :auto} = pad_data,
          %{effective_flow_control: :pull} = state
        ) do
     %{
-      demand_counter: demand_counter,
+      atomic_demand: atomic_demand,
       associated_pads: associated_pads
     } = pad_data
 
-    if DemandCounter.get(demand_counter) > 0 do
-      AutoFlowUtils.auto_adjust_demand_counter(associated_pads, state)
+    if AtomicDemand.get(atomic_demand) > 0 do
+      AutoFlowUtils.auto_adjust_atomic_demand(associated_pads, state)
     else
       state
     end
   end
 
-  defp do_snapshot_demand_counter(%{flow_control: :manual} = pad_data, state) do
-    with %{demand_snapshot: demand_snapshot, demand_counter: demand_counter}
+  defp do_snapshot_atomic_demand(%{flow_control: :manual} = pad_data, state) do
+    with %{demand_snapshot: demand_snapshot, atomic_demand: atomic_demand}
          when demand_snapshot <= 0 <- pad_data,
-         demand_counter_value
-         when demand_counter_value > 0 and demand_counter_value > demand_snapshot <-
-           DemandCounter.get(demand_counter) do
+         atomic_demand_value
+         when atomic_demand_value > 0 and atomic_demand_value > demand_snapshot <-
+           AtomicDemand.get(atomic_demand) do
       state =
         PadModel.update_data!(
           state,
           pad_data.ref,
           &%{
             &1
-            | demand_snapshot: demand_counter_value,
-              incoming_demand: demand_counter_value - &1.demand_snapshot
+            | demand_snapshot: atomic_demand_value,
+              incoming_demand: atomic_demand_value - &1.demand_snapshot
           }
         )
 
@@ -79,12 +79,12 @@ defmodule Membrane.Core.Element.DemandController do
     end
   end
 
-  defp do_snapshot_demand_counter(_pad_data, state) do
+  defp do_snapshot_atomic_demand(_pad_data, state) do
     state
   end
 
   @doc """
-  Decreases demand snapshot and demand counter on the output by the size of outgoing buffers.
+  Decreases demand snapshot and atomic demand on the output by the size of outgoing buffers.
   """
   @spec decrease_demand_by_outgoing_buffers(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
   def decrease_demand_by_outgoing_buffers(pad_ref, buffers, state) do
@@ -92,12 +92,12 @@ defmodule Membrane.Core.Element.DemandController do
     buffers_size = Buffer.Metric.from_unit(pad_data.demand_unit).buffers_size(buffers)
 
     demand_snapshot = pad_data.demand_snapshot - buffers_size
-    demand_counter = DemandCounter.decrease(pad_data.demand_counter, buffers_size)
+    atomic_demand = AtomicDemand.decrease(pad_data.atomic_demand, buffers_size)
 
     PadModel.set_data!(state, pad_ref, %{
       pad_data
       | demand_snapshot: demand_snapshot,
-        demand_counter: demand_counter
+        atomic_demand: atomic_demand
     })
   end
 end
