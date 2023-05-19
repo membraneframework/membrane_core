@@ -107,7 +107,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
     if new_manual_demand_size < 0 do
       raise Membrane.ElementError,
-            "Demand altering function requested negative demand on pad #{inspect(pad_ref)} in #{state.module}"
+            "Demand altering function requested negative demand on pad #{inspect(pad_ref)} in #{inspect(state.module)}"
     end
 
     PadModel.set_data!(state, pad_ref, :manual_demand_size, new_manual_demand_size)
