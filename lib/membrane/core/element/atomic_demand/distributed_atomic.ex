@@ -6,6 +6,7 @@ defmodule Membrane.Core.Element.AtomicDemand.DistributedAtomic do
   # The module allows to create and modify the value of a counter in the same manner both when the counter is about to be accessed
   # from the same node, and from different nodes.
 
+  alias Membrane.Core.SubprocessSupervisor
   alias __MODULE__.Worker
 
   @enforce_keys [:worker, :atomic_ref]
@@ -16,10 +17,10 @@ defmodule Membrane.Core.Element.AtomicDemand.DistributedAtomic do
   defguardp on_the_same_node_as_self(distributed_atomic)
             when distributed_atomic.worker |> node() == self() |> node()
 
-  @spec new(integer() | nil) :: t
-  def new(initial_value \\ nil) do
+  @spec new(integer() | nil, supervisor: pid()) :: t
+  def new(initial_value \\ nil, supervisor: supervisor) do
     atomic_ref = :atomics.new(1, [])
-    {:ok, worker} = Worker.start_link(self())
+    {:ok, worker} = SubprocessSupervisor.start_utility(supervisor, Worker)
 
     distributed_atomic = %__MODULE__{
       atomic_ref: atomic_ref,

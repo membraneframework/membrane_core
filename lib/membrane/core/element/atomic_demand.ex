@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Element.AtomicDemand do
   @moduledoc false
-  alias Membrane.Core.Element.AtomicDemand.AtomicFlowStatus
+
   alias Membrane.Core.Element.EffectiveFlowController
 
   alias __MODULE__.{
@@ -46,40 +46,49 @@ defmodule Membrane.Core.Element.AtomicDemand do
 
   defstruct @enforce_keys ++ [buffered_decrementation: 0, toilet_overflowed?: false]
 
-  @spec new(
-          receiver_effective_flow_control :: EffectiveFlowController.effective_flow_control(),
-          receiver_process :: Process.dest(),
-          receiver_demand_unit :: Membrane.Buffer.Metric.unit(),
-          sender_process :: Process.dest(),
-          sender_pad_ref :: Pad.ref(),
-          toilet_capacity :: non_neg_integer() | nil,
-          throttling_factor :: pos_integer() | nil
-        ) :: t
+  @spec new(%{
+          :receiver_effective_flow_control => EffectiveFlowController.effective_flow_control(),
+          :receiver_process => Process.dest(),
+          :receiver_demand_unit => Membrane.Buffer.Metric.unit(),
+          :sender_process => Process.dest(),
+          :sender_pad_ref => Pad.ref(),
+          :supervisor => pid(),
+          optional(:toilet_capacity) => non_neg_integer() | nil,
+          optional(:throttling_factor) => pos_integer() | nil
+        }) :: t
   def new(
-        receiver_effective_flow_control,
-        receiver_process,
-        receiver_demand_unit,
-        sender_process,
-        sender_pad_ref,
-        toilet_capacity \\ nil,
-        throttling_factor \\ nil
+        %{
+          receiver_effective_flow_control: receiver_effective_flow_control,
+          receiver_process: receiver_process,
+          receiver_demand_unit: receiver_demand_unit,
+          sender_process: sender_process,
+          sender_pad_ref: sender_pad_ref,
+          supervisor: supervisor
+        } = options
       ) do
-    %DistributedAtomic{worker: worker} = counter = DistributedAtomic.new()
+    toilet_capacity = options[:toilet_capacity]
+    throttling_factor = options[:throttling_factor]
+
+    counter = DistributedAtomic.new(supervisor: supervisor)
 
     throttling_factor =
       cond do
         throttling_factor != nil -> throttling_factor
-        node(sender_process) == node(worker) -> @default_throttling_factor
+        node(sender_process) == node(counter.worker) -> @default_throttling_factor
         true -> @distributed_default_throttling_factor
       end
 
-    receiver_status = AtomicFlowStatus.new({:resolved, receiver_effective_flow_control})
+    receiver_status =
+      AtomicFlowStatus.new(
+        {:resolved, receiver_effective_flow_control},
+        supervisor: supervisor
+      )
 
     %__MODULE__{
       counter: counter,
       receiver_status: receiver_status,
       receiver_process: receiver_process,
-      sender_status: AtomicFlowStatus.new(:to_be_resolved),
+      sender_status: AtomicFlowStatus.new(:to_be_resolved, supervisor: supervisor),
       sender_process: sender_process,
       sender_pad_ref: sender_pad_ref,
       toilet_capacity: toilet_capacity || default_toilet_capacity(receiver_demand_unit),

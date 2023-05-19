@@ -10,8 +10,8 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Element.{
     ActionHandler,
-    CallbackContext,
     AtomicDemand,
+    CallbackContext,
     EffectiveFlowController,
     EventController,
     InputQueue,
@@ -160,15 +160,16 @@ defmodule Membrane.Core.Element.PadController do
       EffectiveFlowController.get_pad_effective_flow_control(endpoint.pad_ref, state)
 
     atomic_demand =
-      AtomicDemand.new(
-        pad_effective_flow_control,
-        self(),
-        input_demand_unit || :buffers,
-        other_endpoint.pid,
-        other_endpoint.pad_ref,
-        endpoint.pad_props[:toilet_capacity],
-        endpoint.pad_props[:throttling_factor]
-      )
+      AtomicDemand.new(%{
+        receiver_effective_flow_control: pad_effective_flow_control,
+        receiver_process: self(),
+        receiver_demand_unit: input_demand_unit || :buffers,
+        sender_process: other_endpoint.pid,
+        sender_pad_ref: other_endpoint.pad_ref,
+        supervisor: state.subprocess_supervisor,
+        toilet_capacity: endpoint.pad_props[:toilet_capacity],
+        throttling_factor: endpoint.pad_props[:throttling_factor]
+      })
 
     # The sibiling was an initiator, we don't need to use the pid of a task spawned for observability
     _metadata = Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)

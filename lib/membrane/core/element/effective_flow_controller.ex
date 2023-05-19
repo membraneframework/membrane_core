@@ -8,7 +8,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
   # If element A is linked via its input auto pads only to the :push output pads of other elements, then effective flow
   # control of element A will be set to :push. Otherwise, if element A is linked via its input auto pads to at least one
-  # :pull output pad, element A will set itss effective flow control to :pull and will forward this information
+  # :pull output pad, element A will set its effective flow control to :pull and will forward this information
   # via its output auto pads.
 
   # Resolving effective flow control is performed on

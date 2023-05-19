@@ -7,11 +7,11 @@ defmodule Membrane.Core.Element.AtomicDemand.AtomicFlowStatus do
   @type t :: DistributedAtomic.t()
   @type value :: {:resolved, EffectiveFlowController.effective_flow_control()} | :to_be_resolved
 
-  @spec new(value) :: t
-  def new(initial_value) do
+  @spec new(value, supervisor: pid()) :: t
+  def new(initial_value, supervisor: supervisor) do
     initial_value
     |> flow_status_to_int()
-    |> DistributedAtomic.new()
+    |> DistributedAtomic.new(supervisor: supervisor)
   end
 
   @spec get(t) :: value()
