@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   use Bunch
 
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.{CallbackHandler, Child, Element, Message}
+  alias Membrane.Core.{CallbackHandler, Element, Message}
 
   alias Membrane.Core.Element.{
     ActionHandler,
@@ -17,7 +17,6 @@ defmodule Membrane.Core.Element.LifecycleController do
     State
   }
 
-  require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Logger
 
@@ -73,8 +72,6 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   @spec handle_playing(State.t()) :: State.t()
   def handle_playing(state) do
-    Child.PadController.assert_all_static_pads_linked!(state)
-
     Membrane.Logger.debug("Got play request")
 
     state =
