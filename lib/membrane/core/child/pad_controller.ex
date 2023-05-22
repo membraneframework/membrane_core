@@ -5,7 +5,6 @@ defmodule Membrane.Core.Child.PadController do
   alias Membrane.{LinkError, Pad}
 
   require Membrane.Core.Child.PadModel
-  require Membrane.Logger
 
   @type state :: Membrane.Core.Bin.State.t() | Membrane.Core.Element.State.t()
 

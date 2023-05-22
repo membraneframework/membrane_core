@@ -1,6 +1,7 @@
 defmodule Membrane.Integration.AutoDemandsTest do
   use ExUnit.Case, async: true
 
+  import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Testing.{Pipeline, Sink, Source}
@@ -51,8 +52,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
   ]
   |> Enum.map(fn opts ->
     test "buffers pass through auto-demand filters; setup: #{inspect(opts)}" do
-      import Membrane.ChildrenSpec
-
       %{payloads: payloads, factor: factor, direction: direction, filters: filters} =
         unquote(Macro.escape(opts))
 
@@ -110,8 +109,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end
 
   test "handle removed branch" do
-    import Membrane.ChildrenSpec
-
     pipeline =
       Pipeline.start_link_supervised!(
         spec: [
@@ -158,8 +155,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
   ]
   |> Enum.map(fn opts ->
     test "buffers pass to auto-demand #{opts.name}" do
-      import Membrane.ChildrenSpec
-
       %{name: name, module: module} = unquote(Macro.escape(opts))
       payloads = Enum.map(1..1000, &inspect/1)
 
@@ -201,8 +196,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end
 
   test "toilet" do
-    import Membrane.ChildrenSpec
-
     pipeline =
       Pipeline.start_link_supervised!(
         spec:
@@ -229,8 +222,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end
 
   test "toilet overflow" do
-    import Membrane.ChildrenSpec
-
     pipeline =
       Pipeline.start_supervised!(
         spec:

@@ -1,146 +1,103 @@
 defmodule Membrane.Core.Element.DemandController do
   @moduledoc false
 
-  # Module handling demands incoming through output pads.
+  # Module handling changes in values of output pads atomic demand
 
   use Bunch
 
-  alias Membrane.Core.{CallbackHandler, Message}
+  alias __MODULE__.AutoFlowUtils
+
+  alias Membrane.Buffer
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, CallbackContext, PlaybackQueue, State, Toilet}
+
+  alias Membrane.Core.Element.{
+    AtomicDemand,
+    DemandHandler,
+    PlaybackQueue,
+    State
+  }
+
   alias Membrane.Pad
 
   require Membrane.Core.Child.PadModel
   require Membrane.Logger
 
-  @doc """
-  Handles demand coming on an output pad. Updates demand value and executes `handle_demand` callback.
-  """
-  @spec handle_demand(Pad.ref(), non_neg_integer, State.t()) :: State.t()
-  def handle_demand(pad_ref, size, state) do
-    withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
-          playback: %State{playback: :playing} <- state do
-      %{direction: :output, flow_control: flow_control} = data
+  @spec snapshot_atomic_demand(Pad.ref(), State.t()) :: State.t()
+  def snapshot_atomic_demand(pad_ref, state) do
+    with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
+         %State{playback: :playing} <- state do
+      if pad_data.direction == :input,
+        do: raise("cannot snapshot atomic counter in input pad")
 
-      if flow_control == :push,
-        do: raise("Pad with :push control mode cannot handle demand.")
-
-      do_handle_demand(pad_ref, size, data, state)
+      do_snapshot_atomic_demand(pad_data, state)
     else
-      pad: {:error, :unknown_pad} ->
-        # We've got a demand from already unlinked pad
+      {:error, :unknown_pad} ->
+        # We've got a :atomic_demand_increased message on already unlinked pad
         state
 
-      playback: _playback ->
-        PlaybackQueue.store(&handle_demand(pad_ref, size, &1), state)
+      %State{playback: :stopped} ->
+        PlaybackQueue.store(&snapshot_atomic_demand(pad_ref, &1), state)
     end
   end
 
-  defp do_handle_demand(pad_ref, size, %{flow_control: :auto} = data, state) do
-    %{demand: old_demand, associated_pads: associated_pads} = data
-
-    state = PadModel.set_data!(state, pad_ref, :demand, old_demand + size)
-
-    if old_demand <= 0 do
-      Enum.reduce(associated_pads, state, &send_auto_demand_if_needed/2)
-    else
-      state
-    end
-  end
-
-  defp do_handle_demand(pad_ref, size, %{flow_control: :manual} = data, state) do
-    demand = data.demand + size
-    data = %{data | demand: demand}
-    state = PadModel.set_data!(state, pad_ref, data)
-
-    if exec_handle_demand?(data) do
-      context = &CallbackContext.from_state(&1, incoming_demand: size)
-
-      CallbackHandler.exec_and_handle_callback(
-        :handle_demand,
-        ActionHandler,
-        %{
-          split_continuation_arbiter: &exec_handle_demand?(PadModel.get_data!(&1, pad_ref)),
-          context: context
-        },
-        [pad_ref, demand, data[:demand_unit]],
-        state
-      )
-    else
-      state
-    end
-  end
-
-  @doc """
-  Sends auto demand to an input pad if it should be sent.
-
-  The demand should be sent when the current demand on the input pad is at most
-  half of the demand request size and if there's positive demand on each of
-  associated output pads.
-
-  Also, the `demand_decrease` argument can be passed, decreasing the size of the
-  demand on the input pad before proceeding to the rest of the function logic.
-  """
-  @spec send_auto_demand_if_needed(Pad.ref(), integer, State.t()) :: State.t()
-  def send_auto_demand_if_needed(pad_ref, demand_decrease \\ 0, state) do
-    data = PadModel.get_data!(state, pad_ref)
-
+  defp do_snapshot_atomic_demand(
+         %{flow_control: :auto} = pad_data,
+         %{effective_flow_control: :pull} = state
+       ) do
     %{
-      demand: demand,
-      toilet: toilet,
-      associated_pads: associated_pads,
-      auto_demand_size: demand_request_size
-    } = data
+      atomic_demand: atomic_demand,
+      associated_pads: associated_pads
+    } = pad_data
 
-    demand = demand - demand_decrease
+    if AtomicDemand.get(atomic_demand) > 0 do
+      AutoFlowUtils.auto_adjust_atomic_demand(associated_pads, state)
+    else
+      state
+    end
+  end
 
-    demand =
-      if demand <= div(demand_request_size, 2) and auto_demands_positive?(associated_pads, state) do
-        if toilet do
-          Toilet.drain(toilet, demand_request_size - demand)
-        else
-          Membrane.Logger.debug_verbose(
-            "Sending auto demand of size #{demand_request_size - demand} on pad #{inspect(pad_ref)}"
-          )
-
-          %{pid: pid, other_ref: other_ref} = data
-          Message.send(pid, :demand, demand_request_size - demand, for_pad: other_ref)
-        end
-
-        demand_request_size
-      else
-        Membrane.Logger.debug_verbose(
-          "Not sending auto demand on pad #{inspect(pad_ref)}, pads data: #{inspect(state.pads_data)}"
+  defp do_snapshot_atomic_demand(%{flow_control: :manual} = pad_data, state) do
+    with %{demand_snapshot: demand_snapshot, atomic_demand: atomic_demand}
+         when demand_snapshot <= 0 <- pad_data,
+         atomic_demand_value
+         when atomic_demand_value > 0 and atomic_demand_value > demand_snapshot <-
+           AtomicDemand.get(atomic_demand) do
+      state =
+        PadModel.update_data!(
+          state,
+          pad_data.ref,
+          &%{
+            &1
+            | demand_snapshot: atomic_demand_value,
+              incoming_demand: atomic_demand_value - &1.demand_snapshot
+          }
         )
 
-        demand
-      end
-
-    PadModel.set_data!(state, pad_ref, :demand, demand)
+      DemandHandler.handle_redemand(pad_data.ref, state)
+    else
+      _other -> state
+    end
   end
 
-  defp auto_demands_positive?(associated_pads, state) do
-    Enum.all?(associated_pads, &(PadModel.get_data!(state, &1, :demand) > 0))
+  defp do_snapshot_atomic_demand(_pad_data, state) do
+    state
   end
 
-  defp exec_handle_demand?(%{end_of_stream?: true}) do
-    Membrane.Logger.debug_verbose("""
-    Demand controller: not executing handle_demand as :end_of_stream action has already been returned
-    """)
+  @doc """
+  Decreases demand snapshot and atomic demand on the output by the size of outgoing buffers.
+  """
+  @spec decrease_demand_by_outgoing_buffers(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
+  def decrease_demand_by_outgoing_buffers(pad_ref, buffers, state) do
+    pad_data = PadModel.get_data!(state, pad_ref)
+    buffers_size = Buffer.Metric.from_unit(pad_data.demand_unit).buffers_size(buffers)
 
-    false
-  end
+    demand_snapshot = pad_data.demand_snapshot - buffers_size
+    atomic_demand = AtomicDemand.decrease(pad_data.atomic_demand, buffers_size)
 
-  defp exec_handle_demand?(%{demand: demand}) when demand <= 0 do
-    Membrane.Logger.debug_verbose("""
-    Demand controller: not executing handle_demand as demand is not greater than 0,
-    demand: #{inspect(demand)}
-    """)
-
-    false
-  end
-
-  defp exec_handle_demand?(_pad_data) do
-    true
+    PadModel.set_data!(state, pad_ref, %{
+      pad_data
+      | demand_snapshot: demand_snapshot,
+        atomic_demand: atomic_demand
+    })
   end
 end

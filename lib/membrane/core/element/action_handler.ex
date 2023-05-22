@@ -20,7 +20,15 @@ defmodule Membrane.Core.Element.ActionHandler do
   }
 
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{DemandHandler, PadController, State, StreamFormatController}
+
+  alias Membrane.Core.Element.{
+    DemandController,
+    DemandHandler,
+    PadController,
+    State,
+    StreamFormatController
+  }
+
   alias Membrane.Core.{Events, Message, Telemetry, TimerController}
   alias Membrane.Element.Action
 
@@ -307,11 +315,11 @@ defmodule Membrane.Core.Element.ActionHandler do
          }
          when stream_format != nil <- pad_data do
       state =
-        DemandHandler.handle_outgoing_buffers(pad_ref, pad_data, buffers, state)
+        DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
         |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
 
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
-      state
+      DemandController.snapshot_atomic_demand(pad_ref, state)
     else
       %{direction: :input} ->
         raise PadDirectionError, action: :buffer, direction: :input, pad: pad_ref
@@ -354,7 +362,8 @@ defmodule Membrane.Core.Element.ActionHandler do
         StreamFormatController.validate_stream_format!(
           :output,
           stream_format_validation_params,
-          stream_format
+          stream_format,
+          state
         )
 
       state = PadModel.set_data!(state, pad_ref, :stream_format, stream_format)

@@ -85,7 +85,6 @@ defmodule Membrane.Testing.Pipeline do
   alias Membrane.{Element, Pipeline}
   alias Membrane.Testing.Notification
 
-  require Membrane.Logger
   require Membrane.Core.Message
 
   defmodule State do

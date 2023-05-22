@@ -8,9 +8,15 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.{CallbackHandler, Element, Message}
-  alias Membrane.Core.Element.{ActionHandler, CallbackContext, PlaybackQueue, State}
 
-  require Membrane.Core.Child.PadModel
+  alias Membrane.Core.Element.{
+    ActionHandler,
+    CallbackContext,
+    EffectiveFlowController,
+    PlaybackQueue,
+    State
+  }
+
   require Membrane.Core.Message
   require Membrane.Logger
 
@@ -67,7 +73,10 @@ defmodule Membrane.Core.Element.LifecycleController do
   @spec handle_playing(State.t()) :: State.t()
   def handle_playing(state) do
     Membrane.Logger.debug("Got play request")
-    state = %State{state | playback: :playing}
+
+    state =
+      %State{state | playback: :playing}
+      |> EffectiveFlowController.resolve_effective_flow_control()
 
     state =
       CallbackHandler.exec_and_handle_callback(

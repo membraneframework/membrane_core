@@ -4,6 +4,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.State
   alias Membrane.Core.Message
+  alias Membrane.Core.SubprocessSupervisor
   alias Membrane.LinkError
   alias Membrane.Pad
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter}
@@ -19,7 +20,8 @@ defmodule Membrane.Core.Element.PadControllerTest do
       module: elem_module,
       parent_pid: self(),
       internal_state: %{},
-      synchronization: %{clock: nil, parent_clock: nil}
+      synchronization: %{clock: nil, parent_clock: nil},
+      subprocess_supervisor: SubprocessSupervisor.start_link!()
     )
     |> PadSpecHandler.init_pads()
   end
@@ -30,25 +32,30 @@ defmodule Membrane.Core.Element.PadControllerTest do
 
       assert {{:ok, _pad_info}, new_state} =
                @module.handle_link(
-                 :output,
-                 %{pad_ref: :output, pid: self(), pad_props: %{options: []}, child: :a},
+                 :input,
                  %{
-                   pad_ref: :other_input,
-                   pid: nil,
+                   pad_ref: :input,
+                   pid: self(),
+                   pad_props: %{min_demand_factor: 0.25, target_queue_size: 40, options: []},
+                   child: :a
+                 },
+                 %{
+                   pad_ref: :other_output,
+                   pid: spawn(fn -> :ok end),
                    child: :b,
                    pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
                  },
                  %{
-                   initiator: :sibling,
-                   other_info: %{direction: :input, flow_control: :manual, demand_unit: :buffers},
+                   other_info: %{direction: :output, flow_control: :manual, demand_unit: :buffers},
                    link_metadata: %{toilet: make_ref(), observability_metadata: %{}},
-                   stream_format_validation_params: []
+                   stream_format_validation_params: [],
+                   other_effective_flow_control: :pull
                  },
                  state
                )
 
       assert %{new_state | pads_data: nil} == %{state | pads_data: nil}
-      assert PadModel.assert_instance(new_state, :output) == :ok
+      assert PadModel.assert_instance(new_state, :input) == :ok
     end
 
     test "when pad is does not exist in the element" do
@@ -59,7 +66,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
           :output,
           %{pad_ref: :invalid_pad_ref, child: :a},
           %{pad_ref: :x, child: :b},
-          %{link_initiator: :parent, stream_format_validation_params: []},
+          %{stream_format_validation_params: []},
           state
         )
       end

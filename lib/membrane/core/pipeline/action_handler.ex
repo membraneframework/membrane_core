@@ -8,8 +8,6 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   alias Membrane.Core.Parent.LifecycleController
   alias Membrane.Core.Pipeline.State
 
-  require Membrane.Logger
-
   @impl CallbackHandler
   def handle_action({action, _args}, :handle_init, _params, _state) when action != :spec do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}

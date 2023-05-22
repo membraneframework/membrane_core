@@ -200,12 +200,10 @@ defmodule Membrane.Core.Bin.PadController do
           SpecificationParser.raw_endpoint(),
           SpecificationParser.raw_endpoint(),
           %{
-            initiator: :parent,
             stream_format_validation_params:
               StreamFormatController.stream_format_validation_params()
           }
           | %{
-              initiator: :sibling,
               other_info: PadModel.pad_info() | nil,
               link_metadata: map,
               stream_format_validation_params:
@@ -238,7 +236,7 @@ defmodule Membrane.Core.Bin.PadController do
 
       child_endpoint = %{child_endpoint | pad_props: pad_props}
 
-      if params.initiator == :sibling do
+      if direction == :input do
         :ok =
           Child.PadController.validate_pad_mode!(
             {endpoint.pad_ref, pad_data},
@@ -297,11 +295,10 @@ defmodule Membrane.Core.Bin.PadController do
   def handle_unlink(pad_ref, state) do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
       state = maybe_handle_pad_removed(pad_ref, state)
-      endpoint = PadModel.get_data!(state, pad_ref, :endpoint)
       {pad_data, state} = PadModel.pop_data!(state, pad_ref)
 
-      if endpoint do
-        Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+      if pad_data.endpoint do
+        Message.send(pad_data.endpoint.pid, :handle_unlink, pad_data.endpoint.pad_ref)
         ChildLifeController.proceed_spec_startup(pad_data.spec_ref, state)
       else
         Membrane.Logger.debug("""

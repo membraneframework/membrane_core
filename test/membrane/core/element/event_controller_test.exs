@@ -1,8 +1,9 @@
 defmodule Membrane.Core.Element.EventControllerTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Element.{EventController, InputQueue, State}
-  alias Membrane.Core.{Events, Message}
+  alias Membrane.Core.Element.{AtomicDemand, EventController, InputQueue, State}
+  alias Membrane.Core.Events
+  alias Membrane.Core.SubprocessSupervisor
   alias Membrane.Event
 
   require Membrane.Core.Message
@@ -19,14 +20,24 @@ defmodule Membrane.Core.Element.EventControllerTest do
   end
 
   setup do
+    atomic_demand =
+      AtomicDemand.new(%{
+        receiver_effective_flow_control: :pull,
+        receiver_process: spawn(fn -> :ok end),
+        receiver_demand_unit: :buffers,
+        sender_process: spawn(fn -> :ok end),
+        sender_pad_ref: :output,
+        supervisor: SubprocessSupervisor.start_link!(),
+        toilet_capacity: 300
+      })
+
     input_queue =
       InputQueue.init(%{
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :buffers,
-        demand_pid: self(),
-        demand_pad: :some_pad,
+        linked_output_ref: :some_pad,
         log_tag: "test",
-        toilet?: false,
+        atomic_demand: atomic_demand,
         target_size: nil,
         min_demand_factor: nil
       })
@@ -54,7 +65,8 @@ defmodule Membrane.Core.Element.EventControllerTest do
         }
       )
 
-    assert_received Message.new(:demand, _size, for_pad: :some_pad)
+    assert AtomicDemand.get(atomic_demand) > 0
+
     [state: state]
   end
 

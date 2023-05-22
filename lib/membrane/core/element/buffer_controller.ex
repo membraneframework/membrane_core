@@ -12,7 +12,6 @@ defmodule Membrane.Core.Element.BufferController do
   alias Membrane.Core.Element.{
     ActionHandler,
     CallbackContext,
-    DemandController,
     DemandHandler,
     EventController,
     InputQueue,
@@ -20,6 +19,7 @@ defmodule Membrane.Core.Element.BufferController do
     State
   }
 
+  alias Membrane.Core.Element.DemandController.AutoFlowUtils
   alias Membrane.Core.Telemetry
 
   require Membrane.Core.Child.PadModel
@@ -58,15 +58,17 @@ defmodule Membrane.Core.Element.BufferController do
           State.t()
   defp do_handle_buffer(pad_ref, %{flow_control: :auto} = data, buffers, state) do
     %{demand: demand, demand_unit: demand_unit} = data
-
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
+
     state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
-    state = DemandController.send_auto_demand_if_needed(pad_ref, state)
+
+    state = AutoFlowUtils.auto_adjust_atomic_demand(pad_ref, state)
     exec_buffer_callback(pad_ref, buffers, state)
   end
 
   defp do_handle_buffer(pad_ref, %{flow_control: :manual} = data, buffers, state) do
     %{input_queue: old_input_queue} = data
+
     input_queue = InputQueue.store(old_input_queue, buffers)
     state = PadModel.set_data!(state, pad_ref, :input_queue, input_queue)
 
@@ -77,7 +79,7 @@ defmodule Membrane.Core.Element.BufferController do
     end
   end
 
-  defp do_handle_buffer(pad_ref, _data, buffers, state) do
+  defp do_handle_buffer(pad_ref, %{flow_control: :push}, buffers, state) do
     exec_buffer_callback(pad_ref, buffers, state)
   end
 
@@ -92,13 +94,7 @@ defmodule Membrane.Core.Element.BufferController do
   def exec_buffer_callback(pad_ref, buffers, %State{type: :filter} = state) do
     Telemetry.report_metric("buffer", 1, inspect(pad_ref))
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_buffers_batch,
-      ActionHandler,
-      %{context: &CallbackContext.from_state/1},
-      [pad_ref, buffers],
-      state
-    )
+    do_exec_buffer_callback(pad_ref, buffers, state)
   end
 
   def exec_buffer_callback(pad_ref, buffers, %State{type: type} = state)
@@ -106,6 +102,10 @@ defmodule Membrane.Core.Element.BufferController do
     Telemetry.report_metric(:buffer, length(List.wrap(buffers)))
     Telemetry.report_bitrate(buffers)
 
+    do_exec_buffer_callback(pad_ref, buffers, state)
+  end
+
+  defp do_exec_buffer_callback(pad_ref, buffers, state) do
     CallbackHandler.exec_and_handle_callback(
       :handle_buffers_batch,
       ActionHandler,

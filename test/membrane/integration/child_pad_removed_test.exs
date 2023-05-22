@@ -181,7 +181,6 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
       end
     end
 
-    @tag :target
     test "and sibling linked via static pad is removed, pipeline is not raising" do
       for bin_actions <- [
             [remove_children: :source],

@@ -1,8 +1,12 @@
 defmodule Membrane.Core.Element.LifecycleControllerTest do
   use ExUnit.Case
 
-  alias Membrane.Core.Element.{InputQueue, LifecycleController, State}
-  alias Membrane.Core.Message
+  alias Membrane.Core.Element.{AtomicDemand, InputQueue, LifecycleController, State}
+
+  alias Membrane.Core.{
+    Message,
+    SubprocessSupervisor
+  }
 
   require Membrane.Core.Message
 
@@ -17,16 +21,24 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
   end
 
   setup do
+    atomic_demand =
+      AtomicDemand.new(%{
+        receiver_effective_flow_control: :pull,
+        receiver_process: self(),
+        receiver_demand_unit: :buffers,
+        sender_process: self(),
+        sender_pad_ref: :some_pad,
+        supervisor: SubprocessSupervisor.start_link!()
+      })
+
     input_queue =
       InputQueue.init(%{
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :buffers,
-        demand_pid: self(),
-        demand_pad: :some_pad,
+        atomic_demand: atomic_demand,
+        linked_output_ref: :some_pad,
         log_tag: "test",
-        toilet?: false,
-        target_size: nil,
-        min_demand_factor: nil
+        target_size: nil
       })
 
     state =
@@ -52,7 +64,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
         }
       )
 
-    assert_received Message.new(:demand, _size, for_pad: :some_pad)
+    assert_received Message.new(:atomic_demand_increased, :some_pad)
     [state: state]
   end
 

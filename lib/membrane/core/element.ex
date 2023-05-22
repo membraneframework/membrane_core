@@ -18,6 +18,7 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
+  alias Membrane.Core.Element.DemandHandler
   alias Membrane.{Clock, Core, ResourceGuard, Sync}
 
   alias Membrane.Core.{SubprocessSupervisor, TimerController}
@@ -25,6 +26,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
+    EffectiveFlowController,
     EventController,
     LifecycleController,
     PadController,
@@ -171,9 +173,13 @@ defmodule Membrane.Core.Element do
 
   @compile {:inline, do_handle_info: 2}
 
-  defp do_handle_info(Message.new(:demand, size, _opts) = msg, state) do
-    pad_ref = Message.for_pad(msg)
-    state = DemandController.handle_demand(pad_ref, size, state)
+  defp do_handle_info(Message.new(:atomic_demand_increased, pad_ref), state) do
+    state = DemandController.snapshot_atomic_demand(pad_ref, state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:resume_handle_demand_loop), state) do
+    state = DemandHandler.handle_delayed_demands(state)
     {:noreply, state}
   end
 
@@ -212,6 +218,23 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:parent_notification, notification), state) do
     state = Core.Child.LifecycleController.handle_parent_notification(notification, state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(
+         Message.new(:sender_effective_flow_control_resolved, [
+           input_pad_ref,
+           effective_flow_control
+         ]),
+         state
+       ) do
+    state =
+      EffectiveFlowController.handle_sender_effective_flow_control(
+        input_pad_ref,
+        effective_flow_control,
+        state
+      )
+
     {:noreply, state}
   end
 

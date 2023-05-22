@@ -14,8 +14,6 @@ defmodule Membrane.Support.LogMetadataTest.Pipeline do
 
     import Membrane.ChildrenSpec
 
-    require Membrane.Logger
-
     def_output_pad :output,
       flow_control: :manual,
       accepted_format: _any,

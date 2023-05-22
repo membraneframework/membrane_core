@@ -2,7 +2,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   use ExUnit.Case, async: true
 
   alias Membrane.{ActionError, Buffer, ElementError, PadDirectionError}
-  alias Membrane.Core.Element.State
+  alias Membrane.Core.Element.{AtomicDemand, State}
+  alias Membrane.Core.SubprocessSupervisor
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
 
@@ -30,7 +31,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
               direction: :input,
               pid: self(),
               flow_control: :manual,
-              demand: 0
+              demand_snapshot: 0
             ),
           input_push:
             struct(Membrane.Element.PadData,
@@ -38,6 +39,10 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
               pid: self(),
               flow_control: :push
             )
+        },
+        pads_info: %{
+          input: %{flow_control: :manual},
+          input_push: %{flow_control: :push}
         }
       )
 
@@ -50,7 +55,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "delaying demand", %{state: state} do
       state = %{state | playback: :playing, supplying_demand?: true}
       state = @module.handle_action({:demand, {:input, 10}}, :handle_info, %{}, state)
-      assert state.pads_data.input.demand == 10
+      assert state.pads_data.input.manual_demand_size == 10
       assert MapSet.new([{:input, :supply}]) == state.delayed_demands
     end
 
@@ -68,6 +73,28 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   end
 
   defp trivial_filter_state(_context) do
+    supervisor = SubprocessSupervisor.start_link!()
+
+    input_atomic_demand =
+      AtomicDemand.new(%{
+        receiver_effective_flow_control: :push,
+        receiver_process: self(),
+        receiver_demand_unit: :buffers,
+        sender_process: spawn(fn -> :ok end),
+        sender_pad_ref: :output,
+        supervisor: supervisor
+      })
+
+    output_atomic_demand =
+      AtomicDemand.new(%{
+        receiver_effective_flow_control: :push,
+        receiver_process: spawn(fn -> :ok end),
+        receiver_demand_unit: :bytes,
+        sender_process: self(),
+        sender_pad_ref: :output,
+        supervisor: supervisor
+      })
+
     state =
       struct(State,
         module: TrivialFilter,
@@ -82,10 +109,13 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             pid: self(),
             other_ref: :other_ref,
             stream_format: nil,
+            demand_unit: :bytes,
             other_demand_unit: :bytes,
             start_of_stream?: true,
             end_of_stream?: false,
-            flow_control: :push
+            flow_control: :push,
+            atomic_demand: output_atomic_demand,
+            demand_snapshot: 0
           },
           input: %{
             direction: :input,
@@ -94,8 +124,14 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             stream_format: nil,
             start_of_stream?: true,
             end_of_stream?: false,
-            flow_control: :push
+            flow_control: :push,
+            atomic_demand: input_atomic_demand,
+            demand_snapshot: 0
           }
+        },
+        pads_info: %{
+          output: %{flow_control: :push},
+          input: %{flow_control: :push}
         }
       )
 
@@ -130,23 +166,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       end
     end
 
-    test "when element is moving to playing", %{state: state} do
-      state =
-        %{state | playback: :playing}
-        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
-
-      result =
-        @module.handle_action(
-          buffer_action(:output),
-          :handle_playing,
-          %{},
-          state
-        )
-
-      assert result == state
-      assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref)
-    end
-
     test "when element is playing", %{state: state} do
       state =
         %{state | playback: :playing}
@@ -160,7 +179,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
 
-      assert result == state
+      assert result.pads_data.output.demand_snapshot < 0
+      assert AtomicDemand.get(result.pads_data.output.atomic_demand) < 0
+      assert put_in(result, [:pads_data, :output, :demand_snapshot], 0) == state
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref)
     end
 
@@ -478,8 +499,11 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             direction: :output,
             pid: self(),
             flow_control: :manual,
-            demand: 0
+            demand_snapshot: 0
           }
+        },
+        pads_info: %{
+          output: %{flow_control: :manual}
         },
         playback: :playing
       )

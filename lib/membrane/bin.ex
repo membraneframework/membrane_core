@@ -18,7 +18,6 @@ defmodule Membrane.Bin do
   alias Membrane.Core.OptionsSpecs
 
   require Membrane.Core.Message
-  require Membrane.Logger
 
   @type state :: any()
 

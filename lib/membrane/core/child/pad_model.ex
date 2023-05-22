@@ -6,6 +6,7 @@ defmodule Membrane.Core.Child.PadModel do
   use Bunch
 
   alias Membrane.Core.Child
+  alias Membrane.Core.Element.EffectiveFlowController
   alias Membrane.{Pad, UnknownPadError}
 
   @type bin_pad_data :: %Membrane.Bin.PadData{
@@ -24,11 +25,13 @@ defmodule Membrane.Core.Child.PadModel do
   @type element_pad_data :: %Membrane.Element.PadData{
           availability: Pad.availability(),
           stream_format: Membrane.StreamFormat.t() | nil,
-          demand: integer() | nil,
+          demand_snapshot: integer() | nil,
+          manual_demand_size: integer(),
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
           direction: Pad.direction(),
           flow_control: Pad.flow_control(),
+          other_effective_flow_control: EffectiveFlowController.effective_flow_control() | nil,
           name: Pad.name(),
           ref: Pad.ref(),
           demand_unit: Membrane.Buffer.Metric.unit() | nil,
@@ -38,7 +41,6 @@ defmodule Membrane.Core.Child.PadModel do
           sticky_messages: [Membrane.Event.t()],
           input_queue: Membrane.Core.Element.InputQueue.t() | nil,
           options: %{optional(atom) => any},
-          toilet: Membrane.Core.Element.Toilet.t() | nil,
           auto_demand_size: pos_integer() | nil,
           associated_pads: [Pad.ref()] | nil,
           sticky_events: [Membrane.Event.t()]
@@ -52,6 +54,7 @@ defmodule Membrane.Core.Child.PadModel do
           required(:availability) => Pad.availability(),
           required(:direction) => Pad.direction(),
           required(:name) => Pad.name(),
+          required(:accepted_formats_str) => String.t(),
           optional(:flow_control) => Pad.flow_control(),
           optional(:demand_unit) => Membrane.Buffer.Metric.unit(),
           optional(:other_demand_unit) => Membrane.Buffer.Metric.unit()
