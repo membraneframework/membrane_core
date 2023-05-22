@@ -4,6 +4,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.State
   alias Membrane.Core.Message
+  alias Membrane.Core.SubprocessSupervisor
   alias Membrane.LinkError
   alias Membrane.Pad
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter}
@@ -19,7 +20,8 @@ defmodule Membrane.Core.Element.PadControllerTest do
       module: elem_module,
       parent_pid: self(),
       internal_state: %{},
-      synchronization: %{clock: nil, parent_clock: nil}
+      synchronization: %{clock: nil, parent_clock: nil},
+      subprocess_supervisor: SubprocessSupervisor.start_link!()
     )
     |> PadSpecHandler.init_pads()
   end

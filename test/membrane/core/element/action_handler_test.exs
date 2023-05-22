@@ -3,6 +3,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
   alias Membrane.{ActionError, Buffer, ElementError, PadDirectionError}
   alias Membrane.Core.Element.{AtomicDemand, State}
+  alias Membrane.Core.SubprocessSupervisor
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
 
@@ -72,9 +73,27 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   end
 
   defp trivial_filter_state(_context) do
-    input_atomic_demand = AtomicDemand.new(:push, self(), :buffers, spawn(fn -> :ok end), :output)
+    supervisor = SubprocessSupervisor.start_link!()
 
-    output_atomic_demand = AtomicDemand.new(:push, spawn(fn -> :ok end), :bytes, self(), :output)
+    input_atomic_demand =
+      AtomicDemand.new(%{
+        receiver_effective_flow_control: :push,
+        receiver_process: self(),
+        receiver_demand_unit: :buffers,
+        sender_process: spawn(fn -> :ok end),
+        sender_pad_ref: :output,
+        supervisor: supervisor
+      })
+
+    output_atomic_demand =
+      AtomicDemand.new(%{
+        receiver_effective_flow_control: :push,
+        receiver_process: spawn(fn -> :ok end),
+        receiver_demand_unit: :bytes,
+        sender_process: self(),
+        sender_pad_ref: :output,
+        supervisor: supervisor
+      })
 
     state =
       struct(State,

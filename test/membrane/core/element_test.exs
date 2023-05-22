@@ -2,8 +2,13 @@ defmodule Membrane.Core.ElementTest do
   use ExUnit.Case, async: true
 
   alias __MODULE__.SomeElement
-  alias Membrane.Core.Element
-  alias Membrane.Core.Message
+
+  alias Membrane.Core.{
+    Element,
+    Message,
+    SubprocessSupervisor
+  }
+
   alias Membrane.Core.Parent.Link.Endpoint
 
   require Membrane.Core.Message
@@ -112,7 +117,14 @@ defmodule Membrane.Core.ElementTest do
     other_info = %{direction: :input, flow_control: :manual, demand_unit: :buffers}
 
     output_atomic_demand =
-      Element.AtomicDemand.new(:pull, helper_server, :buffers, self(), :output)
+      Element.AtomicDemand.new(%{
+        receiver_effective_flow_control: :pull,
+        receiver_process: helper_server,
+        receiver_demand_unit: :buffers,
+        sender_process: self(),
+        sender_pad_ref: :output,
+        supervisor: SubprocessSupervisor.start_link!()
+      })
 
     reply_link_metadata = %{
       atomic_demand: output_atomic_demand,

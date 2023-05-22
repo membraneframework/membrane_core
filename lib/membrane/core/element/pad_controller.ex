@@ -20,7 +20,6 @@ defmodule Membrane.Core.Element.PadController do
   }
 
   alias Membrane.Core.Element.DemandController.AutoFlowUtils
-
   alias Membrane.Core.Parent.Link.Endpoint
 
   require Membrane.Core.Child.PadModel

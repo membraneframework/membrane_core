@@ -4,14 +4,13 @@ defmodule Membrane.Core.Element.InputQueueTest do
   alias Membrane.Buffer
   alias Membrane.Core.Element.{AtomicDemand, InputQueue}
   alias Membrane.Core.Message
+  alias Membrane.Core.SubprocessSupervisor
   alias Membrane.Testing.Event
 
   require Message
 
   describe ".init/6 should" do
     setup do
-      atomic_demand = AtomicDemand.new(:pull, self(), :bytes, self(), :output_pad_ref)
-
       {:ok,
        %{
          log_tag: "test",
@@ -19,7 +18,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
          inbound_demand_unit: :bytes,
          outbound_demand_unit: :bytes,
          linked_output_ref: :output_pad_ref,
-         atomic_demand: atomic_demand,
+         atomic_demand: new_atomic_demand(),
          expected_metric: Buffer.Metric.from_unit(:bytes)
        }}
     end
@@ -184,20 +183,17 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
   describe ".take/2 should" do
     setup do
-      output_pad = :pad
-      atomic_demand = AtomicDemand.new(:pull, self(), :bytes, self(), output_pad)
-
       input_queue =
         InputQueue.init(%{
           inbound_demand_unit: :buffers,
           outbound_demand_unit: :buffers,
-          linked_output_ref: output_pad,
+          linked_output_ref: :output_pad_ref,
           log_tag: "test",
-          atomic_demand: atomic_demand,
+          atomic_demand: new_atomic_demand(),
           target_size: 40
         })
 
-      assert_received Message.new(:atomic_demand_increased, ^output_pad)
+      assert_received Message.new(:atomic_demand_increased, :output_pad_ref)
 
       [input_queue: input_queue]
     end
@@ -230,11 +226,10 @@ defmodule Membrane.Core.Element.InputQueueTest do
       buffers1 = {:buffers, [:b1, :b2, :b3], 3, 3}
       buffers2 = {:buffers, [:b4, :b5, :b6], 3, 3}
       q = Qex.new() |> Qex.push(buffers1) |> Qex.push(buffers2)
-      output_pad = :pad
-      atomic_demand = AtomicDemand.new(:pull, self(), :bytes, self(), output_pad)
+      atomic_demand = new_atomic_demand()
 
       :ok = AtomicDemand.increase(atomic_demand, 94)
-      assert_received Message.new(:atomic_demand_increased, ^output_pad)
+      assert_received Message.new(:atomic_demand_increased, :output_pad_ref)
 
       input_queue =
         struct(InputQueue,
@@ -244,7 +239,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
           inbound_metric: Buffer.Metric.Count,
           outbound_metric: Buffer.Metric.Count,
           q: q,
-          linked_output_ref: output_pad,
+          linked_output_ref: :output_pad_ref,
           atomic_demand: atomic_demand
         )
 
@@ -301,7 +296,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
   end
 
   test "if the queue works properly for :bytes input metric and :buffers output metric" do
-    atomic_demand = AtomicDemand.new(:pull, self(), :bytes, self(), :output_pad_ref)
+    atomic_demand = new_atomic_demand()
 
     queue =
       InputQueue.init(%{
@@ -338,7 +333,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
   end
 
   test "if the queue works properly for :buffers input metric and :bytes output metric" do
-    atomic_demand = AtomicDemand.new(:pull, self(), :bytes, self(), :output_pad_ref)
+    atomic_demand = new_atomic_demand()
 
     queue =
       InputQueue.init(%{
@@ -371,6 +366,17 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert queue.demand == 1
     assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
   end
+
+  defp new_atomic_demand(),
+    do:
+      AtomicDemand.new(%{
+        receiver_effective_flow_control: :pull,
+        receiver_process: self(),
+        receiver_demand_unit: :bytes,
+        sender_process: self(),
+        sender_pad_ref: :output_pad_ref,
+        supervisor: SubprocessSupervisor.start_link!()
+      })
 
   defp bufs_size(output, unit) do
     {_state, bufs} = output

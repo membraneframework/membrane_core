@@ -4,6 +4,7 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
   alias Membrane.Buffer
   alias Membrane.Core.Message
   alias Membrane.Core.Element.{AtomicDemand, InputQueue, State}
+  alias Membrane.Core.SubprocessSupervisor
   alias Membrane.StreamFormat.Mock, as: MockStreamFormat
   alias Membrane.Support.DemandsTest.Filter
 
@@ -13,7 +14,15 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
   @module Membrane.Core.Element.StreamFormatController
 
   setup do
-    atomic_demand = AtomicDemand.new(:pull, self(), :buffers, self(), :some_pad)
+    atomic_demand =
+      AtomicDemand.new(%{
+        receiver_effective_flow_control: :pull,
+        receiver_process: self(),
+        receiver_demand_unit: :buffers,
+        sender_process: self(),
+        sender_pad_ref: :some_pad,
+        supervisor: SubprocessSupervisor.start_link!()
+      })
 
     input_queue =
       InputQueue.init(%{

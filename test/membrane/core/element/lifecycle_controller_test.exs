@@ -2,7 +2,11 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
   use ExUnit.Case
 
   alias Membrane.Core.Element.{AtomicDemand, InputQueue, LifecycleController, State}
-  alias Membrane.Core.Message
+
+  alias Membrane.Core.{
+    Message,
+    SubprocessSupervisor
+  }
 
   require Membrane.Core.Message
 
@@ -17,7 +21,15 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
   end
 
   setup do
-    atomic_demand = AtomicDemand.new(:pull, self(), :buffers, self(), :some_pad)
+    atomic_demand =
+      AtomicDemand.new(%{
+        receiver_effective_flow_control: :pull,
+        receiver_process: self(),
+        receiver_demand_unit: :buffers,
+        sender_process: self(),
+        sender_pad_ref: :some_pad,
+        supervisor: SubprocessSupervisor.start_link!()
+      })
 
     input_queue =
       InputQueue.init(%{
