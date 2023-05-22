@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.AtomicDemand.DistributedAtomic do
     }
 
     if initial_value != nil do
-      :ok = put(distributed_atomic, initial_value)
+      :ok = set(distributed_atomic, initial_value)
     end
 
     distributed_atomic
@@ -54,13 +54,13 @@ defmodule Membrane.Core.Element.AtomicDemand.DistributedAtomic do
     GenServer.cast(distributed_atomic.worker, {:sub_get, distributed_atomic.atomic_ref, value})
   end
 
-  @spec put(t, integer()) :: :ok
-  def put(%__MODULE__{} = distributed_atomic, value)
+  @spec set(t, integer()) :: :ok
+  def set(%__MODULE__{} = distributed_atomic, value)
       when on_the_same_node_as_self(distributed_atomic) do
     :atomics.put(distributed_atomic.atomic_ref, 1, value)
   end
 
-  def put(%__MODULE__{} = distributed_atomic, value) do
+  def set(%__MODULE__{} = distributed_atomic, value) do
     GenServer.cast(distributed_atomic.worker, {:put, distributed_atomic.atomic_ref, value})
   end
 

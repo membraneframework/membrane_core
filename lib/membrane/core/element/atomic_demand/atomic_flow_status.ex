@@ -21,10 +21,10 @@ defmodule Membrane.Core.Element.AtomicDemand.AtomicFlowStatus do
     |> int_to_flow_status()
   end
 
-  @spec put(t, value()) :: :ok
-  def put(distributed_atomic, value) do
+  @spec set(t, value()) :: :ok
+  def set(distributed_atomic, value) do
     value = flow_status_to_int(value)
-    DistributedAtomic.put(distributed_atomic, value)
+    DistributedAtomic.set(distributed_atomic, value)
   end
 
   defp int_to_flow_status(0), do: :to_be_resolved

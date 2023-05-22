@@ -99,7 +99,7 @@ defmodule Membrane.Core.Element.AtomicDemand do
 
   @spec set_sender_status(t, AtomicFlowStatus.value()) :: :ok
   def set_sender_status(%__MODULE__{} = atomic_demand, mode) do
-    AtomicFlowStatus.put(
+    AtomicFlowStatus.set(
       atomic_demand.sender_status,
       mode
     )
@@ -112,7 +112,7 @@ defmodule Membrane.Core.Element.AtomicDemand do
 
   @spec set_receiver_status(t, AtomicFlowStatus.value()) :: :ok
   def set_receiver_status(%__MODULE__{} = atomic_demand, mode) do
-    AtomicFlowStatus.put(
+    AtomicFlowStatus.set(
       atomic_demand.receiver_status,
       mode
     )
