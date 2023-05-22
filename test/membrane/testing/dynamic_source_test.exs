@@ -50,16 +50,12 @@ defmodule Membrane.Testing.DynamicSourceTest do
   test "Source works properly when using generator function" do
     pipeline =
       Testing.Pipeline.start_link_supervised!(
-        spec:
-          [
-            child(:source, Testing.DynamicSource),
-            child(:sink_1, Testing.Sink),
-            child(:sink_2, Testing.Sink)
-          ] ++
-            [
-              get_child(:source) |> get_child(:sink_1),
-              get_child(:source) |> get_child(:sink_2)
-            ]
+        spec: [
+          child(:source, Testing.DynamicSource)
+          |> child(:sink_1, Testing.Sink),
+          get_child(:source)
+          |> child(:sink_2, Testing.Sink)
+        ]
       )
 
     assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: <<0::16>>})

@@ -11,7 +11,6 @@ defmodule Membrane.Core.Pipeline do
 
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry
-  require Membrane.Logger
   require Membrane.Core.Component
 
   @impl GenServer

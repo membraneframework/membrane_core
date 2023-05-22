@@ -17,15 +17,13 @@ defmodule Membrane.Integration.DemandsTest do
   end
 
   defp test_pipeline(pid) do
-    pattern_gen = fn i -> %Buffer{payload: <<i::16>> <> <<255>>} end
-
     demand = 500
     Pipeline.message_child(pid, :sink, {:make_demand, demand})
 
     0..(demand - 1)
     |> assert_buffers_received(pid)
 
-    pattern = pattern_gen.(demand)
+    pattern = %Buffer{payload: <<demand::16>> <> <<255>>}
     refute_sink_buffer(pid, :sink, ^pattern, 0)
     Pipeline.message_child(pid, :sink, {:make_demand, demand})
 

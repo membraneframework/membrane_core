@@ -10,6 +10,7 @@ defmodule Membrane.Core.Element.State do
   alias Membrane.{Clock, Element, Pad, Sync}
   alias Membrane.Core.Timer
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
+  alias Membrane.Core.Element.EffectiveFlowController
 
   require Membrane.Pad
 
@@ -23,6 +24,7 @@ defmodule Membrane.Core.Element.State do
           parent_pid: pid,
           supplying_demand?: boolean(),
           delayed_demands: MapSet.t({Pad.ref(), :supply | :redemand}),
+          handle_demand_loop_counter: non_neg_integer(),
           synchronization: %{
             timers: %{Timer.id() => Timer.t()},
             parent_clock: Clock.t(),
@@ -36,7 +38,8 @@ defmodule Membrane.Core.Element.State do
           resource_guard: Membrane.ResourceGuard.t(),
           subprocess_supervisor: pid,
           terminating?: boolean(),
-          setup_incomplete?: boolean()
+          setup_incomplete?: boolean(),
+          effective_flow_control: EffectiveFlowController.effective_flow_control()
         }
 
   defstruct [
@@ -49,6 +52,7 @@ defmodule Membrane.Core.Element.State do
     :parent_pid,
     :supplying_demand?,
     :delayed_demands,
+    :handle_demand_loop_counter,
     :synchronization,
     :demand_size,
     :initialized?,
@@ -57,7 +61,8 @@ defmodule Membrane.Core.Element.State do
     :resource_guard,
     :subprocess_supervisor,
     :terminating?,
-    :setup_incomplete?
+    :setup_incomplete?,
+    :effective_flow_control
   ]
 
   @doc """
@@ -81,6 +86,7 @@ defmodule Membrane.Core.Element.State do
       parent_pid: options.parent,
       supplying_demand?: false,
       delayed_demands: MapSet.new(),
+      handle_demand_loop_counter: 0,
       synchronization: %{
         parent_clock: options.parent_clock,
         timers: %{},
@@ -94,7 +100,8 @@ defmodule Membrane.Core.Element.State do
       resource_guard: options.resource_guard,
       subprocess_supervisor: options.subprocess_supervisor,
       terminating?: false,
-      setup_incomplete?: false
+      setup_incomplete?: false,
+      effective_flow_control: :push
     }
     |> PadSpecHandler.init_pads()
   end

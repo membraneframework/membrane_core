@@ -95,9 +95,7 @@ defmodule Membrane.Testing.Source do
   def default_buf_gen(generator_state, size) do
     buffers =
       generator_state..(size + generator_state - 1)
-      |> Enum.map(fn generator_state ->
-        %Buffer{payload: <<generator_state::16>>}
-      end)
+      |> Enum.map(&%Buffer{payload: <<&1::16>>})
 
     action = [buffer: {:output, buffers}]
     {action, generator_state + size}

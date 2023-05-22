@@ -10,15 +10,16 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Element.{
     ActionHandler,
+    AtomicDemand,
     CallbackContext,
-    DemandController,
+    EffectiveFlowController,
     EventController,
     InputQueue,
     State,
-    StreamFormatController,
-    Toilet
+    StreamFormatController
   }
 
+  alias Membrane.Core.Element.DemandController.AutoFlowUtils
   alias Membrane.Core.Parent.Link.Endpoint
 
   require Membrane.Core.Child.PadModel
@@ -28,20 +29,19 @@ defmodule Membrane.Core.Element.PadController do
 
   @type link_call_props ::
           %{
-            initiator: :parent,
             stream_format_validation_params:
               StreamFormatController.stream_format_validation_params()
           }
           | %{
-              initiator: :sibling,
               other_info: PadModel.pad_info() | nil,
-              link_metadata: %{toilet: Toilet.t() | nil},
+              link_metadata: %{},
               stream_format_validation_params:
-                StreamFormatController.stream_format_validation_params()
+                StreamFormatController.stream_format_validation_params(),
+              other_effective_flow_control: EffectiveFlowController.effective_flow_control()
             }
 
   @type link_call_reply_props ::
-          {Endpoint.t(), PadModel.pad_info(), %{toilet: Toilet.t() | nil}}
+          {Endpoint.t(), PadModel.pad_info(), %{atomic_demand: AtomicDemand.t()}}
 
   @type link_call_reply ::
           :ok
@@ -50,7 +50,7 @@ defmodule Membrane.Core.Element.PadController do
           | {:error, {:neighbor_child_dead, reason :: any()}}
           | {:error, {:unknown_pad, name :: Membrane.Child.name(), pad_ref :: Pad.ref()}}
 
-  @default_auto_demand_size_factor 4000
+  @default_auto_demand_size_factor 400
 
   @doc """
   Verifies linked pad, initializes it's data.
@@ -76,28 +76,25 @@ defmodule Membrane.Core.Element.PadController do
 
     :ok = Child.PadController.validate_pad_being_linked!(direction, info)
 
-    do_handle_link(endpoint, other_endpoint, info, link_props, state)
+    do_handle_link(direction, endpoint, other_endpoint, info, link_props, state)
   end
 
-  defp do_handle_link(
-         endpoint,
-         other_endpoint,
-         info,
-         %{initiator: :parent} = props,
-         state
-       ) do
+  defp do_handle_link(:output, endpoint, other_endpoint, info, props, state) do
+    effective_flow_control =
+      EffectiveFlowController.get_pad_effective_flow_control(endpoint.pad_ref, state)
+
     handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
         Pad.opposite_direction(info.direction),
         other_endpoint,
         endpoint,
         %{
-          initiator: :sibling,
           other_info: info,
           link_metadata: %{
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
           },
-          stream_format_validation_params: []
+          stream_format_validation_params: [],
+          other_effective_flow_control: effective_flow_control
         }
       ])
 
@@ -115,6 +112,7 @@ defmodule Membrane.Core.Element.PadController do
             other_endpoint,
             info,
             props.stream_format_validation_params,
+            :push,
             other_info,
             link_metadata,
             state
@@ -139,44 +137,43 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  defp do_handle_link(
-         endpoint,
-         other_endpoint,
-         info,
-         %{initiator: :sibling} = link_props,
-         state
-       ) do
+  defp do_handle_link(:input, endpoint, other_endpoint, info, link_props, state) do
     %{
       other_info: other_info,
       link_metadata: link_metadata,
-      stream_format_validation_params: stream_format_validation_params
+      stream_format_validation_params: stream_format_validation_params,
+      other_effective_flow_control: other_effective_flow_control
     } = link_props
 
-    {output_info, input_info, input_endpoint} =
-      if info.direction == :output,
-        do: {info, other_info, other_endpoint},
-        else: {other_info, info, endpoint}
+    if info.direction != :input, do: raise("pad direction #{inspect(info.direction)} is wrong")
 
-    {output_demand_unit, input_demand_unit} = resolve_demand_units(output_info, input_info)
+    {output_demand_unit, input_demand_unit} = resolve_demand_units(other_info, info)
 
     link_metadata =
-      Map.put(link_metadata, :input_demand_unit, input_demand_unit)
-      |> Map.put(:output_demand_unit, output_demand_unit)
+      Map.merge(link_metadata, %{
+        input_demand_unit: input_demand_unit,
+        output_demand_unit: output_demand_unit
+      })
 
-    toilet =
-      if input_demand_unit != nil,
-        do:
-          Toilet.new(
-            input_endpoint.pad_props.toilet_capacity,
-            input_demand_unit,
-            self(),
-            input_endpoint.pad_props.throttling_factor
-          )
+    pad_effective_flow_control =
+      EffectiveFlowController.get_pad_effective_flow_control(endpoint.pad_ref, state)
+
+    atomic_demand =
+      AtomicDemand.new(%{
+        receiver_effective_flow_control: pad_effective_flow_control,
+        receiver_process: self(),
+        receiver_demand_unit: input_demand_unit || :buffers,
+        sender_process: other_endpoint.pid,
+        sender_pad_ref: other_endpoint.pad_ref,
+        supervisor: state.subprocess_supervisor,
+        toilet_capacity: endpoint.pad_props[:toilet_capacity],
+        throttling_factor: endpoint.pad_props[:throttling_factor]
+      })
 
     # The sibiling was an initiator, we don't need to use the pid of a task spawned for observability
     _metadata = Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
 
-    link_metadata = Map.put(link_metadata, :toilet, toilet)
+    link_metadata = Map.put(link_metadata, :atomic_demand, atomic_demand)
 
     :ok =
       Child.PadController.validate_pad_mode!(
@@ -190,10 +187,24 @@ defmodule Membrane.Core.Element.PadController do
         other_endpoint,
         info,
         stream_format_validation_params,
+        other_effective_flow_control,
         other_info,
         link_metadata,
         state
       )
+
+    state =
+      case PadModel.get_data!(state, endpoint.pad_ref) do
+        %{flow_control: :auto, direction: :input} = pad_data ->
+          EffectiveFlowController.handle_sender_effective_flow_control(
+            pad_data.ref,
+            pad_data.other_effective_flow_control,
+            state
+          )
+
+        _pad_data ->
+          state
+      end
 
     state = maybe_handle_pad_added(endpoint.pad_ref, state)
     {{:ok, {endpoint, info, link_metadata}}, state}
@@ -213,7 +224,14 @@ defmodule Membrane.Core.Element.PadController do
       state = generate_eos_if_needed(pad_ref, state)
       state = maybe_handle_pad_removed(pad_ref, state)
       state = remove_pad_associations(pad_ref, state)
-      PadModel.delete_data!(state, pad_ref)
+      {pad_data, state} = PadModel.pop_data!(state, pad_ref)
+
+      with %{direction: :input, flow_control: :auto, other_effective_flow_control: :pull} <-
+             pad_data do
+        EffectiveFlowController.resolve_effective_flow_control(state)
+      else
+        _pad_data -> state
+      end
     else
       {:ok, %{availability: :always}} when state.terminating? ->
         state
@@ -238,15 +256,8 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp resolve_demand_units(output_info, input_info) do
-    output_demand_unit =
-      if output_info[:flow_control] == :push,
-        do: nil,
-        else: output_info[:demand_unit] || input_info[:demand_unit] || :buffers
-
-    input_demand_unit =
-      if input_info[:flow_control] == :push,
-        do: nil,
-        else: input_info[:demand_unit] || output_info[:demand_unit] || :buffers
+    output_demand_unit = output_info[:demand_unit] || input_info[:demand_unit] || :buffers
+    input_demand_unit = input_info[:demand_unit] || output_info[:demand_unit] || :buffers
 
     {output_demand_unit, input_demand_unit}
   end
@@ -256,6 +267,7 @@ defmodule Membrane.Core.Element.PadController do
          other_endpoint,
          info,
          stream_format_validation_params,
+         other_effective_flow_control,
          other_info,
          metadata,
          state
@@ -270,11 +282,19 @@ defmodule Membrane.Core.Element.PadController do
           Child.PadController.parse_pad_options!(info.name, endpoint.pad_props.options, state),
         ref: endpoint.pad_ref,
         stream_format_validation_params: stream_format_validation_params,
+        other_effective_flow_control: other_effective_flow_control,
         stream_format: nil,
         start_of_stream?: false,
         end_of_stream?: false,
-        associated_pads: []
+        associated_pads: [],
+        atomic_demand: metadata.atomic_demand
       })
+
+    :ok =
+      AtomicDemand.set_sender_status(
+        data.atomic_demand,
+        {:resolved, EffectiveFlowController.get_pad_effective_flow_control(data.ref, state)}
+      )
 
     data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, metadata, state))
 
@@ -293,10 +313,9 @@ defmodule Membrane.Core.Element.PadController do
           PadModel.update_data!(state, other_data.ref, :associated_pads, &[data.ref | &1])
         end)
 
-      case data.direction do
-        :input -> DemandController.send_auto_demand_if_needed(endpoint.pad_ref, state)
-        :output -> state
-      end
+      if data.direction == :input,
+        do: AutoFlowUtils.auto_adjust_atomic_demand(endpoint.pad_ref, state),
+        else: state
     else
       state
     end
@@ -316,26 +335,27 @@ defmodule Membrane.Core.Element.PadController do
          %{direction: :input, flow_control: :manual} = data,
          props,
          other_info,
-         metadata,
+         _metadata,
          %State{}
        ) do
-    %{ref: ref, pid: pid, other_ref: other_ref, demand_unit: this_demand_unit} = data
-
-    enable_toilet? = other_info.flow_control == :push
+    %{
+      ref: ref,
+      other_ref: other_ref,
+      demand_unit: this_demand_unit,
+      atomic_demand: atomic_demand
+    } = data
 
     input_queue =
       InputQueue.init(%{
         inbound_demand_unit: other_info[:demand_unit] || this_demand_unit,
         outbound_demand_unit: this_demand_unit,
-        demand_pid: pid,
-        demand_pad: other_ref,
+        atomic_demand: atomic_demand,
+        linked_output_ref: other_ref,
         log_tag: inspect(ref),
-        toilet?: enable_toilet?,
-        target_size: props.target_queue_size,
-        min_demand_factor: props.min_demand_factor
+        target_size: props.target_queue_size
       })
 
-    %{input_queue: input_queue, demand: 0, toilet: if(enable_toilet?, do: metadata.toilet)}
+    %{input_queue: input_queue, demand_snapshot: 0}
   end
 
   defp init_pad_mode_data(
@@ -345,14 +365,14 @@ defmodule Membrane.Core.Element.PadController do
          _metadata,
          _state
        ) do
-    %{demand: 0}
+    %{demand_snapshot: 0}
   end
 
   defp init_pad_mode_data(
-         %{flow_control: :auto, direction: direction},
+         %{flow_control: :auto, direction: direction} = data,
          props,
-         other_info,
-         metadata,
+         _other_info,
+         _metadata,
          %State{} = state
        ) do
     associated_pads =
@@ -361,39 +381,25 @@ defmodule Membrane.Core.Element.PadController do
       |> Enum.filter(&(&1.direction != direction and &1.flow_control == :auto))
       |> Enum.map(& &1.ref)
 
-    toilet =
-      if direction == :input and other_info.flow_control == :push do
-        metadata.toilet
-      else
-        nil
-      end
-
     auto_demand_size =
-      if direction == :input do
-        props.auto_demand_size ||
-          Membrane.Buffer.Metric.Count.buffer_size_approximation() *
-            @default_auto_demand_size_factor
-      else
-        nil
+      cond do
+        direction == :output ->
+          nil
+
+        props.auto_demand_size != nil ->
+          props.auto_demand_size
+
+        true ->
+          demand_unit = data.other_demand_unit || data.demand_unit || :buffers
+          metric = Membrane.Buffer.Metric.from_unit(demand_unit)
+          metric.buffer_size_approximation() * @default_auto_demand_size_factor
       end
 
     %{
-      demand: 0,
+      demand_snapshot: 0,
       associated_pads: associated_pads,
-      auto_demand_size: auto_demand_size,
-      toilet: toilet
+      auto_demand_size: auto_demand_size
     }
-  end
-
-  defp init_pad_mode_data(
-         %{flow_control: :push, direction: :output},
-         _props,
-         %{flow_control: other_flow_control},
-         metadata,
-         _state
-       )
-       when other_flow_control in [:auto, :manual] do
-    %{toilet: metadata.toilet}
   end
 
   defp init_pad_mode_data(_data, _props, _other_info, _metadata, _state), do: %{}
@@ -426,15 +432,9 @@ defmodule Membrane.Core.Element.PadController do
           end)
           |> PadModel.set_data!(pad_ref, :associated_pads, [])
 
-        if pad_data.direction == :output do
-          Enum.reduce(
-            pad_data.associated_pads,
-            state,
-            &DemandController.send_auto_demand_if_needed/2
-          )
-        else
-          state
-        end
+        if pad_data.direction == :output,
+          do: AutoFlowUtils.auto_adjust_atomic_demand(pad_data.associated_pads, state),
+          else: state
 
       _pad_data ->
         state

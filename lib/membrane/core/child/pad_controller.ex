@@ -5,7 +5,6 @@ defmodule Membrane.Core.Child.PadController do
   alias Membrane.{LinkError, Pad}
 
   require Membrane.Core.Child.PadModel
-  require Membrane.Logger
 
   @type state :: Membrane.Core.Bin.State.t() | Membrane.Core.Element.State.t()
 
@@ -68,26 +67,5 @@ defmodule Membrane.Core.Child.PadController do
         raise LinkError,
               "Invalid keys in options of pad #{inspect(pad_name)} - #{inspect(keys)}"
     end
-  end
-
-  @spec assert_all_static_pads_linked!(state) :: :ok
-  def assert_all_static_pads_linked!(state) do
-    linked_pads_names = state.pads_data |> Map.values() |> MapSet.new(& &1.name)
-
-    static_unlinked_pads =
-      state.pads_info
-      |> Map.values()
-      |> Enum.filter(
-        &(Pad.availability_mode(&1.availability) == :static and &1.name not in linked_pads_names)
-      )
-
-    unless Enum.empty?(static_unlinked_pads) do
-      raise LinkError, """
-      Some static pads remained unlinked: #{inspect(Enum.map(static_unlinked_pads, & &1.name))}
-      State: #{inspect(state, pretty: true)}
-      """
-    end
-
-    :ok
   end
 end

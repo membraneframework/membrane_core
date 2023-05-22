@@ -46,7 +46,7 @@ defmodule Membrane.Support.Bin.TestBins do
         ctx.pads
         |> Map.values()
         |> Enum.filter(&(&1.direction == :output))
-        |> Enum.map(& &1.demand)
+        |> Enum.map(& &1.demand_snapshot)
         |> Enum.min()
 
       demands =

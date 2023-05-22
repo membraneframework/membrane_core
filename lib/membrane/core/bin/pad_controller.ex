@@ -200,12 +200,10 @@ defmodule Membrane.Core.Bin.PadController do
           SpecificationParser.raw_endpoint(),
           SpecificationParser.raw_endpoint(),
           %{
-            initiator: :parent,
             stream_format_validation_params:
               StreamFormatController.stream_format_validation_params()
           }
           | %{
-              initiator: :sibling,
               other_info: PadModel.pad_info() | nil,
               link_metadata: map,
               stream_format_validation_params:
@@ -238,7 +236,7 @@ defmodule Membrane.Core.Bin.PadController do
 
       child_endpoint = %{child_endpoint | pad_props: pad_props}
 
-      if params.initiator == :sibling do
+      if direction == :input do
         :ok =
           Child.PadController.validate_pad_mode!(
             {endpoint.pad_ref, pad_data},

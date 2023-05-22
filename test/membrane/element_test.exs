@@ -75,7 +75,7 @@ defmodule Membrane.ElementTest do
     [pipeline: pipeline]
   end
 
-  test "play", %{} do
+  test "play" do
     TestFilter.assert_callback_called(:handle_playing)
   end
 
@@ -84,7 +84,7 @@ defmodule Membrane.ElementTest do
       TestFilter.assert_callback_called(:handle_start_of_stream)
     end
 
-    test "does not trigger calling callback handle_event/3", %{} do
+    test "does not trigger calling callback handle_event/3" do
       TestFilter.refute_callback_called(:handle_event)
     end
 
@@ -94,11 +94,11 @@ defmodule Membrane.ElementTest do
   end
 
   describe "End of stream" do
-    test "causes handle_end_of_stream/3 to be called", %{} do
+    test "causes handle_end_of_stream/3 to be called" do
       TestFilter.assert_callback_called(:handle_end_of_stream)
     end
 
-    test "does not trigger calling callback handle_event/3", %{} do
+    test "does not trigger calling callback handle_event/3" do
       TestFilter.refute_callback_called(:handle_event)
     end
 

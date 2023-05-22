@@ -6,7 +6,6 @@ defmodule Membrane.Element.PadData do
     - `:availability` - see `t:Membrane.Pad.availability/0`
     - `:stream_format` - the most recent `t:Membrane.StreamFormat.t/0` that have been sent (output) or received (input)
       on the pad. May be `nil` if not yet set.
-    - `:demand` - current demand requested on the pad working in `:auto` or `:manual` flow control mode.
     - `:direction` - see `t:Membrane.Pad.direction/0`
     - `:end_of_stream?` - flag determining whether the stream processing via the pad has been finished
     - `:flow_control` - see `t:Membrane.Pad.flow_control/0`.
@@ -39,14 +38,29 @@ defmodule Membrane.Element.PadData do
           pid: private_field,
           other_ref: private_field,
           input_queue: private_field,
-          demand: integer() | nil,
+          incoming_demand: integer() | nil,
           demand_unit: private_field,
           other_demand_unit: private_field,
           auto_demand_size: private_field,
           sticky_messages: private_field,
-          toilet: private_field,
+
+          # Used only for output pads with :pull or :auto flow control. Holds the last captured value of AtomicDemand,
+          # decreased by the size of buffers sent via specific pad since the last capture, expressed in the appropriate metric.
+          # Moment, when demand_snapshot value drops to 0 or less, triggers another capture of AtomicDemand value.
+          demand_snapshot: integer() | nil,
+
+          # Instance of AtomicDemand shared by both sides of link. Holds amount of data, that has been demanded by the element
+          # with input pad, but hasn't been sent yet by the element with output pad. Detects toilet overflow as well.
+          atomic_demand: private_field,
+
+          # Field used in DemandController.AutoFlowUtils and InputQueue, to caluclate, how much AtomicDemand should be increased.
+          # Contains amount of data (:buffers/:bytes), that has been demanded from the element on the other side of link, but
+          # hasn't arrived yet. Unused for output pads.
+          demand: private_field,
+          manual_demand_size: private_field,
           associated_pads: private_field,
-          sticky_events: private_field
+          sticky_events: private_field,
+          other_effective_flow_control: private_field
         }
 
   @enforce_keys [
@@ -64,16 +78,20 @@ defmodule Membrane.Element.PadData do
   defstruct @enforce_keys ++
               [
                 input_queue: nil,
-                demand: nil,
+                demand_snapshot: 0,
+                incoming_demand: nil,
                 demand_unit: nil,
                 start_of_stream?: false,
                 end_of_stream?: false,
                 auto_demand_size: nil,
                 sticky_messages: [],
-                toilet: nil,
+                atomic_demand: nil,
+                demand: 0,
+                manual_demand_size: 0,
                 associated_pads: [],
                 sticky_events: [],
                 stream_format_validation_params: [],
-                other_demand_unit: nil
+                other_demand_unit: nil,
+                other_effective_flow_control: :push
               ]
 end
