@@ -41,10 +41,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
   def handle_playing(state) do
     Membrane.Logger.debug("Parent play")
 
-    if state.__struct__ == Membrane.Core.Bin.State do
-      Core.Child.PadController.assert_all_static_pads_linked!(state)
-    end
-
     activate_syncs(state.children)
 
     Enum.each(state.children, fn {_name, %{pid: pid, ready?: ready?}} ->
