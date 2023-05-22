@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Element.DemandController do
   @moduledoc false
 
-  # Module handling changes in values of output pads demand atomics
+  # Module handling changes in values of output pads atomic demand
 
   use Bunch
 
