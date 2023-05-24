@@ -567,7 +567,7 @@ defmodule Membrane.Integration.LinkingTest do
     end
   end
 
-  test "links should be estabilished in the order they are created in spec" do
+  test "links should be estabilished in the order they are created in the spec" do
     defmodule PadsOrderBin do
       use Membrane.Bin
 
