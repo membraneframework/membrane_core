@@ -33,7 +33,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
             | :linking_externally
             | :ready,
           children_names: MapSet.t(Child.name()),
-          links_ids: MapSet.t(Link.id()),
+          links_ids: [Link.id()],
           awaiting_responses: MapSet.t({Link.id(), Membrane.Pad.direction()}),
           dependent_specs: MapSet.t(spec_ref())
         }
@@ -158,7 +158,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       put_in(state, [:pending_specs, spec_ref], %{
         status: :initializing,
         children_names: MapSet.new(all_children_names),
-        links_ids: MapSet.new(links, & &1.id),
+        links_ids: Enum.map(links, & &1.id),
         dependent_specs: dependent_specs,
         awaiting_responses: MapSet.new()
       })
@@ -634,7 +634,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     links_ids =
       spec_data.links_ids
-      |> MapSet.difference(removed_links_ids)
+      |> Enum.reject(&MapSet.member?(removed_links_ids, &1))
 
     awaiting_responses =
       spec_data.awaiting_responses
