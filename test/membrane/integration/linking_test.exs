@@ -566,6 +566,52 @@ defmodule Membrane.Integration.LinkingTest do
     end
   end
 
+  test "links should be estabilished in the order they are created in the spec" do
+    defmodule PadsOrderBin do
+      use Membrane.Bin
+
+      def_input_pad :input, availability: :on_request, accepted_format: _any
+
+      @impl true
+      def handle_init(_ctx, _opts), do: {[], %{}}
+
+      @impl true
+      def handle_pad_added(Pad.ref(:input, pad_id), _ctx, state) do
+        state = Map.update(state, :pads_order, [pad_id], &(&1 ++ [pad_id]))
+        {[], state}
+      end
+
+      @impl true
+      def handle_parent_notification(:get_pads_order, _ctx, state) do
+        answer = {:pads_order, Map.get(state, :pads_order, [])}
+        {[notify_parent: answer], state}
+      end
+    end
+
+    for _i <- 1..10 do
+      pads_ids = Enum.shuffle(1..32)
+
+      children = [
+        child(:element, Element),
+        child(:bin, PadsOrderBin)
+      ]
+
+      links =
+        Enum.map(pads_ids, fn pad_id ->
+          get_child(:element)
+          |> via_in(Pad.ref(:input, pad_id))
+          |> get_child(:bin)
+        end)
+
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: children ++ links)
+
+      Testing.Pipeline.execute_actions(pipeline, notify_child: {:bin, :get_pads_order})
+      assert_pipeline_notified(pipeline, :bin, {:pads_order, ^pads_ids})
+
+      Testing.Pipeline.terminate(pipeline)
+    end
+  end
+
   defp assert_link_removed(pipeline, id) do
     assert_pipeline_notified(pipeline, :source, {:handle_pad_removed, Pad.ref(:output, ^id)})
     assert_pipeline_notified(pipeline, :sink, {:handle_pad_removed, Pad.ref(:input, ^id)})
