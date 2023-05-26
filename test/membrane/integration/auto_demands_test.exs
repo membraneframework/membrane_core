@@ -156,7 +156,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
   |> Enum.map(fn opts ->
     test "buffers pass to auto-demand #{opts.name}" do
       %{name: name, module: module} = unquote(Macro.escape(opts))
-      payloads = Enum.map(1..1000, &inspect/1)
+      payloads = Enum.map(1..100_000, &inspect/1)
 
       pipeline =
         Pipeline.start_link_supervised!(
