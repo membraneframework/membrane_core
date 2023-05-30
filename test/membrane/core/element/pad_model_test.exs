@@ -1,6 +1,8 @@
 defmodule Membrane.Core.Child.PadModelTest do
   use ExUnit.Case, async: true
 
+  alias Membrane.UnknownPadError
+
   require Membrane.Core.Child.PadModel, as: PadModel
 
   defp setup_element_state(_ctx) do
@@ -45,7 +47,7 @@ defmodule Membrane.Core.Child.PadModelTest do
     end
 
     test "is :unknown_pad when the pad is not present", ctx do
-      assert_raise MatchError, fn ->
+      assert_raise UnknownPadError, fn ->
         PadModel.get_data!(ctx.state, :output, :demand)
       end
     end
@@ -76,7 +78,7 @@ defmodule Membrane.Core.Child.PadModelTest do
     end
 
     test "raises when the pad is not present", ctx do
-      assert_raise MatchError, fn ->
+      assert_raise UnknownPadError, fn ->
         PadModel.set_data!(ctx.state, :other_input, :start_of_stream?, true)
       end
     end
@@ -105,7 +107,7 @@ defmodule Membrane.Core.Child.PadModelTest do
     end
 
     test "raises when the pad is not present", ctx do
-      assert_raise MatchError, fn ->
+      assert_raise UnknownPadError, fn ->
         PadModel.update_data!(ctx.state, :other_input, :demand, &(&1 + 5))
       end
     end

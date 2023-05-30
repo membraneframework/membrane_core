@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Element.ActionHandlerTest do
   use ExUnit.Case, async: true
 
-  alias Membrane.{ActionError, Buffer, ElementError, PadDirectionError}
+  alias Membrane.{ActionError, Buffer, ElementError, PadDirectionError, UnknownPadError}
   alias Membrane.Core.Element.State
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
@@ -166,7 +166,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = %{state | playback: :playing}
 
-      assert_raise MatchError, ~r/:unknown_pad/i, fn ->
+      assert_raise UnknownPadError, fn ->
         @module.handle_action(
           buffer_action(:invalid_pad_ref),
           :handle_info,
@@ -289,7 +289,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = %{state | playback: :playing}
 
-      assert_raise MatchError, ~r/:unknown_pad/i, fn ->
+      assert_raise UnknownPadError, fn ->
         @module.handle_action(
           event_action(:invalid_pad_ref),
           :handle_info,
@@ -360,7 +360,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = %{state | playback: :playing}
 
-      assert_raise MatchError, ~r/:unknown_pad/i, fn ->
+      assert_raise UnknownPadError, fn ->
         @module.handle_action(
           stream_format_action(:invalid_pad_ref),
           :handle_info,
@@ -424,7 +424,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "when pad doesn't exist in the element", %{state: state} do
       state = %{state | playback: :playing}
 
-      assert_raise MatchError, ~r/:unknown_pad/i, fn ->
+      assert_raise UnknownPadError, fn ->
         @module.handle_action(
           {:redemand, :invalid_pad_ref},
           :handle_info,

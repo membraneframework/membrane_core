@@ -1,7 +1,10 @@
 # Changelog
 
+# 0.11.4
+ * Fix process leak. [#561](https://github.com/membraneframework/membrane_core/pull/561)
+
 # 0.11.3
- * Fix bug in `c:Membrane.Pipeline.handle_call/3` [#526](https://github.com/membraneframework/membrane_core/pull/526).
+ * Fix bug in `c:Membrane.Pipeline.handle_call/3` [#526](https://github.com/membraneframework/membrane_core/pull/526)
 
 # 0.11.2
  * Fix bug in Membrane.ChildrenSpec.child/3 spec.
