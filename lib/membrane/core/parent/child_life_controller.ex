@@ -58,6 +58,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   @children_spec_options_fields_specs [
     group: [require?: false],
     crash_group_mode: [require?: false],
+    crash_group: [require?: false],
     stream_sync: [require?: false],
     clock_provider: [require?: false],
     node: [require?: false],
@@ -208,6 +209,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     {:ok, options} =
       Bunch.Config.parse(options_keywords_list, @children_spec_options_fields_specs)
+
+    options =
+      with %{crash_group: {group_name, :temporary}} <- options do
+        options
+        |> Map.delete(:crash_group)
+        |> Map.merge(%{group: group_name, crash_group_mode: :temporary})
+      end
 
     this_level_specs = equip_spec_with_children_refs(this_level_specs, options)
 
