@@ -139,7 +139,7 @@ defmodule Membrane.Pipeline do
   Callback invoked when a child removes its pad.
 
   The callback won't be invoked, when you have initiated the pad removal,
-  eg. when you have returned `t:Membrane.Pipeline.Action.remove_link()`
+  e.g. when you have returned `t:Membrane.Pipeline.Action.remove_link()`
   action which made one of your children's pads be removed.
   """
   @callback handle_child_pad_removed(
