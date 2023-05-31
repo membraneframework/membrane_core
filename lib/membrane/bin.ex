@@ -93,7 +93,7 @@ defmodule Membrane.Bin do
   Callback invoked when a child removes its pad.
 
   The callback won't be invoked, when you have initiated the pad removal,
-  eg. when you have returned `t:Membrane.Bin.Action.remove_link()` action
+  e.g. when you have returned `t:Membrane.Bin.Action.remove_link()` action
   which made one of your children's pads be removed.
   """
   @callback handle_child_pad_removed(
