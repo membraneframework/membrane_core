@@ -145,6 +145,14 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   defp do_start(type, options) do
+    options =
+      if Keyword.has_key?(options, :structure) do
+        {spec, options} = Keyword.pop(options, :structure)
+        [spec: spec] ++ options
+      else
+        options
+      end
+
     {process_options, options} = Keyword.split(options, [:name])
     options = Keyword.put_new(options, :test_process, self())
     apply(Pipeline, type, [__MODULE__, options, process_options])
