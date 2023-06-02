@@ -128,19 +128,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     new_children_groups =
       Enum.map(children_definitions, fn {_children, options} -> options.group end)
 
-    state_children_names =
-      Map.keys(state.children)
-      |> Enum.map(fn child_name ->
-        case child_name do
-          {Membrane.Child, _group, child_name} -> child_name
-          child_name -> child_name
-        end
-      end)
+    state_children_names = Map.keys(state.children)
 
     new_children_names =
-      Enum.flat_map(children_definitions, fn {children, _options} ->
-        get_children_names(children)
-      end)
+      children_definitions
+      |> Enum.flat_map(fn {children, _options} -> children end)
+      |> Enum.map(fn {child_name, _child_module, _options} -> child_name end)
 
     duplicated = Enum.filter(new_children_groups, &(&1 in state_children_names))
 
@@ -172,15 +165,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
         )
 
     :ok
-  end
-
-  defp get_children_names(children) do
-    Enum.map(children, fn {child_name, _child_module, _options} ->
-      case child_name do
-        {Membrane.Child, _group, child_name} -> child_name
-        child_name -> child_name
-      end
-    end)
   end
 
   defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor, group) do

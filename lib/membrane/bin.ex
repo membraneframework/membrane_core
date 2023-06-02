@@ -274,7 +274,6 @@ defmodule Membrane.Bin do
   Options:
     - `:bring_spec?` - if true (default) imports and aliases `Membrane.ChildrenSpec`
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
-    - `:bring_child?` - if true (default) requires and aliases `Membrane.Child`
   """
   defmacro __using__(options) do
     bring_spec =
@@ -292,12 +291,6 @@ defmodule Membrane.Bin do
         end
       end
 
-    bring_child =
-      if Keyword.get(options, :bring_child?, true) do
-        quote do
-        end
-      end
-
     quote location: :keep do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
@@ -305,7 +298,6 @@ defmodule Membrane.Bin do
 
       unquote(bring_spec)
       unquote(bring_pad)
-      unquote(bring_child)
 
       import unquote(__MODULE__),
         only: [def_input_pad: 2, def_output_pad: 2, def_options: 1, def_clock: 0, def_clock: 1]

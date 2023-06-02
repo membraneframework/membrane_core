@@ -505,9 +505,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       [] ->
         :ok
 
-      children_refs ->
+      children_names ->
         raise Membrane.ParentError, """
-        Trying to remove children #{Enum.map_join(children_refs, ", ", &inspect/1)}, while such children or children groups do not exist.
+        Trying to remove children #{Enum.map_join(children_names, ", ", &inspect/1)}, while such children or children groups do not exist.
         Existing children are: #{Map.keys(state.children) |> inspect(pretty: true)}
         Existing children groups are: #{MapSet.to_list(children_groups) |> inspect(pretty: true)}
         """
