@@ -8,7 +8,6 @@ defmodule Membrane.Integration.ChildCrashTest do
   alias Membrane.Testing
 
   require Membrane.Pad, as: Pad
-  require Membrane.Child, as: Child
 
   test "Element that is not member of any crash group crashed when pipeline is in playing state" do
     Process.flag(:trap_exit, true)
@@ -27,9 +26,9 @@ defmodule Membrane.Integration.ChildCrashTest do
       [
         :sink,
         :center_filter,
-        {Membrane.Child, 1, :filter_1_1},
-        {Membrane.Child, 1, :filter_2_1},
-        {Membrane.Child, 1, :source_1}
+        :filter_1_1,
+        :filter_2_1,
+        :source_1
       ]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
@@ -53,7 +52,7 @@ defmodule Membrane.Integration.ChildCrashTest do
     ChildCrashTest.Pipeline.add_path(pipeline_pid, [], :source, 1, :group_1)
 
     [source_pid, center_filter_pid, sink_pid] =
-      [{Membrane.Child, 1, :source}, :center_filter, :sink]
+      [:source, :center_filter, :sink]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
     Process.exit(source_pid, :crash)
@@ -92,12 +91,12 @@ defmodule Membrane.Integration.ChildCrashTest do
       [
         :sink,
         :center_filter,
-        {Membrane.Child, 1, :bin_1},
-        {Membrane.Child, 2, :bin_2},
-        {Membrane.Child, 3, :bin_3},
-        {Membrane.Child, 1, :source_1},
-        {Membrane.Child, 2, :source_2},
-        {Membrane.Child, 3, :source_3}
+        :bin_1,
+        :bin_2,
+        :bin_3,
+        :source_1,
+        :source_2,
+        :source_3
       ]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
@@ -152,12 +151,12 @@ defmodule Membrane.Integration.ChildCrashTest do
       [
         :sink,
         :center_filter,
-        {Membrane.Child, 1, :filter_1_1},
-        {Membrane.Child, 1, :filter_2_1},
-        {Membrane.Child, 1, :source_1},
-        {Membrane.Child, 2, :filter_1_2},
-        {Membrane.Child, 2, :filter_2_2},
-        {Membrane.Child, 2, :source_2}
+        :filter_1_1,
+        :filter_2_1,
+        :source_1,
+        :filter_1_2,
+        :filter_2_2,
+        :source_2
       ]
       |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
 
@@ -240,7 +239,7 @@ defmodule Membrane.Integration.ChildCrashTest do
         if state.do_internal_link do
           [
             {child(direction, DynamicElement), group: :group, crash_group_mode: :temporary},
-            get_child(Child.ref(direction, group: :group)) |> bin_output(pad)
+            get_child(direction) |> bin_output(pad)
           ]
         else
           []
@@ -286,8 +285,7 @@ defmodule Membrane.Integration.ChildCrashTest do
 
       assert_pipeline_notified(pipeline, :element, :playing)
 
-      child_ref = Child.ref(:output, group: :group)
-      bin_child_pid = Testing.Pipeline.get_child_pid!(pipeline, [:bin, child_ref])
+      bin_child_pid = Testing.Pipeline.get_child_pid!(pipeline, [:bin, :output])
       Process.exit(bin_child_pid, :kill)
 
       assert_child_pad_removed(pipeline, :bin, Pad.ref(:output, _id))
@@ -308,9 +306,7 @@ defmodule Membrane.Integration.ChildCrashTest do
       assert_pipeline_notified(pipeline, :second_bin, :handle_pad_added)
       refute_pipeline_notified(pipeline, :element, :playing)
 
-      child_ref = Child.ref(:output, group: :group)
-
-      Testing.Pipeline.get_child_pid!(pipeline, [:second_bin, child_ref])
+      Testing.Pipeline.get_child_pid!(pipeline, [:second_bin, :output])
       |> Process.exit(:kill)
 
       assert_child_pad_removed(pipeline, :second_bin, Pad.ref(:output, _id))
@@ -337,7 +333,7 @@ defmodule Membrane.Integration.ChildCrashTest do
       inner_element_pid =
         Testing.Pipeline.get_child_pid!(
           pipeline,
-          [:bin, :bin, Child.ref(:output, group: :group)]
+          [:bin, :bin, :output]
         )
 
       Process.exit(inner_element_pid, :kill)
@@ -350,15 +346,15 @@ defmodule Membrane.Integration.ChildCrashTest do
   end
 
   test "When crash group crashes, another crash group from this same spec is still living" do
-    children_definitions =
-      child(:first_bin, %Bin{do_internal_link: false})
-      |> child(:second_bin, Bin)
-      |> child(:element, DynamicElement)
-
-    spec = [
-      {children_definitions, group: :a, crash_group_mode: :temporary},
-      {children_definitions, group: :b, crash_group_mode: :temporary}
-    ]
+    spec =
+      Enum.map([:a, :b], fn group ->
+        {
+          child({:first_bin, group}, %Bin{do_internal_link: false})
+          |> child({:second_bin, group}, Bin)
+          |> child({:element, group}, DynamicElement),
+          group: group, crash_group_mode: :temporary
+        }
+      end)
 
     pipeline =
       Testing.Pipeline.start_link_supervised!(
@@ -366,18 +362,18 @@ defmodule Membrane.Integration.ChildCrashTest do
         raise_on_child_pad_removed?: false
       )
 
-    assert_pipeline_notified(pipeline, Child.ref(:second_bin, group: :a), :handle_pad_added)
+    assert_pipeline_notified(pipeline, {:second_bin, :a}, :handle_pad_added)
 
-    Testing.Pipeline.get_child_pid!(pipeline, Child.ref(:second_bin, group: :a))
+    Testing.Pipeline.get_child_pid!(pipeline, {:second_bin, :a})
     |> Process.exit(:kill)
 
     assert_pipeline_crash_group_down(pipeline, :a)
-    refute_pipeline_notified(pipeline, Child.ref(:second_bin, group: :b), :playing)
+    refute_pipeline_notified(pipeline, {:second_bin, :b}, :playing)
 
-    Testing.Pipeline.execute_actions(pipeline, remove_children: Child.ref(:first_bin, group: :b))
+    Testing.Pipeline.execute_actions(pipeline, remove_children: {:first_bin, :b})
 
-    assert_pipeline_notified(pipeline, Child.ref(:second_bin, group: :b), :playing)
-    assert_pipeline_notified(pipeline, Child.ref(:element, group: :b), :playing)
+    assert_pipeline_notified(pipeline, {:second_bin, :b}, :playing)
+    assert_pipeline_notified(pipeline, {:element, :b}, :playing)
 
     Testing.Pipeline.terminate(pipeline)
   end

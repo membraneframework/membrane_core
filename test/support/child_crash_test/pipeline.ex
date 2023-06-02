@@ -6,7 +6,6 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
   use Membrane.Pipeline
 
-  alias Membrane.Child
   alias Membrane.Support.Bin.TestBins
   alias Membrane.Support.ChildCrashTest.Filter
   alias Membrane.Testing
@@ -74,15 +73,12 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
 
     children_names = [source_name | filters_names]
 
-    children_names = Enum.map(children_names, fn name -> {group, name} end)
-
     links =
       children_names
-      |> Enum.map(fn {group, name} -> Child.ref(name, group: group) end)
       |> Enum.chunk_every(2, 1, [:center_filter])
-      |> Enum.map(fn [first_child_ref, second_child_ref] ->
-        get_child(first_child_ref)
-        |> get_child(second_child_ref)
+      |> Enum.map(fn [first_child_name, second_child_name] ->
+        get_child(first_child_name)
+        |> get_child(second_child_name)
       end)
 
     spec = children ++ links

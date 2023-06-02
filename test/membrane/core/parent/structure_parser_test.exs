@@ -29,14 +29,14 @@ defmodule Membrane.Core.Parent.SpecificationParserTest do
     assert [
              %Link{
                from: %Endpoint{
-                 child: {:child_ref, :a},
+                 child: :a,
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:child_ref, :b},
+                 child: :b,
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -45,14 +45,14 @@ defmodule Membrane.Core.Parent.SpecificationParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:child_ref, :b},
+                 child: :b,
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:child_ref, :c},
+                 child: :c,
                  pad_props: %{options: [q: 1]},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -61,14 +61,14 @@ defmodule Membrane.Core.Parent.SpecificationParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:child_ref, :c},
+                 child: :c,
                  pad_props: %{},
                  pad_spec: :x,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:child_ref, :d},
+                 child: :d,
                  pad_props: %{},
                  pad_spec: Pad.ref(:y, 2),
                  pad_ref: nil,
@@ -77,14 +77,14 @@ defmodule Membrane.Core.Parent.SpecificationParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:child_ref, :d},
+                 child: :d,
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:child_ref, {Membrane.Bin, :itself}},
+                 child: {Membrane.Bin, :itself},
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
@@ -107,14 +107,14 @@ defmodule Membrane.Core.Parent.SpecificationParserTest do
     assert [
              %Link{
                from: %Endpoint{
-                 child: {:child_ref, :a},
+                 child: :a,
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:child_ref, :b},
+                 child: :b,
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -123,14 +123,14 @@ defmodule Membrane.Core.Parent.SpecificationParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:child_ref, :b},
+                 child: :b,
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:child_ref, :c},
+                 child: :c,
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -139,14 +139,14 @@ defmodule Membrane.Core.Parent.SpecificationParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:child_ref, :d},
+                 child: :d,
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:child_ref, :b},
+                 child: :b,
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -155,14 +155,14 @@ defmodule Membrane.Core.Parent.SpecificationParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:child_ref, :b},
+                 child: :b,
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:child_ref, :e},
+                 child: :e,
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -205,14 +205,14 @@ defmodule Membrane.Core.Parent.SpecificationParserTest do
     assert [
              %Link{
                from: %Endpoint{
-                 child: {:child_name, :a},
+                 child: :a,
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:child_name, :b},
+                 child: :b,
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -221,14 +221,14 @@ defmodule Membrane.Core.Parent.SpecificationParserTest do
              },
              %Link{
                from: %Endpoint{
-                 child: {:child_name, :b},
+                 child: :b,
                  pad_props: %{},
                  pad_spec: :output,
                  pad_ref: nil,
                  pid: nil
                },
                to: %Endpoint{
-                 child: {:child_name, :c},
+                 child: :c,
                  pad_props: %{},
                  pad_spec: :input,
                  pad_ref: nil,
@@ -238,9 +238,9 @@ defmodule Membrane.Core.Parent.SpecificationParserTest do
            ] = links
 
     assert Enum.sort(children) == [
-             {{:child_name, :a}, A, %{get_if_exists: false}},
-             {{:child_name, :b}, A, %{get_if_exists: false}},
-             {{:child_name, :c}, A, %{get_if_exists: false}}
+             {:a, A, %{get_if_exists: false}},
+             {:b, A, %{get_if_exists: false}},
+             {:c, A, %{get_if_exists: false}}
            ]
   end
 end

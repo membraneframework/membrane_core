@@ -124,8 +124,8 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
     send(pipeline, msg_to_pipeline)
   end
 
-  defp assert_child_exists(pipeline, child_ref_path) do
-    assert {:ok, pid} = Testing.Pipeline.get_child_pid(pipeline, child_ref_path)
+  defp assert_child_exists(pipeline, child_name_path) do
+    assert {:ok, pid} = Testing.Pipeline.get_child_pid(pipeline, child_name_path)
     assert is_pid(pid)
   end
 

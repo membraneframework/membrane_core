@@ -459,7 +459,6 @@ defmodule Membrane.Pipeline do
     bring_child =
       if Keyword.get(options, :bring_child?, true) do
         quote do
-          require Membrane.Child, as: Child
         end
       end
 

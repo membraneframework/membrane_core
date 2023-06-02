@@ -238,14 +238,14 @@ defmodule Membrane.Testing.Pipeline do
    * `{:ok, child_pid}`, if a child was succesfully found
    * `{:error, reason}`, if, for example, pipeline is not alive or children path is invalid
   """
-  @spec get_child_pid(pid(), child_ref_path :: Child.ref() | [Child.ref()]) ::
+  @spec get_child_pid(pid(), child_name_path :: Child.name() | [Child.name()]) ::
           {:ok, pid()} | {:error, reason :: term()}
-  def get_child_pid(pipeline, [_head | _tail] = child_ref_path) do
-    do_get_child_pid(pipeline, child_ref_path)
+  def get_child_pid(pipeline, [_head | _tail] = child_name_path) do
+    do_get_child_pid(pipeline, child_name_path)
   end
 
-  def get_child_pid(pipeline, child_ref) when not is_list(child_ref) do
-    do_get_child_pid(pipeline, [child_ref])
+  def get_child_pid(pipeline, child_name) when not is_list(child_name) do
+    do_get_child_pid(pipeline, [child_name])
   end
 
   @doc """
@@ -254,22 +254,22 @@ defmodule Membrane.Testing.Pipeline do
   Works as get_child_pid/2, but raises an error instead of returning
   `{:error, reason}` tuple.
   """
-  @spec get_child_pid!(pid(), child_ref_path :: Child.ref() | [Child.ref()]) :: pid()
-  def get_child_pid!(parent_pid, child_ref_path) do
-    {:ok, child_pid} = get_child_pid(parent_pid, child_ref_path)
+  @spec get_child_pid!(pid(), child_name_path :: Child.name() | [Child.name()]) :: pid()
+  def get_child_pid!(parent_pid, child_name_path) do
+    {:ok, child_pid} = get_child_pid(parent_pid, child_name_path)
     child_pid
   end
 
-  defp do_get_child_pid(component_pid, child_ref_path, is_pipeline? \\ true)
+  defp do_get_child_pid(component_pid, child_name_path, is_pipeline? \\ true)
 
   defp do_get_child_pid(component_pid, [], _is_pipeline?) do
     {:ok, component_pid}
   end
 
-  defp do_get_child_pid(component_pid, [child_ref | child_ref_path_tail], is_pipeline?) do
-    case Message.call(component_pid, :get_child_pid, child_ref) do
+  defp do_get_child_pid(component_pid, [child_name | child_name_path_tail], is_pipeline?) do
+    case Message.call(component_pid, :get_child_pid, child_name) do
       {:ok, child_pid} ->
-        do_get_child_pid(child_pid, child_ref_path_tail, false)
+        do_get_child_pid(child_pid, child_name_path_tail, false)
 
       {:error, {:call_failure, {:noproc, _call_info}}} ->
         if is_pipeline?,

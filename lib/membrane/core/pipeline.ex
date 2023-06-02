@@ -136,9 +136,9 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:get_child_pid, child_ref), _from, state) do
+  def handle_call(Message.new(:get_child_pid, child_name), _from, state) do
     reply =
-      with %State{children: %{^child_ref => %{pid: child_pid}}} <- state do
+      with %State{children: %{^child_name => %{pid: child_pid}}} <- state do
         {:ok, child_pid}
       else
         _other -> {:error, :child_not_found}
