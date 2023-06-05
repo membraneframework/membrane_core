@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "1.0.0-rc0"
+  @version "0.12.6"
   @source_ref "v#{@version}"
 
   def project do
@@ -63,6 +63,7 @@ defmodule Membrane.Mixfile do
         "README.md",
         "CHANGELOG.md",
         "CONTRIBUTING.md",
+        "guides/upgrading/v0.12.md",
         "guides/upgrading/v0.11.md",
         "guides/upgrading/v1.0.0-rc0.md",
         LICENSE: [title: "License"]
@@ -141,7 +142,7 @@ defmodule Membrane.Mixfile do
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
       {:bunch, "~> 1.6"},
-      {:ratio, "~> 3.0"},
+      {:ratio, "~> 2.0"},
       # Development
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
