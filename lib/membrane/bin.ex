@@ -50,7 +50,7 @@ defmodule Membrane.Bin do
   Callback that is called when new pad has been added to bin. Executed
   ONLY for dynamic pads.
 
-  Context passed to this callback contains additional field `:pad_options`.
+  Context passed to this callback contains additional field `:options`.
   """
   @callback handle_pad_added(
               pad :: Pad.ref(),
@@ -62,7 +62,7 @@ defmodule Membrane.Bin do
   Callback that is called when some pad of the bin has been removed. Executed
   ONLY for dynamic pads.
 
-  Context passed to this callback contains additional field `:pad_options`.
+  Context passed to this callback contains additional field `:options`.
   """
   @callback handle_pad_removed(
               pad :: Pad.ref(),
@@ -93,7 +93,7 @@ defmodule Membrane.Bin do
   Callback invoked when a child removes its pad.
 
   The callback won't be invoked, when you have initiated the pad removal,
-  eg. when you have returned `t:Membrane.Bin.Action.remove_link()` action
+  e.g. when you have returned `t:Membrane.Bin.Action.remove_link()` action
   which made one of your children's pads be removed.
   """
   @callback handle_child_pad_removed(

@@ -21,6 +21,8 @@ defmodule Membrane.Pipeline.Action do
   """
   @type setup :: {:setup, :incomplete | :complete}
 
+  @type playback :: {:playback, :playing, :stopped, :prepared}
+
   @typedoc """
   Action that sends a message to a child identified by name.
   """
@@ -41,7 +43,18 @@ defmodule Membrane.Pipeline.Action do
   as an argument.
   """
   @type remove_children ::
-          {:remove_children, Child.name() | [Child.name()]}
+          {:remove_children,
+           Child.name()
+           | [Child.name()]
+           | Child.group()
+           | [Child.group()]}
+
+  @type remove_child ::
+          {:remove_child,
+           Child.name()
+           | [Child.name()]
+           | Child.group()
+           | [Child.group()]}
 
   @typedoc """
   Action that removes link, which relates to specified child and pad.
@@ -132,9 +145,11 @@ defmodule Membrane.Pipeline.Action do
   """
   @type t ::
           setup
+          | playback
           | notify_child
           | spec
           | remove_children
+          | remove_child
           | remove_link
           | start_timer
           | timer_interval

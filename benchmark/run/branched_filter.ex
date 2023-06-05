@@ -4,8 +4,8 @@ defmodule Benchmark.Run.BranchedFilter do
 
   alias Benchmark.Run.Reductions
 
-  def_input_pad :input, accepted_format: _any, availability: :on_request
-  def_output_pad :output, accepted_format: _any, availability: :on_request
+  def_input_pad :input, accepted_format: _any, availability: :on_request, flow_control: :auto
+  def_output_pad :output, accepted_format: _any, availability: :on_request, flow_control: :auto
 
   def_options number_of_reductions: [spec: integer()],
               generator: [spec: (integer() -> integer())],
