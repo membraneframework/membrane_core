@@ -139,7 +139,7 @@ defmodule Membrane.Pipeline do
   Callback invoked when a child removes its pad.
 
   The callback won't be invoked, when you have initiated the pad removal,
-  eg. when you have returned `t:Membrane.Pipeline.Action.remove_link()`
+  e.g. when you have returned `t:Membrane.Pipeline.Action.remove_link()`
   action which made one of your children's pads be removed.
   """
   @callback handle_child_pad_removed(
@@ -332,6 +332,14 @@ defmodule Membrane.Pipeline do
   @spec terminate(pipeline :: pid, timeout: timeout(), force?: boolean(), asynchronous?: boolean()) ::
           :ok | {:ok, pid()} | {:error, :timeout}
   def terminate(pipeline, opts \\ []) do
+    opts =
+      if Keyword.has_key?(opts, :blocking?) do
+        {blocking?, opts} = Keyword.pop!(opts, :blocking?)
+        Keyword.put(opts, :asynchronous?, not blocking?)
+      else
+        opts
+      end
+
     [asynchronous?: asynchronous?] ++ opts =
       Keyword.validate!(opts,
         asynchronous?: false,

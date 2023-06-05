@@ -94,7 +94,7 @@ defmodule Membrane.Pad do
   Can be a module name, pattern describing struct, or call to `any_of` function, which
   arguments are such patterns or modules names.
   If a module name is passed to the `:accepted_format` option or is passed to `any_of`,
-  it will be converted to the match on a struct defined in that module, eg.
+  it will be converted to the match on a struct defined in that module, e.g.
   `accepted_format: My.Format` will have this same effect, as `accepted_format: %My.Format{}`
   and `accepted_format: any_of(My.Format, %My.Another.Format{field: value} when value in
   [:some, :enumeration])` will have this same effect, as `accepted_format: any_of(%My.Format{},
