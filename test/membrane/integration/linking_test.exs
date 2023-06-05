@@ -7,7 +7,6 @@ defmodule Membrane.Integration.LinkingTest do
   alias Membrane.{Buffer, Testing}
   alias Membrane.Support.Element.DynamicFilter
 
-  require Membrane.Child, as: Child
   require Membrane.Pad, as: Pad
 
   defmodule Element do
@@ -157,8 +156,8 @@ defmodule Membrane.Integration.LinkingTest do
           child(:sink, Testing.Sink),
           crash_group_mode: :temporary, group: :group_2
         },
-        get_child(Child.ref(:bin, group: :group_1))
-        |> get_child(Child.ref(:sink, group: :group_2))
+        get_child(:bin)
+        |> get_child(:sink)
       ]
 
       send(pipeline, {:start_spec, %{spec: bin_spec}})
@@ -167,8 +166,8 @@ defmodule Membrane.Integration.LinkingTest do
       send(pipeline, {:start_spec, %{spec: sink_spec}})
       assert_receive(:spec_started)
 
-      sink_pid = get_child_pid({Membrane.Child, :group_2, :sink}, pipeline)
-      bin_pid = get_child_pid({Membrane.Child, :group_1, :bin}, pipeline)
+      sink_pid = get_child_pid(:sink, pipeline)
+      bin_pid = get_child_pid(:bin, pipeline)
       source_pid = get_child_pid(:source, bin_pid)
       source_ref = Process.monitor(source_pid)
 
@@ -199,13 +198,13 @@ defmodule Membrane.Integration.LinkingTest do
         child(:sink, Testing.Sink),
         group: :group_2, crash_group_mode: :temporary
       },
-      get_child(Child.ref(:source, group: :group_1))
-      |> get_child(Child.ref(:sink, group: :group_2))
+      get_child(:source)
+      |> get_child(:sink)
     ]
 
     send(pipeline, {:start_spec, %{spec: spec}})
 
-    send(pipeline, {:kill, [{Membrane.Child, :group_2, :sink}]})
+    send(pipeline, {:kill, [:sink]})
 
     assert_receive(:spec_started)
 
@@ -227,15 +226,15 @@ defmodule Membrane.Integration.LinkingTest do
     }
 
     links_spec =
-      get_child(Child.ref(:source, group: :group_1))
-      |> get_child(Child.ref(:sink, group: :group_2))
+      get_child(:source)
+      |> get_child(:sink)
 
     spec = [spec_1, spec_2, links_spec]
 
     send(pipeline, {:start_spec, %{spec: spec}})
     assert_receive(:spec_started)
 
-    send(pipeline, {:kill, [{Membrane.Child, :group_2, :sink}]})
+    send(pipeline, {:kill, [:sink]})
 
     refute_pipeline_crash_group_down(pipeline, :group_1)
     assert_pipeline_crash_group_down(pipeline, :group_2)
@@ -256,13 +255,13 @@ defmodule Membrane.Integration.LinkingTest do
     }
 
     links_spec =
-      get_child(Child.ref(:source, group: :group_1))
-      |> get_child(Child.ref(:sink, group: :group_2))
+      get_child(:source)
+      |> get_child(:sink)
 
     send(pipeline, {:start_spec, %{spec: [spec, links_spec]}})
     assert_receive(:spec_started)
 
-    send(pipeline, {:kill, [{Membrane.Child, :group_2, :sink}]})
+    send(pipeline, {:kill, [:sink]})
 
     refute_pipeline_crash_group_down(pipeline, :group_1)
     assert_pipeline_crash_group_down(pipeline, :group_2)
@@ -280,8 +279,7 @@ defmodule Membrane.Integration.LinkingTest do
       group: :group_1, crash_group_mode: :temporary
     }
 
-    links_spec =
-      get_child(Child.ref(:bin, group: :group_1)) |> get_child(Child.ref(:sink, group: :group_1))
+    links_spec = get_child(:bin) |> get_child(:sink)
 
     spec = [bin_spec, sink_spec, links_spec]
     send(pipeline, {:start_spec, %{spec: spec}})
@@ -401,15 +399,15 @@ defmodule Membrane.Integration.LinkingTest do
           child(:bin_2, NoInternalLinkBin),
           group: :group_2, crash_group_mode: :temporary
         },
-        get_child(Child.ref(:bin_1, group: :group_1))
-        |> get_child(Child.ref(:bin_2, group: :group_2))
+        get_child(:bin_1)
+        |> get_child(:bin_2)
       ]
     )
 
     Process.sleep(1000)
 
-    bin_1_pid = get_child_pid(Child.ref(:bin_1, group: :group_1), pipeline)
-    bin_2_pid = get_child_pid(Child.ref(:bin_2, group: :group_2), pipeline)
+    bin_1_pid = get_child_pid(:bin_1, pipeline)
+    bin_2_pid = get_child_pid(:bin_2, pipeline)
 
     monitor_1 = Process.monitor(bin_1_pid)
     monitor_2 = Process.monitor(bin_2_pid)
@@ -545,18 +543,16 @@ defmodule Membrane.Integration.LinkingTest do
     end
 
     test "crashed child" do
-      sink_ref = Child.ref(:sink, group: :group)
-
       spec = [
         {child(:sink, Sink), group: :group, crash_group_mode: :temporary},
-        child(:bin, LazyBin) |> get_child(sink_ref)
+        child(:bin, LazyBin) |> get_child(:sink)
       ]
 
       pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
-      assert_pipeline_notified(pipeline, sink_ref, :init)
+      assert_pipeline_notified(pipeline, :sink, :init)
 
-      Testing.Pipeline.get_child_pid!(pipeline, sink_ref)
+      Testing.Pipeline.get_child_pid!(pipeline, :sink)
       |> Process.exit(:kill)
 
       assert_pipeline_crash_group_down(pipeline, :group)

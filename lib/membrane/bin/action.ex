@@ -44,12 +44,12 @@ defmodule Membrane.Bin.Action do
   Action that stops, unlinks and removes specified child/children from the bin.
 
   A child ref, list of children refs, children group id or a list of children group ids can be specified
-  as an argument. In case you need to refer to a single child from a children group, use `Membrane.Child.ref/2`.
+  as an argument.
   """
   @type remove_children ::
           {:remove_children,
-           Child.ref()
-           | [Child.ref()]
+           Child.name()
+           | [Child.name()]
            | Membrane.Child.group()
            | [Membrane.Child.group()]}
 

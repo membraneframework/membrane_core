@@ -6,8 +6,6 @@ defmodule Membrane.Testing.PipelineTest do
 
   alias Membrane.Testing.Pipeline
 
-  require Membrane.Child, as: Child
-
   defmodule Elem do
     use Membrane.Filter
   end
@@ -168,21 +166,19 @@ defmodule Membrane.Testing.PipelineTest do
     # getting pid of child from child group
     Pipeline.execute_actions(pipeline, spec: {child(:element, Element), group: :group})
 
-    element_ref = Child.ref(:element, group: :group)
-
     Pipeline.execute_actions(pipeline,
-      notify_child: {element_ref, {:get_pid, element_ref}}
+      notify_child: {:element, {:get_pid, :element}}
     )
 
-    assert_pipeline_notified(pipeline, element_ref, {:pid, element_pid, ^element_ref})
+    assert_pipeline_notified(pipeline, :element, {:pid, element_pid, :element})
 
-    assert {:ok, element_pid} == Pipeline.get_child_pid(pipeline, element_ref)
+    assert {:ok, element_pid} == Pipeline.get_child_pid(pipeline, :element)
 
     # returning error tuple with proper reason
     assert {:error, :child_not_found} = Pipeline.get_child_pid(pipeline, :nonexisting_child)
 
     assert {:error, :element_cannot_have_children} =
-             Pipeline.get_child_pid(pipeline, [element_ref, :child])
+             Pipeline.get_child_pid(pipeline, [:element, :child])
 
     monitor_ref = Process.monitor(pipeline)
     Pipeline.terminate(pipeline)

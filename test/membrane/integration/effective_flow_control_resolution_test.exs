@@ -6,8 +6,6 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
 
   alias Membrane.Testing
 
-  require Membrane.Child, as: Child
-
   defmodule AutoFilter do
     use Membrane.Filter
 
@@ -201,17 +199,16 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
     Process.sleep(500)
 
-    filter_ref = Child.ref(:filter, group: :group)
-    assert_child_effective_flow_control(pipeline, filter_ref, :pull)
+    assert_child_effective_flow_control(pipeline, :filter, :pull)
 
     monitor_ref =
-      Testing.Pipeline.get_child_pid!(pipeline, filter_ref)
+      Testing.Pipeline.get_child_pid!(pipeline, :filter)
       |> Process.monitor()
 
     Testing.Pipeline.execute_actions(pipeline,
       spec: {
         child(:batching_source, BatchingSource)
-        |> get_child(filter_ref),
+        |> get_child(:filter),
         group: :another_group, crash_group_mode: :temporary
       }
     )
