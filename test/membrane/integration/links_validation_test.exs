@@ -96,27 +96,29 @@ defmodule Membrane.LinksValidationTest do
 
   describe "returning a spec with links to already used" do
     test "static pads" do
-      spec = child(:source, StaticPads.Source) |> child(:sink, StaticPads.Sink)
-
-      pipeline = Pipeline.start_supervised!(spec: spec)
+      pipeline = Pipeline.start_supervised!()
       ref = Process.monitor(pipeline)
 
-      spec = get_child(:source) |> get_child(:sink)
+      spec = child(:source, StaticPads.Source) |> child(:sink, StaticPads.Sink)
+      Pipeline.execute_actions(pipeline, spec: spec)
 
+      spec = get_child(:source) |> get_child(:sink)
       Pipeline.execute_actions(pipeline, spec: spec)
 
       assert_receive({:DOWN, ^ref, :process, ^pipeline, {%Membrane.LinkError{}, _stacktrace}})
     end
 
     test "dynamic pads" do
+      pipeline = Pipeline.start_supervised!()
+      ref = Process.monitor(pipeline)
+
       spec =
         child(:source, DynamicPads.Source)
         |> via_out(Pad.ref(:output, 1))
         |> via_in(Pad.ref(:input, 1))
         |> child(:sink, DynamicPads.Sink)
 
-      pipeline = Pipeline.start_supervised!(spec: spec)
-      ref = Process.monitor(pipeline)
+      Pipeline.execute_actions(pipeline, spec: spec)
 
       spec =
         get_child(:source)
