@@ -1,23 +1,22 @@
 # Changelog
 
-## 1.0.0
+## 0.12.1
+ * Support `:structure` option in `Membrane.Testing.Pipeline`. [#563](https://github.com/membraneframework/membrane_core/pull/563)
+ * Remove `Child.ref` macro. [#564](https://github.com/membraneframework/membrane_core/pull/564)
+
+## 0.12.0
  * Introduce `:remove_link` action in pipelines and bins.
  * Add children groups - a mechanism that allows refering to multiple children with a single identifier. 
- * Rename `remove_child` action into `remove_children` and allow for removing a children group with a single action.
  * Add an ability to spawn anonymous children.
- * Replace `Membrane.Time.round_to_<unit_name>` with `Membrane.Time.as_<unit_name>/2` with second argument equal `:round`. Rename `Membrane.Time.round_to_timebase` to `Membrane.Time.divide_by_timebase/2`. [#494](https://github.com/membraneframework/membrane_core/pull/494)
  * Remove `:playback` action. Introduce `:setup` action. [#496](https://github.com/membraneframework/membrane_core/pull/496)
  * Add `Membrane.Testing.Pipeline.get_child_pid/2`. [#497](https://github.com/membraneframework/membrane_core/pull/497)
  * Make callback contexts to be maps. [#504](https://github.com/membraneframework/membrane_core/pull/504)
  * All Membrane Elements can be compatible till now on - pads working in `:pull` mode, handling different `demand_units`, can be now linked.
  * Output pads working in `:pull` mode should have their `demand_unit` specified. If case it's not available, it's assumed that the pad handles demands in both `:bytes` and `:buffers` units.
- * Rename callbacks `handle_process/4` and `handle_write/4` to `handle_buffer/4` in [#506](https://github.com/membraneframework/membrane_core/pull/506)
- * The flow control of the pad is now set with a single `:flow_control` option instead of `:mode` and `:demand_mode` options.
  * Remove _t suffix from types [#509](https://github.com/membraneframework/membrane_core/pull/509)
  * Implement automatic demands in Membrane Sinks and Endpoints. [#512](https://github.com/membraneframework/membrane_core/pull/512)
  * Add `handle_child_pad_removed/4` callback in Bins and Pipelines. [#513](https://github.com/membraneframework/membrane_core/pull/513)
  * Introduce support for crash groups in Bins. [#521](https://github.com/membraneframework/membrane_core/pull/521)
- * Remove `assert_pipeline_play/2` from `Membrane.Testing.Assertions`. [#528](https://github.com/membraneframework/membrane_core/pull/528)
  * Make sure enumerable with all elements being `Membrane.Buffer.t()`, passed as `:output` parameter for `Membrane.Testing.Source` won't get rewrapped in `Membrane.Buffer.t()` struct.
  * Implement `Membrane.Debug.Filter` and `Membrane.Debug.Sink`. [#552](https://github.com/membraneframework/membrane_core/pull/552)
  
