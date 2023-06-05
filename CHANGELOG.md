@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.1
+ * Support `:structure` option in `Membrane.Testing.Pipeline`. [#563](https://github.com/membraneframework/membrane_core/pull/563)
+ * Remove `Child.ref` macro. [#564](https://github.com/membraneframework/membrane_core/pull/564)
+
 ## 0.12.0
  * Introduce `:remove_link` action in pipelines and bins.
  * Add children groups - a mechanism that allows refering to multiple children with a single identifier. 
