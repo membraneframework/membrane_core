@@ -6,7 +6,7 @@ defmodule Membrane.Bin.CallbackContext do
   @typedoc """
   Type describing context passed to the `Membrane.Bin` callbacks.
 
-  Field `:pad_options` is present only in `c:Membrane.Bin.handle_pad_added/3`
+  Field `:options` is present only in `c:Membrane.Bin.handle_pad_added/3`
   and `c:Membrane.Bin.handle_pad_removed/3`.
 
   Fields `:members` and `:crash_initiator` are present only in
@@ -21,7 +21,7 @@ defmodule Membrane.Bin.CallbackContext do
           :playback => Membrane.Playback.t(),
           :resource_guard => Membrane.ResourceGuard.t(),
           :utility_supervisor => Membrane.UtilitySupervisor.t(),
-          optional(:pad_options) => map(),
+          optional(:options) => map(),
           optional(:members) => [Membrane.Child.name()],
           optional(:crash_initiator) => Membrane.Child.name()
         }

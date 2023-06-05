@@ -9,7 +9,8 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   alias Membrane.Core.Pipeline.State
 
   @impl CallbackHandler
-  def handle_action({action, _args}, :handle_init, _params, _state) when action != :spec do
+  def handle_action({action, _args}, :handle_init, _params, _state)
+      when action not in [:spec, :playback] do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
   end
 
@@ -30,6 +31,11 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
     Core.LifecycleController.handle_setup_operation(operation, state)
   end
 
+  @impl true
+  def handle_action({:playback, _playback}, _cb, _params, state) do
+    state
+  end
+
   @impl CallbackHandler
   def handle_action({:notify_child, notification}, _cb, _params, state) do
     Parent.ChildLifeController.handle_notify_child(notification, state)
@@ -43,6 +49,11 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:remove_children, children}, _cb, _params, state) do
+    Parent.ChildLifeController.handle_remove_children(children, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:remove_child, children}, _cb, _params, state) do
     Parent.ChildLifeController.handle_remove_children(children, state)
   end
 

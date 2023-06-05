@@ -53,6 +53,13 @@ defmodule Membrane.Bin.Action do
            | Membrane.Child.group()
            | [Membrane.Child.group()]}
 
+  @type remove_child ::
+          {:remove_child,
+           Child.name()
+           | [Child.name()]
+           | Membrane.Child.group()
+           | [Membrane.Child.group()]}
+
   @typedoc """
   Action that removes link, which relates to specified child and pad.
 
@@ -134,6 +141,7 @@ defmodule Membrane.Bin.Action do
           | notify_parent
           | spec
           | remove_children
+          | remove_child
           | remove_link
           | start_timer
           | timer_interval
