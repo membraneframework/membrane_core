@@ -1,7 +1,7 @@
 defmodule Membrane.Core.Bin.CallbackContext do
   @moduledoc false
 
-  @type optional_fields :: [pad_options: map()]
+  @type optional_fields :: [options: map()]
 
   @spec from_state(Membrane.Core.Bin.State.t(), optional_fields()) ::
           Membrane.Bin.CallbackContext.t()
