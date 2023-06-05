@@ -4,8 +4,8 @@ defmodule Benchmark.Run.LinearFilter do
 
   alias Benchmark.Run.Reductions
 
-  def_input_pad :input, accepted_format: _any
-  def_output_pad :output, accepted_format: _any
+  def_input_pad :input, accepted_format: _any, flow_control: :auto
+  def_output_pad :output, accepted_format: _any, flow_control: :auto
 
   def_options number_of_reductions: [spec: integer()],
               generator: [spec: (integer() -> integer())]

@@ -76,7 +76,39 @@ defmodule Membrane.Element.WithInputPads do
               state :: Element.state()
             ) :: Membrane.Element.Base.callback_return()
 
-  @optional_callbacks handle_buffer: 4, handle_stream_format: 4
+  @callback handle_write(
+              pad :: Pad.ref(),
+              buffer :: Buffer.t(),
+              context :: CallbackContext.t(),
+              state :: Element.state()
+            ) :: Membrane.Element.Base.callback_return()
+
+  @callback handle_write_list(
+              pad :: Pad.ref(),
+              buffers :: list(Buffer.t()),
+              context :: CallbackContext.t(),
+              state :: Element.state()
+            ) :: Membrane.Element.Base.callback_return()
+
+  @callback handle_process(
+              pad :: Pad.ref(),
+              buffer :: Buffer.t(),
+              context :: CallbackContext.t(),
+              state :: Element.state()
+            ) :: Membrane.Element.Base.callback_return()
+
+  @callback handle_process_list(
+              pad :: Pad.ref(),
+              buffers :: list(Buffer.t()),
+              context :: CallbackContext.t(),
+              state :: Element.state()
+            ) :: Membrane.Element.Base.callback_return()
+
+  @optional_callbacks handle_stream_format: 4,
+                      handle_write: 4,
+                      handle_write_list: 4,
+                      handle_process: 4,
+                      handle_process_list: 4
 
   @doc PadsSpecs.def_pad_docs(:input, :element)
   defmacro def_input_pad(name, spec) do
