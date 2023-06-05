@@ -6,7 +6,6 @@ defmodule Membrane.Integration.ToiletForwardingTest do
 
   alias Membrane.Testing
 
-  require Membrane.Child, as: Child
   require Membrane.Pad, as: Pad
 
   defmodule StreamFormat do
@@ -110,20 +109,17 @@ defmodule Membrane.Integration.ToiletForwardingTest do
   test "toilet overflows only where it should" do
     # because Membrane.Testing.Source output pad has :manual flow control, :filter will work in auto pull
 
-    filter_ref = Child.ref(:filter, group: :filter_group)
-    sink_ref = Child.ref(:sink, group: :sink_group)
-
     spec = [
       {child(:filter, AutoFilter), group: :filter_group, crash_group_mode: :temporary},
       {child(:sink, %Testing.Sink{autodemand: false}),
        group: :sink_group, crash_group_mode: :temporary},
       child(Testing.Source)
       |> child(AutoFilter)
-      |> get_child(filter_ref)
-      |> get_child(sink_ref),
+      |> get_child(:filter)
+      |> get_child(:sink),
       child(:push_source, PushSource)
       |> child(AutoFilter)
-      |> get_child(filter_ref)
+      |> get_child(:filter)
     ]
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)

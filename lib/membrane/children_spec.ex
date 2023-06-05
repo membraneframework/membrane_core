@@ -169,13 +169,6 @@ defmodule Membrane.ChildrenSpec do
   The children spawned within `links1` specification will be put inside `:first_children_group`, whereas the
   children spawned within `links2` specification will be put inside `second_children_group`.
 
-  In order to refer to a child which resides inside the children group, you need to use the `Membrane.Child.ref/2` function,
-  as in the example below:
-   ```
-    spec1 = {child(:source, Source), group: :first_group)
-    spec2 = get_child(Membrane.Child.ref(:source, group: :first_group)) |> child(:sink, Sink)
-   ```
-
   Later on, the children from a given group can be referred with their `group`, as in the example below:
   ```
     actions = [remove_children: :first_children_group]
@@ -262,8 +255,7 @@ defmodule Membrane.ChildrenSpec do
     @typep child_options_map :: %{get_if_exists: boolean}
 
     @type child_spec ::
-            {{:child_name, Child.name()} | {:child_ref, Child.name()},
-             Membrane.ChildrenSpec.child_definition(), child_options_map()}
+            {Child.name(), Membrane.ChildrenSpec.child_definition(), child_options_map()}
 
     @type status :: :from_pad | :to_pad | :done
 
@@ -348,21 +340,21 @@ defmodule Membrane.ChildrenSpec do
   See the _Children's specification_ section of the moduledoc for more information.
   """
   @spec get_child(builder(), Child.name()) :: builder()
-  def get_child(%Builder{} = builder, child_ref) do
-    do_get_child(builder, child_ref)
+  def get_child(%Builder{} = builder, child_name) do
+    do_get_child(builder, child_name)
   end
 
-  defp do_get_child(child_ref) do
-    %Builder{link_starting_child: {:child_ref, child_ref}}
+  defp do_get_child(child_name) do
+    %Builder{link_starting_child: child_name}
   end
 
-  defp do_get_child(builder, child_ref) do
+  defp do_get_child(builder, child_name) do
     if builder.status == :to_pad do
       builder
     else
       via_in(builder, :input)
     end
-    |> Builder.finish_link({:child_ref, child_ref})
+    |> Builder.finish_link(child_name)
   end
 
   @doc """
@@ -445,7 +437,6 @@ defmodule Membrane.ChildrenSpec do
   defp do_child(child_name, child_definition, opts) do
     ensure_is_child_definition!(child_definition)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
-    child_name = {:child_name, child_name}
     child_spec = {child_name, child_definition, opts}
     %Builder{children: [child_spec], link_starting_child: child_name}
   end
@@ -453,7 +444,6 @@ defmodule Membrane.ChildrenSpec do
   defp do_child(%Builder{} = builder, child_name, child_definition, opts) do
     ensure_is_child_definition!(child_definition)
     {:ok, opts} = Bunch.Config.parse(opts, @default_child_options)
-    child_name = {:child_name, child_name}
     child_spec = {child_name, child_definition, opts}
 
     if builder.status == :to_pad do
