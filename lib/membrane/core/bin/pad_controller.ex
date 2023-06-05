@@ -330,7 +330,7 @@ defmodule Membrane.Core.Bin.PadController do
     %{options: pad_opts, availability: availability} = PadModel.get_data!(state, ref)
 
     if Pad.availability_mode(availability) == :dynamic do
-      context = &CallbackContext.from_state(&1, pad_options: pad_opts)
+      context = &CallbackContext.from_state(&1, options: pad_opts)
 
       CallbackHandler.exec_and_handle_callback(
         :handle_pad_added,

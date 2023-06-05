@@ -9,10 +9,10 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
   defmodule AutoFilter do
     use Membrane.Filter
 
-    def_input_pad :input, availability: :on_request, accepted_format: _any
-    def_output_pad :output, availability: :on_request, accepted_format: _any
+    def_input_pad :input, availability: :on_request, accepted_format: _any, flow_control: :auto
+    def_output_pad :output, availability: :on_request, accepted_format: _any, flow_control: :auto
 
-    def_options lazy?: [spec: boolean(), default: false]
+    def_options sleep_on_handle_buffer?: [spec: boolean(), default: false]
 
     @impl true
     def handle_playing(_ctx, state) do
@@ -21,7 +21,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
 
     @impl true
     def handle_buffer(_pad, buffer, _ctx, state) do
-      if state.lazy?, do: Process.sleep(100)
+      if state.sleep_on_handle_buffer?, do: Process.sleep(100)
       {[forward: buffer], state}
     end
   end
@@ -192,7 +192,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
   test "Toilet overflows, when it should" do
     spec = {
       child(:pull_source, PullSource)
-      |> child(:filter, %AutoFilter{lazy?: true}),
+      |> child(:filter, %AutoFilter{sleep_on_handle_buffer?: true}),
       group: :group, crash_group_mode: :temporary
     }
 
