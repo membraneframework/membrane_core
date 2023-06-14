@@ -387,6 +387,30 @@ defmodule Membrane.Pipeline do
     module |> Bunch.Module.check_behaviour(:membrane_pipeline?)
   end
 
+  @doc """
+  Lists PIDs of all the pipelines currently running on the current node.
+
+  Use only for debugging purposes.
+  """
+  @spec list_pipelines() :: [pid]
+  def list_pipelines() do
+    Process.list()
+    |> Enum.filter(fn pid ->
+      case Process.info(pid, :dictionary) do
+        {:dictionary, dictionary} -> List.keyfind(dictionary, :__membrane_pipeline__, 0)
+        nil -> false
+      end
+    end)
+  end
+
+  @doc """
+  Like `list_pipelines/0`, but allows to pass a node.
+  """
+  @spec list_pipelines(node()) :: [pid]
+  def list_pipelines(node) do
+    :erpc.call(node, __MODULE__, :list_pipelines, [])
+  end
+
   @doc false
   defmacro __before_compile__(_env) do
     quote do
