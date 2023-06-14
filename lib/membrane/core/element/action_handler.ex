@@ -8,6 +8,8 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
+  alias Membrane.Telemetry
+
   alias Membrane.{
     ActionError,
     Buffer,
@@ -19,8 +21,6 @@ defmodule Membrane.Core.Element.ActionHandler do
     StreamFormat
   }
 
-  alias Membrane.Core.Child.PadModel
-
   alias Membrane.Core.Element.{
     DemandController,
     DemandHandler,
@@ -29,12 +29,13 @@ defmodule Membrane.Core.Element.ActionHandler do
     StreamFormatController
   }
 
-  alias Membrane.Core.{Events, Message, Telemetry, TimerController}
+  alias Membrane.Core.{Events, TimerController}
   alias Membrane.Element.Action
 
-  require Membrane.Core.Child.PadModel
-  require Membrane.Core.Message
-  require Membrane.Core.Telemetry
+  require Membrane.Core.Child.PadModel, as: PadModel
+  require Membrane.Core.Message, as: Message
+  require Membrane.Core.Observer, as: Observer
+  require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
   @impl CallbackHandler
@@ -307,6 +308,8 @@ defmodule Membrane.Core.Element.ActionHandler do
 
     Telemetry.report_metric(:buffer, length(buffers))
     Telemetry.report_bitrate(buffers)
+
+    Observer.report_metric_update(:total_buffers_sent, 0, &(&1 + length(buffers)), id: pad_ref)
 
     Enum.each(buffers, fn
       %Buffer{} -> :ok

@@ -4,7 +4,7 @@ defmodule Membrane.Core.Pipeline do
 
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.{Clock, ResourceGuard}
-  alias Membrane.Core.{CallbackHandler, ProcessHelper, SubprocessSupervisor}
+  alias Membrane.Core.{CallbackHandler, Observer, ProcessHelper, SubprocessSupervisor}
   alias Membrane.Core.Pipeline.CallbackContext
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
@@ -12,6 +12,14 @@ defmodule Membrane.Core.Pipeline do
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Core.Component
+
+  @spec get_observer(pipeline :: pid()) :: Membrane.Core.Observer.t()
+  def get_observer(pipeline) do
+    case Message.call(pipeline, :get_observer) do
+      {:ok, observer} -> observer
+      {:error, _reason} -> raise Membrane.PipelineError, "Pipeline #{inspect(pipeline)} not found"
+    end
+  end
 
   @impl GenServer
   def init(params) do
@@ -21,11 +29,12 @@ defmodule Membrane.Core.Pipeline do
       pid: self()
     }
 
-    Membrane.Core.Observability.setup(observability_config)
-    SubprocessSupervisor.set_parent_component(params.subprocess_supervisor, observability_config)
+    %{subprocess_supervisor: subprocess_supervisor} = params
+    SubprocessSupervisor.set_parent_component(subprocess_supervisor, observability_config)
+    observer = Observer.new(observability_config, subprocess_supervisor)
 
     {:ok, resource_guard} =
-      SubprocessSupervisor.start_utility(params.subprocess_supervisor, {ResourceGuard, self()})
+      SubprocessSupervisor.start_utility(subprocess_supervisor, {ResourceGuard, self()})
 
     Telemetry.report_init(:pipeline)
 
@@ -42,8 +51,9 @@ defmodule Membrane.Core.Pipeline do
         clock_provider: %{clock: nil, provider: nil, choice: :auto},
         timers: %{}
       },
-      subprocess_supervisor: params.subprocess_supervisor,
-      resource_guard: resource_guard
+      subprocess_supervisor: subprocess_supervisor,
+      resource_guard: resource_guard,
+      observer: observer
     }
 
     state =
@@ -131,6 +141,11 @@ defmodule Membrane.Core.Pipeline do
   def handle_info(message, state) do
     state = LifecycleController.handle_info(message, state)
     {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_call(Message.new(:get_observer), _from, state) do
+    {:reply, {:ok, state.observer}, state}
   end
 
   @impl GenServer

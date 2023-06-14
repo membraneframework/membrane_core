@@ -18,14 +18,13 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  alias Membrane.Core.Element.DemandHandler
   alias Membrane.{Clock, Core, ResourceGuard, Sync}
-
-  alias Membrane.Core.{SubprocessSupervisor, TimerController}
+  alias Membrane.Core.Child.PadSpecHandler
 
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
+    DemandHandler,
     EffectiveFlowController,
     EventController,
     LifecycleController,
@@ -34,7 +33,10 @@ defmodule Membrane.Core.Element do
     StreamFormatController
   }
 
+  alias Membrane.Core.{SubprocessSupervisor, TimerController}
+
   require Membrane.Core.Message, as: Message
+  require Membrane.Core.Observer, as: Observer
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
@@ -98,13 +100,13 @@ defmodule Membrane.Core.Element do
 
     observability_config = %{
       name: options.name,
-      component_type: :bin,
+      component_type: :element,
       pid: self(),
       parent_path: options.parent_path,
       log_metadata: options.log_metadata
     }
 
-    Membrane.Core.Observability.setup(observability_config)
+    Membrane.Core.Observer.register_component(options.observer, observability_config)
     SubprocessSupervisor.set_parent_component(options.subprocess_supervisor, observability_config)
 
     {:ok, resource_guard} =
@@ -115,9 +117,35 @@ defmodule Membrane.Core.Element do
     ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:element) end)
 
     state =
-      Map.take(options, [:module, :name, :parent_clock, :sync, :parent, :subprocess_supervisor])
-      |> Map.put(:resource_guard, resource_guard)
-      |> State.new()
+      %State{
+        module: options.module,
+        type: options.module.membrane_element_type(),
+        name: options.name,
+        internal_state: nil,
+        parent_pid: options.parent,
+        supplying_demand?: false,
+        delayed_demands: MapSet.new(),
+        handle_demand_loop_counter: 0,
+        synchronization: %{
+          parent_clock: options.parent_clock,
+          timers: %{},
+          clock: nil,
+          stream_sync: options.sync,
+          latency: 0
+        },
+        initialized?: false,
+        playback: :stopped,
+        playback_queue: [],
+        resource_guard: resource_guard,
+        subprocess_supervisor: options.subprocess_supervisor,
+        terminating?: false,
+        setup_incomplete?: false,
+        effective_flow_control: :push,
+        handling_action?: false,
+        pads_to_snapshot: MapSet.new(),
+        observer: options.observer
+      }
+      |> PadSpecHandler.init_pads()
 
     state = LifecycleController.handle_init(options.user_options, state)
     {:ok, state, {:continue, :setup}}
@@ -168,7 +196,19 @@ defmodule Membrane.Core.Element do
       :erlang.process_info(self(), :message_queue_len) |> elem(1)
     )
 
-    do_handle_info(message, state)
+    Observer.report_metric(
+      :msg_queue_len,
+      :erlang.process_info(self(), :message_queue_len) |> elem(1)
+    )
+
+    result = do_handle_info(message, state)
+
+    Observer.report_metric(
+      :total_reductions,
+      :erlang.process_info(self(), :reductions) |> elem(1)
+    )
+
+    result
   end
 
   @compile {:inline, do_handle_info: 2}
@@ -185,6 +225,9 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:buffer, buffers, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
+
+    Observer.report_metric_update(:total_buffers_received, 0, &(&1 + length(buffers)), id: pad_ref)
+
     state = BufferController.handle_buffer(pad_ref, buffers, state)
     {:noreply, state}
   end

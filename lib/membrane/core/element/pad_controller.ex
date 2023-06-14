@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.PadController do
 
   use Bunch
   alias Membrane.{LinkError, Pad}
-  alias Membrane.Core.{CallbackHandler, Child, Events, Message, Observability}
+  alias Membrane.Core.{CallbackHandler, Child, Events, Message, Observer}
   alias Membrane.Core.Child.PadModel
 
   alias Membrane.Core.Element.{
@@ -91,7 +91,7 @@ defmodule Membrane.Core.Element.PadController do
         %{
           other_info: info,
           link_metadata: %{
-            observability_metadata: Observability.setup_link(endpoint.pad_ref)
+            observability_data: Observer.generate_link_observability_data(endpoint.pad_ref)
           },
           stream_format_validation_params: [],
           other_effective_flow_control: effective_flow_control
@@ -170,8 +170,12 @@ defmodule Membrane.Core.Element.PadController do
         throttling_factor: endpoint.pad_props[:throttling_factor]
       })
 
-    # The sibiling was an initiator, we don't need to use the pid of a task spawned for observability
-    _metadata = Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
+    Observer.register_link(
+      state.observer,
+      endpoint.pad_ref,
+      other_endpoint.pad_ref,
+      link_metadata.observability_data
+    )
 
     link_metadata = Map.put(link_metadata, :atomic_demand, atomic_demand)
 
@@ -207,6 +211,16 @@ defmodule Membrane.Core.Element.PadController do
       end
 
     state = maybe_handle_pad_added(endpoint.pad_ref, state)
+
+    link_metadata = %{
+      link_metadata
+      | observability_data:
+          Observer.generate_link_observability_data(
+            endpoint.pad_ref,
+            link_metadata.observability_data
+          )
+    }
+
     {{:ok, {endpoint, info, link_metadata}}, state}
   end
 
@@ -221,6 +235,7 @@ defmodule Membrane.Core.Element.PadController do
   @spec handle_unlink(Pad.ref(), State.t()) :: State.t()
   def handle_unlink(pad_ref, state) do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
+      Observer.unregister_link(state.observer, pad_ref)
       state = generate_eos_if_needed(pad_ref, state)
       state = maybe_handle_pad_removed(pad_ref, state)
       state = remove_pad_associations(pad_ref, state)
