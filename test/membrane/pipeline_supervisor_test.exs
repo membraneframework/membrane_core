@@ -1,10 +1,10 @@
 defmodule Membrane.PipelineSupervisorTest do
   use ExUnit.Case
 
-  alias Membrane.Testing
-
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
+
+  alias Membrane.Testing
 
   test "Pipeline supervisor exits with the same reason as pipeline" do
     defmodule MyPipeline do
