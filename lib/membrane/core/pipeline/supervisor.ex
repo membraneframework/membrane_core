@@ -75,19 +75,15 @@ defmodule Membrane.Core.Pipeline.Supervisor do
   @impl true
   def handle_info(
         {:EXIT, pid, :normal},
-        %{subprocess_supervisor: pid, pipeline: {:exited, pipeline_exit_reason}} = state
+        %{subprocess_supervisor: pid, pipeline: {:exited, pipeline_exit_reason}}
       ) do
     Membrane.Logger.debug("got exit from subprocess supervisor, exiting")
 
-    reason =
-      case pipeline_exit_reason do
-        :normal -> :normal
-        :shutdown -> :shutdown
-        {:shutdown, reason} -> {:shutdown, reason}
-        _other -> :shutdown
-      end
-
-    {:stop, reason, state}
+    # this is a hack to exit with the same reason as pipeline, but without having
+    # GenServer exit logs occurring when the exit reason is neither :normal, :shutdown
+    # nor {:shutdown, reason}
+    Process.flag(:trap_exit, false)
+    Process.exit(self(), pipeline_exit_reason)
   end
 
   @impl true
