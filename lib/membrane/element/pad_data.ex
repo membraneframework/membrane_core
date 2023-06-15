@@ -60,7 +60,8 @@ defmodule Membrane.Element.PadData do
           manual_demand_size: private_field,
           associated_pads: private_field,
           sticky_events: private_field,
-          other_effective_flow_control: private_field
+          other_effective_flow_control: private_field,
+          announced_end_of_stream?: private_field
         }
 
   @enforce_keys [
@@ -92,6 +93,7 @@ defmodule Membrane.Element.PadData do
                 sticky_events: [],
                 stream_format_validation_params: [],
                 other_demand_unit: nil,
-                other_effective_flow_control: :push
+                other_effective_flow_control: :push,
+                announced_end_of_stream?: false
               ]
 end

@@ -41,6 +41,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   def transform_actions(actions, callback, _handler_params, state) do
     actions = join_buffers(actions)
     ensure_nothing_after_redemand(actions, callback, state)
+    state = announce_end_of_stream(actions, state)
     {actions, state}
   end
 
@@ -280,6 +281,16 @@ defmodule Membrane.Core.Element.ActionHandler do
           action: redemand,
           callback: {state.module, callback}
     end
+  end
+
+  defp announce_end_of_stream(actions, state) do
+    Enum.reduce(actions, state, fn
+      {:end_of_stream, pad_ref}, state ->
+        PadModel.set_data!(state, pad_ref, :announced_end_of_stream?, true)
+
+      _action, state ->
+        state
+    end)
   end
 
   @spec send_buffer(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
