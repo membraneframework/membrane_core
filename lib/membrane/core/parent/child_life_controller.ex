@@ -692,7 +692,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         Terminating.
         """)
 
-        exit({:shutdown, :child_crash})
+        exit(:child_crash)
     end
   end
 
