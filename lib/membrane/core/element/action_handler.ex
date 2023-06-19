@@ -41,6 +41,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   def transform_actions(actions, callback, _handler_params, state) do
     actions = join_buffers(actions)
     ensure_nothing_after_redemand(actions, callback, state)
+    actions = append_resnapshots(actions)
     {actions, state}
   end
 
@@ -237,6 +238,11 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
+  def handle_action({:membrane_resnapshot, pad_ref}, _cp, _params, state) do
+    DemandController.snapshot_atomic_demand(pad_ref, state)
+  end
+
+  @impl CallbackHandler
   def handle_action(action, _callback, _params, _state) do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Element.Action}
   end
@@ -282,6 +288,16 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
+  defp append_resnapshots(actions) do
+    resnapshots =
+      Enum.flat_map(actions, fn
+        {:buffer, {pad_ref, _data}} -> [membrane_resnapshot: pad_ref]
+        _action -> []
+      end)
+
+    actions ++ resnapshots
+  end
+
   @spec send_buffer(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
   defp send_buffer(_pad_ref, [], state) do
     state
@@ -319,7 +335,9 @@ defmodule Membrane.Core.Element.ActionHandler do
         |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
 
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
-      DemandController.snapshot_atomic_demand(pad_ref, state)
+
+      state
+      # DemandController.snapshot_atomic_demand(pad_ref, state)
     else
       %{direction: :input} ->
         raise PadDirectionError, action: :buffer, direction: :input, pad: pad_ref

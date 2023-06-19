@@ -6,9 +6,9 @@ defmodule Membrane.Integration.DemandsTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  alias Membrane.Testing
   alias Membrane.Buffer
   alias Membrane.Support.DemandsTest.Filter
+  alias Membrane.Testing
   alias Membrane.Testing.{Pipeline, Sink, Source}
 
   defp assert_buffers_received(range, pid) do
@@ -97,8 +97,6 @@ defmodule Membrane.Integration.DemandsTest do
 
       @impl true
       def handle_demand(:output, n, :buffers, _ctx, %{eos_sent?: false} = state) do
-        IO.inspect(n, label: "N TO")
-
         buffers =
           1..(n - 1)//1
           |> Enum.map(fn _i -> %Membrane.Buffer{payload: <<>>} end)
