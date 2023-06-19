@@ -205,8 +205,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     )
   end
 
-  defp exec_handle_demand?(pad_data)
-       when pad_data.end_of_stream? or pad_data.announced_end_of_stream? do
+  defp exec_handle_demand?(%{end_of_stream?: true}) do
     Membrane.Logger.debug_verbose("""
     Demand controller: not executing handle_demand as :end_of_stream action has already been returned
     """)
