@@ -47,15 +47,19 @@ defmodule Membrane.Core.Element.ActionHandler do
   defguardp is_demand_size(size) when is_integer(size) or is_function(size)
 
   @impl CallbackHandler
-  def handle_action(action, callback, params, state) do
-    state = Map.update!(state, :callback_depth_counter, &(&1 + 1))
-
+  def handle_action(action, callback, params, state) when state.handling_callback? do
     do_handle_action(action, callback, params, state)
-    |> Map.update!(:callback_depth_counter, &(&1 - 1))
   end
 
   @impl CallbackHandler
-  def handle_end_of_actions(%{callback_depth_counter: 0} = state) do
+  def handle_action(action, callback, params, state) do
+    state = %{state | handling_callback?: true}
+    state = do_handle_action(action, callback, params, state)
+    %{state | handling_callback?: false}
+  end
+
+  @impl CallbackHandler
+  def handle_end_of_actions(state) when not state.handling_callback? do
     Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
     |> Map.put(:pads_to_snapshot, MapSet.new())
   end
