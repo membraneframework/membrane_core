@@ -30,6 +30,8 @@ defmodule Membrane.Core.CallbackHandler do
   @callback transform_actions(actions :: list, callback :: atom, handler_params, state) ::
               {actions :: list, state}
 
+  @callback handle_end_of_actions(state) :: state
+
   defmacro __using__(_args) do
     quote location: :keep do
       alias unquote(__MODULE__)
@@ -38,6 +40,11 @@ defmodule Membrane.Core.CallbackHandler do
       @impl unquote(__MODULE__)
       def transform_actions(actions, _callback, _handler_params, state) do
         {actions, state}
+      end
+
+      @impl unquote(__MODULE__)
+      def handle_end_of_actions(state) do
+        state
       end
 
       defoverridable unquote(__MODULE__)
@@ -188,5 +195,6 @@ defmodule Membrane.Core.CallbackHandler do
           reraise e, __STACKTRACE__
       end
     end)
+    |> handler_module.handle_end_of_actions()
   end
 end

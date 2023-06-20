@@ -18,6 +18,8 @@ defmodule Membrane.Core.Element.PadControllerTest do
     struct(State,
       name: name,
       module: elem_module,
+      callback_depth_counter: 0,
+      pads_to_snapshot: MapSet.new(),
       parent_pid: self(),
       internal_state: %{},
       synchronization: %{clock: nil, parent_clock: nil},

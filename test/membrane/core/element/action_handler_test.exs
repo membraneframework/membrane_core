@@ -25,6 +25,9 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         playback: :stopped,
         synchronization: %{clock: nil, parent_clock: nil},
         delayed_demands: MapSet.new(),
+        callback_depth_counter: 0,
+        pads_to_snapshot: MapSet.new(),
+        pads_to_snapshot: MapSet.new(),
         pads_data: %{
           input:
             struct(Membrane.Element.PadData,
@@ -103,6 +106,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         synchronization: %{clock: nil, parent_clock: nil},
         delayed_demands: MapSet.new(),
         playback: :stopped,
+        callback_depth_counter: 0,
+        pads_to_snapshot: MapSet.new(),
         pads_data: %{
           output: %{
             direction: :output,
@@ -180,8 +185,12 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
 
       assert result.pads_data.output.demand_snapshot < 0
+      assert result.pads_to_snapshot == MapSet.new([:output])
       assert AtomicDemand.get(result.pads_data.output.atomic_demand) < 0
-      assert put_in(result, [:pads_data, :output, :demand_snapshot], 0) == state
+
+      assert put_in(result, [:pads_data, :output, :demand_snapshot], 0)
+             |> Map.put(:pads_to_snapshot, MapSet.new()) == state
+
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref)
     end
 
@@ -494,6 +503,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         name: :elem_name,
         synchronization: %{clock: nil, parent_clock: nil},
         type: :source,
+        callback_depth_counter: 0,
+        pads_to_snapshot: MapSet.new(),
         pads_data: %{
           output: %{
             direction: :output,

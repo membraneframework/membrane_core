@@ -47,45 +47,56 @@ defmodule Membrane.Core.Element.ActionHandler do
   defguardp is_demand_size(size) when is_integer(size) or is_function(size)
 
   @impl CallbackHandler
-  def handle_action({action, _}, :handle_init, _params, _state)
-      when action not in [:latency, :notify_parent] do
+  def handle_action(action, callback, params, state) do
+    state = Map.update!(state, :callback_depth_counter, &(&1 + 1))
+
+    do_handle_action(action, callback, params, state)
+    |> Map.update!(:callback_depth_counter, &(&1 - 1))
+  end
+
+  @impl CallbackHandler
+  def handle_end_of_actions(%{callback_depth_counter: 0} = state) do
+    Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
+    |> Map.put(:pads_to_snapshot, MapSet.new())
+  end
+
+  @impl CallbackHandler
+  def handle_end_of_actions(state), do: state
+
+  defp do_handle_action({action, _}, :handle_init, _params, _state)
+       when action not in [:latency, :notify_parent] do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
   end
 
-  @impl CallbackHandler
-  def handle_action({action, _}, _cb, _params, %State{playback: playback})
-      when playback != :playing and
-             action in [
-               :buffer,
-               :event,
-               :stream_format,
-               :demand,
-               :redemand,
-               :forward,
-               :end_of_stream
-             ] do
+  defp do_handle_action({action, _}, _cb, _params, %State{playback: playback})
+       when playback != :playing and
+              action in [
+                :buffer,
+                :event,
+                :stream_format,
+                :demand,
+                :redemand,
+                :forward,
+                :end_of_stream
+              ] do
     raise ActionError, action: action, reason: {:invalid_component_playback, playback}
   end
 
-  @impl CallbackHandler
-  def handle_action({:setup, :incomplete} = action, cb, _params, _state)
-      when cb != :handle_setup do
+  defp do_handle_action({:setup, :incomplete} = action, cb, _params, _state)
+       when cb != :handle_setup do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_setup}
   end
 
-  @impl CallbackHandler
-  def handle_action({:setup, operation}, _cb, _params, state) do
+  defp do_handle_action({:setup, operation}, _cb, _params, state) do
     Core.LifecycleController.handle_setup_operation(operation, state)
   end
 
-  @impl CallbackHandler
-  def handle_action({:event, {pad_ref, event}}, _cb, _params, state)
-      when is_pad_ref(pad_ref) do
+  defp do_handle_action({:event, {pad_ref, event}}, _cb, _params, state)
+       when is_pad_ref(pad_ref) do
     send_event(pad_ref, event, state)
   end
 
-  @impl CallbackHandler
-  def handle_action({:notify_parent, notification}, _cb, _params, state) do
+  defp do_handle_action({:notify_parent, notification}, _cb, _params, state) do
     %State{name: name, parent_pid: parent_pid} = state
 
     Membrane.Logger.debug_verbose(
@@ -96,8 +107,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     state
   end
 
-  @impl CallbackHandler
-  def handle_action({:split, {callback, args_list}}, cb, params, state) do
+  defp do_handle_action({:split, {callback, args_list}}, cb, params, state) do
     CallbackHandler.exec_and_handle_split_callback(
       callback,
       cb,
@@ -108,46 +118,41 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  @impl CallbackHandler
-  def handle_action({:buffer, {pad_ref, buffers}}, _cb, _params, %State{type: type} = state)
-      when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
+  defp do_handle_action({:buffer, {pad_ref, buffers}}, _cb, _params, %State{type: type} = state)
+       when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
     send_buffer(pad_ref, buffers, state)
   end
 
-  @impl CallbackHandler
-  def handle_action(
-        {:stream_format, {pad_ref, stream_format}},
-        _cb,
-        _params,
-        %State{type: type} = state
-      )
-      when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
+  defp do_handle_action(
+         {:stream_format, {pad_ref, stream_format}},
+         _cb,
+         _params,
+         %State{type: type} = state
+       )
+       when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
     send_stream_format(pad_ref, stream_format, state)
   end
 
-  @impl CallbackHandler
-  def handle_action({:redemand, out_refs}, cb, params, state)
-      when is_list(out_refs) do
+  defp do_handle_action({:redemand, out_refs}, cb, params, state)
+       when is_list(out_refs) do
     Enum.reduce(out_refs, state, fn out_ref, state ->
       handle_action({:redemand, out_ref}, cb, params, state)
     end)
   end
 
-  @impl CallbackHandler
-  def handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
-      when type in [:source, :filter, :endpoint] and is_pad_ref(out_ref) and
-             {type, cb} != {:filter, :handle_demand} do
+  defp do_handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
+       when type in [:source, :filter, :endpoint] and is_pad_ref(out_ref) and
+              {type, cb} != {:filter, :handle_demand} do
     handle_redemand(out_ref, state)
   end
 
-  @impl CallbackHandler
-  def handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
-      when cb in [
-             :handle_stream_format,
-             :handle_event,
-             :handle_buffers_batch,
-             :handle_end_of_stream
-           ] do
+  defp do_handle_action({:forward, data}, cb, params, %State{type: :filter} = state)
+       when cb in [
+              :handle_stream_format,
+              :handle_event,
+              :handle_buffers_batch,
+              :handle_end_of_stream
+            ] do
     dir =
       case cb do
         :handle_event -> Pad.opposite_direction(params.direction)
@@ -169,75 +174,64 @@ defmodule Membrane.Core.Element.ActionHandler do
     end)
   end
 
-  @impl CallbackHandler
-  def handle_action(
-        {:demand, pad_ref},
-        cb,
-        params,
-        %State{type: type} = state
-      )
-      when is_pad_ref(pad_ref) and type in [:sink, :filter, :endpoint] do
+  defp do_handle_action(
+         {:demand, pad_ref},
+         cb,
+         params,
+         %State{type: type} = state
+       )
+       when is_pad_ref(pad_ref) and type in [:sink, :filter, :endpoint] do
     handle_action({:demand, {pad_ref, 1}}, cb, params, state)
   end
 
-  @impl CallbackHandler
-  def handle_action(
-        {:demand, {pad_ref, size}},
-        _cb,
-        _params,
-        %State{type: type} = state
-      )
-      when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter, :endpoint] do
+  defp do_handle_action(
+         {:demand, {pad_ref, size}},
+         _cb,
+         _params,
+         %State{type: type} = state
+       )
+       when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter, :endpoint] do
     supply_demand(pad_ref, size, state)
   end
 
-  @impl CallbackHandler
-  def handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
+  defp do_handle_action({:start_timer, {id, interval, clock}}, _cb, _params, state) do
     TimerController.start_timer(id, interval, clock, state)
   end
 
-  @impl CallbackHandler
-  def handle_action({:start_timer, {id, interval}}, cb, params, state) do
+  defp do_handle_action({:start_timer, {id, interval}}, cb, params, state) do
     clock = state.synchronization.parent_clock
     handle_action({:start_timer, {id, interval, clock}}, cb, params, state)
   end
 
-  @impl CallbackHandler
-  def handle_action({:timer_interval, {id, interval}}, cb, _params, state)
-      when interval != :no_interval or cb == :handle_tick do
+  defp do_handle_action({:timer_interval, {id, interval}}, cb, _params, state)
+       when interval != :no_interval or cb == :handle_tick do
     TimerController.timer_interval(id, interval, state)
   end
 
-  @impl CallbackHandler
-  def handle_action({:stop_timer, id}, _cb, _params, state) do
+  defp do_handle_action({:stop_timer, id}, _cb, _params, state) do
     TimerController.stop_timer(id, state)
   end
 
-  @impl CallbackHandler
-  def handle_action({:latency, latency}, _cb, _params, state) do
+  defp do_handle_action({:latency, latency}, _cb, _params, state) do
     put_in(state.synchronization.latency, latency)
   end
 
-  @impl CallbackHandler
-  def handle_action({:end_of_stream, pad_ref}, _callback, _params, %State{type: type} = state)
-      when is_pad_ref(pad_ref) and type != :sink do
+  defp do_handle_action({:end_of_stream, pad_ref}, _callback, _params, %State{type: type} = state)
+       when is_pad_ref(pad_ref) and type != :sink do
     send_event(pad_ref, %Events.EndOfStream{}, state)
   end
 
-  @impl CallbackHandler
-  def handle_action({:terminate, :normal}, _cb, _params, %State{terminating?: false}) do
+  defp do_handle_action({:terminate, :normal}, _cb, _params, %State{terminating?: false}) do
     raise Membrane.ElementError,
           "Cannot terminate an element with reason `:normal` unless it's removed by its parent"
   end
 
-  @impl CallbackHandler
-  def handle_action({:terminate, reason}, _cb, _params, _state) do
+  defp do_handle_action({:terminate, reason}, _cb, _params, _state) do
     Membrane.Logger.debug("Terminating with reason #{inspect(reason)}")
     exit(reason)
   end
 
-  @impl CallbackHandler
-  def handle_action(action, _callback, _params, _state) do
+  defp do_handle_action(action, _callback, _params, _state) do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Element.Action}
   end
 
@@ -314,12 +308,11 @@ defmodule Membrane.Core.Element.ActionHandler do
            other_ref: other_ref
          }
          when stream_format != nil <- pad_data do
-      state =
-        DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
-        |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
-
+      state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
-      DemandController.snapshot_atomic_demand(pad_ref, state)
+
+      PadModel.set_data!(state, pad_ref, :start_of_stream?, true)
+      |> Map.update!(:pads_to_snapshot, &MapSet.put(&1, pad_ref))
     else
       %{direction: :input} ->
         raise PadDirectionError, action: :buffer, direction: :input, pad: pad_ref

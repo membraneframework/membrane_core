@@ -39,7 +39,9 @@ defmodule Membrane.Core.Element.State do
           subprocess_supervisor: pid,
           terminating?: boolean(),
           setup_incomplete?: boolean(),
-          effective_flow_control: EffectiveFlowController.effective_flow_control()
+          effective_flow_control: EffectiveFlowController.effective_flow_control(),
+          callback_depth_counter: non_neg_integer(),
+          pads_to_snapshot: MapSet.t()
         }
 
   defstruct [
@@ -62,7 +64,9 @@ defmodule Membrane.Core.Element.State do
     :subprocess_supervisor,
     :terminating?,
     :setup_incomplete?,
-    :effective_flow_control
+    :effective_flow_control,
+    :callback_depth_counter,
+    :pads_to_snapshot
   ]
 
   @doc """
@@ -101,7 +105,9 @@ defmodule Membrane.Core.Element.State do
       subprocess_supervisor: options.subprocess_supervisor,
       terminating?: false,
       setup_incomplete?: false,
-      effective_flow_control: :push
+      effective_flow_control: :push,
+      callback_depth_counter: 0,
+      pads_to_snapshot: MapSet.new()
     }
     |> PadSpecHandler.init_pads()
   end
