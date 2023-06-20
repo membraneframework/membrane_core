@@ -45,6 +45,7 @@ defmodule Membrane.StreamFormatTest do
       assert_down(Sink, source_module: Source)
     end
 
+    @tag :dupa
     test "input pad :accepted_format in outer bin" do
       start_test_pipeline(Source, OuterSinkBin, AcceptedByInnerBins)
       assert_down(Sink, source_module: Source)
