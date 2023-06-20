@@ -6,9 +6,9 @@ defmodule Membrane.Integration.DemandsTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  alias Membrane.Testing
   alias Membrane.Buffer
   alias Membrane.Support.DemandsTest.Filter
+  alias Membrane.Testing
   alias Membrane.Testing.{Pipeline, Sink, Source}
 
   defp assert_buffers_received(range, pid) do
