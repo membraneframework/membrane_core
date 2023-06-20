@@ -49,6 +49,8 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
         playback: :playing,
         parent_pid: self(),
         synchronization: %{clock: nil, parent_clock: nil},
+        handling_action?: false,
+        pads_to_snapshot: MapSet.new(),
         pads_data: %{
           input:
             struct(Membrane.Element.PadData,

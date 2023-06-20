@@ -47,6 +47,15 @@ defmodule Membrane.Core.Element.ActionHandler do
   defguardp is_demand_size(size) when is_integer(size) or is_function(size)
 
   @impl CallbackHandler
+  def handle_end_of_actions(state) when not state.handling_action? do
+    Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
+    |> Map.put(:pads_to_snapshot, MapSet.new())
+  end
+
+  @impl CallbackHandler
+  def handle_end_of_actions(state), do: state
+
+  @impl CallbackHandler
   def handle_action({action, _}, :handle_init, _params, _state)
       when action not in [:latency, :notify_parent] do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
@@ -314,12 +323,11 @@ defmodule Membrane.Core.Element.ActionHandler do
            other_ref: other_ref
          }
          when stream_format != nil <- pad_data do
-      state =
-        DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
-        |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
-
+      state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
-      DemandController.snapshot_atomic_demand(pad_ref, state)
+
+      PadModel.set_data!(state, pad_ref, :start_of_stream?, true)
+      |> Map.update!(:pads_to_snapshot, &MapSet.put(&1, pad_ref))
     else
       %{direction: :input} ->
         raise PadDirectionError, action: :buffer, direction: :input, pad: pad_ref
