@@ -97,8 +97,6 @@ defmodule Membrane.Integration.DemandsTest do
 
       @impl true
       def handle_demand(:output, n, :buffers, _ctx, %{eos_sent?: false} = state) do
-        IO.inspect(n, label: "N TO")
-
         buffers =
           1..(n - 1)//1
           |> Enum.map(fn _i -> %Membrane.Buffer{payload: <<>>} end)
