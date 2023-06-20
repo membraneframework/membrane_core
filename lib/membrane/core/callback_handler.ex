@@ -183,7 +183,7 @@ defmodule Membrane.Core.CallbackHandler do
           reraise e, __STACKTRACE__
       end
 
-    old_handling_action? = state.handling_action?
+    was_handling_action? = state.handling_action?
     state = %{state | handling_action?: true}
 
     state =
@@ -201,7 +201,7 @@ defmodule Membrane.Core.CallbackHandler do
       end)
 
     state =
-      if old_handling_action?,
+      if was_handling_action?,
         do: state,
         else: %{state | handling_action?: false}
 

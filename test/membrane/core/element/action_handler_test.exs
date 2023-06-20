@@ -27,7 +27,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         delayed_demands: MapSet.new(),
         handling_action?: false,
         pads_to_snapshot: MapSet.new(),
-        pads_to_snapshot: MapSet.new(),
         pads_data: %{
           input:
             struct(Membrane.Element.PadData,
