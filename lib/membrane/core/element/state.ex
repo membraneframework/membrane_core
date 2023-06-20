@@ -40,7 +40,7 @@ defmodule Membrane.Core.Element.State do
           terminating?: boolean(),
           setup_incomplete?: boolean(),
           effective_flow_control: EffectiveFlowController.effective_flow_control(),
-          handling_callback?: boolean(),
+          handling_action?: boolean(),
           pads_to_snapshot: MapSet.t()
         }
 
@@ -65,7 +65,7 @@ defmodule Membrane.Core.Element.State do
     :terminating?,
     :setup_incomplete?,
     :effective_flow_control,
-    :handling_callback?,
+    :handling_action?,
     :pads_to_snapshot
   ]
 
@@ -106,7 +106,7 @@ defmodule Membrane.Core.Element.State do
       terminating?: false,
       setup_incomplete?: false,
       effective_flow_control: :push,
-      handling_callback?: false,
+      handling_action?: false,
       pads_to_snapshot: MapSet.new()
     }
     |> PadSpecHandler.init_pads()

@@ -183,18 +183,28 @@ defmodule Membrane.Core.CallbackHandler do
           reraise e, __STACKTRACE__
       end
 
-    Enum.reduce(actions, state, fn action, state ->
-      try do
-        handler_module.handle_action(action, callback, handler_params, state)
-      rescue
-        e ->
-          Membrane.Logger.error("""
-          Error handling action #{inspect(action)} returned by callback #{inspect(state.module)}.#{callback}
-          """)
+    old_handling_action? = state.handling_action?
+    state = %{state | handling_action?: true}
 
-          reraise e, __STACKTRACE__
-      end
-    end)
-    |> handler_module.handle_end_of_actions()
+    state =
+      Enum.reduce(actions, state, fn action, state ->
+        try do
+          handler_module.handle_action(action, callback, handler_params, state)
+        rescue
+          e ->
+            Membrane.Logger.error("""
+            Error handling action #{inspect(action)} returned by callback #{inspect(state.module)}.#{callback}
+            """)
+
+            reraise e, __STACKTRACE__
+        end
+      end)
+
+    state =
+      if old_handling_action?,
+        do: state,
+        else: %{state | handling_action?: false}
+
+    handler_module.handle_end_of_actions(state)
   end
 end
