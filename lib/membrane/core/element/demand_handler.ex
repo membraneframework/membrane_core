@@ -200,7 +200,7 @@ defmodule Membrane.Core.Element.DemandHandler do
         split_continuation_arbiter: &exec_handle_demand?(PadModel.get_data!(&1, pad_data.ref)),
         context: context
       },
-      [pad_data.ref, pad_data.demand_snapshot, pad_data.demand_unit],
+      [pad_data.ref, pad_data.demand, pad_data.demand_unit],
       state
     )
   end
@@ -213,10 +213,10 @@ defmodule Membrane.Core.Element.DemandHandler do
     false
   end
 
-  defp exec_handle_demand?(%{demand_snapshot: demand_snapshot}) when demand_snapshot <= 0 do
+  defp exec_handle_demand?(%{demand: demand}) when demand <= 0 do
     Membrane.Logger.debug_verbose("""
-    Demand controller: not executing handle_demand as demand_snapshot is not greater than 0,
-    demand_snapshot: #{inspect(demand_snapshot)}
+    Demand controller: not executing handle_demand as demand is not greater than 0,
+    demand: #{inspect(demand)}
     """)
 
     false

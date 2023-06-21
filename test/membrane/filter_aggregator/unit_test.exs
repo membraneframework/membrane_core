@@ -45,7 +45,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
       pad_description_template
       |> Map.merge(%{
         stream_format: nil,
-        demand_snapshot: 0,
+        demand: 0,
         ref: nil,
         other_ref: nil,
         other_demand_unit: :buffers,
@@ -160,7 +160,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
     |> Enum.flat_map(& &1.pads)
     |> Enum.each(fn {pad, pad_data} ->
       assert pad_data.availability == :always
-      assert pad_data.demand_snapshot == nil
+      assert pad_data.demand == nil
       assert pad_data.direction == pad
       assert pad_data.start_of_stream? == false
       assert pad_data.end_of_stream? == false
