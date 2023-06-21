@@ -72,6 +72,6 @@ defmodule Membrane.FailWhenNoStreamFormatAreSent do
     pipeline = Pipeline.start_supervised!(options)
     ref = Process.monitor(pipeline)
     assert_start_of_stream(pipeline, :sink)
-    refute_receive {:DOWN, ^ref, :process, ^pipeline, :child_crash}
+    refute_receive {:DOWN, ^ref, :process, ^pipeline, _reason}
   end
 end

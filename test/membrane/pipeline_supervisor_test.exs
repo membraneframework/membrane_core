@@ -23,7 +23,7 @@ defmodule Membrane.PipelineSupervisorTest do
     assert_receive {:DOWN, ^supervisor_monitor_ref, _process, _pid, ^exit_reason}
   end
 
-  test "Pipeline supervisor exits with :child_crash when pipeline's child crashes" do
+  test "Pipeline supervisor exits with {:child_crash, child_name} when pipeline's child crashes" do
     defmodule MyElement do
       use Membrane.Endpoint
 
@@ -41,11 +41,13 @@ defmodule Membrane.PipelineSupervisorTest do
     pipeline_monitor_ref = Process.monitor(pipeline)
     element_monitor_ref = Process.monitor(element)
 
-    exit_reason = :custom_exit_reason
-    Process.exit(element, exit_reason)
+    element_exit_reason = :custom_exit_reason
+    Process.exit(element, element_exit_reason)
 
-    assert_receive {:DOWN, ^element_monitor_ref, _process, _pid, ^exit_reason}
-    assert_receive {:DOWN, ^pipeline_monitor_ref, _process, _pid, :child_crash}
-    assert_receive {:DOWN, ^supervisor_monitor_ref, _process, _pid, :child_crash}
+    pipeline_exit_reason = {:child_crash, :element}
+
+    assert_receive {:DOWN, ^element_monitor_ref, _process, _pid, ^element_exit_reason}
+    assert_receive {:DOWN, ^pipeline_monitor_ref, _process, _pid, ^pipeline_exit_reason}
+    assert_receive {:DOWN, ^supervisor_monitor_ref, _process, _pid, ^pipeline_exit_reason}
   end
 end
