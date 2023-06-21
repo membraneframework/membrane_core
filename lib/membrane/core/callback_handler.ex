@@ -30,6 +30,8 @@ defmodule Membrane.Core.CallbackHandler do
   @callback transform_actions(actions :: list, callback :: atom, handler_params, state) ::
               {actions :: list, state}
 
+  @callback handle_end_of_actions(state) :: state
+
   defmacro __using__(_args) do
     quote location: :keep do
       alias unquote(__MODULE__)
@@ -38,6 +40,11 @@ defmodule Membrane.Core.CallbackHandler do
       @impl unquote(__MODULE__)
       def transform_actions(actions, _callback, _handler_params, state) do
         {actions, state}
+      end
+
+      @impl unquote(__MODULE__)
+      def handle_end_of_actions(state) do
+        state
       end
 
       defoverridable unquote(__MODULE__)
@@ -176,17 +183,28 @@ defmodule Membrane.Core.CallbackHandler do
           reraise e, __STACKTRACE__
       end
 
-    Enum.reduce(actions, state, fn action, state ->
-      try do
-        handler_module.handle_action(action, callback, handler_params, state)
-      rescue
-        e ->
-          Membrane.Logger.error("""
-          Error handling action #{inspect(action)} returned by callback #{inspect(state.module)}.#{callback}
-          """)
+    was_handling_action? = state.handling_action?
+    state = %{state | handling_action?: true}
 
-          reraise e, __STACKTRACE__
-      end
-    end)
+    state =
+      Enum.reduce(actions, state, fn action, state ->
+        try do
+          handler_module.handle_action(action, callback, handler_params, state)
+        rescue
+          e ->
+            Membrane.Logger.error("""
+            Error handling action #{inspect(action)} returned by callback #{inspect(state.module)}.#{callback}
+            """)
+
+            reraise e, __STACKTRACE__
+        end
+      end)
+
+    state =
+      if was_handling_action?,
+        do: state,
+        else: %{state | handling_action?: false}
+
+    handler_module.handle_end_of_actions(state)
   end
 end
