@@ -4,6 +4,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   alias __MODULE__.{CrashGroupUtils, LinkUtils, StartupUtils}
   alias Membrane.{Child, ChildrenSpec}
+  alias Membrane.Core
   alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
 
   alias Membrane.Core.Parent.{
@@ -692,7 +693,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         Terminating.
         """)
 
-        exit(:child_crash)
+        Core.Process.exit_self({:child_crash, child_name})
     end
   end
 
