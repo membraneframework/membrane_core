@@ -57,10 +57,10 @@ defmodule Membrane.Core.Element.DemandController do
   end
 
   defp do_snapshot_atomic_demand(%{flow_control: :manual} = pad_data, state) do
-    with %{demand_snapshot: demand_snapshot, atomic_demand: atomic_demand}
-         when demand_snapshot <= 0 <- pad_data,
+    with %{demand: demand, atomic_demand: atomic_demand}
+         when demand <= 0 <- pad_data,
          atomic_demand_value
-         when atomic_demand_value > 0 and atomic_demand_value > demand_snapshot <-
+         when atomic_demand_value > 0 and atomic_demand_value > demand <-
            AtomicDemand.get(atomic_demand) do
       state =
         PadModel.update_data!(
@@ -68,8 +68,8 @@ defmodule Membrane.Core.Element.DemandController do
           pad_data.ref,
           &%{
             &1
-            | demand_snapshot: atomic_demand_value,
-              incoming_demand: atomic_demand_value - &1.demand_snapshot
+            | demand: atomic_demand_value,
+              incoming_demand: atomic_demand_value - &1.demand
           }
         )
 
@@ -91,12 +91,12 @@ defmodule Membrane.Core.Element.DemandController do
     pad_data = PadModel.get_data!(state, pad_ref)
     buffers_size = Buffer.Metric.from_unit(pad_data.demand_unit).buffers_size(buffers)
 
-    demand_snapshot = pad_data.demand_snapshot - buffers_size
+    demand = pad_data.demand - buffers_size
     atomic_demand = AtomicDemand.decrease(pad_data.atomic_demand, buffers_size)
 
     PadModel.set_data!(state, pad_ref, %{
       pad_data
-      | demand_snapshot: demand_snapshot,
+      | demand: demand,
         atomic_demand: atomic_demand
     })
   end

@@ -9,7 +9,7 @@ defmodule Membrane.Core.Child.PadModelTest do
 
   defp setup_element_state(_ctx) do
     state = %Membrane.Core.Element.State{
-      pads_data: %{:input => struct(Membrane.Element.PadData, demand_snapshot: 1)},
+      pads_data: %{:input => struct(Membrane.Element.PadData, demand: 1)},
       pads_info: %{}
     }
 
@@ -32,11 +32,11 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "is {:ok, value} when the pad is present", ctx do
-      assert {:ok, 1} = PadModel.get_data(ctx.state, :input, :demand_snapshot)
+      assert {:ok, 1} = PadModel.get_data(ctx.state, :input, :demand)
     end
 
     test "is :unknown_pad when the pad is not present", ctx do
-      assert PadModel.get_data(ctx.state, :output, :demand_snapshot) ==
+      assert PadModel.get_data(ctx.state, :output, :demand) ==
                {:error, :unknown_pad}
     end
   end
@@ -45,12 +45,12 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "is value when the pad is present", ctx do
-      assert 1 = PadModel.get_data!(ctx.state, :input, :demand_snapshot)
+      assert 1 = PadModel.get_data!(ctx.state, :input, :demand)
     end
 
     test "is :unknown_pad when the pad is not present", ctx do
       assert_raise @unknown_pad_error_module, fn ->
-        PadModel.get_data!(ctx.state, :output, :demand_snapshot)
+        PadModel.get_data!(ctx.state, :output, :demand)
       end
     end
   end
@@ -90,12 +90,12 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "updates the pad data with the given function when present", ctx do
-      assert PadModel.update_data(ctx.state, :input, :demand_snapshot, &{:ok, &1 + 5}) ==
-               {:ok, put_in(ctx.state, [:pads_data, :input, :demand_snapshot], 6)}
+      assert PadModel.update_data(ctx.state, :input, :demand, &{:ok, &1 + 5}) ==
+               {:ok, put_in(ctx.state, [:pads_data, :input, :demand], 6)}
     end
 
     test "is :unknown_pad and original state when the pad is not present", ctx do
-      assert PadModel.update_data(ctx.state, :output, :demand_snapshot, &{:ok, &1 + 1}) ==
+      assert PadModel.update_data(ctx.state, :output, :demand, &{:ok, &1 + 1}) ==
                {{:error, :unknown_pad}, ctx.state}
     end
   end
@@ -104,13 +104,13 @@ defmodule Membrane.Core.Child.PadModelTest do
     setup :setup_element_state
 
     test "updates the pad data with the given function when present", ctx do
-      assert PadModel.update_data!(ctx.state, :input, :demand_snapshot, &(&1 + 5)) ==
-               put_in(ctx.state, [:pads_data, :input, :demand_snapshot], 6)
+      assert PadModel.update_data!(ctx.state, :input, :demand, &(&1 + 5)) ==
+               put_in(ctx.state, [:pads_data, :input, :demand], 6)
     end
 
     test "raises when the pad is not present", ctx do
       assert_raise @unknown_pad_error_module, fn ->
-        PadModel.update_data!(ctx.state, :other_input, :demand_snapshot, &(&1 + 5))
+        PadModel.update_data!(ctx.state, :other_input, :demand, &(&1 + 5))
       end
     end
   end

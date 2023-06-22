@@ -23,11 +23,11 @@ defmodule Membrane.Bin.PadData do
           availability: Membrane.Pad.availability(),
           direction: Membrane.Pad.direction(),
           name: Membrane.Pad.name(),
+          spec_ref: private_field,
           link_id: private_field,
           endpoint: private_field,
           linked?: private_field,
-          response_received?: private_field,
-          spec_ref: private_field
+          response_received?: private_field
         }
 
   @enforce_keys [

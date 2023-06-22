@@ -64,7 +64,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
     |> Map.delete(:accepted_formats_str)
     |> Map.merge(%{
       stream_format: nil,
-      demand_snapshot: nil,
+      demand: nil,
       start_of_stream?: false,
       end_of_stream?: false,
       ref: pad_description.name,
