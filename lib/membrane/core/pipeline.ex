@@ -104,12 +104,8 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_info(Message.new(:child_death, [name, reason]), state) do
-    {result, state} = ChildLifeController.handle_child_death(name, reason, state)
-
-    case result do
-      :stop -> {:stop, :normal, state}
-      :continue -> {:noreply, state}
-    end
+    state = ChildLifeController.handle_child_death(name, reason, state)
+    {:noreply, state}
   end
 
   @impl GenServer

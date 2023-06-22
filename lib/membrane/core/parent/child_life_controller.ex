@@ -4,8 +4,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   alias __MODULE__.{CrashGroupUtils, LinkUtils, StartupUtils}
   alias Membrane.{Child, ChildrenSpec}
-  alias Membrane.Core
-  alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
+  alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline, ProcessHelper}
 
   alias Membrane.Core.Parent.{
     ChildEntryParser,
@@ -640,14 +639,17 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           child_name :: Child.name(),
           reason :: any(),
           state :: Parent.state()
-        ) :: {:stop | :continue, Parent.state()}
+        ) :: Parent.state()
   def handle_child_death(child_name, reason, state) do
-    state = do_handle_child_death(child_name, reason, state)
+    case do_handle_child_death(child_name, reason, state) do
+      {:error, reason} ->
+        ProcessHelper.notoelo(reason)
 
-    if state.terminating? and Enum.empty?(state.children) do
-      {:stop, state}
-    else
-      {:continue, state}
+      {:ok, state} when state.terminating? and state.children == %{} ->
+        ProcessHelper.notoelo(:normal)
+
+      {:ok, state} ->
+        state
     end
   end
 
@@ -655,7 +657,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {%{pid: child_pid}, state} = Bunch.Access.pop_in(state, [:children, child_name])
     state = LinkUtils.unlink_element(child_name, state)
     {_result, state} = remove_child_from_crash_group(state, child_pid)
-    state
+    {:ok, state}
   end
 
   defp do_handle_child_death(child_name, reason, state) do
@@ -667,21 +669,24 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         |> Enum.filter(&Map.has_key?(state.children, &1))
         |> remove_children_from_specs(state)
 
-      {result, state} =
+      state =
         crash_all_group_members(group, child_name, state)
         |> remove_child_from_crash_group(group, child_pid)
+        |> case do
+          {:removed, state} ->
+            exec_handle_crash_group_down_callback(
+              group.name,
+              group.members,
+              group.crash_initiator || child_name,
+              state
+            )
 
-      if result == :removed do
-        exec_handle_crash_group_down_callback(
-          group.name,
-          group.members,
-          group.crash_initiator || child_name,
-          state
-        )
-      else
-        state
-      end
-      |> Bunch.Access.delete_in([:children, child_name])
+          {_result, state} ->
+            state
+        end
+        |> Bunch.Access.delete_in([:children, child_name])
+
+      {:ok, state}
     else
       {:error, :not_member} when reason == {:shutdown, :membrane_crash_group_kill} ->
         raise Membrane.PipelineError,
@@ -693,7 +698,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         Terminating.
         """)
 
-        Core.Process.exit_self({:child_crash, child_name})
+        {:error, {:membrane_child_crash, child_name}}
     end
   end
 

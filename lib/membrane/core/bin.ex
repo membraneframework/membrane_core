@@ -209,12 +209,8 @@ defmodule Membrane.Core.Bin do
   end
 
   defp do_handle_info(Message.new(:child_death, [name, reason]), state) do
-    {result, state} = Parent.ChildLifeController.handle_child_death(name, reason, state)
-
-    case result do
-      :stop -> {:stop, :normal, state}
-      :continue -> {:noreply, state}
-    end
+    state = Parent.ChildLifeController.handle_child_death(name, reason, state)
+    {:noreply, state}
   end
 
   defp do_handle_info(Message.new(:play), state) do
