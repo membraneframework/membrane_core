@@ -4,7 +4,7 @@ defmodule Membrane.Core.Pipeline do
 
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.{Clock, ResourceGuard}
-  alias Membrane.Core.{CallbackHandler, SubprocessSupervisor}
+  alias Membrane.Core.{CallbackHandler, ProcessHelper, SubprocessSupervisor}
   alias Membrane.Core.Pipeline.CallbackContext
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
@@ -104,8 +104,10 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_info(Message.new(:child_death, [name, reason]), state) do
-    state = ChildLifeController.handle_child_death(name, reason, state)
-    {:noreply, state}
+    case ChildLifeController.handle_child_death(name, reason, state) do
+      {:stop, reason, _state} -> ProcessHelper.notoelo(reason)
+      {:continue, state} -> {:noreply, state}
+    end
   end
 
   @impl GenServer

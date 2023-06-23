@@ -639,17 +639,17 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           child_name :: Child.name(),
           reason :: any(),
           state :: Parent.state()
-        ) :: Parent.state()
+        ) :: {:continue, Parent.state()} | {:stop, reason :: any(), Parent.state()}
   def handle_child_death(child_name, reason, state) do
     case do_handle_child_death(child_name, reason, state) do
       {:error, reason} ->
-        ProcessHelper.notoelo(reason)
+        {:stop, reason, state}
 
       {:ok, state} when state.terminating? and state.children == %{} ->
-        ProcessHelper.notoelo(:normal)
+        {:stop, :normal, state}
 
       {:ok, state} ->
-        state
+        {:continue, state}
     end
   end
 
@@ -681,7 +681,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
               state
             )
 
-          {_result, state} ->
+          {:not_removed, state} ->
             state
         end
         |> Bunch.Access.delete_in([:children, child_name])

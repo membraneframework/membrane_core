@@ -11,6 +11,7 @@ defmodule Membrane.Core.Bin do
     Child,
     Message,
     Parent,
+    ProcessHelper,
     SubprocessSupervisor,
     Telemetry,
     TimerController
@@ -209,8 +210,10 @@ defmodule Membrane.Core.Bin do
   end
 
   defp do_handle_info(Message.new(:child_death, [name, reason]), state) do
-    state = Parent.ChildLifeController.handle_child_death(name, reason, state)
-    {:noreply, state}
+    case Parent.ChildLifeController.handle_child_death(name, reason, state) do
+      {:stop, reason, _state} -> ProcessHelper.notoelo(reason)
+      {:continue, state} -> {:noreply, state}
+    end
   end
 
   defp do_handle_info(Message.new(:play), state) do
