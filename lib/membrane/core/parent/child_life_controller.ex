@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
   alias __MODULE__.{CrashGroupUtils, LinkUtils, StartupUtils}
   alias Membrane.{Child, ChildrenSpec}
-  alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline, ProcessHelper}
+  alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
 
   alias Membrane.Core.Parent.{
     ChildEntryParser,
