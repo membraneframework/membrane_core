@@ -33,7 +33,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
               direction: :input,
               pid: self(),
               flow_control: :manual,
-              demand_snapshot: 0
+              demand: 0
             ),
           input_push:
             struct(Membrane.Element.PadData,
@@ -119,7 +119,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             end_of_stream?: false,
             flow_control: :push,
             atomic_demand: output_atomic_demand,
-            demand_snapshot: 0
+            demand: 0
           },
           input: %{
             direction: :input,
@@ -130,7 +130,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             end_of_stream?: false,
             flow_control: :push,
             atomic_demand: input_atomic_demand,
-            demand_snapshot: 0
+            demand: 0
           }
         },
         pads_info: %{
@@ -183,11 +183,11 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
 
-      assert result.pads_data.output.demand_snapshot < 0
+      assert result.pads_data.output.demand < 0
       assert result.pads_to_snapshot == MapSet.new([:output])
       assert AtomicDemand.get(result.pads_data.output.atomic_demand) < 0
 
-      assert put_in(result, [:pads_data, :output, :demand_snapshot], 0)
+      assert put_in(result, [:pads_data, :output, :demand], 0)
              |> Map.put(:pads_to_snapshot, MapSet.new()) == state
 
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref)
@@ -509,7 +509,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             direction: :output,
             pid: self(),
             flow_control: :manual,
-            demand_snapshot: 0
+            demand: 0
           }
         },
         pads_info: %{
