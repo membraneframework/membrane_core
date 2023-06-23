@@ -234,7 +234,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     buffers = Enum.map(1..100_000, &%Membrane.Buffer{payload: &1})
     Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
-    assert_receive({:DOWN, _ref, :process, ^pipeline, {:shutdown, :child_crash}})
+    assert_receive({:DOWN, _ref, :process, ^pipeline, {:membrane_child_crash, :sink}})
   end
 
   defp reduce_link(link, enum, fun) do

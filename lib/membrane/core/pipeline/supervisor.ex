@@ -3,7 +3,7 @@ defmodule Membrane.Core.Pipeline.Supervisor do
 
   use GenServer
 
-  alias Membrane.Core.SubprocessSupervisor
+  alias Membrane.Core.{ProcessHelper, SubprocessSupervisor}
 
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
@@ -75,19 +75,10 @@ defmodule Membrane.Core.Pipeline.Supervisor do
   @impl true
   def handle_info(
         {:EXIT, pid, :normal},
-        %{subprocess_supervisor: pid, pipeline: {:exited, pipeline_exit_reason}} = state
+        %{subprocess_supervisor: pid, pipeline: {:exited, pipeline_exit_reason}}
       ) do
     Membrane.Logger.debug("got exit from subprocess supervisor, exiting")
-
-    reason =
-      case pipeline_exit_reason do
-        :normal -> :normal
-        :shutdown -> :shutdown
-        {:shutdown, reason} -> {:shutdown, reason}
-        _other -> :shutdown
-      end
-
-    {:stop, reason, state}
+    ProcessHelper.notoelo(pipeline_exit_reason, log?: false)
   end
 
   @impl true
