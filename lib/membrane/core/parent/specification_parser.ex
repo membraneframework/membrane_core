@@ -27,7 +27,7 @@ defmodule Membrane.Core.Parent.SpecificationParser do
       |> Enum.map(fn
         %ChildrenSpec.Builder{links: links, children: children, status: :done} = builder ->
           if links == [] and children == [] do
-            Membrane.Logger.warn(
+            Membrane.Logger.warning(
               "The specification you have passed: #{builder} has no effect - it doesn't produce any children nor links."
             )
           end
