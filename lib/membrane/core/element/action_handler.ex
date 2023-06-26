@@ -309,7 +309,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     Telemetry.report_metric(:buffer, length(buffers))
     Telemetry.report_bitrate(buffers)
 
-    Observer.report_metric_update(:total_buffers_sent, 0, &(&1 + length(buffers)), id: pad_ref)
+    Observer.report_metric_update(:total_buffers_sent, 0, &(&1 + length(buffers)), pad: pad_ref)
 
     Enum.each(buffers, fn
       %Buffer{} -> :ok
