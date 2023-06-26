@@ -263,7 +263,7 @@ defmodule Membrane.Core.Observer do
           :ets.insert(
             ets,
             {{unquote(metric), unquote(opts)[:component_path] || ComponentPath.get(),
-              unquote(opts)[:id]}, unquote(value)}
+              unquote(opts)[:pad]}, unquote(value)}
           )
         end
 
@@ -278,7 +278,7 @@ defmodule Membrane.Core.Observer do
         if ets do
           key =
             {unquote(metric), unquote(opts)[:component_path] || ComponentPath.get(),
-             unquote(opts)[:id]}
+             unquote(opts)[:pad]}
 
           [{_key, value} | _default] = :ets.lookup(ets, key) ++ [{nil, unquote(init)}]
 

@@ -226,7 +226,9 @@ defmodule Membrane.Core.Element do
   defp do_handle_info(Message.new(:buffer, buffers, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
 
-    Observer.report_metric_update(:total_buffers_received, 0, &(&1 + length(buffers)), id: pad_ref)
+    Observer.report_metric_update(:total_buffers_received, 0, &(&1 + length(buffers)),
+      pad: pad_ref
+    )
 
     state = BufferController.handle_buffer(pad_ref, buffers, state)
     {:noreply, state}
