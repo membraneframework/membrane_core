@@ -422,6 +422,7 @@ defmodule Membrane.Core.Observer do
 
   defp handle_graph_update(%{entity: :remove_component, pid: pid}, state) do
     {update, state} = pop_in(state, [:pid_to_component, pid])
+    :ets.match_delete(state.ets, {{:_, update.path, :_}, :_})
     graph = Enum.reject(state.graph, &(&1.entity == :component and update.path == &1.path))
 
     {removed_links, graph} =
@@ -448,6 +449,8 @@ defmodule Membrane.Core.Observer do
 
     removed_links =
       Enum.map(removed_links, fn link ->
+        :ets.match_delete(state.ets, {{:_, link.from, link.output}, :_})
+        :ets.match_delete(state.ets, {{:_, link.to, link.input}, :_})
         link |> Map.take([:from, :to, :output, :input]) |> Map.put(:entity, :link)
       end)
 
