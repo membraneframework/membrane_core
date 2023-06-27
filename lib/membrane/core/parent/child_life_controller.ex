@@ -479,7 +479,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     {already_removing, data} = Enum.split_with(data, & &1.terminating?)
 
     if already_removing != [] do
-      Membrane.Logger.warn("""
+      Membrane.Logger.warning("""
       Trying to remove children that are already being removed: #{Enum.map_join(already_removing, ", ", &inspect(&1.name))}. This may lead to 'unknown child' errors.
       """)
     end

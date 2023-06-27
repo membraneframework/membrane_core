@@ -23,7 +23,7 @@ defmodule Membrane.Core.Child do
         doc -> doc
       end
 
-    if moduledoc != false do
+    if is_binary(moduledoc) and String.valid?(moduledoc) do
       moduledoc =
         if String.trim(moduledoc) == "" do
           "Membrane #{child_type}.\n\n"

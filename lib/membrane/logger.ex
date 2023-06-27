@@ -79,7 +79,7 @@ defmodule Membrane.Logger do
     end
   end
 
-  Enum.map([:debug, :info, :warn, :error], fn method ->
+  Enum.map([:debug, :info, :warn, :warning, :error], fn method ->
     @doc """
     Wrapper around `Logger.#{method}/2` that adds Membrane prefix.
 
