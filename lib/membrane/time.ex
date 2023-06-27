@@ -11,8 +11,6 @@ defmodule Membrane.Time do
   that do not touch hardware clock, you should use Membrane units for consistency.
   """
 
-  require Ratio
-
   @compile {:inline,
             native_units: 1, native_unit: 0, nanoseconds: 1, nanosecond: 0, second: 0, seconds: 1}
 
@@ -35,7 +33,7 @@ defmodule Membrane.Time do
   # Difference between 01.01.1900 (start of NTP epoch) and 01.01.1970 (start of Unix epoch) in seconds
   @ntp_unix_epoch_diff 2_208_988_800
 
-  @two_to_pow_32 Ratio.pow(Ratio.new(2, 1), 32) |> Ratio.trunc()
+  @two_to_pow_32 Ratio.pow(2, 32)
 
   @doc """
   Checks whether a value is `Membrane.Time.t`.
@@ -245,6 +243,21 @@ defmodule Membrane.Time do
     Ratio.new(timestamp, timebase) |> round_rational()
   end
 
+  @doc """
+  Divides timestamp by a timebase. The result is rounded to the nearest integer.
+  Works this same as `divide_by_timebase/2`.
+
+  ## Examples:
+      iex> timestamp = 10 |> Membrane.Time.seconds()
+      iex> timebase = Ratio.new(Membrane.Time.second(), 30)
+      iex> Membrane.Time.round_to_timebase(timestamp, timebase)
+      300
+  """
+  @spec round_to_timebase(number | Ratio.t(), number | Ratio.t()) :: integer
+  def round_to_timebase(timestamp, timebase) do
+    divide_by_timebase(timestamp, timebase)
+  end
+
   Enum.map(@units, fn unit ->
     @doc """
     Returns one #{unit.singular} in `#{inspect(__MODULE__)}` units.
@@ -265,8 +278,12 @@ defmodule Membrane.Time do
     end
 
     # credo:disable-for-next-line Credo.Check.Readability.Specs
-    def unquote(unit.plural)(number) when Ratio.is_rational(number) do
-      Ratio.mult(number, Ratio.new(unquote(unit.duration)))
+    def unquote(unit.plural)(number) do
+      if not Ratio.is_rational?(number) do
+        raise "Only integers and rationals can be converted with Membrane.Time.#{unquote(unit.plural)}"
+      end
+
+      Ratio.*(number, unquote(unit.duration))
       |> round_rational()
     end
 
@@ -287,6 +304,17 @@ defmodule Membrane.Time do
         :round -> Ratio.new(time, unquote(unit.duration)) |> round_rational()
       end
     end
+
+    round_fun_name = :"round_to_#{unit.plural}"
+
+    @doc """
+    Works as #{as_fun_name}/2 with `mode` argument set to `:round`.
+    """
+    @spec unquote(round_fun_name)(t) :: integer
+    # credo:disable-for-next-line Credo.Check.Readability.Specs
+    def unquote(round_fun_name)(time) when is_time(time) do
+      unquote(as_fun_name)(time, :round)
+    end
   end)
 
   defp best_unit(time) do
@@ -295,6 +323,7 @@ defmodule Membrane.Time do
   end
 
   defp round_rational(ratio) do
+    ratio = make_rational(ratio)
     trunced = Ratio.trunc(ratio)
 
     if 2 * sign_of_rational(ratio) *
@@ -302,6 +331,14 @@ defmodule Membrane.Time do
          ratio.denominator,
        do: trunced + sign_of_rational(ratio),
        else: trunced
+  end
+
+  defp make_rational(number) do
+    if Ratio.is_rational?(number) do
+      number
+    else
+      %Ratio{numerator: number, denominator: 1}
+    end
   end
 
   defp sign_of_rational(ratio) do
