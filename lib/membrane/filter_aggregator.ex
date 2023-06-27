@@ -37,7 +37,7 @@ defmodule Membrane.FilterAggregator do
   @impl true
   def handle_init(agg_ctx, %__MODULE__{filters: filter_specs}) do
     if filter_specs == [] do
-      Membrane.Logger.warn("No filters provided, #{inspect(__MODULE__)} will be a no-op")
+      Membrane.Logger.warning("No filters provided, #{inspect(__MODULE__)} will be a no-op")
     end
 
     states =

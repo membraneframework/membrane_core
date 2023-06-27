@@ -49,7 +49,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
     for format <- accepted_formats do
       with :any <- format do
-        Membrane.Logger.warn("""
+        Membrane.Logger.warning("""
         Remeber, that `accepted_format: :any` in pad definition will be satisified by stream format in form of %:any{}, \
         not >>any<< stream format (to achieve such an effect, put `accepted_format: _any` in your code)
         """)
