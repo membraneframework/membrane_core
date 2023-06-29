@@ -45,6 +45,7 @@ defmodule Membrane.Element.Base do
   that happen in this callback crash the parent as well, regardless of crash groups.
   For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
   while `handle_init` should be used for things like parsing options or initializing state.
+  By default it create map from opts struct.
   """
   @callback handle_init(context :: CallbackContext.t(), options :: Element.options()) ::
               callback_return
@@ -53,6 +54,7 @@ defmodule Membrane.Element.Base do
   Callback invoked on element startup, right after `c:handle_init/2`.
 
   Any long-lasting or complex initialization should happen here.
+  By default it does nothing.
   """
   @callback handle_setup(
               context :: CallbackContext.t(),
@@ -64,6 +66,7 @@ defmodule Membrane.Element.Base do
 
   From this point, element can send and receive buffers, events, stream formats and demands
   through its pads.
+  By default it does nothing.
   """
   @callback handle_playing(
               context :: CallbackContext.t(),
@@ -75,6 +78,7 @@ defmodule Membrane.Element.Base do
   as an internal membrane message.
 
   Useful for receiving ticks from timer, data sent from NIFs or other stuff.
+  By default it ignores message.
   """
   @callback handle_info(
               message :: any(),
@@ -87,6 +91,7 @@ defmodule Membrane.Element.Base do
   ONLY for dynamic pads.
 
   Context passed to this callback contains additional field `:pad_options`.
+  By default it does nothing.
   """
   @callback handle_pad_added(
               pad :: Pad.ref(),
@@ -99,6 +104,7 @@ defmodule Membrane.Element.Base do
   ONLY for dynamic pads.
 
   Context passed to this callback contains additional field `:pad_options`.
+  By default it does nothing.
   """
   @callback handle_pad_removed(
               pad :: Pad.ref(),
@@ -111,6 +117,7 @@ defmodule Membrane.Element.Base do
 
   Events may arrive from both input and output pads. In filters by default event is
   forwarded to all output and input pads, respectively.
+  By default it ignores received event.
   """
   @callback handle_event(
               pad :: Pad.ref(),
@@ -131,6 +138,7 @@ defmodule Membrane.Element.Base do
 
   @doc """
   Callback invoked when a message from the parent is received.
+  By default it ignores received message from parent.
   """
   @callback handle_parent_notification(
               notification :: Membrane.ParentNotification.t(),
