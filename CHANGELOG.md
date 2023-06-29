@@ -1,5 +1,8 @@
 # Changelog
 
+# 0.11.5
+ * Fix compilation error occuring with Elixir 1.15. [#570](https://github.com/membraneframework/membrane_core/pull/570)
+
 # 0.11.4
  * Fix process leak. [#561](https://github.com/membraneframework/membrane_core/pull/561)
 
