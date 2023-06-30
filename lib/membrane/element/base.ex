@@ -138,7 +138,7 @@ defmodule Membrane.Element.Base do
 
   @doc """
   Callback invoked when a message from the parent is received.
-  By default it ignores received message from parent.
+  By default it ignores the received message.
   """
   @callback handle_parent_notification(
               notification :: Membrane.ParentNotification.t(),
