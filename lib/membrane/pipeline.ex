@@ -103,7 +103,7 @@ defmodule Membrane.Pipeline do
   finishes. For that reason, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
   while `handle_init` should be used for things like parsing options, initializing state or spawning
   children.
-  By default, it creates a map from opts struct.
+  By default, it converts the `opts` to a map if they're a struct and sets them as the pipeline state.
   """
   @callback handle_init(context :: CallbackContext.t(), options :: pipeline_options) ::
               callback_return()
