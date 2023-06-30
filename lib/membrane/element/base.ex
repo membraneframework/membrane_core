@@ -78,7 +78,7 @@ defmodule Membrane.Element.Base do
   as an internal membrane message.
 
   Useful for receiving ticks from timer, data sent from NIFs or other stuff.
-  By default it ignores message.
+  By default it ignores the received message.
   """
   @callback handle_info(
               message :: any(),
