@@ -103,7 +103,7 @@ defmodule Membrane.Pipeline do
   finishes. For that reason, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
   while `handle_init` should be used for things like parsing options, initializing state or spawning
   children.
-  By default it create map from opts struct.
+  By default, it creates a map from opts struct.
   """
   @callback handle_init(context :: CallbackContext.t(), options :: pipeline_options) ::
               callback_return()
@@ -120,7 +120,7 @@ defmodule Membrane.Pipeline do
   Callback invoked on pipeline startup, right after `c:handle_init/2`.
 
   Any long-lasting or complex initialization should happen here.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_setup(
               context :: CallbackContext.t(),
@@ -130,7 +130,7 @@ defmodule Membrane.Pipeline do
 
   @doc """
   Callback invoked when pipeline switches the playback to `:playing`.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_playing(
               context :: CallbackContext.t(),
@@ -144,7 +144,7 @@ defmodule Membrane.Pipeline do
   The callback won't be invoked, when you have initiated the pad removal,
   eg. when you have returned `t:Membrane.Pipeline.Action.remove_link()`
   action which made one of your children's pads be removed.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_child_pad_removed(
               child :: Child.name(),
@@ -155,7 +155,7 @@ defmodule Membrane.Pipeline do
 
   @doc """
   Callback invoked when a notification comes in from an element.
- By default, it ignores the notification received from the child.
+  By default, it ignores the notification received from the child.
   """
   @callback handle_child_notification(
               notification :: Membrane.ChildNotification.t(),
@@ -169,7 +169,7 @@ defmodule Membrane.Pipeline do
   as an internal membrane message.
 
   Useful for receiving data sent from NIFs or other stuff.
- By default, it ignores the received message.
+  By default, it ignores the received message.
   """
   @callback handle_info(
               message :: any,
@@ -202,7 +202,7 @@ defmodule Membrane.Pipeline do
 
   @doc """
   Callback invoked when children of `Membrane.ChildrenSpec` are started.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_spec_started(
               children :: [Child.name()],
@@ -224,7 +224,7 @@ defmodule Membrane.Pipeline do
   Callback invoked when crash of the crash group happens.
 
   Context passed to this callback contains 2 additional fields: `:members` and `:crash_initiator`.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_crash_group_down(
               group_name :: Child.group(),
@@ -236,7 +236,7 @@ defmodule Membrane.Pipeline do
   Callback invoked when pipeline is called using a synchronous call.
 
   Context passed to this callback contains additional field `:from`.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_call(
               message :: any,

@@ -42,7 +42,7 @@ defmodule Membrane.Bin do
   For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
   while `handle_init` should be used for things like parsing options, initializing state or
   spawning children.
-  By default it create map from opts struct.
+  By default, it creates a map from opts struct.
   """
   @callback handle_init(context :: CallbackContext.t(), options :: options) ::
               callback_return()
@@ -52,7 +52,7 @@ defmodule Membrane.Bin do
   ONLY for dynamic pads.
 
   Context passed to this callback contains additional field `:pad_options`.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_pad_added(
               pad :: Pad.ref(),
@@ -65,7 +65,7 @@ defmodule Membrane.Bin do
   ONLY for dynamic pads.
 
   Context passed to this callback contains additional field `:pad_options`.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_pad_removed(
               pad :: Pad.ref(),
@@ -77,7 +77,7 @@ defmodule Membrane.Bin do
   Callback invoked on bin startup, right after `c:handle_init/2`.
 
   Any long-lasting or complex initialization should happen here.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_setup(
               context :: CallbackContext.t(),
@@ -86,7 +86,7 @@ defmodule Membrane.Bin do
 
   @doc """
   Callback invoked when bin switches the playback to `:playing`.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_playing(
               context :: CallbackContext.t(),
@@ -100,7 +100,7 @@ defmodule Membrane.Bin do
   The callback won't be invoked, when you have initiated the pad removal,
   eg. when you have returned `t:Membrane.Bin.Action.remove_link()` action
   which made one of your children's pads be removed.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_child_pad_removed(
               child :: Child.name(),
@@ -111,7 +111,7 @@ defmodule Membrane.Bin do
 
   @doc """
   Callback invoked when a notification comes in from an element.
-  By default it ignores received notification from child.
+  By default, it ignores the notification received from the child.
   """
   @callback handle_child_notification(
               notification :: Membrane.ChildNotification.t(),
@@ -135,7 +135,7 @@ defmodule Membrane.Bin do
   as an internal membrane message.
 
   Can be used for receiving data from non-membrane processes.
-  By default it ignores received message.
+  By default, it ignores the received message.
   """
   @callback handle_info(
               message :: any,
@@ -167,7 +167,7 @@ defmodule Membrane.Bin do
 
   @doc """
   Callback invoked when children of `Membrane.ChildrenSpec` are started.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_spec_started(
               children :: [Child.name()],

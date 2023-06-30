@@ -45,7 +45,7 @@ defmodule Membrane.Element.Base do
   that happen in this callback crash the parent as well, regardless of crash groups.
   For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
   while `handle_init` should be used for things like parsing options or initializing state.
-By default, it creates a map from opts struct.
+  By default, it creates a map from opts struct.
   """
   @callback handle_init(context :: CallbackContext.t(), options :: Element.options()) ::
               callback_return
@@ -54,7 +54,7 @@ By default, it creates a map from opts struct.
   Callback invoked on element startup, right after `c:handle_init/2`.
 
   Any long-lasting or complex initialization should happen here.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_setup(
               context :: CallbackContext.t(),
@@ -66,7 +66,7 @@ By default, it creates a map from opts struct.
 
   From this point, element can send and receive buffers, events, stream formats and demands
   through its pads.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_playing(
               context :: CallbackContext.t(),
@@ -91,7 +91,7 @@ By default, it creates a map from opts struct.
   ONLY for dynamic pads.
 
   Context passed to this callback contains additional field `:pad_options`.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_pad_added(
               pad :: Pad.ref(),
@@ -104,7 +104,7 @@ By default, it creates a map from opts struct.
   ONLY for dynamic pads.
 
   Context passed to this callback contains additional field `:pad_options`.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_pad_removed(
               pad :: Pad.ref(),
