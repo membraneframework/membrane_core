@@ -111,7 +111,7 @@ defmodule Membrane.Bin do
 
   @doc """
   Callback invoked when a notification comes in from an element.
-  By default, it ignores the notification received from the child.
+  By default, it ignores the received message.
   """
   @callback handle_child_notification(
               notification :: Membrane.ChildNotification.t(),
@@ -122,7 +122,7 @@ defmodule Membrane.Bin do
 
   @doc """
   Callback invoked when a notification comes in from an parent.
-  By default it ignores received notification from parent.
+  By default, it ignores the received message.
   """
   @callback handle_parent_notification(
               notification :: Membrane.ParentNotification.t(),
@@ -145,7 +145,7 @@ defmodule Membrane.Bin do
 
   @doc """
   Callback invoked when a child element starts processing stream via given pad.
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_element_start_of_stream(
               child :: Child.name(),
@@ -157,7 +157,7 @@ defmodule Membrane.Bin do
   @doc """
   Callback invoked when a child element finishes processing stream via given pad.
 
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_element_end_of_stream(
               child :: Child.name(),
@@ -202,7 +202,7 @@ defmodule Membrane.Bin do
   @doc """
   A callback invoked when the bin is being removed by its parent.
 
-  By default it returns `t:Membrane.Bin.Action.terminate/0` with reason `:normal`.
+  By default, it returns `t:Membrane.Bin.Action.terminate/0` with reason `:normal`.
   """
   @callback handle_terminate_request(
               context :: CallbackContext.t(),

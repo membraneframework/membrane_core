@@ -111,7 +111,7 @@ defmodule Membrane.Pipeline do
   @doc """
   Callback invoked when pipeline is requested to terminate with `terminate/2`.
 
-  By default it returns `t:Membrane.Pipeline.Action.terminate/0` with reason `:normal`.
+  By default, it returns `t:Membrane.Pipeline.Action.terminate/0` with reason `:normal`.
   """
   @callback handle_terminate_request(context :: CallbackContext.t(), state) ::
               callback_return()
@@ -182,7 +182,7 @@ defmodule Membrane.Pipeline do
   @doc """
   Callback invoked when a child element starts processing stream via given pad.
 
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_element_start_of_stream(
               child :: Child.name(),
@@ -194,7 +194,7 @@ defmodule Membrane.Pipeline do
   @doc """
   Callback invoked when a child element finishes processing stream via given pad.
 
-  By default it does nothing.
+  By default, it does nothing.
   """
   @callback handle_element_end_of_stream(
               child :: Child.name(),

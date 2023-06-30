@@ -78,7 +78,7 @@ defmodule Membrane.Element.Base do
   as an internal membrane message.
 
   Useful for receiving ticks from timer, data sent from NIFs or other stuff.
-  By default it ignores the received message.
+  By default, it ignores the received message.
   """
   @callback handle_info(
               message :: any(),
@@ -117,7 +117,7 @@ defmodule Membrane.Element.Base do
 
   Events may arrive from both input and output pads. In filters by default event is
   forwarded to all output and input pads, respectively.
-  By default it ignores received event.
+  By default, it ignores received event.
   """
   @callback handle_event(
               pad :: Pad.ref(),
@@ -138,7 +138,7 @@ defmodule Membrane.Element.Base do
 
   @doc """
   Callback invoked when a message from the parent is received.
-  By default it ignores the received message.
+  By default, it ignores the received message.
   """
   @callback handle_parent_notification(
               notification :: Membrane.ParentNotification.t(),
@@ -149,7 +149,7 @@ defmodule Membrane.Element.Base do
   @doc """
   Callback invoked when element is removed by its parent.
 
-  By default it returns `t:Membrane.Element.Action.terminate/0` with reason `:normal`.
+  By default, it returns `t:Membrane.Element.Action.terminate/0` with reason `:normal`.
   """
   @callback handle_terminate_request(
               context :: CallbackContext.t(),
