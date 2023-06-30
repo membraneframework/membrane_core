@@ -169,7 +169,7 @@ defmodule Membrane.Pipeline do
   as an internal membrane message.
 
   Useful for receiving data sent from NIFs or other stuff.
-  By default it ignores received message.
+ By default, it ignores the received message.
   """
   @callback handle_info(
               message :: any,
