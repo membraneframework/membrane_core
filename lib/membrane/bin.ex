@@ -169,6 +169,7 @@ defmodule Membrane.Bin do
 
   @doc """
   Callback invoked when children of `Membrane.ChildrenSpec` are started.
+
   By default, it does nothing.
   """
   @callback handle_spec_started(
