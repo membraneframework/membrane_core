@@ -1,6 +1,5 @@
 defmodule Membrane.Core.ProcessHelper do
   @moduledoc false
-  require Membrane.Core.ProcessHelper
   require Membrane.Logger
 
   defguardp is_shutdown_tuple(reason)
