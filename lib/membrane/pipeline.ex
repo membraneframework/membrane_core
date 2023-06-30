@@ -181,7 +181,7 @@ defmodule Membrane.Pipeline do
 
   @doc """
   Callback invoked when a child element starts processing stream via given pad.
-  
+
   By default it does nothing.
   """
   @callback handle_element_start_of_stream(
