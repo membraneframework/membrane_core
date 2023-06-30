@@ -157,7 +157,8 @@ defmodule Membrane.Bin do
 
   @doc """
   Callback invoked when a child element finishes processing stream via given pad.
-  By default it ignores `:end_of_stream`.
+
+  By default it does nothing.
   """
   @callback handle_element_end_of_stream(
               child :: Child.name(),
