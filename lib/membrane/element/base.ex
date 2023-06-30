@@ -45,7 +45,7 @@ defmodule Membrane.Element.Base do
   that happen in this callback crash the parent as well, regardless of crash groups.
   For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
   while `handle_init` should be used for things like parsing options or initializing state.
-  By default it create map from opts struct.
+By default, it creates a map from opts struct.
   """
   @callback handle_init(context :: CallbackContext.t(), options :: Element.options()) ::
               callback_return
