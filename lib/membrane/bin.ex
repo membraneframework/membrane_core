@@ -42,7 +42,7 @@ defmodule Membrane.Bin do
   For these reasons, it's important to do any long-lasting or complex work in `c:handle_setup/2`,
   while `handle_init` should be used for things like parsing options, initializing state or
   spawning children.
-  By default, it creates a map from opts struct.
+  By default, it converts the opts struct to a map and sets them as the bin's state.
   """
   @callback handle_init(context :: CallbackContext.t(), options :: options) ::
               callback_return()
@@ -145,7 +145,6 @@ defmodule Membrane.Bin do
 
   @doc """
   Callback invoked when a child element starts processing stream via given pad.
-  
   By default it does nothing.
   """
   @callback handle_element_start_of_stream(
