@@ -145,7 +145,8 @@ defmodule Membrane.Bin do
 
   @doc """
   Callback invoked when a child element starts processing stream via given pad.
-  By default it ignores `:start_of_stream`.
+  
+  By default it does nothing.
   """
   @callback handle_element_start_of_stream(
               child :: Child.name(),
