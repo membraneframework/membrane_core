@@ -154,8 +154,9 @@ defmodule Membrane.Pipeline do
             ) :: callback_return
 
   @doc """
-  Callback invoked when a notification comes in from an element.
-  By default, it ignores the notification received from the child.
+  Callback invoked when a notification comes in from a child.
+
+  By default, it ignores the notification.
   """
   @callback handle_child_notification(
               notification :: Membrane.ChildNotification.t(),
