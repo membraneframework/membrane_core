@@ -91,7 +91,7 @@ defmodule Membrane.Core.Element.PadController do
         %{
           other_info: info,
           link_metadata: %{
-            observability_data: Observer.generate_link_observability_data(endpoint.pad_ref)
+            observability_data: Observer.generate_observability_data_for_link(endpoint.pad_ref)
           },
           stream_format_validation_params: [],
           other_effective_flow_control: effective_flow_control
@@ -215,7 +215,7 @@ defmodule Membrane.Core.Element.PadController do
     link_metadata = %{
       link_metadata
       | observability_data:
-          Observer.generate_link_observability_data(
+          Observer.generate_observability_data_for_link(
             endpoint.pad_ref,
             link_metadata.observability_data
           )

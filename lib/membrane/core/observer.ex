@@ -170,9 +170,9 @@ defmodule Membrane.Core.Observer do
   config.exs, starts processes to reflect pads structure in the process tree for visibility
   in Erlang observer.
   """
-  @spec generate_link_observability_data(Pad.ref(), link_observability_data()) ::
+  @spec generate_observability_data_for_link(Pad.ref(), link_observability_data()) ::
           link_observability_data()
-  def generate_link_observability_data(pad_ref, other_observability_data \\ %{}) do
+  def generate_observability_data_for_link(pad_ref, other_observability_data \\ %{}) do
     %{
       path: ComponentPath.get(),
       observer_dbg_process: run_link_dbg_process(pad_ref, other_observability_data)
