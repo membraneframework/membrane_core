@@ -11,6 +11,13 @@ defmodule Membrane.Core.Observer do
                                         )
   @metrics_enabled Application.compile_env(:membrane_core, :enable_metrics, true)
 
+  @scrape_interval 1000
+
+  @atomic_metric :__membrane_observer_atomic_metric__
+
+  @enforce_keys [:pid, :ets]
+  defstruct @enforce_keys
+
   @type component_config :: %{
           optional(:parent_path) => ComponentPath.path(),
           optional(:log_metadata) => Logger.metadata(),
@@ -42,11 +49,6 @@ defmodule Membrane.Core.Observer do
            timestamp_ms :: integer()}
 
   @type t :: %__MODULE__{pid: pid(), ets: :ets.tid() | nil}
-
-  @enforce_keys [:pid, :ets]
-  defstruct @enforce_keys
-
-  @scrape_interval 1000
 
   @doc false
   @spec start_link(%{ets: :ets.tid()}) :: {:ok, pid()}
@@ -271,6 +273,22 @@ defmodule Membrane.Core.Observer do
       end
     end
 
+    defmacro register_atomic_metric(metric, atomic, opts \\ []) do
+      quote do
+        ets = Process.get(:__membrane_observer_ets__)
+
+        if ets do
+          :ets.insert(
+            ets,
+            {{unquote(metric), unquote(opts)[:component_path] || ComponentPath.get(),
+              unquote(opts)[:pad]}, unquote({@atomic_metric, atomic})}
+          )
+        end
+
+        :ok
+      end
+    end
+
     defmacro report_metric_update(metric, init, fun, opts \\ []) do
       quote do
         ets = Process.get(:__membrane_observer_ets__)
@@ -332,7 +350,7 @@ defmodule Membrane.Core.Observer do
   @impl true
   def handle_info(:scrape_metrics, state) do
     Process.send_after(self(), :scrape_metrics, @scrape_interval)
-    metrics = :ets.tab2list(state.ets)
+    metrics = scrape_metrics(state)
     timestamp = System.monotonic_time(:millisecond) - state.init_time
     derivatives = calc_derivatives(metrics, timestamp, state)
     send_to_subscribers(metrics ++ derivatives, :metrics, &{:metrics, &1, timestamp}, state)
@@ -455,6 +473,14 @@ defmodule Membrane.Core.Observer do
       end)
 
     {:remove, [], removed_links, %{state | graph: graph}}
+  end
+
+  defp scrape_metrics(state) do
+    :ets.tab2list(state.ets)
+    |> Enum.map(fn
+      {key, {@atomic_metric, atomic}} -> {key, :atomics.get(atomic, 1)}
+      metric -> metric
+    end)
   end
 
   defp calc_derivatives(_new_metrics, _new_timestamp, %{timestamp: nil}) do

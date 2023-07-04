@@ -4,6 +4,7 @@ defmodule Membrane.Core.Element.PadController do
   # Module handling linking and unlinking pads.
 
   use Bunch
+  require Membrane.Core.Observer
   alias Membrane.{LinkError, Pad}
   alias Membrane.Core.{CallbackHandler, Child, Events, Message, Observer}
   alias Membrane.Core.Child.PadModel
@@ -287,6 +288,12 @@ defmodule Membrane.Core.Element.PadController do
          metadata,
          state
        ) do
+    total_buffers_metric = :atomics.new(1, [])
+
+    Membrane.Core.Observer.register_atomic_metric(:total_buffers, total_buffers_metric,
+      pad: endpoint.pad_ref
+    )
+
     data =
       info
       |> Map.delete(:accepted_formats_str)
@@ -302,7 +309,8 @@ defmodule Membrane.Core.Element.PadController do
         start_of_stream?: false,
         end_of_stream?: false,
         associated_pads: [],
-        atomic_demand: metadata.atomic_demand
+        atomic_demand: metadata.atomic_demand,
+        total_buffers_metric: total_buffers_metric
       })
 
     :ok =

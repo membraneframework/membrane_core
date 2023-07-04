@@ -34,7 +34,6 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
-  require Membrane.Core.Observer, as: Observer
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
@@ -309,7 +308,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     Telemetry.report_metric(:buffer, length(buffers))
     Telemetry.report_bitrate(buffers)
 
-    Observer.report_metric_update(:total_buffers_sent, 0, &(&1 + length(buffers)), pad: pad_ref)
+    # Observer.report_metric_update(:total_buffers_sent, 0, &(&1 + length(buffers)), pad: pad_ref)
+    :atomics.add(PadModel.get_data!(state, pad_ref, :total_buffers_metric), 1, length(buffers))
 
     Enum.each(buffers, fn
       %Buffer{} -> :ok

@@ -18,6 +18,8 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
+  require Membrane.Core.Child.PadModel
+  alias Membrane.Core.Child.PadModel
   alias Membrane.{Clock, Core, ResourceGuard, Sync}
   alias Membrane.Core.Child.PadSpecHandler
 
@@ -226,9 +228,11 @@ defmodule Membrane.Core.Element do
   defp do_handle_info(Message.new(:buffer, buffers, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
 
-    Observer.report_metric_update(:total_buffers_received, 0, &(&1 + length(buffers)),
-      pad: pad_ref
-    )
+    # Observer.report_metric_update(:total_buffers_received, 0, &(&1 + length(buffers)),
+    #   pad: pad_ref
+    # )
+
+    :atomics.add(PadModel.get_data!(state, pad_ref, :total_buffers_metric), 1, length(buffers))
 
     state = BufferController.handle_buffer(pad_ref, buffers, state)
     {:noreply, state}
