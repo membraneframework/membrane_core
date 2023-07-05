@@ -295,6 +295,12 @@ defmodule Membrane.Core.Element.PadController do
       pad: endpoint.pad_ref
     )
 
+    Membrane.Core.Observer.register_metric_function(
+      :atomic_demand,
+      fn -> AtomicDemand.get(metadata.atomic_demand) end,
+      pad: endpoint.pad_ref
+    )
+
     data =
       info
       |> Map.delete(:accepted_formats_str)
