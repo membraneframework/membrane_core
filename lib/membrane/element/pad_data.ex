@@ -90,6 +90,7 @@ defmodule Membrane.Element.PadData do
                 sticky_events: [],
                 stream_format_validation_params: [],
                 other_demand_unit: nil,
-                other_effective_flow_control: :push
+                other_effective_flow_control: :push,
+                total_buffers_metric: nil
               ]
 end

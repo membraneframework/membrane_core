@@ -9,7 +9,15 @@ defmodule Membrane.Core.Observer do
                                           :unsafely_name_processes_for_observer,
                                           []
                                         )
+
   @metrics_enabled Application.compile_env(:membrane_core, :enable_metrics, true)
+
+  @scrape_interval 1000
+
+  @function_metric :__membrane_observer_function_metric__
+
+  @enforce_keys [:pid, :ets]
+  defstruct @enforce_keys
 
   @type component_config :: %{
           optional(:parent_path) => ComponentPath.path(),
@@ -42,11 +50,6 @@ defmodule Membrane.Core.Observer do
            timestamp_ms :: integer()}
 
   @type t :: %__MODULE__{pid: pid(), ets: :ets.tid() | nil}
-
-  @enforce_keys [:pid, :ets]
-  defstruct @enforce_keys
-
-  @scrape_interval 1000
 
   @doc false
   @spec start_link(%{ets: :ets.tid()}) :: {:ok, pid()}
@@ -271,23 +274,23 @@ defmodule Membrane.Core.Observer do
       end
     end
 
-    defmacro report_metric_update(metric, init, fun, opts \\ []) do
+    defmacro register_metric_function(metric, function, opts \\ []) do
       quote do
         ets = Process.get(:__membrane_observer_ets__)
 
         if ets do
-          key =
-            {unquote(metric), unquote(opts)[:component_path] || ComponentPath.get(),
-             unquote(opts)[:pad]}
-
-          [{_key, value} | _default] = :ets.lookup(ets, key) ++ [{nil, unquote(init)}]
-
-          :ets.insert(ets, {key, unquote(fun).(value)})
+          :ets.insert(
+            ets,
+            {{unquote(metric), unquote(opts)[:component_path] || ComponentPath.get(),
+              unquote(opts)[:pad]}, unquote({@function_metric, function})}
+          )
         end
+
+        :ok
       end
     end
   else
-    defmacro report(metric, value, opts \\ []) do
+    defmacro report_metric(metric, value, opts \\ []) do
       quote do
         fn ->
           _unused = unquote(metric)
@@ -299,12 +302,11 @@ defmodule Membrane.Core.Observer do
       end
     end
 
-    defmacro report_update(metric, init, fun, opts \\ []) do
+    defmacro register_metric_function(metric, function, opts \\ []) do
       quote do
         fn ->
           _unused = unquote(metric)
-          _unused = unquote(init)
-          _unused = unquote(fun)
+          _unused = unquote(function)
           _unused = unquote(opts)
         end
 
@@ -332,7 +334,7 @@ defmodule Membrane.Core.Observer do
   @impl true
   def handle_info(:scrape_metrics, state) do
     Process.send_after(self(), :scrape_metrics, @scrape_interval)
-    metrics = :ets.tab2list(state.ets)
+    metrics = scrape_metrics(state)
     timestamp = System.monotonic_time(:millisecond) - state.init_time
     derivatives = calc_derivatives(metrics, timestamp, state)
     send_to_subscribers(metrics ++ derivatives, :metrics, &{:metrics, &1, timestamp}, state)
@@ -422,7 +424,7 @@ defmodule Membrane.Core.Observer do
 
   defp handle_graph_update(%{entity: :remove_component, pid: pid}, state) do
     {update, state} = pop_in(state, [:pid_to_component, pid])
-    :ets.match_delete(state.ets, {{:_, update.path, :_}, :_})
+    cleanup_metrics({:_, update.path, :_}, state)
     graph = Enum.reject(state.graph, &(&1.entity == :component and update.path == &1.path))
 
     {removed_links, graph} =
@@ -449,12 +451,33 @@ defmodule Membrane.Core.Observer do
 
     removed_links =
       Enum.map(removed_links, fn link ->
-        :ets.match_delete(state.ets, {{:_, link.from, link.output}, :_})
-        :ets.match_delete(state.ets, {{:_, link.to, link.input}, :_})
+        cleanup_metrics({:_, link.from, link.output}, state)
+        cleanup_metrics({:_, link.to, link.input}, state)
         link |> Map.take([:from, :to, :output, :input]) |> Map.put(:entity, :link)
       end)
 
     {:remove, [], removed_links, %{state | graph: graph}}
+  end
+
+  defp scrape_metrics(%{ets: nil}) do
+    []
+  end
+
+  defp scrape_metrics(%{ets: ets}) do
+    :ets.tab2list(ets)
+    |> Enum.map(fn
+      {key, {@function_metric, function}} -> {key, function.()}
+      metric -> metric
+    end)
+  end
+
+  defp cleanup_metrics(_pattern, %{ets: nil}) do
+    :ok
+  end
+
+  defp cleanup_metrics(pattern, %{ets: ets}) do
+    :ets.match_delete(ets, {pattern, :_})
+    :ok
   end
 
   defp calc_derivatives(_new_metrics, _new_timestamp, %{timestamp: nil}) do

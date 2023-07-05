@@ -4,9 +4,7 @@ defmodule Membrane.Core.Element.PadController do
   # Module handling linking and unlinking pads.
 
   use Bunch
-  alias Membrane.{LinkError, Pad}
-  alias Membrane.Core.{CallbackHandler, Child, Events, Message, Observer}
-  alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.{CallbackHandler, Child, Events}
 
   alias Membrane.Core.Element.{
     ActionHandler,
@@ -21,11 +19,13 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Element.DemandController.AutoFlowUtils
   alias Membrane.Core.Parent.Link.Endpoint
+  alias Membrane.LinkError
 
-  require Membrane.Core.Child.PadModel
-  require Membrane.Core.Message
+  require Membrane.Core.Child.PadModel, as: PadModel
+  require Membrane.Core.Message, as: Message
+  require Membrane.Core.Observer, as: Observer
   require Membrane.Logger
-  require Membrane.Pad
+  require Membrane.Pad, as: Pad
 
   @type link_call_props ::
           %{
@@ -287,6 +287,14 @@ defmodule Membrane.Core.Element.PadController do
          metadata,
          state
        ) do
+    total_buffers_metric = :atomics.new(1, [])
+
+    Membrane.Core.Observer.register_metric_function(
+      :total_buffers,
+      fn -> :atomics.get(total_buffers_metric, 1) end,
+      pad: endpoint.pad_ref
+    )
+
     data =
       info
       |> Map.delete(:accepted_formats_str)
@@ -302,7 +310,8 @@ defmodule Membrane.Core.Element.PadController do
         start_of_stream?: false,
         end_of_stream?: false,
         associated_pads: [],
-        atomic_demand: metadata.atomic_demand
+        atomic_demand: metadata.atomic_demand,
+        total_buffers_metric: total_buffers_metric
       })
 
     :ok =

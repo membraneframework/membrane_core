@@ -116,6 +116,16 @@ defmodule Membrane.Core.Element do
 
     ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:element) end)
 
+    self_pid = self()
+
+    Observer.register_metric_function(:message_queue_length, fn ->
+      :erlang.process_info(self_pid, :message_queue_len) |> elem(1)
+    end)
+
+    Observer.register_metric_function(:total_reductions, fn ->
+      :erlang.process_info(self_pid, :reductions) |> elem(1)
+    end)
+
     state =
       %State{
         module: options.module,
@@ -196,19 +206,7 @@ defmodule Membrane.Core.Element do
       :erlang.process_info(self(), :message_queue_len) |> elem(1)
     )
 
-    Observer.report_metric(
-      :msg_queue_len,
-      :erlang.process_info(self(), :message_queue_len) |> elem(1)
-    )
-
-    result = do_handle_info(message, state)
-
-    Observer.report_metric(
-      :total_reductions,
-      :erlang.process_info(self(), :reductions) |> elem(1)
-    )
-
-    result
+    do_handle_info(message, state)
   end
 
   @compile {:inline, do_handle_info: 2}
@@ -225,11 +223,6 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:buffer, buffers, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
-
-    Observer.report_metric_update(:total_buffers_received, 0, &(&1 + length(buffers)),
-      pad: pad_ref
-    )
-
     state = BufferController.handle_buffer(pad_ref, buffers, state)
     {:noreply, state}
   end

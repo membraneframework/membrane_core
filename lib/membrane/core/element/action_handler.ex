@@ -34,7 +34,6 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
-  require Membrane.Core.Observer, as: Observer
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
@@ -309,8 +308,6 @@ defmodule Membrane.Core.Element.ActionHandler do
     Telemetry.report_metric(:buffer, length(buffers))
     Telemetry.report_bitrate(buffers)
 
-    Observer.report_metric_update(:total_buffers_sent, 0, &(&1 + length(buffers)), pad: pad_ref)
-
     Enum.each(buffers, fn
       %Buffer{} -> :ok
       value -> raise ElementError, "Tried to send an invalid buffer #{inspect(value)}"
@@ -323,10 +320,12 @@ defmodule Membrane.Core.Element.ActionHandler do
            end_of_stream?: false,
            stream_format: stream_format,
            pid: pid,
-           other_ref: other_ref
+           other_ref: other_ref,
+           total_buffers_metric: total_buffers_metric
          }
          when stream_format != nil <- pad_data do
       state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
+      :atomics.add(total_buffers_metric, 1, length(buffers))
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
 
       PadModel.set_data!(state, pad_ref, :start_of_stream?, true)

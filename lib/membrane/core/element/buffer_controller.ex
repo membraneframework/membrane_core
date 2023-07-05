@@ -34,7 +34,13 @@ defmodule Membrane.Core.Element.BufferController do
   def handle_buffer(pad_ref, buffers, state) do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
-      %{direction: :input, start_of_stream?: start_of_stream?} = data
+      %{
+        direction: :input,
+        start_of_stream?: start_of_stream?,
+        total_buffers_metric: total_buffers_metric
+      } = data
+
+      :atomics.add(total_buffers_metric, 1, length(buffers))
 
       state =
         if start_of_stream? do
