@@ -403,20 +403,6 @@ defmodule Membrane.Core.ElementTest do
     }
   end
 
-  # module: SomeElement,
-  # name: :name,
-  # node: nil,
-  # user_options: ,
-  # parent: self(),
-  # parent_clock: nil,
-  # sync: Membrane.Sync.no_sync(),
-  # parent_path: [],
-  # log_metadata: [],
-  # subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
-  # parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
-  # group: nil,
-  # observer: %Membrane.Core.Observer{pid: spawn(fn -> :ok end), ets: nil}
-
   defp increase_output_atomic_demand(state, value) do
     :ok =
       state.pads_data.output.atomic_demand

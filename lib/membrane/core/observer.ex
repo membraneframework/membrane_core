@@ -2,7 +2,7 @@ defmodule Membrane.Core.Observer do
   @moduledoc false
 
   use GenServer
-  alias Membrane.{ComponentPath, Pad}
+  alias Membrane.{ComponentPath, Pad, Time}
 
   @unsafely_name_processes_for_observer Application.compile_env(
                                           :membrane_core,
@@ -33,7 +33,7 @@ defmodule Membrane.Core.Observer do
         }
 
   @type graph_update ::
-          {:graph,
+          {:graph, :add | :remove,
            [
              %{entity: :component, path: ComponentPath.path(), pid: pid}
              | %{
@@ -43,7 +43,7 @@ defmodule Membrane.Core.Observer do
                  output: Pad.ref(),
                  input: Pad.ref()
                }
-           ], :add | :remove}
+           ]}
 
   @type metrics_update ::
           {:metrics, [{{metric :: atom, ComponentPath.path(), Pad.ref()}, value :: integer()}],
@@ -119,34 +119,37 @@ defmodule Membrane.Core.Observer do
     utility_name = Map.get(opts, :utility_name)
     observer = Map.get(opts, :observer)
     %{name: name, component_type: component_type, pid: pid} = config
+    is_name_provided = name != nil
+    pid_string = pid |> :erlang.pid_to_list() |> to_string()
+    name = if is_name_provided, do: name, else: pid_string
+    name_suffix = if component_type == :element, do: "", else: "/"
+    is_utility = utility_name != nil
+    utility_name = if is_utility, do: " #{utility_name}", else: ""
+
+    name_string =
+      if(is_binary(name) and String.valid?(name), do: name, else: inspect(name)) <> name_suffix
 
     # Metrics are currently reported only if the component
     # is on the same node as the pipeline
     if observer && node(observer.pid) == node(),
       do: Process.put(:__membrane_observer_ets__, observer.ets)
 
-    if component_type == :pipeline and !utility_name,
+    if component_type == :pipeline and !is_utility,
       do: Process.put(:__membrane_pipeline__, true)
 
-    utility_name = if utility_name == "", do: "", else: " #{utility_name}"
     parent_path = Map.get(config, :parent_path, [])
     log_metadata = Map.get(config, :log_metadata, [])
     Logger.metadata(log_metadata)
-    pid_string = pid |> :erlang.pid_to_list() |> to_string()
-
-    {name, unique_prefix, component_type_suffix} =
-      if name,
-        do: {name, pid_string <> " ", ""},
-        else: {pid_string, "", " (#{component_type})"}
-
-    name_suffix = if component_type == :element, do: "", else: "/"
-    name_str = if(String.valid?(name), do: name, else: inspect(name)) <> name_suffix
 
     register_name_for_observer(
-      :"##{unique_prefix}#{name_str}#{component_type_suffix}#{utility_name}"
+      is_name_provided,
+      name_string,
+      pid_string,
+      component_type,
+      utility_name
     )
 
-    component_path = parent_path ++ [name_str]
+    component_path = parent_path ++ [name_string]
     ComponentPath.set(component_path)
 
     Membrane.Logger.set_prefix(ComponentPath.format(component_path) <> utility_name)
@@ -155,15 +158,35 @@ defmodule Membrane.Core.Observer do
   end
 
   if :components in @unsafely_name_processes_for_observer do
-    defp register_name_for_observer(name) do
+    defp register_name_for_observer(
+           is_name_provided,
+           name_string,
+           pid_string,
+           component_type,
+           utility_name
+         ) do
       if Process.info(self(), :registered_name) == {:registered_name, []} do
-        Process.register(self(), name)
+        Process.register(
+          self(),
+          """
+          ##{pid_string} #{if is_name_provided, do: name_string}\
+          #{unless is_name_provided, do: " (#{component_type})"}#{utility_name}"\
+          """
+          |> String.to_atom()
+        )
       end
 
       :ok
     end
   else
-    defp register_name_for_observer(_name), do: :ok
+    defp register_name_for_observer(
+           _is_name_provided,
+           _name_string,
+           _pid_string,
+           _component_type,
+           _utility_name
+         ),
+         do: :ok
   end
 
   @doc """
@@ -335,7 +358,7 @@ defmodule Membrane.Core.Observer do
   def handle_info(:scrape_metrics, state) do
     Process.send_after(self(), :scrape_metrics, @scrape_interval)
     metrics = scrape_metrics(state)
-    timestamp = System.monotonic_time(:millisecond) - state.init_time
+    timestamp = Time.milliseconds(System.monotonic_time(:millisecond) - state.init_time)
     derivatives = calc_derivatives(metrics, timestamp, state)
     send_to_subscribers(metrics ++ derivatives, :metrics, &{:metrics, &1, timestamp}, state)
     {:noreply, %{state | metrics: Map.new(metrics), timestamp: timestamp}}
@@ -343,9 +366,9 @@ defmodule Membrane.Core.Observer do
 
   @impl true
   def handle_info({:graph, graph_update}, state) do
-    {action, graph_entries, graph_updates, state} = handle_graph_update(graph_update, state)
+    {action, graph_updates, state} = handle_graph_update(graph_update, state)
     send_to_subscribers(graph_updates, :graph, &{:graph, action, &1}, state)
-    {:noreply, %{state | graph: graph_entries ++ state.graph}}
+    {:noreply, state}
   end
 
   @impl true
@@ -419,7 +442,9 @@ defmodule Membrane.Core.Observer do
 
   defp handle_graph_update(%{entity: :component, pid: pid} = update, state) do
     Process.monitor(pid)
-    {:add, [update], [update], put_in(state, [:pid_to_component, pid], update)}
+    state = put_in(state, [:pid_to_component, pid], update)
+    state = %{state | graph: [update | state.graph]}
+    {:add, [update], state}
   end
 
   defp handle_graph_update(%{entity: :remove_component, pid: pid}, state) do
@@ -430,16 +455,11 @@ defmodule Membrane.Core.Observer do
     {removed_links, graph} =
       Enum.split_with(graph, &(&1.entity == :link and update.path in [&1.from, &1.to]))
 
-    removed_links =
-      Enum.map(removed_links, fn link ->
-        link |> Map.take([:from, :to, :output, :input]) |> Map.put(:entity, :link)
-      end)
-
-    {:remove, [], removed_links ++ [update], %{state | graph: graph}}
+    {:remove, removed_links ++ [update], %{state | graph: graph}}
   end
 
   defp handle_graph_update(%{entity: :link} = update, state) do
-    {:add, [update], [update], state}
+    {:add, [update], %{state | graph: [update | state.graph]}}
   end
 
   defp handle_graph_update(%{entity: :remove_link, path: path, pad: pad}, state) do
@@ -449,14 +469,12 @@ defmodule Membrane.Core.Observer do
         &(&1.entity == :link and {path, pad} in [{&1.from, &1.output}, {&1.to, &1.input}])
       )
 
-    removed_links =
-      Enum.map(removed_links, fn link ->
-        cleanup_metrics({:_, link.from, link.output}, state)
-        cleanup_metrics({:_, link.to, link.input}, state)
-        link |> Map.take([:from, :to, :output, :input]) |> Map.put(:entity, :link)
-      end)
+    Enum.each(removed_links, fn link ->
+      cleanup_metrics({:_, link.from, link.output}, state)
+      cleanup_metrics({:_, link.to, link.input}, state)
+    end)
 
-    {:remove, [], removed_links, %{state | graph: graph}}
+    {:remove, removed_links, %{state | graph: graph}}
   end
 
   defp scrape_metrics(%{ets: nil}) do
@@ -485,7 +503,7 @@ defmodule Membrane.Core.Observer do
   end
 
   defp calc_derivatives(new_metrics, new_timestamp, %{metrics: metrics, timestamp: timestamp}) do
-    dt_seconds = (new_timestamp - timestamp) / 1000
+    dt_seconds = Time.as_seconds(new_timestamp - timestamp, :round)
 
     new_metrics
     |> Enum.filter(fn {k, _v} -> Map.has_key?(metrics, k) end)
