@@ -14,6 +14,7 @@ defmodule Membrane.Core.Element.InputQueue do
   alias Membrane.Pad
   alias Membrane.StreamFormat
 
+  require Membrane.Core.Observer, as: Observer
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
@@ -35,7 +36,7 @@ defmodule Membrane.Core.Element.InputQueue do
           demand: non_neg_integer(),
           inbound_metric: module(),
           outbound_metric: module(),
-          linked_output_ref: Pad.ref(),
+          pad_ref: Pad.ref(),
           atomic_demand: AtomicDemand.t()
         }
 
@@ -46,7 +47,8 @@ defmodule Membrane.Core.Element.InputQueue do
     :atomic_demand,
     :inbound_metric,
     :outbound_metric,
-    :linked_output_ref
+    :pad_ref,
+    :size_metric
   ]
 
   defstruct @enforce_keys ++ [size: 0, demand: 0]
@@ -60,7 +62,7 @@ defmodule Membrane.Core.Element.InputQueue do
           inbound_demand_unit: Buffer.Metric.unit(),
           outbound_demand_unit: Buffer.Metric.unit(),
           atomic_demand: AtomicDemand.t(),
-          linked_output_ref: Pad.ref(),
+          pad_ref: Pad.ref(),
           log_tag: String.t(),
           target_size: pos_integer() | nil
         }) :: t()
@@ -69,7 +71,7 @@ defmodule Membrane.Core.Element.InputQueue do
       inbound_demand_unit: inbound_demand_unit,
       outbound_demand_unit: outbound_demand_unit,
       atomic_demand: atomic_demand,
-      linked_output_ref: linked_output_ref,
+      pad_ref: pad_ref,
       log_tag: log_tag,
       target_size: target_size
     } = config
@@ -81,6 +83,14 @@ defmodule Membrane.Core.Element.InputQueue do
 
     target_size = target_size || default_target_size
 
+    size_metric = :atomics.new(1, [])
+
+    Observer.register_metric_function(
+      :input_queue_size,
+      fn -> :atomics.get(size_metric, 1) end,
+      pad: pad_ref
+    )
+
     %__MODULE__{
       q: @qe.new(),
       log_tag: log_tag,
@@ -88,7 +98,8 @@ defmodule Membrane.Core.Element.InputQueue do
       inbound_metric: inbound_metric,
       outbound_metric: outbound_metric,
       atomic_demand: atomic_demand,
-      linked_output_ref: linked_output_ref
+      pad_ref: pad_ref,
+      size_metric: size_metric
     }
     |> maybe_increase_atomic_demand()
   end
@@ -97,7 +108,7 @@ defmodule Membrane.Core.Element.InputQueue do
   def store(input_queue, type \\ :buffers, v)
 
   def store(input_queue, :buffers, v) when is_list(v) do
-    %__MODULE__{size: size, target_size: target_size} = input_queue
+    %__MODULE__{size: size, target_size: target_size, size_metric: size_metric} = input_queue
 
     if size >= target_size do
       """
@@ -111,6 +122,7 @@ defmodule Membrane.Core.Element.InputQueue do
     %__MODULE__{size: size} = input_queue = do_store_buffers(input_queue, v)
 
     Telemetry.report_metric(:store, size, input_queue.log_tag)
+    :atomics.put(size_metric, 1, size)
 
     input_queue
   end
@@ -160,7 +172,9 @@ defmodule Membrane.Core.Element.InputQueue do
     {out, input_queue} = do_take(input_queue, count)
     input_queue = maybe_increase_atomic_demand(input_queue)
 
-    Telemetry.report_metric(:take, input_queue.size, input_queue.log_tag)
+    %{size: size, size_metric: size_metric} = input_queue
+    Telemetry.report_metric(:take, size, input_queue.log_tag)
+    :atomics.put(size_metric, 1, size)
 
     {out, input_queue}
   end
@@ -286,7 +300,7 @@ defmodule Membrane.Core.Element.InputQueue do
     diff = max(target_size - size - demand, div(target_size, 2))
 
     """
-    Increasing AtomicDemand linked to  #{inspect(input_queue.linked_output_ref)} by #{inspect(diff)}
+    Increasing AtomicDemand for pad  #{inspect(input_queue.pad_ref)} by #{inspect(diff)}
     """
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()

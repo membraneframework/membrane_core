@@ -63,10 +63,11 @@ defmodule Membrane.Core.Element.BufferController do
   @spec do_handle_buffer(Pad.ref(), PadModel.pad_data(), [Buffer.t()] | Buffer.t(), State.t()) ::
           State.t()
   defp do_handle_buffer(pad_ref, %{flow_control: :auto} = data, buffers, state) do
-    %{demand: demand, demand_unit: demand_unit} = data
+    %{demand: demand, demand_unit: demand_unit, demand_metric: demand_metric} = data
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
 
     state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
+    :atomics.put(demand_metric, 1, demand - buf_size)
 
     state = AutoFlowUtils.auto_adjust_atomic_demand(pad_ref, state)
     exec_buffer_callback(pad_ref, buffers, state)

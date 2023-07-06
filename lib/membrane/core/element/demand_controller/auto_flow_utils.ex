@@ -26,15 +26,19 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   defp do_auto_adjust_atomic_demand(pad_data, state) when is_input_auto_pad_data(pad_data) do
     if increase_atomic_demand?(pad_data, state) do
-      diff = pad_data.auto_demand_size - pad_data.demand
-      :ok = AtomicDemand.increase(pad_data.atomic_demand, diff)
+      %{
+        ref: ref,
+        auto_demand_size: auto_demand_size,
+        demand: demand,
+        atomic_demand: atomic_demand,
+        demand_metric: demand_metric
+      } = pad_data
 
-      PadModel.set_data!(
-        state,
-        pad_data.ref,
-        :demand,
-        pad_data.auto_demand_size
-      )
+      diff = auto_demand_size - demand
+      :ok = AtomicDemand.increase(atomic_demand, diff)
+
+      :atomics.put(demand_metric, 1, auto_demand_size)
+      PadModel.set_data!(state, ref, :demand, auto_demand_size)
     else
       state
     end

@@ -91,6 +91,7 @@ defmodule Membrane.Element.PadData do
                 stream_format_validation_params: [],
                 other_demand_unit: nil,
                 other_effective_flow_control: :push,
-                total_buffers_metric: nil
+                total_buffers_metric: nil,
+                demand_metric: nil
               ]
 end

@@ -370,7 +370,6 @@ defmodule Membrane.Core.Element.PadController do
        ) do
     %{
       ref: ref,
-      other_ref: other_ref,
       demand_unit: this_demand_unit,
       atomic_demand: atomic_demand
     } = data
@@ -380,7 +379,7 @@ defmodule Membrane.Core.Element.PadController do
         inbound_demand_unit: other_info[:demand_unit] || this_demand_unit,
         outbound_demand_unit: this_demand_unit,
         atomic_demand: atomic_demand,
-        linked_output_ref: other_ref,
+        pad_ref: ref,
         log_tag: inspect(ref),
         target_size: props.target_queue_size
       })
@@ -425,10 +424,21 @@ defmodule Membrane.Core.Element.PadController do
           metric.buffer_size_approximation() * @default_auto_demand_size_factor
       end
 
+    demand_metric =
+      if direction == :input do
+        :atomics.new(1, [])
+        |> tap(
+          &Observer.register_metric_function(:auto_demand_size, fn -> :atomics.get(&1, 1) end,
+            pad: data.ref
+          )
+        )
+      end
+
     %{
       demand: 0,
       associated_pads: associated_pads,
-      auto_demand_size: auto_demand_size
+      auto_demand_size: auto_demand_size,
+      demand_metric: demand_metric
     }
   end
 
