@@ -17,7 +17,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
          target_queue_size: 100,
          inbound_demand_unit: :bytes,
          outbound_demand_unit: :bytes,
-         linked_output_ref: :output_pad_ref,
+         pad_ref: :output_pad_ref,
          atomic_demand: new_atomic_demand(),
          expected_metric: Buffer.Metric.from_unit(:bytes)
        }}
@@ -27,25 +27,27 @@ defmodule Membrane.Core.Element.InputQueueTest do
       assert InputQueue.init(%{
                inbound_demand_unit: context.inbound_demand_unit,
                outbound_demand_unit: context.outbound_demand_unit,
-               linked_output_ref: context.linked_output_ref,
+               pad_ref: context.pad_ref,
                log_tag: context.log_tag,
                atomic_demand: context.atomic_demand,
                target_size: context.target_queue_size
-             }) == %InputQueue{
+             })
+             |> Map.put(:size_metric, nil) == %InputQueue{
                q: Qex.new(),
                log_tag: context.log_tag,
                target_size: context.target_queue_size,
                atomic_demand: context.atomic_demand,
                inbound_metric: context.expected_metric,
                outbound_metric: context.expected_metric,
-               linked_output_ref: context.linked_output_ref,
+               pad_ref: context.pad_ref,
                size: 0,
-               demand: context.target_queue_size
+               demand: context.target_queue_size,
+               size_metric: nil
              }
 
       assert context.target_queue_size == AtomicDemand.get(context.atomic_demand)
 
-      expected_message = Message.new(:atomic_demand_increased, context.linked_output_ref)
+      expected_message = Message.new(:atomic_demand_increased, context.pad_ref)
       assert_received ^expected_message
     end
   end
@@ -55,7 +57,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
       buffer = %Buffer{payload: <<1, 2, 3>>}
 
       input_queue =
-        struct(InputQueue,
+        prepare_input_queue(
           size: 0,
           inbound_metric: Buffer.Metric.Count,
           outbound_metric: Buffer.Metric.Count,
@@ -96,7 +98,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     test "updated properly `size` and `demand` when `:metric` is `Buffer.Metric.Count`",
          context do
       input_queue =
-        struct(InputQueue,
+        prepare_input_queue(
           size: context.size,
           inbound_metric: Buffer.Metric.Count,
           outbound_metric: Buffer.Metric.Count,
@@ -114,7 +116,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     test "updated properly `size` and `demand` when `:metric` is `Buffer.Metric.ByteSize`",
          context do
       input_queue =
-        struct(InputQueue,
+        prepare_input_queue(
           size: context.size,
           inbound_metric: Buffer.Metric.ByteSize,
           outbound_metric: Buffer.Metric.ByteSize,
@@ -133,7 +135,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
     test "append buffer to the queue", context do
       input_queue =
-        struct(InputQueue,
+        prepare_input_queue(
           size: context.size,
           inbound_metric: Buffer.Metric.ByteSize,
           outbound_metric: Buffer.Metric.ByteSize,
@@ -150,7 +152,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
     test "append event to the queue", context do
       input_queue =
-        struct(InputQueue,
+        prepare_input_queue(
           size: context.size,
           inbound_metric: Buffer.Metric.ByteSize,
           outbound_metric: Buffer.Metric.ByteSize,
@@ -167,7 +169,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
     test "keep other fields unchanged after storing an event", context do
       input_queue =
-        struct(InputQueue,
+        prepare_input_queue(
           size: context.size,
           inbound_metric: Buffer.Metric.ByteSize,
           outbound_metric: Buffer.Metric.ByteSize,
@@ -187,7 +189,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
         InputQueue.init(%{
           inbound_demand_unit: :buffers,
           outbound_demand_unit: :buffers,
-          linked_output_ref: :output_pad_ref,
+          pad_ref: :output_pad_ref,
           log_tag: "test",
           atomic_demand: new_atomic_demand(),
           target_size: 40
@@ -232,14 +234,14 @@ defmodule Membrane.Core.Element.InputQueueTest do
       assert_received Message.new(:atomic_demand_increased, :output_pad_ref)
 
       input_queue =
-        struct(InputQueue,
+        prepare_input_queue(
           size: size,
           demand: 94,
           target_size: 100,
           inbound_metric: Buffer.Metric.Count,
           outbound_metric: Buffer.Metric.Count,
           q: q,
-          linked_output_ref: :output_pad_ref,
+          pad_ref: :output_pad_ref,
           atomic_demand: atomic_demand
         )
 
@@ -303,7 +305,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
         inbound_demand_unit: :bytes,
         outbound_demand_unit: :buffers,
         atomic_demand: atomic_demand,
-        linked_output_ref: :output_pad_ref,
+        pad_ref: :output_pad_ref,
         log_tag: nil,
         target_size: 10
       })
@@ -340,7 +342,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :bytes,
         atomic_demand: atomic_demand,
-        linked_output_ref: :output_pad_ref,
+        pad_ref: :output_pad_ref,
         log_tag: nil,
         target_size: 3
       })
@@ -365,6 +367,10 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert queue.size == 2
     assert queue.demand == 1
     assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
+  end
+
+  defp prepare_input_queue(fields) do
+    struct(InputQueue, [size_metric: :atomics.new(1, [])] ++ fields)
   end
 
   defp new_atomic_demand(),
