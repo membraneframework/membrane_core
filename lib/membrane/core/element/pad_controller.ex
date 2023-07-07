@@ -23,7 +23,7 @@ defmodule Membrane.Core.Element.PadController do
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
-  require Membrane.Core.Observer, as: Observer
+  require Membrane.Core.Stalker, as: Stalker
   require Membrane.Logger
   require Membrane.Pad, as: Pad
 
@@ -91,7 +91,7 @@ defmodule Membrane.Core.Element.PadController do
         %{
           other_info: info,
           link_metadata: %{
-            observability_data: Observer.generate_observability_data_for_link(endpoint.pad_ref)
+            observability_data: Stalker.generate_observability_data_for_link(endpoint.pad_ref)
           },
           stream_format_validation_params: [],
           other_effective_flow_control: effective_flow_control
@@ -170,8 +170,8 @@ defmodule Membrane.Core.Element.PadController do
         throttling_factor: endpoint.pad_props[:throttling_factor]
       })
 
-    Observer.register_link(
-      state.observer,
+    Stalker.register_link(
+      state.stalker,
       endpoint.pad_ref,
       other_endpoint.pad_ref,
       link_metadata.observability_data
@@ -215,7 +215,7 @@ defmodule Membrane.Core.Element.PadController do
     link_metadata = %{
       link_metadata
       | observability_data:
-          Observer.generate_observability_data_for_link(
+          Stalker.generate_observability_data_for_link(
             endpoint.pad_ref,
             link_metadata.observability_data
           )
@@ -235,7 +235,7 @@ defmodule Membrane.Core.Element.PadController do
   @spec handle_unlink(Pad.ref(), State.t()) :: State.t()
   def handle_unlink(pad_ref, state) do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
-      Observer.unregister_link(state.observer, pad_ref)
+      Stalker.unregister_link(state.stalker, pad_ref)
       state = generate_eos_if_needed(pad_ref, state)
       state = maybe_handle_pad_removed(pad_ref, state)
       state = remove_pad_associations(pad_ref, state)
@@ -289,13 +289,13 @@ defmodule Membrane.Core.Element.PadController do
        ) do
     total_buffers_metric = :atomics.new(1, [])
 
-    Membrane.Core.Observer.register_metric_function(
+    Membrane.Core.Stalker.register_metric_function(
       :total_buffers,
       fn -> :atomics.get(total_buffers_metric, 1) end,
       pad: endpoint.pad_ref
     )
 
-    Membrane.Core.Observer.register_metric_function(
+    Membrane.Core.Stalker.register_metric_function(
       :atomic_demand,
       fn -> AtomicDemand.get(metadata.atomic_demand) end,
       pad: endpoint.pad_ref
@@ -428,7 +428,7 @@ defmodule Membrane.Core.Element.PadController do
       if direction == :input do
         :atomics.new(1, [])
         |> tap(
-          &Observer.register_metric_function(:auto_demand_size, fn -> :atomics.get(&1, 1) end,
+          &Stalker.register_metric_function(:auto_demand_size, fn -> :atomics.get(&1, 1) end,
             pad: data.ref
           )
         )

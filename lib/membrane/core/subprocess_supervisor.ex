@@ -9,7 +9,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
   use GenServer
 
   alias Membrane.Core
-  alias Membrane.Core.Observer
+  alias Membrane.Core.Stalker
 
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
@@ -80,7 +80,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
   """
   @spec set_parent_component(
           supervisor_pid :: pid,
-          observability_config :: Observer.component_config()
+          observability_config :: Stalker.component_config()
         ) :: :ok
   def set_parent_component(supervisor, observability_config) do
     Message.send(supervisor, :set_parent_component, [
@@ -177,7 +177,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
 
   @impl true
   def handle_info(Message.new(:set_parent_component, [pid, observability_config]), state) do
-    Membrane.Core.Observer.setup_component_utility(observability_config, "subprocess supervisor")
+    Membrane.Core.Stalker.setup_component_utility(observability_config, "subprocess supervisor")
     {:noreply, %{state | parent_component: pid}}
   end
 

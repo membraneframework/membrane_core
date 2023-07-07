@@ -42,7 +42,7 @@ defmodule Membrane.Core.Element.State do
           effective_flow_control: EffectiveFlowController.effective_flow_control(),
           handling_action?: boolean(),
           pads_to_snapshot: MapSet.t(),
-          observer: Membrane.Core.Observer.t()
+          stalker: Membrane.Core.Stalker.t()
         }
 
   defstruct [
@@ -68,6 +68,6 @@ defmodule Membrane.Core.Element.State do
     :effective_flow_control,
     :handling_action?,
     :pads_to_snapshot,
-    :observer
+    :stalker
   ]
 end

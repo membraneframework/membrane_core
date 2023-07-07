@@ -36,7 +36,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.{SubprocessSupervisor, TimerController}
 
   require Membrane.Core.Message, as: Message
-  require Membrane.Core.Observer, as: Observer
+  require Membrane.Core.Stalker, as: Stalker
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
@@ -106,7 +106,7 @@ defmodule Membrane.Core.Element do
       log_metadata: options.log_metadata
     }
 
-    Membrane.Core.Observer.register_component(options.observer, observability_config)
+    Membrane.Core.Stalker.register_component(options.stalker, observability_config)
     SubprocessSupervisor.set_parent_component(options.subprocess_supervisor, observability_config)
 
     {:ok, resource_guard} =
@@ -118,11 +118,11 @@ defmodule Membrane.Core.Element do
 
     self_pid = self()
 
-    Observer.register_metric_function(:message_queue_length, fn ->
+    Stalker.register_metric_function(:message_queue_length, fn ->
       :erlang.process_info(self_pid, :message_queue_len) |> elem(1)
     end)
 
-    Observer.register_metric_function(:total_reductions, fn ->
+    Stalker.register_metric_function(:total_reductions, fn ->
       :erlang.process_info(self_pid, :reductions) |> elem(1)
     end)
 
@@ -153,7 +153,7 @@ defmodule Membrane.Core.Element do
         effective_flow_control: :push,
         handling_action?: false,
         pads_to_snapshot: MapSet.new(),
-        observer: options.observer
+        stalker: options.stalker
       }
       |> PadSpecHandler.init_pads()
 

@@ -1,4 +1,4 @@
-defmodule Membrane.Integration.ObserverTest do
+defmodule Membrane.Integration.StalkerTest do
   use ExUnit.Case
 
   import Membrane.ChildrenSpec
@@ -62,12 +62,12 @@ defmodule Membrane.Integration.ObserverTest do
   test "graph updates" do
     pipeline = Testing.Pipeline.start_link_supervised!()
     run_children(pipeline)
-    # wait for the children to register themselves in the observer
+    # wait for the children to register themselves in the stalker
     Process.sleep(200)
 
     pipeline
-    |> Membrane.Core.Pipeline.get_observer()
-    |> Membrane.Core.Observer.subscribe([:graph])
+    |> Membrane.Core.Pipeline.get_stalker()
+    |> Membrane.Core.Stalker.subscribe([:graph])
 
     # should get entire graph in a single update
     assert_receive {:graph, :add, update}
@@ -107,8 +107,8 @@ defmodule Membrane.Integration.ObserverTest do
     pipeline = Testing.Pipeline.start_link_supervised!()
 
     pipeline
-    |> Membrane.Core.Pipeline.get_observer()
-    |> Membrane.Core.Observer.subscribe([:metrics])
+    |> Membrane.Core.Pipeline.get_stalker()
+    |> Membrane.Core.Stalker.subscribe([:metrics])
 
     run_children(pipeline)
 

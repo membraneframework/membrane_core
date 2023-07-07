@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Observer do
+defmodule Membrane.Core.Stalker do
   @moduledoc false
 
   use GenServer
@@ -14,7 +14,7 @@ defmodule Membrane.Core.Observer do
 
   @scrape_interval 1000
 
-  @function_metric :__membrane_observer_function_metric__
+  @function_metric :__membrane_stalker_function_metric__
 
   @enforce_keys [:pid, :ets]
   defstruct @enforce_keys
@@ -58,7 +58,7 @@ defmodule Membrane.Core.Observer do
   end
 
   @doc """
-  Creates a new observer and configures observability for the pipeline.
+  Creates a new stalker and configures observability for the pipeline.
 
   Must be called by the pipeline process.
   """
@@ -69,9 +69,9 @@ defmodule Membrane.Core.Observer do
     {:ok, pid} =
       Membrane.Core.SubprocessSupervisor.start_link_utility(supervisor, {__MODULE__, %{ets: ets}})
 
-    observer = %__MODULE__{pid: pid, ets: ets}
-    setup_process_local_observability(config, %{observer: observer})
-    observer
+    stalker = %__MODULE__{pid: pid, ets: ets}
+    setup_process_local_observability(config, %{stalker: stalker})
+    stalker
   end
 
   if @metrics_enabled do
@@ -81,16 +81,16 @@ defmodule Membrane.Core.Observer do
   end
 
   @doc """
-  Registers a component in the observer and configures the component's observability.
+  Registers a component in the stalker and configures the component's observability.
 
   Must be called by an element's or bin's process.
   """
   @spec register_component(t(), component_config()) :: :ok
-  def register_component(observer, config) do
-    setup_process_local_observability(config, %{observer: observer})
+  def register_component(stalker, config) do
+    setup_process_local_observability(config, %{stalker: stalker})
 
     send(
-      observer.pid,
+      stalker.pid,
       {:graph,
        %{
          entity: :component,
@@ -113,11 +113,11 @@ defmodule Membrane.Core.Observer do
 
   # Sets component path, logger metadata and adds necessary entries to the process dictionary
   # Also registers the process with a meaningful name for easier introspection with
-  # observer if enabled by setting `unsafely_name_processes_for_observer: :components`
+  # stalker if enabled by setting `unsafely_name_processes_for_observer: :components`
   # in config.exs.
   defp setup_process_local_observability(config, opts) do
     utility_name = Map.get(opts, :utility_name)
-    observer = Map.get(opts, :observer)
+    stalker = Map.get(opts, :stalker)
     %{name: name, component_type: component_type, pid: pid} = config
     is_name_provided = name != nil
     pid_string = pid |> :erlang.pid_to_list() |> to_string()
@@ -131,8 +131,8 @@ defmodule Membrane.Core.Observer do
 
     # Metrics are currently reported only if the component
     # is on the same node as the pipeline
-    if observer && node(observer.pid) == node(),
-      do: Process.put(:__membrane_observer_ets__, observer.ets)
+    if stalker && node(stalker.pid) == node(),
+      do: Process.put(:__membrane_stalker_ets__, stalker.ets)
 
     if component_type == :pipeline and !is_utility,
       do: Process.put(:__membrane_pipeline__, true)
@@ -141,7 +141,7 @@ defmodule Membrane.Core.Observer do
     log_metadata = Map.get(config, :log_metadata, [])
     Logger.metadata(log_metadata)
 
-    register_name_for_observer(
+    register_name_for_stalker(
       is_name_provided,
       name_string,
       pid_string,
@@ -158,7 +158,7 @@ defmodule Membrane.Core.Observer do
   end
 
   if :components in @unsafely_name_processes_for_observer do
-    defp register_name_for_observer(
+    defp register_name_for_stalker(
            is_name_provided,
            name_string,
            pid_string,
@@ -179,7 +179,7 @@ defmodule Membrane.Core.Observer do
       :ok
     end
   else
-    defp register_name_for_observer(
+    defp register_name_for_stalker(
            _is_name_provided,
            _name_string,
            _pid_string,
@@ -226,12 +226,12 @@ defmodule Membrane.Core.Observer do
   end
 
   @doc """
-  Registers a link in the observer. Must be called by the sender element.
+  Registers a link in the stalker. Must be called by the sender element.
   """
   @spec register_link(t, Pad.ref(), Pad.ref(), link_observability_data()) :: :ok
-  def register_link(observer, input_ref, output_ref, observability_data) do
+  def register_link(stalker, input_ref, output_ref, observability_data) do
     send(
-      observer.pid,
+      stalker.pid,
       {:graph,
        %{
          entity: :link,
@@ -246,23 +246,23 @@ defmodule Membrane.Core.Observer do
   end
 
   @doc """
-  Unregisters a link in the observer. Can be called by both elements of the link.
+  Unregisters a link in the stalker. Can be called by both elements of the link.
   """
   @spec unregister_link(t, Pad.ref()) :: :ok
-  def unregister_link(observer, pad_ref) do
-    send(observer.pid, {:graph, %{entity: :remove_link, path: ComponentPath.get(), pad: pad_ref}})
+  def unregister_link(stalker, pad_ref) do
+    send(stalker.pid, {:graph, %{entity: :remove_link, path: ComponentPath.get(), pad: pad_ref}})
     :ok
   end
 
   @doc """
-  Subscribes for updates from the observer
+  Subscribes for updates from the stalker
 
   The following topics are supported:
-  - graph - information about the shape of the pipeline, observer will send `t:graph_update/0` messages
-  - metrics - metrics from pipeline components, observer will send `t:metrics_update/0` messages
+  - graph - information about the shape of the pipeline, stalker will send `t:graph_update/0` messages
+  - metrics - metrics from pipeline components, stalker will send `t:metrics_update/0` messages
 
   Subsequent subscription from the same process overrides any previous subscription. If the `confirm: id`
-  option is passed, the observer will send a `{:subscribed, id}` message when the subscription is updated.
+  option is passed, the stalker will send a `{:subscribed, id}` message when the subscription is updated.
   """
   @spec subscribe(
           t(),
@@ -275,15 +275,15 @@ defmodule Membrane.Core.Observer do
           confirm: id :: term
         ) ::
           :ok
-  def subscribe(observer, topics, opts \\ []) do
-    send(observer.pid, {:subscribe, self(), topics, opts})
+  def subscribe(stalker, topics, opts \\ []) do
+    send(stalker.pid, {:subscribe, self(), topics, opts})
     :ok
   end
 
   if @metrics_enabled do
     defmacro report_metric(metric, value, opts \\ []) do
       quote do
-        ets = Process.get(:__membrane_observer_ets__)
+        ets = Process.get(:__membrane_stalker_ets__)
 
         if ets do
           :ets.insert(
@@ -299,7 +299,7 @@ defmodule Membrane.Core.Observer do
 
     defmacro register_metric_function(metric, function, opts \\ []) do
       quote do
-        ets = Process.get(:__membrane_observer_ets__)
+        ets = Process.get(:__membrane_stalker_ets__)
 
         if ets do
           :ets.insert(

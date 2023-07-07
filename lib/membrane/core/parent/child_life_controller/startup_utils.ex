@@ -185,7 +185,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       parent_path: Membrane.ComponentPath.get(),
       group: group,
       log_metadata: log_metadata,
-      observer: state.observer
+      stalker: state.stalker
     }
 
     component_module =

@@ -14,7 +14,7 @@ defmodule Membrane.Core.Element.InputQueue do
   alias Membrane.Pad
   alias Membrane.StreamFormat
 
-  require Membrane.Core.Observer, as: Observer
+  require Membrane.Core.Stalker, as: Stalker
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
@@ -85,7 +85,7 @@ defmodule Membrane.Core.Element.InputQueue do
 
     size_metric = :atomics.new(1, [])
 
-    Observer.register_metric_function(
+    Stalker.register_metric_function(
       :input_queue_size,
       fn -> :atomics.get(size_metric, 1) end,
       pad: pad_ref

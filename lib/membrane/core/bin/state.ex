@@ -46,10 +46,10 @@ defmodule Membrane.Core.Bin.State do
           resource_guard: Membrane.ResourceGuard.t(),
           setup_incomplete?: boolean(),
           handling_action?: boolean(),
-          observer: Membrane.Core.Observer.t()
+          stalker: Membrane.Core.Stalker.t()
         }
 
-  @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard, :observer]
+  @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard, :stalker]
   defstruct @enforce_keys ++
               [
                 internal_state: nil,

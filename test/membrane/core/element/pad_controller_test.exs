@@ -24,7 +24,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
       internal_state: %{},
       synchronization: %{clock: nil, parent_clock: nil},
       subprocess_supervisor: SubprocessSupervisor.start_link!(),
-      observer: %Membrane.Core.Observer{pid: spawn(fn -> :ok end), ets: nil}
+      stalker: %Membrane.Core.Stalker{pid: spawn(fn -> :ok end), ets: nil}
     )
     |> PadSpecHandler.init_pads()
   end

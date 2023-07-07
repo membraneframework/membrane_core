@@ -308,7 +308,7 @@ defmodule Membrane.Core.BinTest do
       subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
       parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
       group: nil,
-      observer: %Membrane.Core.Observer{pid: spawn(fn -> :ok end), ets: nil}
+      stalker: %Membrane.Core.Stalker{pid: spawn(fn -> :ok end), ets: nil}
     }
   end
 end

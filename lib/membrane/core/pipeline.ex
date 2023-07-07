@@ -4,7 +4,7 @@ defmodule Membrane.Core.Pipeline do
 
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.{Clock, ResourceGuard}
-  alias Membrane.Core.{CallbackHandler, Observer, ProcessHelper, SubprocessSupervisor}
+  alias Membrane.Core.{CallbackHandler, ProcessHelper, Stalker, SubprocessSupervisor}
   alias Membrane.Core.Pipeline.CallbackContext
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
@@ -13,10 +13,10 @@ defmodule Membrane.Core.Pipeline do
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Core.Component
 
-  @spec get_observer(pipeline :: pid()) :: Membrane.Core.Observer.t()
-  def get_observer(pipeline) do
-    case Message.call(pipeline, :get_observer) do
-      {:ok, observer} -> observer
+  @spec get_stalker(pipeline :: pid()) :: Membrane.Core.Stalker.t()
+  def get_stalker(pipeline) do
+    case Message.call(pipeline, :get_stalker) do
+      {:ok, stalker} -> stalker
       {:error, _reason} -> raise Membrane.PipelineError, "Pipeline #{inspect(pipeline)} not found"
     end
   end
@@ -31,7 +31,7 @@ defmodule Membrane.Core.Pipeline do
 
     %{subprocess_supervisor: subprocess_supervisor} = params
     SubprocessSupervisor.set_parent_component(subprocess_supervisor, observability_config)
-    observer = Observer.new(observability_config, subprocess_supervisor)
+    stalker = Stalker.new(observability_config, subprocess_supervisor)
 
     {:ok, resource_guard} =
       SubprocessSupervisor.start_utility(subprocess_supervisor, {ResourceGuard, self()})
@@ -53,7 +53,7 @@ defmodule Membrane.Core.Pipeline do
       },
       subprocess_supervisor: subprocess_supervisor,
       resource_guard: resource_guard,
-      observer: observer
+      stalker: stalker
     }
 
     state =
@@ -144,8 +144,8 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
-  def handle_call(Message.new(:get_observer), _from, state) do
-    {:reply, {:ok, state.observer}, state}
+  def handle_call(Message.new(:get_stalker), _from, state) do
+    {:reply, {:ok, state.stalker}, state}
   end
 
   @impl GenServer

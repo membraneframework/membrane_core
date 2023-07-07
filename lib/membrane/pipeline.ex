@@ -48,14 +48,14 @@ defmodule Membrane.Pipeline do
 
   ### Visualizing pipeline's supervision tree
 
-  Pipeline's internal supervision tree can be looked up with Applications tab of Erlang's Observer
+  Pipeline's internal supervision tree can be looked up with Applications tab of Erlang's Stalker
   or with Livebook's `Kino` library.
   For debugging (and ONLY for debugging) purposes, you may use the following configuration:
 
-        config :membrane_core, unsafely_name_processes_for_observer: [:components]
+        config :membrane_core, unsafely_name_processes_for_stalker: [:components]
 
-  that makes the observer's process tree graph more readable by naming pipeline's descendants, for example:
-  ![Observer graph](assets/images/observer_graph.png).
+  that makes the stalker's process tree graph more readable by naming pipeline's descendants, for example:
+  ![Stalker graph](assets/images/stalker_graph.png).
   """
 
   use Bunch
