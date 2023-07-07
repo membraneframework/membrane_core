@@ -150,10 +150,7 @@ defmodule Membrane.Mixfile do
       # Testing
       {:mox, "~> 1.0", only: :test},
       {:junit_formatter, "~> 3.1", only: :test},
-      {:excoveralls, "~> 0.14", only: :test},
-      # Kino
-      {:kino, "~> 0.9.2"},
-      {:kino_vega_lite, "> 0.0.0"}
+      {:excoveralls, "~> 0.14", only: :test}
     ]
   end
 end
