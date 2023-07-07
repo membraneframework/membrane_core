@@ -116,61 +116,61 @@ defmodule Membrane.Core.Stalker do
   # stalker if enabled by setting `unsafely_name_processes_for_observer: :components`
   # in config.exs.
   defp setup_process_local_observability(config, opts) do
+    config = parse_observability_config(config, opts)
+
+    # Metrics are currently reported only if the component
+    # is on the same node as the pipeline
+    if config.stalker && node(config.stalker.pid) == node(),
+      do: Process.put(:__membrane_stalker_ets__, config.stalker.ets)
+
+    if config.component_type == :pipeline and !config.is_utility,
+      do: Process.put(:__membrane_pipeline__, true)
+
+    Logger.metadata(config.log_metadata)
+    register_name_for_stalker(config)
+
+    ComponentPath.set(config.component_path)
+
+    Membrane.Logger.set_prefix(ComponentPath.format(config.component_path) <> config.utility_name)
+
+    :ok
+  end
+
+  defp parse_observability_config(config, opts) do
     utility_name = Map.get(opts, :utility_name)
     stalker = Map.get(opts, :stalker)
     %{name: name, component_type: component_type, pid: pid} = config
     is_name_provided = name != nil
     pid_string = pid |> :erlang.pid_to_list() |> to_string()
     name = if is_name_provided, do: name, else: pid_string
-    name_suffix = if component_type == :element, do: "", else: "/"
     is_utility = utility_name != nil
-    utility_name = if is_utility, do: " #{utility_name}", else: ""
 
-    name_string =
-      if(is_binary(name) and String.valid?(name), do: name, else: inspect(name)) <> name_suffix
+    name_string = """
+    #{if is_binary(name) and String.valid?(name), do: name, else: inspect(name)}\
+    #{if component_type == :element, do: "", else: "/"}\
+    """
 
-    # Metrics are currently reported only if the component
-    # is on the same node as the pipeline
-    if stalker && node(stalker.pid) == node(),
-      do: Process.put(:__membrane_stalker_ets__, stalker.ets)
-
-    if component_type == :pipeline and !is_utility,
-      do: Process.put(:__membrane_pipeline__, true)
-
-    parent_path = Map.get(config, :parent_path, [])
-    log_metadata = Map.get(config, :log_metadata, [])
-    Logger.metadata(log_metadata)
-
-    register_name_for_stalker(
-      is_name_provided,
-      name_string,
-      pid_string,
-      component_type,
-      utility_name
-    )
-
-    component_path = parent_path ++ [name_string]
-    ComponentPath.set(component_path)
-
-    Membrane.Logger.set_prefix(ComponentPath.format(component_path) <> utility_name)
-
-    :ok
+    %{
+      stalker: stalker,
+      name: name,
+      name_string: name_string,
+      component_type: component_type,
+      is_name_provided: is_name_provided,
+      is_utility: is_utility,
+      utility_name: if(is_utility, do: " #{utility_name}", else: ""),
+      component_path: Map.get(config, :parent_path, []) ++ [name_string],
+      log_metadata: Map.get(config, :log_metadata, [])
+    }
   end
 
   if :components in @unsafely_name_processes_for_observer do
-    defp register_name_for_stalker(
-           is_name_provided,
-           name_string,
-           pid_string,
-           component_type,
-           utility_name
-         ) do
+    defp register_name_for_stalker(config) do
       if Process.info(self(), :registered_name) == {:registered_name, []} do
         Process.register(
           self(),
           """
-          ##{pid_string} #{if is_name_provided, do: name_string}\
-          #{unless is_name_provided, do: " (#{component_type})"}#{utility_name}"\
+          ##{config.pid_string} #{if config.is_name_provided, do: config.name_string}\
+          #{unless config.is_name_provided, do: " (#{config.component_type})"}#{config.utility_name}"\
           """
           |> String.to_atom()
         )
@@ -179,14 +179,7 @@ defmodule Membrane.Core.Stalker do
       :ok
     end
   else
-    defp register_name_for_stalker(
-           _is_name_provided,
-           _name_string,
-           _pid_string,
-           _component_type,
-           _utility_name
-         ),
-         do: :ok
+    defp register_name_for_stalker(_config), do: :ok
   end
 
   @doc """
