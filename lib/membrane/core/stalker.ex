@@ -496,12 +496,12 @@ defmodule Membrane.Core.Stalker do
   end
 
   defp calc_derivatives(new_metrics, new_timestamp, %{metrics: metrics, timestamp: timestamp}) do
-    dt_seconds = Time.as_seconds(new_timestamp - timestamp, :round)
+    dt_seconds = Time.as_seconds(new_timestamp - timestamp)
 
     new_metrics
     |> Enum.filter(fn {k, _v} -> Map.has_key?(metrics, k) end)
     |> Enum.map(fn {{metric, path, pad} = k, value} ->
-      {{"#{metric} dt", path, pad}, (value - metrics[k]) / dt_seconds}
+      {{"#{metric} dt", path, pad}, Ratio.new(value - metrics[k], dt_seconds) |> Ratio.to_float()}
     end)
   end
 end
