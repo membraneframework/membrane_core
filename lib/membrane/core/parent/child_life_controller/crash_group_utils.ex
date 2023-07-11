@@ -2,14 +2,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
   @moduledoc false
   # A module responsible for managing crash groups inside the state of pipeline.
 
-  alias Membrane.ChildrenSpec
+  alias Membrane.{Child, ChildrenSpec}
   alias Membrane.Core.{CallbackHandler, Component, Parent, Pipeline}
   alias Membrane.Core.Parent.{ChildLifeController, ChildrenModel, CrashGroup}
   alias Membrane.Core.Parent.ChildLifeController.LinkUtils
 
   @spec add_crash_group(
-          {Membrane.Child.group(), ChildrenSpec.crash_group_mode()},
-          [Membrane.Child.name()],
+          {Child.group(), ChildrenSpec.crash_group_mode()},
+          [Child.name()],
           [pid()],
           Pipeline.State.t()
         ) :: Pipeline.State.t()

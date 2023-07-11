@@ -266,7 +266,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = %{state | children: Map.merge(state.children, Map.new(children, &{&1.name, &1}))}
 
     children_names = children |> Enum.map(& &1.name)
-    children_pids = children |> Enum.map(& &1.pid)
 
     # adding crash group to state
     state =
@@ -661,7 +660,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     %{group: group_name} = ChildrenModel.get_child_data!(state, child_name)
 
     state =
-      with %{crash_group: %{^group_name => group}} <- state do
+      with %{crash_groups: %{^group_name => group}} <- state do
         CrashGroupUtils.handle_crash_group_member_death(child_name, group, :normal, state)
       end
       |> ChildrenModel.delete_child(child_name)
