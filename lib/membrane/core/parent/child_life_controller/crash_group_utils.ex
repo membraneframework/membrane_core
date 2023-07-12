@@ -30,6 +30,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     )
   end
 
+  @spec get_child_crash_group(Child.name(), Parent.state()) :: {:ok, CrashGroup.t()} | :error
+  def get_child_crash_group(child_name, state) do
+    %{group: group_name} = ChildrenModel.get_child_data!(state, child_name)
+    Map.fetch(state.crash_groups, group_name)
+  end
+
   @spec handle_crash_group_member_death(Child.name(), CrashGroup.t(), any(), Parent.state()) ::
           Parent.state()
   def handle_crash_group_member_death(child_name, crash_group_data, reason, state)

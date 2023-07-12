@@ -10,7 +10,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     ChildEntryParser,
     ChildrenModel,
     ClockHandler,
-    CrashGroup,
     Link,
     SpecificationParser
   }
@@ -657,11 +656,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp do_handle_child_death(child_name, :normal, state) do
     state = LinkUtils.unlink_element(child_name, state)
 
-    %{group: group_name} = ChildrenModel.get_child_data!(state, child_name)
-
     state =
-      with %{crash_groups: %{^group_name => group}} <- state do
-        CrashGroupUtils.handle_crash_group_member_death(child_name, group, :normal, state)
+      with {:ok, crash_group} <- CrashGroupUtils.get_child_crash_group(child_name, state) do
+        CrashGroupUtils.handle_crash_group_member_death(child_name, crash_group, :normal, state)
+      else
+        :error -> state
       end
       |> ChildrenModel.delete_child(child_name)
 
@@ -669,21 +668,18 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp do_handle_child_death(child_name, reason, state) do
-    %{group: group} = ChildrenModel.get_child_data!(state, child_name)
+    with {:ok, crash_group} <- CrashGroupUtils.get_child_crash_group(child_name, state) do
+      state =
+        CrashGroupUtils.handle_crash_group_member_death(child_name, crash_group, reason, state)
+        |> ChildrenModel.delete_child(child_name)
 
-    case Map.get(state.crash_groups, group) do
-      %CrashGroup{} = group ->
-        state =
-          CrashGroupUtils.handle_crash_group_member_death(child_name, group, reason, state)
-          |> ChildrenModel.delete_child(child_name)
-
-        {:ok, state}
-
-      nil when reason == {:shutdown, :membrane_crash_group_kill} ->
+      {:ok, state}
+    else
+      :error when reason == {:shutdown, :membrane_crash_group_kill} ->
         raise Membrane.PipelineError,
               "Child #{inspect(child_name)} that was not a member of any crash group killed with :membrane_crash_group_kill."
 
-      nil ->
+      :error ->
         Membrane.Logger.debug("""
         Child #{inspect(child_name)} crashed but was not a member of any crash group.
         Terminating.
