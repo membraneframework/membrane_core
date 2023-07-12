@@ -1,5 +1,5 @@
 defmodule Membrane.Core.PipelineTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
   import Membrane.ChildrenSpec

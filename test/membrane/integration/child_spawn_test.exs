@@ -1,6 +1,6 @@
 defmodule Membrane.Integration.ChildSpawnTest do
   use Bunch
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions

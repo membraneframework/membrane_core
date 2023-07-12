@@ -1,5 +1,5 @@
 defmodule Membrane.Core.Element.LifecycleControllerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Membrane.Core.Element.{AtomicDemand, InputQueue, LifecycleController, State}
 

@@ -1,5 +1,5 @@
 defmodule Membrane.Testing.SinkTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Membrane.Testing.Notification
   alias Membrane.Testing.Sink
