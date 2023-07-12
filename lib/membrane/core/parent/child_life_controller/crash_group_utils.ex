@@ -15,11 +15,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
         ) :: Pipeline.State.t()
   def add_crash_group(group_name, _mode, children, state)
       when is_map_key(state.crash_group, group_name) do
-    Bunch.Access.update_in(state, [:crash_groups, group_name, :members], &(children ++ &1))
+    update_in(state, [:crash_groups, group_name, :members], &(children ++ &1))
   end
 
   def add_crash_group(group_name, mode, children, state) do
-    Bunch.Access.put_in(
+    put_in(
       state,
       [:crash_groups, group_name],
       %CrashGroup{
@@ -58,7 +58,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
         :normal,
         state
       ) do
-    Bunch.Access.delete_in(state, [:crash_groups, group.name])
+    {_group, state} = pop_in(state, [:crash_groups, group.name])
+    state
   end
 
   def handle_crash_group_member_death(
@@ -73,7 +74,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
   end
 
   def handle_crash_group_member_death(child_name, %CrashGroup{} = group, :normal, state) do
-    Bunch.Access.update_in(
+    update_in(
       state,
       [:crash_groups, group.name, :members],
       &List.delete(&1, child_name)
@@ -90,7 +91,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
       |> Process.exit({:shutdown, :membrane_crash_group_kill})
     end)
 
-    Bunch.Access.put_in(state, [:crash_groups, group.name], %CrashGroup{
+    put_in(state, [:crash_groups, group.name], %CrashGroup{
       group
       | triggered?: true,
         crash_initiator: child_name

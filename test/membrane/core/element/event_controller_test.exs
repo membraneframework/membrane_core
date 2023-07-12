@@ -104,7 +104,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
   end
 
   defp put_start_of_stream(state, pad_ref) do
-    Bunch.Access.update_in(state, [:pads_data, pad_ref], fn data ->
+    update_in(state, [:pads_data, pad_ref], fn data ->
       %{data | start_of_stream?: true}
     end)
   end

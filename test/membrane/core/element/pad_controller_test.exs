@@ -79,7 +79,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
     {info, state} =
       elem_module
       |> prepare_state(name)
-      |> Bunch.Access.pop_in([:pads_info, pad_name])
+      |> pop_in([:pads_info, pad_name])
 
     data =
       struct(Membrane.Element.PadData,
@@ -89,7 +89,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
       |> Map.merge(info)
 
     state
-    |> Bunch.Access.put_in([:pads_data, pad_name], data)
+    |> put_in([:pads_data, pad_name], data)
   end
 
   defp prepare_dynamic_state(elem_module, name, pad_name, pad_ref) do
@@ -103,7 +103,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
       )
       |> Map.merge(info)
 
-    state |> Bunch.Access.put_in([:pads_data, pad_ref], data)
+    state |> put_in([:pads_data, pad_ref], data)
   end
 
   describe "handle_unlink" do
