@@ -46,7 +46,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
       end)
 
     if all_members_dead? do
-      exec_handle_crash_group_down(group, state)
+      state = exec_handle_crash_group_down(group.name, state)
+      delete_crash_group(group.name, state)
     else
       state
     end
@@ -58,8 +59,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
         :normal,
         state
       ) do
-    {_group, state} = pop_in(state, [:crash_groups, group.name])
-    state
+    delete_crash_group(group.name, state)
   end
 
   def handle_crash_group_member_death(
@@ -70,7 +70,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
       ) do
     state = ChildLifeController.remove_children_from_specs(group.members, state)
     state = LinkUtils.unlink_crash_group(group, state)
-    exec_handle_crash_group_down(group, state)
+    state = trigger_crash_group(group.name, child_name, state)
+    state = exec_handle_crash_group_down(group.name, state)
+    delete_crash_group(group.name, state)
   end
 
   def handle_crash_group_member_death(child_name, %CrashGroup{} = group, :normal, state) do
@@ -91,17 +93,32 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
       |> Process.exit({:shutdown, :membrane_crash_group_kill})
     end)
 
-    put_in(state, [:crash_groups, group.name], %CrashGroup{
-      group
-      | triggered?: true,
-        crash_initiator: child_name
-    })
+    trigger_crash_group(group.name, child_name, state)
+  end
+
+  defp trigger_crash_group(crash_group_name, crash_initiator, state) do
+    update_in(
+      state,
+      [:crash_groups, crash_group_name],
+      &%CrashGroup{
+        &1
+        | triggered?: true,
+          crash_initiator: crash_initiator
+      }
+    )
+  end
+
+  defp delete_crash_group(crash_group_name, state) do
+    {_group, state} = pop_in(state, [:crash_groups, crash_group_name])
+    state
   end
 
   defp exec_handle_crash_group_down(
-         crash_group,
+         group_name,
          state
        ) do
+    crash_group = get_in(state, [:crash_groups, group_name])
+
     context_generator =
       &Component.context_from_state(&1,
         members: crash_group.members,
