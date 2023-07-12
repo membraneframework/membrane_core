@@ -122,7 +122,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             flow_control: :push,
             atomic_demand: output_atomic_demand,
             demand: 0,
-            total_buffers_metric: :atomics.new(1, [])
+            metrics: %{total_buffers: :atomics.new(1, [])}
           },
           input: %{
             direction: :input,
@@ -134,7 +134,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             flow_control: :push,
             atomic_demand: input_atomic_demand,
             demand: 0,
-            total_buffers_metric: :atomics.new(1, [])
+            metrics: %{total_buffers: :atomics.new(1, [])}
           }
         },
         pads_info: %{

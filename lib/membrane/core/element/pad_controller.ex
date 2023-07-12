@@ -304,35 +304,36 @@ defmodule Membrane.Core.Element.PadController do
     data =
       info
       |> Map.delete(:accepted_formats_str)
-      |> Map.merge(%{
-        pid: other_endpoint.pid,
-        other_ref: other_endpoint.pad_ref,
-        options:
-          Child.PadController.parse_pad_options!(info.name, endpoint.pad_props.options, state),
-        ref: endpoint.pad_ref,
-        stream_format_validation_params: stream_format_validation_params,
-        other_effective_flow_control: other_effective_flow_control,
-        stream_format: nil,
-        start_of_stream?: false,
-        end_of_stream?: false,
-        associated_pads: [],
-        atomic_demand: metadata.atomic_demand,
-        total_buffers_metric: total_buffers_metric
-      })
+      |> merge_pad_data(
+        &%{
+          pid: other_endpoint.pid,
+          other_ref: other_endpoint.pad_ref,
+          options:
+            Child.PadController.parse_pad_options!(&1.name, endpoint.pad_props.options, state),
+          ref: endpoint.pad_ref,
+          stream_format_validation_params: stream_format_validation_params,
+          other_effective_flow_control: other_effective_flow_control,
+          stream_format: nil,
+          start_of_stream?: false,
+          end_of_stream?: false,
+          associated_pads: [],
+          atomic_demand: metadata.atomic_demand,
+          metrics: %{
+            total_buffers: total_buffers_metric
+          }
+        }
+      )
+      |> merge_pad_data(&init_pad_direction_data(&1, endpoint.pad_props, metadata, state))
+      |> merge_pad_data(&init_pad_mode_data(&1, endpoint.pad_props, other_info, metadata, state))
+      |> then(&struct!(Membrane.Element.PadData, &1))
+
+    state = put_in(state, [:pads_data, endpoint.pad_ref], data)
 
     :ok =
       AtomicDemand.set_sender_status(
         data.atomic_demand,
         {:resolved, EffectiveFlowController.get_pad_effective_flow_control(data.ref, state)}
       )
-
-    data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, metadata, state))
-
-    data =
-      data |> Map.merge(init_pad_mode_data(data, endpoint.pad_props, other_info, metadata, state))
-
-    data = struct!(Membrane.Element.PadData, data)
-    state = put_in(state, [:pads_data, endpoint.pad_ref], data)
 
     if data.flow_control == :auto do
       state =
@@ -349,6 +350,13 @@ defmodule Membrane.Core.Element.PadController do
     else
       state
     end
+  end
+
+  defp merge_pad_data(pad_data, fun) do
+    Map.merge(pad_data, fun.(pad_data), fn
+      :metrics, m1, m2 -> Map.merge(m1, m2)
+      _key, _v1, v2 -> v2
+    end)
   end
 
   defp init_pad_direction_data(%{direction: :input}, _props, metadata, _state),
@@ -438,7 +446,7 @@ defmodule Membrane.Core.Element.PadController do
       demand: 0,
       associated_pads: associated_pads,
       auto_demand_size: auto_demand_size,
-      demand_metric: demand_metric
+      metrics: %{demand: demand_metric}
     }
   end
 

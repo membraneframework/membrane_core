@@ -321,11 +321,11 @@ defmodule Membrane.Core.Element.ActionHandler do
            stream_format: stream_format,
            pid: pid,
            other_ref: other_ref,
-           total_buffers_metric: total_buffers_metric
+           metrics: metrics
          }
          when stream_format != nil <- pad_data do
       state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
-      :atomics.add(total_buffers_metric, 1, length(buffers))
+      :atomics.add(metrics.total_buffers, 1, length(buffers))
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
 
       PadModel.set_data!(state, pad_ref, :start_of_stream?, true)

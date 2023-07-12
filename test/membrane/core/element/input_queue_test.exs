@@ -32,7 +32,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
                atomic_demand: context.atomic_demand,
                target_size: context.target_queue_size
              })
-             |> Map.put(:size_metric, nil) == %InputQueue{
+             |> Map.put(:stalker_metrics, nil) == %InputQueue{
                q: Qex.new(),
                log_tag: context.log_tag,
                target_size: context.target_queue_size,
@@ -42,7 +42,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
                pad_ref: context.pad_ref,
                size: 0,
                demand: context.target_queue_size,
-               size_metric: nil
+               stalker_metrics: nil
              }
 
       assert context.target_queue_size == AtomicDemand.get(context.atomic_demand)
@@ -370,7 +370,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
   end
 
   defp prepare_input_queue(fields) do
-    struct(InputQueue, [size_metric: :atomics.new(1, [])] ++ fields)
+    struct(InputQueue, [stalker_metrics: %{size: :atomics.new(1, [])}] ++ fields)
   end
 
   defp new_atomic_demand(),

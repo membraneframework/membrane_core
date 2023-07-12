@@ -44,8 +44,7 @@ defmodule Membrane.Core.Child.PadModel do
           auto_demand_size: pos_integer() | nil,
           associated_pads: [Pad.ref()] | nil,
           sticky_events: [Membrane.Event.t()],
-          total_buffers_metric: :atomics.atomics_ref(),
-          demand_metric: :atomics.atomics_ref()
+          metrics: %{atom => :atomics.atomics_ref()}
         }
 
   @type pad_data :: bin_pad_data | element_pad_data

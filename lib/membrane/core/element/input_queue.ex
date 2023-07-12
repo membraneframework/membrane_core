@@ -37,7 +37,8 @@ defmodule Membrane.Core.Element.InputQueue do
           inbound_metric: module(),
           outbound_metric: module(),
           pad_ref: Pad.ref(),
-          atomic_demand: AtomicDemand.t()
+          atomic_demand: AtomicDemand.t(),
+          stalker_metrics: map()
         }
 
   @enforce_keys [
@@ -48,7 +49,7 @@ defmodule Membrane.Core.Element.InputQueue do
     :inbound_metric,
     :outbound_metric,
     :pad_ref,
-    :size_metric
+    :stalker_metrics
   ]
 
   defstruct @enforce_keys ++ [size: 0, demand: 0]
@@ -99,7 +100,7 @@ defmodule Membrane.Core.Element.InputQueue do
       outbound_metric: outbound_metric,
       atomic_demand: atomic_demand,
       pad_ref: pad_ref,
-      size_metric: size_metric
+      stalker_metrics: %{size: size_metric}
     }
     |> maybe_increase_atomic_demand()
   end
@@ -108,7 +109,8 @@ defmodule Membrane.Core.Element.InputQueue do
   def store(input_queue, type \\ :buffers, v)
 
   def store(input_queue, :buffers, v) when is_list(v) do
-    %__MODULE__{size: size, target_size: target_size, size_metric: size_metric} = input_queue
+    %__MODULE__{size: size, target_size: target_size, stalker_metrics: stalker_metrics} =
+      input_queue
 
     if size >= target_size do
       """
@@ -122,7 +124,7 @@ defmodule Membrane.Core.Element.InputQueue do
     %__MODULE__{size: size} = input_queue = do_store_buffers(input_queue, v)
 
     Telemetry.report_metric(:store, size, input_queue.log_tag)
-    :atomics.put(size_metric, 1, size)
+    :atomics.put(stalker_metrics.size, 1, size)
 
     input_queue
   end
@@ -172,9 +174,9 @@ defmodule Membrane.Core.Element.InputQueue do
     {out, input_queue} = do_take(input_queue, count)
     input_queue = maybe_increase_atomic_demand(input_queue)
 
-    %{size: size, size_metric: size_metric} = input_queue
+    %{size: size, stalker_metrics: stalker_metrics} = input_queue
     Telemetry.report_metric(:take, size, input_queue.log_tag)
-    :atomics.put(size_metric, 1, size)
+    :atomics.put(stalker_metrics.size, 1, size)
 
     {out, input_queue}
   end

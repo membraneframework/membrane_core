@@ -31,13 +31,13 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
         auto_demand_size: auto_demand_size,
         demand: demand,
         atomic_demand: atomic_demand,
-        demand_metric: demand_metric
+        metrics: metrics
       } = pad_data
 
       diff = auto_demand_size - demand
       :ok = AtomicDemand.increase(atomic_demand, diff)
 
-      :atomics.put(demand_metric, 1, auto_demand_size)
+      :atomics.put(metrics.demand, 1, auto_demand_size)
       PadModel.set_data!(state, ref, :demand, auto_demand_size)
     else
       state
