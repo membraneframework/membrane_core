@@ -230,7 +230,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def handle_action({:end_of_stream, pad_ref}, _callback, _params, %State{type: type} = state)
       when is_pad_ref(pad_ref) and type != :sink do
-    send_event(pad_ref, %Events.EndOfStream{}, state)
+    send_event(pad_ref, %Events.EndOfStream{explicit?: true}, state)
   end
 
   @impl CallbackHandler

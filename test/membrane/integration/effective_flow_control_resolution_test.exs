@@ -124,6 +124,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     end
   end
 
+  @tag :dupa
   test "effective_flow_control switches between :push and :pull" do
     spec =
       Enum.reduce(

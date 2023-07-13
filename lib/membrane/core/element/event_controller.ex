@@ -77,9 +77,20 @@ defmodule Membrane.Core.Element.EventController do
     data = PadModel.get_data!(state, pad_ref)
     callback = stream_event_to_callback(event)
 
+    context =
+      case event_type do
+        Events.StartOfStream ->
+          &CallbackContext.from_state/1
+
+        Events.EndOfStream ->
+          &CallbackContext.from_state(&1,
+            preceded_by_start_of_stream?: PadModel.get_data!(&1, pad_ref, :start_of_stream?)
+          )
+      end
+
     new_params =
       Map.merge(params, %{
-        context: &CallbackContext.from_state/1,
+        context: context,
         direction: data.direction
       })
 
@@ -134,21 +145,25 @@ defmodule Membrane.Core.Element.EventController do
     {:handle, state}
   end
 
-  defp handle_special_event(pad_ref, %Events.EndOfStream{}, state) do
+  defp handle_special_event(pad_ref, %Events.EndOfStream{explicit?: explicit?}, state) do
     pad_data = PadModel.get_data!(state, pad_ref)
 
-    with %{start_of_stream?: true, end_of_stream?: false} <- pad_data do
-      state = PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
-      state = PadController.remove_pad_associations(pad_ref, state)
-      {:handle, state}
-    else
-      %{end_of_stream?: true} ->
+    cond do
+      pad_data.end_of_stream? ->
         Membrane.Logger.debug("Ignoring end of stream as it has already arrived before")
         {:ignore, state}
 
-      %{start_of_stream?: false} ->
-        Membrane.Logger.debug("Ignoring end of stream as start of stream hasn't arrived yet")
+      not explicit? and not pad_data.start_of_stream? ->
+        Membrane.Logger.debug(
+          "Ignoring end of stream as start of stream hasn't arrived yet and end of stream hasn't been sent explicite"
+        )
+
         {:ignore, state}
+
+      true ->
+        state = PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
+        state = PadController.remove_pad_associations(pad_ref, state)
+        {:handle, state}
     end
   end
 

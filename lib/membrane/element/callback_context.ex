@@ -25,6 +25,7 @@ defmodule Membrane.Element.CallbackContext do
           :utility_supervisor => Membrane.UtilitySupervisor.t(),
           optional(:incoming_demand) => non_neg_integer(),
           optional(:pad_options) => map(),
-          optional(:old_stream_format) => Membrane.StreamFormat.t()
+          optional(:old_stream_format) => Membrane.StreamFormat.t(),
+          optional(:preceded_by_start_of_stream?) => boolean()
         }
 end
