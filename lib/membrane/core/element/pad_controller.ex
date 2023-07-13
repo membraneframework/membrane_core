@@ -62,55 +62,48 @@ defmodule Membrane.Core.Element.PadController do
       "Element handle link on pad #{inspect(endpoint.pad_ref)} with pad #{inspect(other_endpoint.pad_ref)} of child #{inspect(other_endpoint.child)}"
     )
 
-    name = endpoint.pad_ref |> Pad.name_by_ref()
+    pad_name = Pad.name_by_ref(endpoint.pad_ref)
 
-    info =
-      case Map.fetch(state.pads_info, name) do
-        {:ok, info} ->
-          info
+    pad_info =
+      case Map.fetch(state.pads_info, pad_name) do
+        {:ok, pad_info} ->
+          pad_info
 
         :error ->
           raise LinkError,
-                "Tried to link via unknown pad #{inspect(name)} of #{inspect(state.name)}"
+                "Tried to link via unknown pad #{inspect(pad_name)} of #{inspect(state.name)}"
       end
 
-    :ok = Child.PadController.validate_pad_being_linked!(direction, info)
-
-    do_handle_link(direction, endpoint, other_endpoint, info, link_props, state)
+    :ok = Child.PadController.validate_pad_direction!(direction, pad_info)
+    do_handle_link(direction, endpoint, other_endpoint, pad_info, link_props, state)
   end
 
-  defp do_handle_link(:output, endpoint, other_endpoint, info, props, state) do
-    effective_flow_control =
+  defp do_handle_link(:output, endpoint, other_endpoint, pad_info, props, state) do
+    pad_effective_flow_control =
       EffectiveFlowController.get_pad_effective_flow_control(endpoint.pad_ref, state)
 
     handle_link_response =
       Message.call(other_endpoint.pid, :handle_link, [
-        Pad.opposite_direction(info.direction),
+        Pad.opposite_direction(pad_info.direction),
         other_endpoint,
         endpoint,
         %{
-          other_info: info,
+          other_info: pad_info,
           link_metadata: %{
             observability_metadata: Observability.setup_link(endpoint.pad_ref)
           },
           stream_format_validation_params: [],
-          other_effective_flow_control: effective_flow_control
+          other_effective_flow_control: pad_effective_flow_control
         }
       ])
 
     case handle_link_response do
       {:ok, {other_endpoint, other_info, link_metadata}} ->
-        :ok =
-          Child.PadController.validate_pad_mode!(
-            {endpoint.pad_ref, info},
-            {other_endpoint.pad_ref, other_info}
-          )
-
         state =
           init_pad_data(
             endpoint,
             other_endpoint,
-            info,
+            pad_info,
             props.stream_format_validation_params,
             :push,
             other_info,
@@ -137,7 +130,7 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  defp do_handle_link(:input, endpoint, other_endpoint, info, link_props, state) do
+  defp do_handle_link(:input, endpoint, other_endpoint, pad_info, link_props, state) do
     %{
       other_info: other_info,
       link_metadata: link_metadata,
@@ -145,9 +138,10 @@ defmodule Membrane.Core.Element.PadController do
       other_effective_flow_control: other_effective_flow_control
     } = link_props
 
-    if info.direction != :input, do: raise("pad direction #{inspect(info.direction)} is wrong")
+    if pad_info.direction != :input,
+      do: raise("pad direction #{inspect(pad_info.direction)} is wrong")
 
-    {output_demand_unit, input_demand_unit} = resolve_demand_units(other_info, info)
+    {output_demand_unit, input_demand_unit} = resolve_demand_units(other_info, pad_info)
 
     link_metadata =
       Map.merge(link_metadata, %{
@@ -176,16 +170,18 @@ defmodule Membrane.Core.Element.PadController do
     link_metadata = Map.put(link_metadata, :atomic_demand, atomic_demand)
 
     :ok =
-      Child.PadController.validate_pad_mode!(
-        {endpoint.pad_ref, info},
-        {other_endpoint.pad_ref, other_info}
+      Child.PadController.validate_pads_flow_control_compability!(
+        other_endpoint.pad_ref,
+        other_info.flow_control,
+        endpoint.pad_ref,
+        pad_info.flow_control
       )
 
     state =
       init_pad_data(
         endpoint,
         other_endpoint,
-        info,
+        pad_info,
         stream_format_validation_params,
         other_effective_flow_control,
         other_info,
@@ -207,7 +203,7 @@ defmodule Membrane.Core.Element.PadController do
       end
 
     state = maybe_handle_pad_added(endpoint.pad_ref, state)
-    {{:ok, {endpoint, info, link_metadata}}, state}
+    {{:ok, {endpoint, pad_info, link_metadata}}, state}
   end
 
   @doc """
@@ -265,21 +261,21 @@ defmodule Membrane.Core.Element.PadController do
   defp init_pad_data(
          endpoint,
          other_endpoint,
-         info,
+         pad_info,
          stream_format_validation_params,
          other_effective_flow_control,
          other_info,
          metadata,
          state
        ) do
-    data =
-      info
+    pad_data =
+      pad_info
       |> Map.delete(:accepted_formats_str)
       |> Map.merge(%{
         pid: other_endpoint.pid,
         other_ref: other_endpoint.pad_ref,
         options:
-          Child.PadController.parse_pad_options!(info.name, endpoint.pad_props.options, state),
+          Child.PadController.parse_pad_options!(pad_info.name, endpoint.pad_props.options, state),
         ref: endpoint.pad_ref,
         stream_format_validation_params: stream_format_validation_params,
         other_effective_flow_control: other_effective_flow_control,
@@ -292,28 +288,36 @@ defmodule Membrane.Core.Element.PadController do
 
     :ok =
       AtomicDemand.set_sender_status(
-        data.atomic_demand,
-        {:resolved, EffectiveFlowController.get_pad_effective_flow_control(data.ref, state)}
+        pad_data.atomic_demand,
+        {:resolved, EffectiveFlowController.get_pad_effective_flow_control(pad_data.ref, state)}
       )
 
-    data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, metadata, state))
+    pad_data =
+      pad_data
+      |> Map.merge(init_pad_direction_data(pad_data, metadata, state))
 
-    data =
-      data |> Map.merge(init_pad_mode_data(data, endpoint.pad_props, other_info, metadata, state))
+    pad_data =
+      pad_data
+      |> Map.merge(init_pad_mode_data(pad_data, endpoint.pad_props, other_info, state))
+      |> then(&struct!(Membrane.Element.PadData, &1))
 
-    data = struct!(Membrane.Element.PadData, data)
-    state = put_in(state, [:pads_data, endpoint.pad_ref], data)
+    state = put_in(state, [:pads_data, endpoint.pad_ref], pad_data)
 
-    if data.flow_control == :auto do
+    if pad_data.flow_control == :auto do
       state =
         state.pads_data
         |> Map.values()
-        |> Enum.filter(&(&1.direction != data.direction and &1.flow_control == :auto))
-        |> Enum.reduce(state, fn other_data, state ->
-          PadModel.update_data!(state, other_data.ref, :associated_pads, &[data.ref | &1])
+        |> Enum.filter(&(&1.direction != pad_data.direction and &1.flow_control == :auto))
+        |> Enum.reduce(state, fn opposite_pad_data, state ->
+          PadModel.update_data!(
+            state,
+            opposite_pad_data.ref,
+            :associated_pads,
+            &[pad_data.ref | &1]
+          )
         end)
 
-      if data.direction == :input,
+      if pad_data.direction == :input,
         do: AutoFlowUtils.auto_adjust_atomic_demand(endpoint.pad_ref, state),
         else: state
     else
@@ -321,21 +325,20 @@ defmodule Membrane.Core.Element.PadController do
     end
   end
 
-  defp init_pad_direction_data(%{direction: :input}, _props, metadata, _state),
+  defp init_pad_direction_data(%{direction: :input}, metadata, _state),
     do: %{
       sticky_messages: [],
       demand_unit: metadata.input_demand_unit,
       other_demand_unit: metadata.output_demand_unit
     }
 
-  defp init_pad_direction_data(%{direction: :output}, _props, metadata, _state),
+  defp init_pad_direction_data(%{direction: :output}, metadata, _state),
     do: %{demand_unit: metadata.output_demand_unit, other_demand_unit: metadata.input_demand_unit}
 
   defp init_pad_mode_data(
          %{direction: :input, flow_control: :manual} = data,
          props,
          other_info,
-         _metadata,
          %State{}
        ) do
     %{
@@ -362,7 +365,6 @@ defmodule Membrane.Core.Element.PadController do
          %{direction: :output, flow_control: :manual},
          _props,
          _other_info,
-         _metadata,
          _state
        ) do
     %{demand: 0}
@@ -372,7 +374,6 @@ defmodule Membrane.Core.Element.PadController do
          %{flow_control: :auto, direction: direction} = data,
          props,
          _other_info,
-         _metadata,
          %State{} = state
        ) do
     associated_pads =
@@ -402,7 +403,7 @@ defmodule Membrane.Core.Element.PadController do
     }
   end
 
-  defp init_pad_mode_data(_data, _props, _other_info, _metadata, _state), do: %{}
+  defp init_pad_mode_data(_data, _props, _other_info, _state), do: %{}
 
   @doc """
   Generates end of stream on the given input pad if it hasn't been generated yet
