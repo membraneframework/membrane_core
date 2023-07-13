@@ -1,27 +1,3 @@
-defmodule Membrane.ClockTest.Sync do
-  use ExUnit.Case, async: false
-
-  @module Membrane.Clock
-
-  @initial_ratio Ratio.new(1)
-
-  test "should send proper ratio when default time provider is used" do
-    ratio_error = 0.3
-    {:ok, clock} = @module.start_link()
-    @module.subscribe(clock)
-    assert_receive {:membrane_clock_ratio, ^clock, @initial_ratio}
-    send(clock, {:membrane_clock_update, 100})
-    Process.send_after(clock, {:membrane_clock_update, 100}, 50)
-    Process.send_after(clock, {:membrane_clock_update, random_time()}, 100)
-    assert_receive {:membrane_clock_ratio, ^clock, ratio}
-    assert_in_delta Ratio.to_float(ratio), 100 / 50, ratio_error
-    assert_receive {:membrane_clock_ratio, ^clock, ratio}
-    assert_in_delta Ratio.to_float(ratio), 100 / 50, ratio_error
-  end
-
-  defp random_time, do: :rand.uniform(10_000)
-end
-
 defmodule Membrane.ClockTest do
   use ExUnit.Case, async: true
 
@@ -270,4 +246,28 @@ defmodule Membrane.ClockTest do
   defp random_time, do: :rand.uniform(10_000)
 
   defp ms_to_ns(e), do: e * 1_000_000
+
+  defmodule Sync do
+    use ExUnit.Case, async: false
+
+    @module Membrane.Clock
+
+    @initial_ratio Ratio.new(1)
+
+    test "should send proper ratio when default time provider is used" do
+      ratio_error = 0.3
+      {:ok, clock} = @module.start_link()
+      @module.subscribe(clock)
+      assert_receive {:membrane_clock_ratio, ^clock, @initial_ratio}
+      send(clock, {:membrane_clock_update, 100})
+      Process.send_after(clock, {:membrane_clock_update, 100}, 50)
+      Process.send_after(clock, {:membrane_clock_update, random_time()}, 100)
+      assert_receive {:membrane_clock_ratio, ^clock, ratio}
+      assert_in_delta Ratio.to_float(ratio), 100 / 50, ratio_error
+      assert_receive {:membrane_clock_ratio, ^clock, ratio}
+      assert_in_delta Ratio.to_float(ratio), 100 / 50, ratio_error
+    end
+
+    defp random_time, do: :rand.uniform(10_000)
+  end
 end
