@@ -4,9 +4,7 @@ defmodule Membrane.Core.Element.PadController do
   # Module handling linking and unlinking pads.
 
   use Bunch
-  alias Membrane.{LinkError, Pad}
-  alias Membrane.Core.{CallbackHandler, Child, Events, Message, Observability}
-  alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.{CallbackHandler, Child, Events}
 
   alias Membrane.Core.Element.{
     ActionHandler,
@@ -21,11 +19,13 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Element.DemandController.AutoFlowUtils
   alias Membrane.Core.Parent.Link.Endpoint
+  alias Membrane.LinkError
 
-  require Membrane.Core.Child.PadModel
-  require Membrane.Core.Message
+  require Membrane.Core.Child.PadModel, as: PadModel
+  require Membrane.Core.Message, as: Message
+  require Membrane.Core.Stalker, as: Stalker
   require Membrane.Logger
-  require Membrane.Pad
+  require Membrane.Pad, as: Pad
 
   @type link_call_props ::
           %{
@@ -91,7 +91,7 @@ defmodule Membrane.Core.Element.PadController do
         %{
           other_info: info,
           link_metadata: %{
-            observability_metadata: Observability.setup_link(endpoint.pad_ref)
+            observability_data: Stalker.generate_observability_data_for_link(endpoint.pad_ref)
           },
           stream_format_validation_params: [],
           other_effective_flow_control: effective_flow_control
@@ -170,8 +170,12 @@ defmodule Membrane.Core.Element.PadController do
         throttling_factor: endpoint.pad_props[:throttling_factor]
       })
 
-    # The sibiling was an initiator, we don't need to use the pid of a task spawned for observability
-    _metadata = Observability.setup_link(endpoint.pad_ref, link_metadata.observability_metadata)
+    Stalker.register_link(
+      state.stalker,
+      endpoint.pad_ref,
+      other_endpoint.pad_ref,
+      link_metadata.observability_data
+    )
 
     link_metadata = Map.put(link_metadata, :atomic_demand, atomic_demand)
 
@@ -207,6 +211,16 @@ defmodule Membrane.Core.Element.PadController do
       end
 
     state = maybe_handle_pad_added(endpoint.pad_ref, state)
+
+    link_metadata = %{
+      link_metadata
+      | observability_data:
+          Stalker.generate_observability_data_for_link(
+            endpoint.pad_ref,
+            link_metadata.observability_data
+          )
+    }
+
     {{:ok, {endpoint, info, link_metadata}}, state}
   end
 
@@ -221,6 +235,7 @@ defmodule Membrane.Core.Element.PadController do
   @spec handle_unlink(Pad.ref(), State.t()) :: State.t()
   def handle_unlink(pad_ref, state) do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
+      Stalker.unregister_link(state.stalker, pad_ref)
       state = generate_eos_if_needed(pad_ref, state)
       state = maybe_handle_pad_removed(pad_ref, state)
       state = remove_pad_associations(pad_ref, state)
@@ -272,37 +287,53 @@ defmodule Membrane.Core.Element.PadController do
          metadata,
          state
        ) do
+    total_buffers_metric = :atomics.new(1, [])
+
+    Membrane.Core.Stalker.register_metric_function(
+      :total_buffers,
+      fn -> :atomics.get(total_buffers_metric, 1) end,
+      pad: endpoint.pad_ref
+    )
+
+    Membrane.Core.Stalker.register_metric_function(
+      :atomic_demand,
+      fn -> AtomicDemand.get(metadata.atomic_demand) end,
+      pad: endpoint.pad_ref
+    )
+
     data =
       info
       |> Map.delete(:accepted_formats_str)
-      |> Map.merge(%{
-        pid: other_endpoint.pid,
-        other_ref: other_endpoint.pad_ref,
-        options:
-          Child.PadController.parse_pad_options!(info.name, endpoint.pad_props.options, state),
-        ref: endpoint.pad_ref,
-        stream_format_validation_params: stream_format_validation_params,
-        other_effective_flow_control: other_effective_flow_control,
-        stream_format: nil,
-        start_of_stream?: false,
-        end_of_stream?: false,
-        associated_pads: [],
-        atomic_demand: metadata.atomic_demand
-      })
+      |> merge_pad_data(
+        &%{
+          pid: other_endpoint.pid,
+          other_ref: other_endpoint.pad_ref,
+          options:
+            Child.PadController.parse_pad_options!(&1.name, endpoint.pad_props.options, state),
+          ref: endpoint.pad_ref,
+          stream_format_validation_params: stream_format_validation_params,
+          other_effective_flow_control: other_effective_flow_control,
+          stream_format: nil,
+          start_of_stream?: false,
+          end_of_stream?: false,
+          associated_pads: [],
+          atomic_demand: metadata.atomic_demand,
+          stalker_metrics: %{
+            total_buffers: total_buffers_metric
+          }
+        }
+      )
+      |> merge_pad_data(&init_pad_direction_data(&1, endpoint.pad_props, metadata, state))
+      |> merge_pad_data(&init_pad_mode_data(&1, endpoint.pad_props, other_info, metadata, state))
+      |> then(&struct!(Membrane.Element.PadData, &1))
+
+    state = put_in(state, [:pads_data, endpoint.pad_ref], data)
 
     :ok =
       AtomicDemand.set_sender_status(
         data.atomic_demand,
         {:resolved, EffectiveFlowController.get_pad_effective_flow_control(data.ref, state)}
       )
-
-    data = data |> Map.merge(init_pad_direction_data(data, endpoint.pad_props, metadata, state))
-
-    data =
-      data |> Map.merge(init_pad_mode_data(data, endpoint.pad_props, other_info, metadata, state))
-
-    data = struct!(Membrane.Element.PadData, data)
-    state = put_in(state, [:pads_data, endpoint.pad_ref], data)
 
     if data.flow_control == :auto do
       state =
@@ -319,6 +350,13 @@ defmodule Membrane.Core.Element.PadController do
     else
       state
     end
+  end
+
+  defp merge_pad_data(pad_data, fun) do
+    Map.merge(pad_data, fun.(pad_data), fn
+      :stalker_metrics, m1, m2 -> Map.merge(m1, m2)
+      _key, _v1, v2 -> v2
+    end)
   end
 
   defp init_pad_direction_data(%{direction: :input}, _props, metadata, _state),
@@ -340,7 +378,6 @@ defmodule Membrane.Core.Element.PadController do
        ) do
     %{
       ref: ref,
-      other_ref: other_ref,
       demand_unit: this_demand_unit,
       atomic_demand: atomic_demand
     } = data
@@ -350,7 +387,7 @@ defmodule Membrane.Core.Element.PadController do
         inbound_demand_unit: other_info[:demand_unit] || this_demand_unit,
         outbound_demand_unit: this_demand_unit,
         atomic_demand: atomic_demand,
-        linked_output_ref: other_ref,
+        pad_ref: ref,
         log_tag: inspect(ref),
         target_size: props.target_queue_size
       })
@@ -395,10 +432,21 @@ defmodule Membrane.Core.Element.PadController do
           metric.buffer_size_approximation() * @default_auto_demand_size_factor
       end
 
+    demand_metric =
+      if direction == :input do
+        :atomics.new(1, [])
+        |> tap(
+          &Stalker.register_metric_function(:auto_demand_size, fn -> :atomics.get(&1, 1) end,
+            pad: data.ref
+          )
+        )
+      end
+
     %{
       demand: 0,
       associated_pads: associated_pads,
-      auto_demand_size: auto_demand_size
+      auto_demand_size: auto_demand_size,
+      stalker_metrics: %{demand: demand_metric}
     }
   end
 

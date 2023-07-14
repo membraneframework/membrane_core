@@ -18,14 +18,13 @@ defmodule Membrane.Core.Element do
   use Bunch
   use GenServer
 
-  alias Membrane.Core.Element.DemandHandler
   alias Membrane.{Clock, Core, ResourceGuard, Sync}
-
-  alias Membrane.Core.{SubprocessSupervisor, TimerController}
+  alias Membrane.Core.Child.PadSpecHandler
 
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
+    DemandHandler,
     EffectiveFlowController,
     EventController,
     LifecycleController,
@@ -34,7 +33,10 @@ defmodule Membrane.Core.Element do
     StreamFormatController
   }
 
+  alias Membrane.Core.{SubprocessSupervisor, TimerController}
+
   require Membrane.Core.Message, as: Message
+  require Membrane.Core.Stalker, as: Stalker
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
@@ -98,13 +100,13 @@ defmodule Membrane.Core.Element do
 
     observability_config = %{
       name: options.name,
-      component_type: :bin,
+      component_type: :element,
       pid: self(),
       parent_path: options.parent_path,
       log_metadata: options.log_metadata
     }
 
-    Membrane.Core.Observability.setup(observability_config)
+    Membrane.Core.Stalker.register_component(options.stalker, observability_config)
     SubprocessSupervisor.set_parent_component(options.subprocess_supervisor, observability_config)
 
     {:ok, resource_guard} =
@@ -114,10 +116,46 @@ defmodule Membrane.Core.Element do
 
     ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:element) end)
 
+    self_pid = self()
+
+    Stalker.register_metric_function(:message_queue_length, fn ->
+      :erlang.process_info(self_pid, :message_queue_len) |> elem(1)
+    end)
+
+    Stalker.register_metric_function(:total_reductions, fn ->
+      :erlang.process_info(self_pid, :reductions) |> elem(1)
+    end)
+
     state =
-      Map.take(options, [:module, :name, :parent_clock, :sync, :parent, :subprocess_supervisor])
-      |> Map.put(:resource_guard, resource_guard)
-      |> State.new()
+      %State{
+        module: options.module,
+        type: options.module.membrane_element_type(),
+        name: options.name,
+        internal_state: nil,
+        parent_pid: options.parent,
+        supplying_demand?: false,
+        delayed_demands: MapSet.new(),
+        handle_demand_loop_counter: 0,
+        synchronization: %{
+          parent_clock: options.parent_clock,
+          timers: %{},
+          clock: nil,
+          stream_sync: options.sync,
+          latency: 0
+        },
+        initialized?: false,
+        playback: :stopped,
+        playback_queue: [],
+        resource_guard: resource_guard,
+        subprocess_supervisor: options.subprocess_supervisor,
+        terminating?: false,
+        setup_incomplete?: false,
+        effective_flow_control: :push,
+        handling_action?: false,
+        pads_to_snapshot: MapSet.new(),
+        stalker: options.stalker
+      }
+      |> PadSpecHandler.init_pads()
 
     state = LifecycleController.handle_init(options.user_options, state)
     {:ok, state, {:continue, :setup}}
