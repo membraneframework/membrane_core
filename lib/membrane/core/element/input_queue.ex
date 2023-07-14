@@ -38,7 +38,7 @@ defmodule Membrane.Core.Element.InputQueue do
           outbound_metric: module(),
           pad_ref: Pad.ref(),
           atomic_demand: AtomicDemand.t(),
-          stalker_metrics: map()
+          stalker_metrics: %{atom() => any()}
         }
 
   @enforce_keys [

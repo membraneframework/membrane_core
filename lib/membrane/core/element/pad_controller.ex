@@ -318,7 +318,7 @@ defmodule Membrane.Core.Element.PadController do
           end_of_stream?: false,
           associated_pads: [],
           atomic_demand: metadata.atomic_demand,
-          metrics: %{
+          stalker_metrics: %{
             total_buffers: total_buffers_metric
           }
         }
@@ -354,7 +354,7 @@ defmodule Membrane.Core.Element.PadController do
 
   defp merge_pad_data(pad_data, fun) do
     Map.merge(pad_data, fun.(pad_data), fn
-      :metrics, m1, m2 -> Map.merge(m1, m2)
+      :stalker_metrics, m1, m2 -> Map.merge(m1, m2)
       _key, _v1, v2 -> v2
     end)
   end
@@ -446,7 +446,7 @@ defmodule Membrane.Core.Element.PadController do
       demand: 0,
       associated_pads: associated_pads,
       auto_demand_size: auto_demand_size,
-      metrics: %{demand: demand_metric}
+      stalker_metrics: %{demand: demand_metric}
     }
   end
 
