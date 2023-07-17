@@ -23,7 +23,8 @@ defmodule Membrane.Core.Element.PadControllerTest do
       parent_pid: self(),
       internal_state: %{},
       synchronization: %{clock: nil, parent_clock: nil},
-      subprocess_supervisor: SubprocessSupervisor.start_link!()
+      subprocess_supervisor: SubprocessSupervisor.start_link!(),
+      stalker: %Membrane.Core.Stalker{pid: spawn(fn -> :ok end), ets: nil}
     )
     |> PadSpecHandler.init_pads()
   end
@@ -49,7 +50,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
                  },
                  %{
                    other_info: %{direction: :output, flow_control: :manual, demand_unit: :buffers},
-                   link_metadata: %{toilet: make_ref(), observability_metadata: %{}},
+                   link_metadata: %{toilet: make_ref(), observability_data: %{path: ""}},
                    stream_format_validation_params: [],
                    other_effective_flow_control: :pull
                  },

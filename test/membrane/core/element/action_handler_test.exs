@@ -33,13 +33,15 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
               direction: :input,
               pid: self(),
               flow_control: :manual,
-              demand: 0
+              demand: 0,
+              total_buffers_metric: :atomics.new(1, [])
             ),
           input_push:
             struct(Membrane.Element.PadData,
               direction: :input,
               pid: self(),
-              flow_control: :push
+              flow_control: :push,
+              total_buffers_metric: :atomics.new(1, [])
             )
         },
         pads_info: %{
@@ -119,7 +121,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             end_of_stream?: false,
             flow_control: :push,
             atomic_demand: output_atomic_demand,
-            demand: 0
+            demand: 0,
+            stalker_metrics: %{total_buffers: :atomics.new(1, [])}
           },
           input: %{
             direction: :input,
@@ -130,7 +133,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             end_of_stream?: false,
             flow_control: :push,
             atomic_demand: input_atomic_demand,
-            demand: 0
+            demand: 0,
+            stalker_metrics: %{total_buffers: :atomics.new(1, [])}
           }
         },
         pads_info: %{

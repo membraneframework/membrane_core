@@ -32,10 +32,11 @@ defmodule Membrane.Core.Pipeline.State do
           terminating?: boolean(),
           resource_guard: Membrane.ResourceGuard.t(),
           setup_incomplete?: boolean(),
-          handling_action?: boolean()
+          handling_action?: boolean(),
+          stalker: Membrane.Core.Stalker.t()
         }
 
-  @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard]
+  @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard, :stalker]
   defstruct @enforce_keys ++
               [
                 internal_state: nil,

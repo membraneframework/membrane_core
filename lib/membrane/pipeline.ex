@@ -48,14 +48,14 @@ defmodule Membrane.Pipeline do
 
   ### Visualizing pipeline's supervision tree
 
-  Pipeline's internal supervision tree can be looked up with Applications tab of Erlang's Observer
+  Pipeline's internal supervision tree can be looked up with Applications tab of Erlang's Stalker
   or with Livebook's `Kino` library.
   For debugging (and ONLY for debugging) purposes, you may use the following configuration:
 
-        config :membrane_core, unsafely_name_processes_for_observer: [:components]
+        config :membrane_core, unsafely_name_processes_for_stalker: [:components]
 
-  that makes the observer's process tree graph more readable by naming pipeline's descendants, for example:
-  ![Observer graph](assets/images/observer_graph.png).
+  that makes the stalker's process tree graph more readable by naming pipeline's descendants, for example:
+  ![Stalker graph](assets/images/stalker_graph.png).
   """
 
   use Bunch
@@ -400,6 +400,30 @@ defmodule Membrane.Pipeline do
   @spec pipeline?(module) :: boolean
   def pipeline?(module) do
     module |> Bunch.Module.check_behaviour(:membrane_pipeline?)
+  end
+
+  @doc """
+  Lists PIDs of all the pipelines currently running on the current node.
+
+  Use only for debugging purposes.
+  """
+  @spec list_pipelines() :: [pid]
+  def list_pipelines() do
+    Process.list()
+    |> Enum.filter(fn pid ->
+      case Process.info(pid, :dictionary) do
+        {:dictionary, dictionary} -> List.keyfind(dictionary, :__membrane_pipeline__, 0)
+        nil -> false
+      end
+    end)
+  end
+
+  @doc """
+  Like `list_pipelines/0`, but allows to pass a node.
+  """
+  @spec list_pipelines(node()) :: [pid]
+  def list_pipelines(node) do
+    :erpc.call(node, __MODULE__, :list_pipelines, [])
   end
 
   @doc false

@@ -8,9 +8,9 @@ defmodule Membrane.Core.Element.State do
   use Bunch.Access
 
   alias Membrane.{Clock, Element, Pad, Sync}
-  alias Membrane.Core.Timer
-  alias Membrane.Core.Child.{PadModel, PadSpecHandler}
+  alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.EffectiveFlowController
+  alias Membrane.Core.Timer
 
   require Membrane.Pad
 
@@ -41,7 +41,8 @@ defmodule Membrane.Core.Element.State do
           setup_incomplete?: boolean(),
           effective_flow_control: EffectiveFlowController.effective_flow_control(),
           handling_action?: boolean(),
-          pads_to_snapshot: MapSet.t()
+          pads_to_snapshot: MapSet.t(),
+          stalker: Membrane.Core.Stalker.t()
         }
 
   defstruct [
@@ -66,49 +67,7 @@ defmodule Membrane.Core.Element.State do
     :setup_incomplete?,
     :effective_flow_control,
     :handling_action?,
-    :pads_to_snapshot
+    :pads_to_snapshot,
+    :stalker
   ]
-
-  @doc """
-  Initializes new state.
-  """
-  @spec new(%{
-          module: module,
-          name: Element.name(),
-          parent_clock: Clock.t(),
-          sync: Sync.t(),
-          parent: pid,
-          resource_guard: Membrane.ResourceGuard.t(),
-          subprocess_supervisor: pid()
-        }) :: t
-  def new(options) do
-    %__MODULE__{
-      module: options.module,
-      type: options.module.membrane_element_type(),
-      name: options.name,
-      internal_state: nil,
-      parent_pid: options.parent,
-      supplying_demand?: false,
-      delayed_demands: MapSet.new(),
-      handle_demand_loop_counter: 0,
-      synchronization: %{
-        parent_clock: options.parent_clock,
-        timers: %{},
-        clock: nil,
-        stream_sync: options.sync,
-        latency: 0
-      },
-      initialized?: false,
-      playback: :stopped,
-      playback_queue: [],
-      resource_guard: options.resource_guard,
-      subprocess_supervisor: options.subprocess_supervisor,
-      terminating?: false,
-      setup_incomplete?: false,
-      effective_flow_control: :push,
-      handling_action?: false,
-      pads_to_snapshot: MapSet.new()
-    }
-    |> PadSpecHandler.init_pads()
-  end
 end

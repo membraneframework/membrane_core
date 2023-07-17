@@ -8,7 +8,6 @@ defmodule Membrane.Core.Element.DemandController do
   alias __MODULE__.AutoFlowUtils
 
   alias Membrane.Buffer
-  alias Membrane.Core.Child.PadModel
 
   alias Membrane.Core.Element.{
     AtomicDemand,
@@ -19,7 +18,7 @@ defmodule Membrane.Core.Element.DemandController do
 
   alias Membrane.Pad
 
-  require Membrane.Core.Child.PadModel
+  require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Logger
 
   @spec snapshot_atomic_demand(Pad.ref(), State.t()) :: State.t()
