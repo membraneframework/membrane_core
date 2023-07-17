@@ -3,6 +3,6 @@ defmodule Membrane.Core.Events.EndOfStream do
   # Sent by Membrane.Element.Action.end_of_stream/
   # Invokes `c:Membrane.Element.WithInputPads.end_of_stream/3` callback.
   @derive Membrane.EventProtocol
-  defstruct explicit?: false
-  @type t :: %__MODULE__{explicit?: boolean()}
+  defstruct []
+  @type t :: %__MODULE__{}
 end

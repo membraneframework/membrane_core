@@ -24,6 +24,11 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
       if state.lazy?, do: Process.sleep(100)
       {[forward: buffer], state}
     end
+
+    @impl true
+    def handle_end_of_stream(_pad, _ctx, state) do
+      {[], state}
+    end
   end
 
   defmodule DoubleFlowControlSource do

@@ -145,25 +145,14 @@ defmodule Membrane.Core.Element.EventController do
     {:handle, state}
   end
 
-  defp handle_special_event(pad_ref, %Events.EndOfStream{explicit?: explicit?}, state) do
-    pad_data = PadModel.get_data!(state, pad_ref)
-
-    cond do
-      pad_data.end_of_stream? ->
-        Membrane.Logger.debug("Ignoring end of stream as it has already arrived before")
-        {:ignore, state}
-
-      not explicit? and not pad_data.start_of_stream? ->
-        Membrane.Logger.debug(
-          "Ignoring end of stream as start of stream hasn't arrived yet and end of stream hasn't been sent explicite"
-        )
-
-        {:ignore, state}
-
-      true ->
-        state = PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
-        state = PadController.remove_pad_associations(pad_ref, state)
-        {:handle, state}
+  defp handle_special_event(pad_ref, %Events.EndOfStream{}, state) do
+    if PadModel.get_data!(state, pad_ref, :end_of_stream?) do
+      Membrane.Logger.debug("Ignoring end of stream as it has already arrived before")
+      {:ignore, state}
+    else
+      state = PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
+      state = PadController.remove_pad_associations(pad_ref, state)
+      {:handle, state}
     end
   end
 
