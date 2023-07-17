@@ -1,5 +1,5 @@
 defmodule Membrane.RCPipelineTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import Membrane.ChildrenSpec
 

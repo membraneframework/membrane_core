@@ -1,5 +1,5 @@
 defmodule Membrane.Integration.ChildPadRemovedTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias Membrane.Testing
 
