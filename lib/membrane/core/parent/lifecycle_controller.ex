@@ -134,9 +134,10 @@ defmodule Membrane.Core.Parent.LifecycleController do
           Membrane.Event.t(),
           Child.name(),
           Pad.ref(),
+          [preceded_by_start_of_stream?: boolean()],
           Parent.state()
         ) :: Parent.state()
-  def handle_stream_management_event(%event_type{}, element_name, pad_ref, state)
+  def handle_stream_management_event(%event_type{}, element_name, pad_ref, event_opts, state)
       when event_type in [Events.StartOfStream, Events.EndOfStream] do
     callback =
       case event_type do
@@ -144,10 +145,21 @@ defmodule Membrane.Core.Parent.LifecycleController do
         Events.EndOfStream -> :handle_element_end_of_stream
       end
 
+    context =
+      case event_opts do
+        [] ->
+          &Component.context_from_state/1
+
+        [preceded_by_start_of_stream?: preceded_by_start_of_stream?] ->
+          &Component.context_from_state(&1,
+            preceded_by_start_of_stream?: preceded_by_start_of_stream?
+          )
+      end
+
     CallbackHandler.exec_and_handle_callback(
       callback,
       Component.action_handler(state),
-      %{context: &Component.context_from_state/1},
+      %{context: context},
       [element_name, pad_ref],
       state
     )

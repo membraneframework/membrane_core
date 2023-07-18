@@ -8,6 +8,9 @@ defmodule Membrane.Pipeline.CallbackContext do
 
   Field `:from` is present only in `c:Membrane.Pipeline.handle_call/3`.
 
+  Field `:preceded_by_start_of_stream?` is present only in
+  `c:Membrane.Pipeline.handle_element_end_of_stream/4`.
+
   Fields `:members` and `:crash_initiator` are present only in
   `c:Membrane.Pipeline.handle_crash_group_down/3`.
   """
@@ -19,6 +22,7 @@ defmodule Membrane.Pipeline.CallbackContext do
           :utility_supervisor => Membrane.UtilitySupervisor.t(),
           optional(:from) => [GenServer.from()],
           optional(:members) => [Membrane.Child.name()],
-          optional(:crash_initiator) => Membrane.Child.name()
+          optional(:crash_initiator) => Membrane.Child.name(),
+          optional(:preceded_by_start_of_stream?) => boolean()
         }
 end

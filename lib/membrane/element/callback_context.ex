@@ -12,6 +12,9 @@ defmodule Membrane.Element.CallbackContext do
   Field `:pad_options` is present only in `c:Membrane.Element.Base.handle_pad_added/3`
   and `c:Membrane.Element.Base.handle_pad_removed/3`.
 
+  Field `:preceded_by_start_of_stream?` is present only in
+  `c:Membrane.Element.handle_end_of_stream/3`.
+
   Field `:old_stream_format` is present only in
   `c:Membrane.Element.WithInputPads.handle_stream_format/4`.
   """

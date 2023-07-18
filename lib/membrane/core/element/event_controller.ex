@@ -76,17 +76,7 @@ defmodule Membrane.Core.Element.EventController do
        when event_type in [Events.StartOfStream, Events.EndOfStream] do
     data = PadModel.get_data!(state, pad_ref)
     callback = stream_event_to_callback(event)
-
-    context =
-      case event_type do
-        Events.StartOfStream ->
-          &CallbackContext.from_state/1
-
-        Events.EndOfStream ->
-          &CallbackContext.from_state(&1,
-            preceded_by_start_of_stream?: PadModel.get_data!(&1, pad_ref, :start_of_stream?)
-          )
-      end
+    context = stream_event_to_callback_context(event, pad_ref)
 
     new_params =
       Map.merge(params, %{
@@ -103,10 +93,13 @@ defmodule Membrane.Core.Element.EventController do
         state
       )
 
+    event_opts = stream_event_to_parent_message_opts(event, pad_ref, state)
+
     Message.send(state.parent_pid, :stream_management_event, [
       state.name,
       pad_ref,
-      event
+      event,
+      event_opts
     ])
 
     state
@@ -116,11 +109,26 @@ defmodule Membrane.Core.Element.EventController do
     data = PadModel.get_data!(state, pad_ref)
 
     params =
-      %{context: &CallbackContext.from_state/1, direction: data.direction} |> Map.merge(params)
+      %{context: &CallbackContext.from_state/1, direction: data.direction}
+      |> Map.merge(params)
 
     args = [pad_ref, event]
     CallbackHandler.exec_and_handle_callback(:handle_event, ActionHandler, params, args, state)
   end
+
+  defp stream_event_to_callback_context(%Events.StartOfStream{}, _pad_ref),
+    do: &CallbackContext.from_state/1
+
+  defp stream_event_to_callback_context(%Events.EndOfStream{}, pad_ref) do
+    &CallbackContext.from_state(&1,
+      preceded_by_start_of_stream?: PadModel.get_data!(&1, pad_ref, :start_of_stream?)
+    )
+  end
+
+  defp stream_event_to_parent_message_opts(%Events.StartOfStream{}, _pad_ref, _state), do: []
+
+  defp stream_event_to_parent_message_opts(%Events.EndOfStream{}, pad_ref, state),
+    do: [preceded_by_start_of_stream?: PadModel.get_data!(state, pad_ref, :start_of_stream?)]
 
   defp check_sync(%Events.StartOfStream{}, state) do
     if state.pads_data
