@@ -1,5 +1,5 @@
 defmodule Membrane.Integration.DistributedPipelineTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
 
@@ -39,8 +39,6 @@ defmodule Membrane.Integration.DistributedPipelineTest do
   end
 
   defp start_another_node() do
-    System.cmd("epmd", ["-daemon"])
-    _start_result = Node.start(:"first@127.0.0.1", :longnames)
     {:ok, _pid, hostname} = :peer.start(%{host: ~c"127.0.0.1", name: :second})
     :rpc.block_call(hostname, :code, :add_paths, [:code.get_path()])
     hostname

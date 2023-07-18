@@ -253,11 +253,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       StartupUtils.start_children(
         children,
         options.node,
-        state.synchronization.clock_proxy,
         syncs,
         log_metadata,
-        state.subprocess_supervisor,
-        options.group
+        options.group,
+        state
       )
 
     :ok = StartupUtils.maybe_activate_syncs(syncs, state)

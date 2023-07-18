@@ -1,5 +1,5 @@
 defmodule Membrane.Integration.LinkingTest do
-  use ExUnit.Case, async?: true
+  use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
   import Membrane.ChildrenSpec

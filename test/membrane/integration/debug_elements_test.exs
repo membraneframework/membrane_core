@@ -1,5 +1,5 @@
 defmodule Membrane.Integration.DebugElementsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions

@@ -34,7 +34,13 @@ defmodule Membrane.Core.Element.BufferController do
   def handle_buffer(pad_ref, buffers, state) do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
-      %{direction: :input, start_of_stream?: start_of_stream?} = data
+      %{
+        direction: :input,
+        start_of_stream?: start_of_stream?,
+        stalker_metrics: stalker_metrics
+      } = data
+
+      :atomics.add(stalker_metrics.total_buffers, 1, length(buffers))
 
       state =
         if start_of_stream? do
@@ -57,10 +63,11 @@ defmodule Membrane.Core.Element.BufferController do
   @spec do_handle_buffer(Pad.ref(), PadModel.pad_data(), [Buffer.t()] | Buffer.t(), State.t()) ::
           State.t()
   defp do_handle_buffer(pad_ref, %{flow_control: :auto} = data, buffers, state) do
-    %{demand: demand, demand_unit: demand_unit} = data
+    %{demand: demand, demand_unit: demand_unit, stalker_metrics: stalker_metrics} = data
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
 
     state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
+    :atomics.put(stalker_metrics.demand, 1, demand - buf_size)
 
     state = AutoFlowUtils.auto_adjust_atomic_demand(pad_ref, state)
     exec_buffer_callback(pad_ref, buffers, state)

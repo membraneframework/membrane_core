@@ -1,6 +1,6 @@
 defmodule Membrane.Integration.DemandsTest do
   use Bunch
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   import ExUnit.Assertions
   import Membrane.ChildrenSpec

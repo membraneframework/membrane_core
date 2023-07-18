@@ -2,7 +2,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   @moduledoc false
   use Bunch
 
-  alias Membrane.{ChildEntry, Clock, Core, ParentError, Sync}
+  alias Membrane.{ChildEntry, Core, ParentError, Sync}
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent, SubprocessSupervisor}
   alias Membrane.Core.Parent.{ChildEntryParser, ChildLifeController}
 
@@ -67,20 +67,18 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   @spec start_children(
           [ChildEntryParser.raw_child_entry()],
           node() | nil,
-          parent_clock :: Clock.t(),
           syncs :: %{Membrane.Child.name() => pid()},
           log_metadata :: Keyword.t(),
-          supervisor :: pid,
-          group :: Membrane.Child.group()
+          group :: Membrane.Child.group(),
+          Parent.state()
         ) :: [ChildEntry.t()]
   def start_children(
         children,
         node,
-        parent_clock,
         syncs,
         log_metadata,
-        supervisor,
-        group
+        group,
+        state
       ) do
     # If the node is set to the current node, set it to nil, to avoid race conditions when
     # distribution changes
@@ -91,7 +89,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     )
 
     children
-    |> Enum.map(&start_child(&1, node, parent_clock, syncs, log_metadata, supervisor, group))
+    |> Enum.map(&start_child(&1, node, syncs, log_metadata, group, state))
   end
 
   @spec maybe_activate_syncs(%{Membrane.Child.name() => Sync.t()}, Parent.state()) ::
@@ -167,7 +165,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     :ok
   end
 
-  defp start_child(child, node, parent_clock, syncs, log_metadata, supervisor, group) do
+  defp start_child(child, node, syncs, log_metadata, group, state) do
     %ChildEntry{name: name, module: module, options: options} = child
 
     Membrane.Logger.debug(
@@ -182,11 +180,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       name: name,
       node: node,
       user_options: options,
-      parent_clock: parent_clock,
+      parent_clock: state.synchronization.clock_proxy,
       sync: sync,
       parent_path: Membrane.ComponentPath.get(),
       group: group,
-      log_metadata: log_metadata
+      log_metadata: log_metadata,
+      stalker: state.stalker
     }
 
     component_module =
@@ -205,7 +204,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
       end
 
     with {:ok, child_pid} <-
-           SubprocessSupervisor.start_component(supervisor, name, component_module, params),
+           SubprocessSupervisor.start_component(
+             state.subprocess_supervisor,
+             name,
+             component_module,
+             params
+           ),
          {:ok, clock} <- receive_clock(name) do
       %ChildEntry{
         child

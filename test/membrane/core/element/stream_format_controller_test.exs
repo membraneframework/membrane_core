@@ -29,7 +29,7 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :buffers,
         atomic_demand: atomic_demand,
-        linked_output_ref: :some_pad,
+        pad_ref: :some_pad,
         log_tag: "test",
         target_size: nil
       })

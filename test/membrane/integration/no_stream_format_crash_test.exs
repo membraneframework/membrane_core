@@ -1,5 +1,5 @@
 defmodule Membrane.FailWhenNoStreamFormatAreSent do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
   import Membrane.ChildrenSpec

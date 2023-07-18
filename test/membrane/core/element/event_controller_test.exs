@@ -1,5 +1,5 @@
 defmodule Membrane.Core.Element.EventControllerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Membrane.Core.Element.{AtomicDemand, EventController, InputQueue, State}
   alias Membrane.Core.Events
@@ -35,7 +35,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
       InputQueue.init(%{
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :buffers,
-        linked_output_ref: :some_pad,
+        pad_ref: :some_pad,
         log_tag: "test",
         atomic_demand: atomic_demand,
         target_size: nil,
