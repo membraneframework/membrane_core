@@ -329,7 +329,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       end
     end
 
-    @tag :asd
     test "with invalid event", %{state: state} do
       state = %{state | playback: :playing}
 

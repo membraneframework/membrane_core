@@ -145,21 +145,10 @@ defmodule Membrane.Core.Parent.LifecycleController do
         Events.EndOfStream -> :handle_element_end_of_stream
       end
 
-    context =
-      case event_opts do
-        [] ->
-          &Component.context_from_state/1
-
-        [preceded_by_start_of_stream?: preceded_by_start_of_stream?] ->
-          &Component.context_from_state(&1,
-            preceded_by_start_of_stream?: preceded_by_start_of_stream?
-          )
-      end
-
     CallbackHandler.exec_and_handle_callback(
       callback,
       Component.action_handler(state),
-      %{context: context},
+      %{context: &Component.context_from_state(&1, event_opts)},
       [element_name, pad_ref],
       state
     )
