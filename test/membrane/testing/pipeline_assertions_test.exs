@@ -1,5 +1,5 @@
 defmodule Membrane.Testing.PipelineAssertionsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
 

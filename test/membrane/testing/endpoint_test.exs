@@ -1,5 +1,5 @@
 defmodule Membrane.Testing.EndpointTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Membrane.Buffer
   alias Membrane.Testing.{Endpoint, Notification}

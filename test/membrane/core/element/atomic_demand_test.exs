@@ -1,5 +1,5 @@
 defmodule Membrane.Core.Element.AtomicDemandTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Membrane.Core.Element.AtomicDemand
   alias Membrane.Core.SubprocessSupervisor
@@ -126,8 +126,6 @@ defmodule Membrane.Core.Element.AtomicDemandTest do
   end
 
   defp setup_another_node() do
-    _cmd_result = System.cmd("epmd", ["-daemon"])
-    _start_result = Node.start(:"my_node@127.0.0.1", :longnames)
     {:ok, _pid, another_node} = :peer.start(%{host: ~c"127.0.0.1", name: :another_node})
     :rpc.block_call(another_node, :code, :add_paths, [:code.get_path()])
 

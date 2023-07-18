@@ -92,7 +92,7 @@ defmodule Membrane.Core.Bin do
       log_metadata: options.log_metadata
     }
 
-    Membrane.Core.Observability.setup(observability_config)
+    Membrane.Core.Stalker.register_component(options.stalker, observability_config)
     SubprocessSupervisor.set_parent_component(options.subprocess_supervisor, observability_config)
 
     clock_proxy = Membrane.Clock.start_link(proxy: true) ~> ({:ok, pid} -> pid)
@@ -122,7 +122,8 @@ defmodule Membrane.Core.Bin do
         },
         children_log_metadata: options.log_metadata,
         subprocess_supervisor: options.subprocess_supervisor,
-        resource_guard: resource_guard
+        resource_guard: resource_guard,
+        stalker: options.stalker
       }
       |> Child.PadSpecHandler.init_pads()
 

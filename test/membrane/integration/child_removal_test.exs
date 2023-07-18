@@ -1,6 +1,6 @@
 defmodule Membrane.Integration.ChildRemovalTest do
   use Bunch
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   import Membrane.Testing.Assertions
 

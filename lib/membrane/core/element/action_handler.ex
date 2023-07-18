@@ -8,6 +8,8 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
+  alias Membrane.Telemetry
+
   alias Membrane.{
     ActionError,
     Buffer,
@@ -19,8 +21,6 @@ defmodule Membrane.Core.Element.ActionHandler do
     StreamFormat
   }
 
-  alias Membrane.Core.Child.PadModel
-
   alias Membrane.Core.Element.{
     DemandController,
     DemandHandler,
@@ -29,12 +29,12 @@ defmodule Membrane.Core.Element.ActionHandler do
     StreamFormatController
   }
 
-  alias Membrane.Core.{Events, Message, Telemetry, TimerController}
+  alias Membrane.Core.{Events, TimerController}
   alias Membrane.Element.Action
 
-  require Membrane.Core.Child.PadModel
-  require Membrane.Core.Message
-  require Membrane.Core.Telemetry
+  require Membrane.Core.Child.PadModel, as: PadModel
+  require Membrane.Core.Message, as: Message
+  require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
   @impl CallbackHandler
@@ -320,10 +320,12 @@ defmodule Membrane.Core.Element.ActionHandler do
            end_of_stream?: false,
            stream_format: stream_format,
            pid: pid,
-           other_ref: other_ref
+           other_ref: other_ref,
+           stalker_metrics: stalker_metrics
          }
          when stream_format != nil <- pad_data do
       state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
+      :atomics.add(stalker_metrics.total_buffers, 1, length(buffers))
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
 
       PadModel.set_data!(state, pad_ref, :start_of_stream?, true)

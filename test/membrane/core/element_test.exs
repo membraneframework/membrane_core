@@ -52,21 +52,7 @@ defmodule Membrane.Core.ElementTest do
   end
 
   defp get_state do
-    {:ok, state, {:continue, :setup}} =
-      Element.init(%{
-        module: Filter,
-        user_options: nil,
-        name: :some_element,
-        parent_clock: nil,
-        sync: Membrane.Sync.no_sync(),
-        parent: self(),
-        parent_path: [],
-        log_metadata: [],
-        subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
-        parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
-        group: nil
-      })
-
+    {:ok, state, {:continue, :setup}} = Element.init(element_init_options(Filter))
     state
   end
 
@@ -128,7 +114,7 @@ defmodule Membrane.Core.ElementTest do
 
     reply_link_metadata = %{
       atomic_demand: output_atomic_demand,
-      observability_metadata: %{},
+      observability_data: %{path: ""},
       input_demand_unit: :buffers,
       output_demand_unit: :buffers
     }
@@ -145,7 +131,7 @@ defmodule Membrane.Core.ElementTest do
           output_other_endpoint,
           %{
             other_info: other_info,
-            link_metadata: %{atomic_demand: output_atomic_demand, observability_metadata: %{}},
+            link_metadata: %{atomic_demand: output_atomic_demand, observability_data: %{path: ""}},
             stream_format_validation_params: [],
             other_effective_flow_control: :pull
           }
@@ -175,7 +161,7 @@ defmodule Membrane.Core.ElementTest do
           %Endpoint{pad_spec: :output, pad_ref: :output, pid: self(), child: :other},
           %{
             other_info: %{direction: :output, flow_control: :manual},
-            link_metadata: %{toilet: nil, observability_metadata: %{}},
+            link_metadata: %{toilet: nil, observability_data: %{path: ""}},
             stream_format_validation_params: [],
             other_effective_flow_control: :pull
           }
@@ -289,7 +275,7 @@ defmodule Membrane.Core.ElementTest do
                      demand_unit: :buffers,
                      flow_control: :manual
                    },
-                   link_metadata: %{observability_metadata: %{}},
+                   link_metadata: %{observability_data: %{path: ""}},
                    stream_format_validation_params: [],
                    other_effective_flow_control: :pull
                  }
@@ -376,11 +362,7 @@ defmodule Membrane.Core.ElementTest do
   describe "Not linked element" do
     test "DOWN message should be delivered to handle_info" do
       parent_pid = self()
-
-      {:ok, elem_pid} =
-        parent_pid
-        |> element_init_options
-        |> Element.start()
+      {:ok, elem_pid} = Element.start(element_init_options(SomeElement))
 
       monitored_proc = spawn(fn -> receive do: (:exit -> :ok) end)
       on_exit(fn -> send(monitored_proc, :exit) end)
@@ -388,14 +370,14 @@ defmodule Membrane.Core.ElementTest do
       send(elem_pid, {:DOWN, ref, :process, monitored_proc, :normal})
 
       assert_receive Message.new(:child_notification, [
-                       :name,
+                       :some_element,
                        {:DOWN, ^ref, :process, ^monitored_proc, :normal}
                      ])
 
       send(elem_pid, {:DOWN, ref, :process, parent_pid, :normal})
 
       assert_receive Message.new(:child_notification, [
-                       :name,
+                       :some_element,
                        {:DOWN, ^ref, :process, ^parent_pid, :normal}
                      ])
 
@@ -403,20 +385,21 @@ defmodule Membrane.Core.ElementTest do
     end
   end
 
-  defp element_init_options(pipeline) do
+  defp element_init_options(module) do
     %{
-      module: SomeElement,
-      name: :name,
-      node: nil,
+      module: module,
       user_options: %{test_pid: self()},
-      parent: pipeline,
+      name: :some_element,
+      node: nil,
+      parent: self(),
       parent_clock: nil,
       sync: Membrane.Sync.no_sync(),
       parent_path: [],
       log_metadata: [],
       subprocess_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
       parent_supervisor: Membrane.Core.SubprocessSupervisor.start_link!(),
-      group: nil
+      group: nil,
+      stalker: %Membrane.Core.Stalker{pid: spawn(fn -> :ok end), ets: nil}
     }
   end
 

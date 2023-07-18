@@ -1,5 +1,5 @@
 defmodule Membrane.Core.Parent.SpecificationParserTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Membrane.Core.Parent.{Link, SpecificationParser}
   alias Membrane.Core.Parent.Link.Endpoint
