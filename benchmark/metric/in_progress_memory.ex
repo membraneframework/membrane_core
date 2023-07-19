@@ -33,23 +33,23 @@ defmodule Benchmark.Metric.InProgressMemory do
 
   @impl true
   def start_meassurement(_opts \\ nil) do
-    initial_memory = :erlang.memory(:total)
+    Process.list() |> Enum.each(&:erlang.garbage_collect/1)
 
     task =
       Task.async(fn ->
-        do_loop([], initial_memory)
+        do_loop()
       end)
 
     task
   end
 
-  defp do_loop(acc, initial_memory) do
-    acc = acc ++ [:erlang.memory(:total) - initial_memory]
+  defp do_loop(acc \\ []) do
+    acc = [:erlang.memory(:total) | acc]
 
     receive do
-      :stop -> acc
+      :stop -> Enum.reverse(acc)
     after
-      @sampling_period -> do_loop(acc, initial_memory)
+      @sampling_period -> do_loop(acc)
     end
   end
 
