@@ -93,7 +93,7 @@ defmodule Membrane.Element.Action do
 
   @typedoc """
   Executes `c:Membrane.Element.WithOutputPads.handle_demand/5` callback
-  for those given pads, that have demand greater than 0.
+  for the given pad (or pads), that have demand greater than 0.
 
   The pad must have output direction and work in pull mode.
 
