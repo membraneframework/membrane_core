@@ -93,7 +93,7 @@ defmodule Membrane.Element.Action do
 
   @typedoc """
   Executes `c:Membrane.Element.WithOutputPads.handle_demand/5` callback
-  for the given pad if its demand is greater than 0.
+  for the given pad (or pads), that have demand greater than 0.
 
   The pad must have output direction and work in pull mode.
 
@@ -123,26 +123,29 @@ defmodule Membrane.Element.Action do
   ## Usage limitations
   Allowed only when playback is playing.
   """
-  @type redemand :: {:redemand, Pad.ref()}
+  @type redemand :: {:redemand, Pad.ref() | [Pad.ref()]}
 
   @typedoc """
-  Sends buffers/stream format/event to all output pads of element (or to input pads when
-  event occurs on the output pad).
+  Sends buffers/stream format/event/end of stream to all output pads of element (or to input
+  pads when event occurs on the output pad).
 
   Used by default implementations of
-  `c:Membrane.Element.WithInputPads.handle_stream_format/4` and
-  `c:Membrane.Element.Base.handle_event/4` callbacks in filter.
+  `c:Membrane.Element.WithInputPads.handle_stream_format/4`,
+  `c:Membrane.Element.Base.handle_event/4` and
+  `c:Membrane.Element.WithInputPads.handle_end_of_stream/3` callbacks in filter.
 
   Allowed only when _all_ below conditions are met:
   - element is filter,
-  - callback is `c:Membrane.WithInputPads.handle_buffers_batch/4`,
-  `c:Membrane.Element.WithInputPads.handle_stream_format/4`
-  or `c:Membrane.Element.Base.handle_event/4`,
+  - callback is `c:Membrane.Element.WithInputPads.handle_buffers_batch/4`,
+  `c:Membrane.Element.WithInputPads.handle_buffer/4`,
+  `c:Membrane.Element.WithInputPads.handle_stream_format/4`,
+  `c:Membrane.Element.Base.handle_event/4` or `c:Membrane.Element.WithInputPads.handle_end_of_stream/3`
   - playback is `playing`
 
   Keep in mind that `c:Membrane.WithInputPads.handle_buffers_batch/4` can only
-  forward buffers, `c:Membrane.Element.WithInputPads.handle_stream_format/4` - stream formats
-  and `c:Membrane.Element.Base.handle_event/4` - events.
+  forward buffers, `c:Membrane.Element.WithInputPads.handle_stream_format/4` - stream formats.
+  `c:Membrane.Element.Base.handle_event/4` - events and
+  `c:Membrane.Element.WithInputPads.handle_end_of_stream/3` - ends of streams.
   """
   @type forward ::
           {:forward, Buffer.t() | [Buffer.t()] | StreamFormat.t() | Event.t() | :end_of_stream}
