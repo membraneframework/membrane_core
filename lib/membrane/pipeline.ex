@@ -557,6 +557,11 @@ defmodule Membrane.Pipeline do
       @impl true
       def handle_terminate_request(_ctx, state), do: {[terminate: :normal], state}
 
+      @impl true
+      def handle_child_pad_removed(child, pad, _ctx, _state) do
+        raise Membrane.Core.Parent.child_pad_removed_error_message(child, pad, __MODULE__)
+      end
+
       defoverridable child_spec: 1,
                      handle_init: 2,
                      handle_setup: 2,
@@ -568,7 +573,8 @@ defmodule Membrane.Pipeline do
                      handle_child_notification: 4,
                      handle_crash_group_down: 3,
                      handle_call: 3,
-                     handle_terminate_request: 2
+                     handle_terminate_request: 2,
+                     handle_child_pad_removed: 4
     end
   end
 end

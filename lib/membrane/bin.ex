@@ -367,6 +367,11 @@ defmodule Membrane.Bin do
       @impl true
       def handle_terminate_request(_ctx, state), do: {[terminate: :normal], state}
 
+      @impl true
+      def handle_child_pad_removed(child, pad, _ctx, _state) do
+        raise Membrane.Core.Parent.child_pad_removed_error_message(child, pad, __MODULE__)
+      end
+
       defoverridable handle_init: 2,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
@@ -379,7 +384,8 @@ defmodule Membrane.Bin do
                      handle_child_notification: 4,
                      handle_parent_notification: 3,
                      handle_crash_group_down: 3,
-                     handle_terminate_request: 2
+                     handle_terminate_request: 2,
+                     handle_child_pad_removed: 4
     end
   end
 
