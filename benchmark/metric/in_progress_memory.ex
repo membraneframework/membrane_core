@@ -37,17 +37,17 @@ defmodule Benchmark.Metric.InProgressMemory do
 
     task =
       Task.async(fn ->
-        do_loop([])
+        do_loop()
       end)
 
     task
   end
 
-  defp do_loop(acc) do
-    acc = acc ++ [:erlang.memory(:total)]
+  defp do_loop(acc \\ []) do
+    acc = [:erlang.memory(:total) | acc]
 
     receive do
-      :stop -> acc
+      :stop -> Enum.reverse(acc)
     after
       @sampling_period -> do_loop(acc)
     end
