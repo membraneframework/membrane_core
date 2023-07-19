@@ -38,74 +38,49 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
 
   @spec handle_crash_group_member_death(Child.name(), CrashGroup.t(), any(), Parent.state()) ::
           Parent.state()
-  def handle_crash_group_member_death(child_name, crash_group_data, reason, state)
+  def handle_crash_group_member_death(child_name, %CrashGroup{} = group, :normal, state) do
+    members = List.delete(group.members, child_name)
+    state = put_in(state, [:crash_groups, group.name, :members], members)
 
-  def handle_crash_group_member_death(
-        child_name,
-        %CrashGroup{triggered?: true} = group,
-        _reason,
-        state
-      ) do
-    all_members_dead? =
-      Enum.all?(group.members, fn member ->
-        member == child_name or not Map.has_key?(state.children, member)
-      end)
-
-    if all_members_dead? do
-      state = exec_handle_crash_group_down(group.name, state)
-      delete_crash_group(group.name, state)
+    if group.triggered? and Enum.all?(members, &(not Map.has_key?(state.children, &1))) do
+      cleanup_crash_group(group.name, state)
     else
       state
     end
   end
 
-  def handle_crash_group_member_death(
-        child_name,
-        %CrashGroup{members: [child_name]} = group,
-        :normal,
-        state
-      ) do
-    delete_crash_group(group.name, state)
-  end
-
-  def handle_crash_group_member_death(
-        child_name,
-        %CrashGroup{members: [child_name]} = group,
-        _reason,
-        state
-      ) do
-    state = ChildLifeController.remove_children_from_specs(group.members, state)
-    state = LinkUtils.unlink_crash_group(group, state)
-    state = trigger_crash_group(group.name, child_name, state)
-    state = exec_handle_crash_group_down(group.name, state)
-    delete_crash_group(group.name, state)
-  end
-
-  def handle_crash_group_member_death(child_name, %CrashGroup{} = group, :normal, state) do
-    update_in(
-      state,
-      [:crash_groups, group.name, :members],
-      &List.delete(&1, child_name)
-    )
-  end
-
   def handle_crash_group_member_death(child_name, %CrashGroup{} = group, _reason, state) do
+    state =
+      if group.triggered? do
+        state
+      else
+        trigger_crash_group(child_name, group, state)
+      end
+
+    all_members_dead? =
+      List.delete(group.members, child_name)
+      |> Enum.all?(&(not Map.has_key?(state.children, &1)))
+
+    if all_members_dead? do
+      cleanup_crash_group(group.name, state)
+    else
+      state
+    end
+  end
+
+  defp trigger_crash_group(crash_initiator, %CrashGroup{} = group, state) do
     state = ChildLifeController.remove_children_from_specs(group.members, state)
     state = LinkUtils.unlink_crash_group(group, state)
 
-    Enum.each(group.members, fn child ->
-      ChildrenModel.get_child_data!(state, child)
-      |> Map.get(:pid)
+    List.delete(group.members, crash_initiator)
+    |> Enum.each(fn group_member ->
+      get_in(state, [:children, group_member, :pid])
       |> Process.exit({:shutdown, :membrane_crash_group_kill})
     end)
 
-    trigger_crash_group(group.name, child_name, state)
-  end
-
-  defp trigger_crash_group(crash_group_name, crash_initiator, state) do
     update_in(
       state,
-      [:crash_groups, crash_group_name],
+      [:crash_groups, group.name],
       &%CrashGroup{
         &1
         | triggered?: true,
@@ -114,8 +89,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     )
   end
 
-  defp delete_crash_group(crash_group_name, state) do
-    {_group, state} = pop_in(state, [:crash_groups, crash_group_name])
+  defp cleanup_crash_group(group_name, state) do
+    state = exec_handle_crash_group_down(group_name, state)
+    {_group, state} = pop_in(state, [:crash_groups, group_name])
     state
   end
 

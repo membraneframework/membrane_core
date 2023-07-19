@@ -652,21 +652,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  defp do_handle_child_death(child_name, :normal, state) do
-    state = LinkUtils.unlink_element(child_name, state)
-
-    state =
-      with {:ok, crash_group} <- CrashGroupUtils.get_child_crash_group(child_name, state) do
-        CrashGroupUtils.handle_crash_group_member_death(child_name, crash_group, :normal, state)
-      else
-        :error -> state
-      end
-      |> ChildrenModel.delete_child(child_name)
-
-    {:ok, state}
-  end
-
   defp do_handle_child_death(child_name, reason, state) do
+    state =
+      if reason == :normal,
+        do: LinkUtils.unlink_element(child_name, state),
+        else: state
+
     with {:ok, crash_group} <- CrashGroupUtils.get_child_crash_group(child_name, state) do
       state =
         CrashGroupUtils.handle_crash_group_member_death(child_name, crash_group, reason, state)
@@ -674,6 +665,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
       {:ok, state}
     else
+      :error when reason == :normal ->
+        {:ok, ChildrenModel.delete_child(state, child_name)}
+
       :error when reason == {:shutdown, :membrane_crash_group_kill} ->
         raise Membrane.PipelineError,
               "Child #{inspect(child_name)} that was not a member of any crash group killed with :membrane_crash_group_kill."
