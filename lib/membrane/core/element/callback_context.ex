@@ -5,7 +5,7 @@ defmodule Membrane.Core.Element.CallbackContext do
           [incoming_demand: non_neg_integer()]
           | [pad_options: map()]
           | [old_stream_format: Membrane.StreamFormat.t()]
-          | [preceded_by_start_of_stream?: boolean()]
+          | [start_of_stream_received?: boolean()]
 
   @spec from_state(Membrane.Core.Element.State.t(), optional_fields()) ::
           Membrane.Element.CallbackContext.t()

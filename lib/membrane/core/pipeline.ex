@@ -76,7 +76,7 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_info(
-        Message.new(:stream_management_event, [element_name, pad_ref, event, event_opts]),
+        Message.new(:stream_management_event, [element_name, pad_ref, event, event_params]),
         state
       ) do
     state =
@@ -84,7 +84,7 @@ defmodule Membrane.Core.Pipeline do
         event,
         element_name,
         pad_ref,
-        event_opts,
+        event_params,
         state
       )
 

@@ -72,35 +72,59 @@ defmodule Membrane.Core.Element.EventController do
   end
 
   @spec do_exec_handle_event(Pad.ref(), Event.t(), params :: map, State.t()) :: State.t()
-  defp do_exec_handle_event(pad_ref, %event_type{} = event, params, state)
-       when event_type in [Events.StartOfStream, Events.EndOfStream] do
-    data = PadModel.get_data!(state, pad_ref)
-    callback = stream_event_to_callback(event)
-    context = stream_event_to_callback_context(event, pad_ref)
-
+  defp do_exec_handle_event(pad_ref, %Events.StartOfStream{} = event, params, state) do
     new_params =
       Map.merge(params, %{
-        context: context,
-        direction: data.direction
+        context: &CallbackContext.from_state/1,
+        direction: PadModel.get_data!(state, pad_ref, :direction)
       })
 
     state =
       CallbackHandler.exec_and_handle_callback(
-        callback,
+        :handle_start_of_stream,
         ActionHandler,
         new_params,
         [pad_ref],
         state
       )
 
-    event_opts = stream_event_to_parent_message_opts(event, pad_ref, state)
+    Message.send(
+      state.parent_pid,
+      :stream_management_event,
+      [state.name, pad_ref, event, []]
+    )
 
-    Message.send(state.parent_pid, :stream_management_event, [
-      state.name,
-      pad_ref,
-      event,
-      event_opts
-    ])
+    state
+  end
+
+  defp do_exec_handle_event(pad_ref, %Events.EndOfStream{} = event, params, state) do
+    %{
+      start_of_stream?: start_of_stream?,
+      direction: direction
+    } = PadModel.get_data!(state, pad_ref)
+
+    event_params = [start_of_stream_received?: start_of_stream?]
+
+    new_params =
+      Map.merge(params, %{
+        context: &CallbackContext.from_state(&1, event_params),
+        direction: direction
+      })
+
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_end_of_stream,
+        ActionHandler,
+        new_params,
+        [pad_ref],
+        state
+      )
+
+    Message.send(
+      state.parent_pid,
+      :stream_management_event,
+      [state.name, pad_ref, event, event_params]
+    )
 
     state
   end
@@ -115,20 +139,6 @@ defmodule Membrane.Core.Element.EventController do
     args = [pad_ref, event]
     CallbackHandler.exec_and_handle_callback(:handle_event, ActionHandler, params, args, state)
   end
-
-  defp stream_event_to_callback_context(%Events.StartOfStream{}, _pad_ref),
-    do: &CallbackContext.from_state/1
-
-  defp stream_event_to_callback_context(%Events.EndOfStream{}, pad_ref) do
-    &CallbackContext.from_state(&1,
-      preceded_by_start_of_stream?: PadModel.get_data!(&1, pad_ref, :start_of_stream?)
-    )
-  end
-
-  defp stream_event_to_parent_message_opts(%Events.StartOfStream{}, _pad_ref, _state), do: []
-
-  defp stream_event_to_parent_message_opts(%Events.EndOfStream{}, pad_ref, state),
-    do: [preceded_by_start_of_stream?: PadModel.get_data!(state, pad_ref, :start_of_stream?)]
 
   defp check_sync(%Events.StartOfStream{}, state) do
     if state.pads_data
@@ -169,7 +179,4 @@ defmodule Membrane.Core.Element.EventController do
   defp buffers_before_event_present?(pad_data) do
     pad_data.input_queue && not InputQueue.empty?(pad_data.input_queue)
   end
-
-  defp stream_event_to_callback(%Events.StartOfStream{}), do: :handle_start_of_stream
-  defp stream_event_to_callback(%Events.EndOfStream{}), do: :handle_end_of_stream
 end

@@ -28,7 +28,7 @@ defmodule Membrane.EndOfStreamTest do
     end
 
     @impl true
-    def handle_end_of_stream(:input, %{preceded_by_start_of_stream?: false}, state) do
+    def handle_end_of_stream(:input, %{start_of_stream_received?: false}, state) do
       {[], state}
     end
   end
