@@ -119,11 +119,17 @@ defmodule Membrane.Core.Element do
     self_pid = self()
 
     Stalker.register_metric_function(:message_queue_length, fn ->
-      :erlang.process_info(self_pid, :message_queue_len) |> elem(1)
+      case Process.info(self_pid, :message_queue_len) do
+        {:message_queue_len, len} -> len
+        nil -> 0
+      end
     end)
 
     Stalker.register_metric_function(:total_reductions, fn ->
-      :erlang.process_info(self_pid, :reductions) |> elem(1)
+      case Process.info(self_pid, :reductions) do
+        {:reductions, reductions} -> reductions
+        nil -> 0
+      end
     end)
 
     state =
