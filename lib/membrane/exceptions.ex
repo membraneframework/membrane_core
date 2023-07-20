@@ -73,8 +73,7 @@ defmodule Membrane.CallbackError do
     msg = """
     Bin #{inspect(child)} removed its pad #{inspect(pad)}, but callback #{callback_ref} is not implemented in #{inspect(module)}.
 
-    This means, that `#{inspect(child)} removed the pad on its own, without knowledge of its parent. It could be done, by, for example,
-    removing #{inspect(child)}'s child linked to the #{inspect(child)}'s inner pad or by removing link between #{inspect(child)} and its child.
+    This means, that `#{inspect(child)} removed the pad on its own, without knowledge of its parent. For example it could happen due to removing #{inspect(child)}'s child linked to the #{inspect(child)}'s inner pad or by removing link between #{inspect(child)} and its child.
 
     If you want to handle this scenario, implement #{callback_ref} callback in #{inspect(module)}.
     """
