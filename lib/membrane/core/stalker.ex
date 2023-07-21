@@ -154,6 +154,7 @@ defmodule Membrane.Core.Stalker do
       stalker: stalker,
       name: name,
       name_string: name_string,
+      pid_string: pid_string,
       component_type: component_type,
       is_name_provided: is_name_provided,
       is_utility: is_utility,
