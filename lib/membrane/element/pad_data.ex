@@ -60,7 +60,8 @@ defmodule Membrane.Element.PadData do
           associated_pads: private_field,
           sticky_events: private_field,
           other_effective_flow_control: private_field,
-          stalker_metrics: private_field
+          stalker_metrics: private_field,
+          auto_demand_stopped?: private_field
         }
 
   @enforce_keys [
@@ -92,6 +93,7 @@ defmodule Membrane.Element.PadData do
                 stream_format_validation_params: [],
                 other_demand_unit: nil,
                 other_effective_flow_control: :push,
-                stalker_metrics: %{}
+                stalker_metrics: %{},
+                auto_demand_stopped?: false
               ]
 end

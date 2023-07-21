@@ -91,6 +91,9 @@ defmodule Membrane.Element.Action do
   @type demand :: {:demand, {Pad.ref(), demand_size}}
   @type demand_size :: pos_integer | (pos_integer() -> non_neg_integer())
 
+  @type pause_auto_demands :: {:pause_auto_demands, Pad.ref() | [Pad.ref()]}
+  @type resume_auto_demands :: {:resume_auto_demands, Pad.ref() | [Pad.ref()]}
+
   @typedoc """
   Executes `c:Membrane.Element.WithOutputPads.handle_demand/5` callback
   for the given pad (or pads), that have demand greater than 0.
@@ -237,6 +240,8 @@ defmodule Membrane.Element.Action do
           | buffer
           | demand
           | redemand
+          | pause_auto_demands
+          | resume_auto_demands
           | forward
           | start_timer
           | timer_interval
