@@ -22,7 +22,8 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   @spec resume_demands(Pad.ref(), State.t()) :: State.t()
   def resume_demands(pad_ref, state) do
-    set_auto_demand_stopped_flag(pad_ref, false, state)
+    state = set_auto_demand_stopped_flag(pad_ref, false, state)
+    auto_adjust_atomic_demand(pad_ref, state)
   end
 
   @spec set_auto_demand_stopped_flag(Pad.ref(), boolean(), State.t()) :: State.t()

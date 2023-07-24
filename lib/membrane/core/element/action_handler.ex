@@ -70,8 +70,8 @@ defmodule Membrane.Core.Element.ActionHandler do
                :stream_format,
                :demand,
                :redemand,
-               :pause_auto_demands,
-               :resume_auto_demands,
+               :pause_auto_demand,
+               :resume_auto_demand,
                :forward,
                :end_of_stream
              ] do
@@ -152,27 +152,27 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:pause_auto_demands, in_refs}, cb, params, state) when is_list(in_refs) do
+  def handle_action({:pause_auto_demand, in_refs}, cb, params, state) when is_list(in_refs) do
     Enum.reduce(in_refs, state, fn in_ref, state ->
-      handle_action({:pause_auto_demands, in_ref}, cb, params, state)
+      handle_action({:pause_auto_demand, in_ref}, cb, params, state)
     end)
   end
 
   @impl CallbackHandler
-  def handle_action({:pause_auto_demands, in_ref}, _cb, _params, %State{type: type} = state)
+  def handle_action({:pause_auto_demand, in_ref}, _cb, _params, %State{type: type} = state)
       when type in [:sink, :filter, :endpoint] and is_pad_ref(in_ref) do
     DemandController.AutoFlowUtils.pause_demands(in_ref, state)
   end
 
   @impl CallbackHandler
-  def handle_action({:resume_auto_demands, in_refs}, cb, params, state) when is_list(in_refs) do
+  def handle_action({:resume_auto_demand, in_refs}, cb, params, state) when is_list(in_refs) do
     Enum.reduce(in_refs, state, fn in_ref, state ->
-      handle_action({:resume_auto_demands, in_ref}, cb, params, state)
+      handle_action({:resume_auto_demand, in_ref}, cb, params, state)
     end)
   end
 
   @impl CallbackHandler
-  def handle_action({:resume_auto_demands, in_ref}, _cb, _params, %State{type: type} = state)
+  def handle_action({:resume_auto_demand, in_ref}, _cb, _params, %State{type: type} = state)
       when type in [:sink, :filter, :endpoint] and is_pad_ref(in_ref) do
     DemandController.AutoFlowUtils.resume_demands(in_ref, state)
   end

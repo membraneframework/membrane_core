@@ -133,4 +133,82 @@ defmodule Membrane.Integration.DemandsTest do
 
     Testing.Pipeline.terminate(pipeline)
   end
+
+  defmodule RedemandingSource do
+    use Membrane.Source
+
+    def_output_pad :output, accepted_format: _any, flow_control: :manual, availability: :always
+
+    defmodule StreamFormat do
+      defstruct []
+    end
+
+    @impl true
+    def handle_playing(_ctx, state) do
+      {[stream_format: {:output, %StreamFormat{}}], state}
+    end
+
+    @impl true
+    def handle_demand(:output, _size, _unit, _ctx, state) do
+      Process.sleep(10)
+      {[buffer: {:output, %Membrane.Buffer{payload: ""}}, redemand: :output], state}
+    end
+  end
+
+  defmodule PausingSink do
+    use Membrane.Sink
+
+    def_input_pad :input, accepted_format: _any, flow_control: :auto, availability: :always
+
+    @impl true
+    def handle_init(_ctx, _opts), do: {[], %{counter: 0}}
+
+    @impl true
+    def handle_buffer(:input, _buffer, _ctx, state) do
+      {[], Map.update!(state, :counter, &(&1 + 1))}
+    end
+
+    @impl true
+    def handle_parent_notification(action, _ctx, state)
+        when action in [:pause_auto_demand, :resume_auto_demand] do
+      actions = [
+        {action, :input},
+        notify_parent: {:buff_no, state.counter}
+      ]
+
+      {actions, %{state | counter: 0}}
+    end
+  end
+
+  test "actions :pause_auto_demand and :resume_auto_demand" do
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(
+        spec:
+          child(RedemandingSource)
+          |> via_in(:input, auto_demand_size: 10)
+          |> child(:sink, PausingSink)
+      )
+
+    Process.sleep(500)
+
+    for _i <- 1..10 do
+      # during sleep below source should send about 100 buffers
+      Process.sleep(100 * 10)
+
+      Testing.Pipeline.execute_actions(pipeline, notify_child: {:sink, :pause_auto_demand})
+
+      assert_pipeline_notified(pipeline, :sink, {:buff_no, buff_no})
+      assert buff_no > 70
+
+      # during sleep below source should send up to about auto_demand_size = 10 buffers
+      Process.sleep(100 * 10)
+
+      Testing.Pipeline.execute_actions(pipeline, notify_child: {:sink, :resume_auto_demand})
+
+      assert_pipeline_notified(pipeline, :sink, {:buff_no, buff_no})
+      assert buff_no < 25
+    end
+
+    Testing.Pipeline.terminate(pipeline)
+  end
 end
