@@ -141,7 +141,12 @@ defmodule Membrane.Core.CallbackHandler do
         e in UndefinedFunctionError ->
           with %{module: ^module, function: ^callback, arity: arity} <- e do
             reraise CallbackError,
-                    [kind: :not_implemented, callback: {module, callback}, arity: arity],
+                    [
+                      kind: :not_implemented,
+                      callback: {module, callback},
+                      arity: arity,
+                      args: args
+                    ],
                     __STACKTRACE__
           end
 
