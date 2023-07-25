@@ -17,13 +17,30 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   @spec pause_demands(Pad.ref(), State.t()) :: State.t()
   def pause_demands(pad_ref, state) do
+    :ok = ensure_auto_input_pad!(pad_ref, :pause_auto_demand, state)
     set_auto_demand_stopped_flag(pad_ref, true, state)
   end
 
   @spec resume_demands(Pad.ref(), State.t()) :: State.t()
   def resume_demands(pad_ref, state) do
+    :ok = ensure_auto_input_pad!(pad_ref, :resume_auto_demand, state)
     state = set_auto_demand_stopped_flag(pad_ref, false, state)
     auto_adjust_atomic_demand(pad_ref, state)
+  end
+
+  defp ensure_auto_input_pad!(pad_ref, action, state) do
+    case PadModel.get_data!(state, pad_ref) do
+      %{direction: :input, flow_control: :auto} ->
+        :ok
+
+      %{direction: :output} ->
+        raise Membrane.ElementError,
+              "Action #{inspect(action)} can only be returned for input pads, but #{inspect(pad_ref)} is output pad"
+
+      %{flow_control: flow_control} ->
+        raise Membrane.ElementError,
+              "Action #{inspect(action)} can only be returned for pads with :auto flow control, but #{inspect(pad_ref)} pad flow control is #{inspect(flow_control)}"
+    end
   end
 
   @spec set_auto_demand_stopped_flag(Pad.ref(), boolean(), State.t()) :: State.t()

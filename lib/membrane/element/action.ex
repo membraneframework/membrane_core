@@ -91,6 +91,9 @@ defmodule Membrane.Element.Action do
   @type demand :: {:demand, {Pad.ref(), demand_size}}
   @type demand_size :: pos_integer | (pos_integer() -> non_neg_integer())
 
+  @typedoc """
+  Pauses auto-demanding on specific input pad
+  """
   @type pause_auto_demand :: {:pause_auto_demand, Pad.ref() | [Pad.ref()]}
   @type resume_auto_demand :: {:resume_auto_demand, Pad.ref() | [Pad.ref()]}
 
