@@ -137,11 +137,16 @@ defmodule Membrane.Integration.DemandsTest do
   defmodule RedemandingSource do
     use Membrane.Source
 
-    def_output_pad :output, accepted_format: _any, flow_control: :manual, availability: :always
+    @sleep_time 10
+
+    def_output_pad :output, accepted_format: _any, flow_control: :manual
 
     defmodule StreamFormat do
       defstruct []
     end
+
+    @spec sleep_time() :: pos_integer()
+    def sleep_time(), do: @sleep_time
 
     @impl true
     def handle_playing(_ctx, state) do
@@ -150,7 +155,7 @@ defmodule Membrane.Integration.DemandsTest do
 
     @impl true
     def handle_demand(:output, _size, _unit, _ctx, state) do
-      Process.sleep(10)
+      Process.sleep(@sleep_time)
       {[buffer: {:output, %Membrane.Buffer{payload: ""}}, redemand: :output], state}
     end
   end
@@ -158,7 +163,7 @@ defmodule Membrane.Integration.DemandsTest do
   defmodule PausingSink do
     use Membrane.Sink
 
-    def_input_pad :input, accepted_format: _any, flow_control: :auto, availability: :always
+    def_input_pad :input, accepted_format: _any, flow_control: :auto
 
     @impl true
     def handle_init(_ctx, _opts), do: {[], %{counter: 0}}
@@ -189,11 +194,12 @@ defmodule Membrane.Integration.DemandsTest do
           |> child(:sink, PausingSink)
       )
 
+    # time for pipeline to start playing
     Process.sleep(500)
 
     for _i <- 1..10 do
       # during sleep below source should send about 100 buffers
-      Process.sleep(100 * 10)
+      Process.sleep(100 * RedemandingSource.sleep_time())
 
       Testing.Pipeline.execute_actions(pipeline, notify_child: {:sink, :pause_auto_demand})
 
@@ -201,7 +207,7 @@ defmodule Membrane.Integration.DemandsTest do
       assert buff_no > 70
 
       # during sleep below source should send up to about auto_demand_size = 10 buffers
-      Process.sleep(100 * 10)
+      Process.sleep(100 * RedemandingSource.sleep_time())
 
       Testing.Pipeline.execute_actions(pipeline, notify_child: {:sink, :resume_auto_demand})
 

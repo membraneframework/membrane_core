@@ -100,6 +100,8 @@ defmodule Membrane.Element.Action do
   but ensures, that demand on this pad will not increase until returning
   `#{inspect(__MODULE__)}.resume_auto_demand()` action. Number of buffers, that will
   arrive on the pad, depends on the behaviour of the elements ealier in the pipeline.
+
+  When auto-demanding is already paused, this action will have no effect.
   """
   @type pause_auto_demand :: {:pause_auto_demand, Pad.ref() | [Pad.ref()]}
 
@@ -109,6 +111,8 @@ defmodule Membrane.Element.Action do
   The pad must have input direction and work in `:auto` flow control mode.
 
   This action reverts the effects of `#{inspect(__MODULE__)}.pause_auto_demand()` action.
+
+  When auto demanding is not paused, this action will have no effect.
   """
   @type resume_auto_demand :: {:resume_auto_demand, Pad.ref() | [Pad.ref()]}
 

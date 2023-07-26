@@ -34,6 +34,7 @@ defmodule Membrane.Element.PadData do
           name: Pad.name(),
           ref: Pad.ref(),
           options: %{optional(atom) => any},
+          auto_demand_stopped?: boolean(),
           stream_format_validation_params: private_field,
           pid: private_field,
           other_ref: private_field,
@@ -60,8 +61,7 @@ defmodule Membrane.Element.PadData do
           associated_pads: private_field,
           sticky_events: private_field,
           other_effective_flow_control: private_field,
-          stalker_metrics: private_field,
-          auto_demand_stopped?: private_field
+          stalker_metrics: private_field
         }
 
   @enforce_keys [

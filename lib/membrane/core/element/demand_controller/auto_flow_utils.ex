@@ -35,7 +35,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
       %{direction: :output} ->
         raise Membrane.ElementError,
-              "Action #{inspect(action)} can only be returned for input pads, but #{inspect(pad_ref)} is output pad"
+              "Action #{inspect(action)} can only be returned for input pads, but #{inspect(pad_ref)} is an output pad"
 
       %{flow_control: flow_control} ->
         raise Membrane.ElementError,
