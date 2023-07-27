@@ -267,15 +267,25 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     # adding crash group to state
     state =
-      if options.crash_group_mode != nil or Map.has_key?(state.crash_groups, options.group) do
-        CrashGroupUtils.add_crash_group(
-          options.group,
-          options.crash_group_mode,
-          children_names,
+      cond do
+        Map.has_key?(state.crash_groups, options.group) ->
+          CrashGroupUtils.extend_crash_group(
+            options.group,
+            options.crash_group_mode,
+            children_names,
+            state
+          )
+
+        options.crash_group_mode != nil ->
+          CrashGroupUtils.add_crash_group(
+            options.group,
+            options.crash_group_mode,
+            children_names,
+            state
+          )
+
+        true ->
           state
-        )
-      else
-        state
       end
 
     {children_names, state}

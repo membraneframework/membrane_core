@@ -3,22 +3,18 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
   # A module responsible for managing crash groups inside the state of pipeline.
 
   alias Membrane.{Child, ChildrenSpec}
-  alias Membrane.Core.{CallbackHandler, Component, Parent, Pipeline}
+  alias Membrane.Core.{CallbackHandler, Component, Parent}
   alias Membrane.Core.Parent.{ChildLifeController, ChildrenModel, CrashGroup}
   alias Membrane.Core.Parent.ChildLifeController.LinkUtils
 
   @spec add_crash_group(
-          {Child.group(), ChildrenSpec.crash_group_mode()},
+          Child.group(),
+          ChildrenSpec.crash_group_mode(),
           [Child.name()],
-          [pid()],
-          Pipeline.State.t()
-        ) :: Pipeline.State.t()
-  def add_crash_group(group_name, _mode, children, state)
-      when is_map_key(state.crash_group, group_name) do
-    update_in(state, [:crash_groups, group_name, :members], &(children ++ &1))
-  end
-
-  def add_crash_group(group_name, mode, children, state) do
+          Parent.state()
+        ) :: Parent.state()
+  def add_crash_group(group_name, mode, children, state)
+      when not is_map_key(state.crash_groups, group_name) do
     put_in(
       state,
       [:crash_groups, group_name],
@@ -28,6 +24,16 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
         members: children
       }
     )
+  end
+
+  @spec extend_crash_group(
+          Child.group(),
+          ChildrenSpec.crash_group_mode(),
+          [Child.name()],
+          Parent.state()
+        ) :: Parent.state()
+  def extend_crash_group(group_name, _mode, children, state) do
+    update_in(state, [:crash_groups, group_name, :members], &(children ++ &1))
   end
 
   @spec get_child_crash_group(Child.name(), Parent.state()) :: {:ok, CrashGroup.t()} | :error
@@ -42,7 +48,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     members = List.delete(group.members, child_name)
     state = put_in(state, [:crash_groups, group.name, :members], members)
 
-    if group.triggered? and Enum.all?(members, &(not Map.has_key?(state.children, &1))) do
+    if group.detonating? and Enum.all?(members, &(not Map.has_key?(state.children, &1))) do
       cleanup_crash_group(group.name, state)
     else
       state
@@ -51,10 +57,10 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
 
   def handle_crash_group_member_death(child_name, %CrashGroup{} = group, _reason, state) do
     state =
-      if group.triggered? do
+      if group.detonating? do
         state
       else
-        trigger_crash_group(child_name, group, state)
+        detonate_crash_group(child_name, group, state)
       end
 
     all_members_dead? =
@@ -68,7 +74,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     end
   end
 
-  defp trigger_crash_group(crash_initiator, %CrashGroup{} = group, state) do
+  defp detonate_crash_group(crash_initiator, %CrashGroup{} = group, state) do
     state = ChildLifeController.remove_children_from_specs(group.members, state)
     state = LinkUtils.unlink_crash_group(group, state)
 
@@ -83,7 +89,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
       [:crash_groups, group.name],
       &%CrashGroup{
         &1
-        | triggered?: true,
+        | detonating?: true,
           crash_initiator: crash_initiator
       }
     )
@@ -109,7 +115,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
 
     CallbackHandler.exec_and_handle_callback(
       :handle_crash_group_down,
-      Membrane.Core.Pipeline.ActionHandler,
+      Component.action_handler(state),
       %{context: context_generator},
       [crash_group.name],
       state

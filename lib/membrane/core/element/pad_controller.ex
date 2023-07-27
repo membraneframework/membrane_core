@@ -329,27 +329,30 @@ defmodule Membrane.Core.Element.PadController do
         {:resolved, EffectiveFlowController.get_pad_effective_flow_control(pad_data.ref, state)}
       )
 
-    if pad_data.flow_control == :auto do
-      state =
-        state.pads_data
-        |> Map.values()
-        |> Enum.filter(&(&1.direction != pad_data.direction and &1.flow_control == :auto))
-        |> Enum.reduce(state, fn opposite_pad_data, state ->
-          PadModel.update_data!(
-            state,
-            opposite_pad_data.ref,
-            :associated_pads,
-            &[pad_data.ref | &1]
-          )
-        end)
+    state = update_associated_pads(pad_data, state)
 
-      if pad_data.direction == :input,
-        do: AutoFlowUtils.auto_adjust_atomic_demand(endpoint.pad_ref, state),
-        else: state
+    if pad_data.direction == :input and pad_data.flow_control == :auto do
+      AutoFlowUtils.auto_adjust_atomic_demand(endpoint.pad_ref, state)
     else
       state
     end
   end
+
+  defp update_associated_pads(%{flow_control: :auto} = pad_data, state) do
+    state.pads_data
+    |> Map.values()
+    |> Enum.filter(&(&1.direction != pad_data.direction and &1.flow_control == :auto))
+    |> Enum.reduce(state, fn associated_pad_data, state ->
+      PadModel.update_data!(
+        state,
+        associated_pad_data.ref,
+        :associated_pads,
+        &[pad_data.ref | &1]
+      )
+    end)
+  end
+
+  defp update_associated_pads(_pad_data, state), do: state
 
   defp merge_pad_direction_data(%{direction: :input} = pad_data, metadata, _state) do
     pad_data

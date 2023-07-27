@@ -14,10 +14,10 @@ defmodule Membrane.Core.Parent.CrashGroup do
           name: name(),
           mode: :temporary,
           members: [Membrane.Child.name()],
-          triggered?: boolean(),
+          detonating?: boolean(),
           crash_initiator: Membrane.Child.name()
         }
 
   @enforce_keys [:name, :mode]
-  defstruct @enforce_keys ++ [members: [], triggered?: false, crash_initiator: nil]
+  defstruct @enforce_keys ++ [members: [], detonating?: false, crash_initiator: nil]
 end
