@@ -200,15 +200,11 @@ defmodule Membrane.Core.Bin.PadController do
           SpecificationParser.raw_endpoint(),
           SpecificationParser.raw_endpoint(),
           %{
-            stream_format_validation_params:
+            optional(:input_pad_info) => PadModel.pad_info() | nil,
+            optional(:link_metadata) => map(),
+            :stream_format_validation_params =>
               StreamFormatController.stream_format_validation_params()
-          }
-          | %{
-              other_info: PadModel.pad_info() | nil,
-              link_metadata: map,
-              stream_format_validation_params:
-                StreamFormatController.stream_format_validation_params()
-            },
+          },
           Core.Bin.State.t()
         ) :: {Core.Element.PadController.link_call_reply(), Core.Bin.State.t()}
   def handle_link(direction, endpoint, other_endpoint, params, state) do

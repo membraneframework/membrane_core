@@ -49,10 +49,14 @@ defmodule Membrane.Core.Element.PadControllerTest do
                    pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
                  },
                  %{
-                   other_info: %{direction: :output, flow_control: :manual, demand_unit: :buffers},
+                   output_pad_info: %{
+                     direction: :output,
+                     flow_control: :manual,
+                     demand_unit: :buffers
+                   },
                    link_metadata: %{toilet: make_ref(), observability_data: %{path: ""}},
                    stream_format_validation_params: [],
-                   other_effective_flow_control: :pull
+                   output_effective_flow_control: :pull
                  },
                  state
                )

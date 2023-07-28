@@ -130,10 +130,10 @@ defmodule Membrane.Core.ElementTest do
           %Endpoint{pad_spec: :output, pad_ref: :output, pad_props: %{options: []}, child: :this},
           output_other_endpoint,
           %{
-            other_info: other_info,
+            # other_info: other_info,
             link_metadata: %{atomic_demand: output_atomic_demand, observability_data: %{path: ""}},
-            stream_format_validation_params: [],
-            other_effective_flow_control: :pull
+            stream_format_validation_params: []
+            # other_effective_flow_control: :pull
           }
         ]),
         nil,
@@ -160,10 +160,10 @@ defmodule Membrane.Core.ElementTest do
           },
           %Endpoint{pad_spec: :output, pad_ref: :output, pid: self(), child: :other},
           %{
-            other_info: %{direction: :output, flow_control: :manual},
+            output_pad_info: %{direction: :output, flow_control: :manual},
             link_metadata: %{toilet: nil, observability_data: %{path: ""}},
             stream_format_validation_params: [],
-            other_effective_flow_control: :pull
+            output_effective_flow_control: :pull
           }
         ]),
         nil,
@@ -270,14 +270,14 @@ defmodule Membrane.Core.ElementTest do
                    pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
                  },
                  %{
-                   other_info: %{
-                     direction: :input,
+                   output_pad_info: %{
+                     direction: :output,
                      demand_unit: :buffers,
                      flow_control: :manual
                    },
                    link_metadata: %{observability_data: %{path: ""}},
                    stream_format_validation_params: [],
-                   other_effective_flow_control: :pull
+                   output_effective_flow_control: :pull
                  }
                ]),
                nil,
