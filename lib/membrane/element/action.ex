@@ -99,7 +99,7 @@ defmodule Membrane.Element.Action do
   This action does not guarantee that no more buffers will arrive on the specific pad,
   but ensures, that demand on this pad will not increase until returning
   `#{inspect(__MODULE__)}.resume_auto_demand()` action. Number of buffers, that will
-  arrive on the pad, depends on the behaviour of the elements ealier in the pipeline.
+  arrive on the pad, depends on the behaviour of the elements earlier in the pipeline.
 
   When auto-demanding is already paused, this action will have no effect.
   """
