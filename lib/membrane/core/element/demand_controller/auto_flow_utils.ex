@@ -44,7 +44,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   end
 
   @spec set_auto_demand_stopped_flag(Pad.ref(), boolean(), State.t()) :: State.t()
-  defp set_auto_demand_stopped_flag(pad_ref, new_value, state) do
+  defp set_auto_demand_stopped_flag(pad_ref, stopped?, state) do
     {old_value, state} =
       PadModel.get_and_update_data!(state, pad_ref, :auto_demand_stopped?, &{&1, new_value})
 
