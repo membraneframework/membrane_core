@@ -18,13 +18,13 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   @spec pause_demands(Pad.ref(), State.t()) :: State.t()
   def pause_demands(pad_ref, state) do
     :ok = ensure_auto_input_pad!(pad_ref, :pause_auto_demand, state)
-    set_auto_demand_stopped_flag(pad_ref, true, state)
+    set_auto_demand_paused_flag(pad_ref, true, state)
   end
 
   @spec resume_demands(Pad.ref(), State.t()) :: State.t()
   def resume_demands(pad_ref, state) do
     :ok = ensure_auto_input_pad!(pad_ref, :resume_auto_demand, state)
-    state = set_auto_demand_stopped_flag(pad_ref, false, state)
+    state = set_auto_demand_paused_flag(pad_ref, false, state)
     auto_adjust_atomic_demand(pad_ref, state)
   end
 
@@ -43,13 +43,13 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     end
   end
 
-  @spec set_auto_demand_stopped_flag(Pad.ref(), boolean(), State.t()) :: State.t()
-  defp set_auto_demand_stopped_flag(pad_ref, stopped?, state) do
+  @spec set_auto_demand_paused_flag(Pad.ref(), boolean(), State.t()) :: State.t()
+  defp set_auto_demand_paused_flag(pad_ref, paused?, state) do
     {old_value, state} =
-      PadModel.get_and_update_data!(state, pad_ref, :auto_demand_stopped?, &{&1, new_value})
+      PadModel.get_and_update_data!(state, pad_ref, :auto_demand_paused?, &{&1, paused?})
 
-    if old_value == new_value do
-      operation = if new_value, do: "pause", else: "resume"
+    if old_value == paused? do
+      operation = if paused?, do: "pause", else: "resume"
 
       Membrane.Logger.debug(
         "Trying to #{operation} auto demand on pad #{inspect(pad_ref)}, while it has been already #{operation}d"
@@ -95,7 +95,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   defp increase_atomic_demand?(pad_data, state) do
     state.effective_flow_control == :pull and
-      not pad_data.auto_demand_stopped? and
+      not pad_data.auto_demand_paused? and
       pad_data.demand < pad_data.auto_demand_size / 2 and
       Enum.all?(pad_data.associated_pads, &atomic_demand_positive?(&1, state))
   end

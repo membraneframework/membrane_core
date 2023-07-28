@@ -101,7 +101,7 @@ defmodule Membrane.Element.Action do
   `#{inspect(__MODULE__)}.resume_auto_demand()` action. Number of buffers, that will
   arrive on the pad, depends on the behaviour of the elements earlier in the pipeline.
 
-  When auto-demanding is already paused, this action will have no effect.
+  When auto-demanding is already paused, this action has no effect.
   """
   @type pause_auto_demand :: {:pause_auto_demand, Pad.ref() | [Pad.ref()]}
 
@@ -112,7 +112,7 @@ defmodule Membrane.Element.Action do
 
   This action reverts the effects of `#{inspect(__MODULE__)}.pause_auto_demand()` action.
 
-  When auto demanding is not paused, this action will have no effect.
+  When auto demanding is not paused, this action has no effect.
   """
   @type resume_auto_demand :: {:resume_auto_demand, Pad.ref() | [Pad.ref()]}
 
