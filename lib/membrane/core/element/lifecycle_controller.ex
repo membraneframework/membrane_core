@@ -73,7 +73,7 @@ defmodule Membrane.Core.Element.LifecycleController do
         """)
 
       true ->
-        Membrane.Logger.warn("""
+        Membrane.Logger.warning("""
         Terminating element possibly not prepared for termination as it was in state #{inspect(playback_state)}.
         Reason: #{inspect(reason)},
         State: #{inspect(state, pretty: true)}

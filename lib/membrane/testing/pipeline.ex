@@ -163,7 +163,7 @@ defmodule Membrane.Testing.Pipeline do
   def start_link(pipeline_options, process_options \\ [])
 
   def start_link(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
-    Membrane.Logger.warn(
+    Membrane.Logger.warning(
       "Please pass options to Membrane.Testing.Pipeline.start_link/2 as keyword list, instead of using Membrane.Testing.Options"
     )
 
@@ -180,7 +180,7 @@ defmodule Membrane.Testing.Pipeline do
   def start(pipeline_options, process_options \\ [])
 
   def start(pipeline_options, process_options) when is_struct(pipeline_options, Options) do
-    Membrane.Logger.warn(
+    Membrane.Logger.warning(
       "Please pass options to Membrane.Testing.Pipeline.start/2 as keyword list, instead of using Membrane.Testing.Options"
     )
 
