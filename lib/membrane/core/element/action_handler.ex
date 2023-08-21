@@ -372,8 +372,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         StreamFormatController.validate_stream_format!(
           :output,
           stream_format_validation_params,
-          stream_format,
-          state
+          stream_format
         )
 
       state = PadModel.set_data!(state, pad_ref, :stream_format, stream_format)

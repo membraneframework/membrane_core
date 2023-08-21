@@ -63,8 +63,7 @@ defmodule Membrane.Core.Element.StreamFormatController do
       validate_stream_format!(
         :input,
         [{state.module, pad_name} | stream_format_validation_params],
-        stream_format,
-        state
+        stream_format
       )
 
     state =
@@ -82,10 +81,9 @@ defmodule Membrane.Core.Element.StreamFormatController do
   @spec validate_stream_format!(
           Pad.direction(),
           stream_format_validation_params(),
-          StreamFormat.t(),
-          State.t()
+          StreamFormat.t()
         ) :: :ok
-  def validate_stream_format!(direction, params, stream_format, state) do
+  def validate_stream_format!(direction, params, stream_format) do
     unless is_struct(stream_format) do
       raise Membrane.StreamFormatError, """
       Stream format must be defined as a struct, therefore it cannot be: #{inspect(stream_format)}
@@ -94,7 +92,9 @@ defmodule Membrane.Core.Element.StreamFormatController do
 
     for {module, pad_name} <- params do
       unless module.membrane_stream_format_match?(pad_name, stream_format) do
-        pattern_string = get_in(state, [:pads_info, pad_name, :accepted_formats_str])
+        pattern_string =
+          module.membrane_pads()
+          |> get_in([pad_name, :accepted_formats_str])
 
         raise Membrane.StreamFormatError, """
         Stream format: #{inspect(stream_format)} is not matching accepted format pattern "#{pattern_string}" in def_#{direction}_pad
