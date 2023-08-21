@@ -45,6 +45,9 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
   @spec handle_crash_group_member_death(Child.name(), CrashGroup.t(), any(), Parent.state()) ::
           Parent.state()
   def handle_crash_group_member_death(child_name, %CrashGroup{} = group, :normal, state) do
+    # if a child dies with reason :normal, there will be no need to kill it during crash group detonation
+    # and we will not want to have it in :crash_group_members in the callback context in handle_crash_group_down/3,
+    # so this child is removed from :members in crash group struct
     members = List.delete(group.members, child_name)
     state = put_in(state, [:crash_groups, group.name, :members], members)
 

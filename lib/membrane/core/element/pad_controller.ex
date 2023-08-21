@@ -431,13 +431,13 @@ defmodule Membrane.Core.Element.PadController do
     demand_metric =
       if direction == :input do
         :atomics.new(1, [])
-        |> tap(fn atomic ->
-          Stalker.register_metric_function(
+        |> tap(
+          &Stalker.register_metric_function(
             :auto_demand_size,
-            fn -> :atomics.get(atomic, 1) end,
+            fn -> :atomics.get(&1, 1) end,
             pad: pad_data.ref
           )
-        end)
+        )
       end
 
     pad_data
