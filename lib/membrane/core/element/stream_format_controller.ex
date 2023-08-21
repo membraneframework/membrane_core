@@ -52,19 +52,15 @@ defmodule Membrane.Core.Element.StreamFormatController do
           State.t()
   def exec_handle_stream_format(pad_ref, stream_format, params \\ %{}, state) do
     %{
-      stream_format_validation_params: stream_format_validation_params,
+      stream_format_validation_params: validation_params,
       name: pad_name,
       stream_format: old_stream_format
     } = PadModel.get_data!(state, pad_ref)
 
-    context = &CallbackContext.from_state(&1, old_stream_format: old_stream_format)
+    validation_params = [{state.module, pad_name} | validation_params]
+    :ok = validate_stream_format!(:input, validation_params, stream_format)
 
-    :ok =
-      validate_stream_format!(
-        :input,
-        [{state.module, pad_name} | stream_format_validation_params],
-        stream_format
-      )
+    context = &CallbackContext.from_state(&1, old_stream_format: old_stream_format)
 
     state =
       CallbackHandler.exec_and_handle_callback(
