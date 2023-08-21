@@ -436,7 +436,7 @@ defmodule Membrane.Pipeline do
         A proxy for `#{inspect(unquote(__MODULE__))}.start_link/3`
         """
         @spec start_link(
-                pipeline_options :: unquote(__MODULE__).pipeline_options(),
+                unquote(__MODULE__).pipeline_options(),
                 process_options :: GenServer.options()
               ) :: unquote(__MODULE__).on_start()
         def start_link(pipeline_options \\ nil, process_options \\ []) do
@@ -452,7 +452,7 @@ defmodule Membrane.Pipeline do
         A proxy for `#{inspect(unquote(__MODULE__))}.start/3`
         """
         @spec start(
-                pipeline_options :: unquote(__MODULE__).pipeline_options(),
+                unquote(__MODULE__).pipeline_options(),
                 process_options :: GenServer.options()
               ) :: unquote(__MODULE__).on_start()
         def start(pipeline_options \\ nil, process_options \\ []) do
