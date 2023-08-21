@@ -612,9 +612,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     child_terminating? = Parent.ChildrenModel.get_child_data!(state, child).terminating?
 
-    if child_terminating? do
-      state
-    else
+    if not child_terminating? and corresponding_link_exists?(child, pad, state) do
       state =
         CallbackHandler.exec_and_handle_callback(
           :handle_child_pad_removed,
@@ -625,7 +623,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         )
 
       LinkUtils.handle_child_pad_removed(child, pad, state)
+    else
+      state
     end
+  end
+
+  defp corresponding_link_exists?(child, pad, state) do
+    state.links
+    |> Enum.flat_map(fn {_key, link} -> [link.from, link.to] end)
+    |> Enum.any?(&(&1.child == child and &1.pad_ref == pad))
   end
 
   @doc """
