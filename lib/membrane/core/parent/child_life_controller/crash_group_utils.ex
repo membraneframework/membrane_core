@@ -26,13 +26,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     )
   end
 
-  @spec extend_crash_group(
-          Child.group(),
-          ChildrenSpec.crash_group_mode(),
-          [Child.name()],
-          Parent.state()
-        ) :: Parent.state()
-  def extend_crash_group(group_name, _mode, children, state) do
+  @spec extend_crash_group(Child.group(), [Child.name()], Parent.state()) :: Parent.state()
+  def extend_crash_group(group_name, children, state) do
     update_in(state, [:crash_groups, group_name, :members], &(children ++ &1))
   end
 

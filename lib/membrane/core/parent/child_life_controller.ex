@@ -265,16 +265,10 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     children_names = children |> Enum.map(& &1.name)
 
-    # adding crash group to state
     state =
       cond do
         Map.has_key?(state.crash_groups, options.group) ->
-          CrashGroupUtils.extend_crash_group(
-            options.group,
-            options.crash_group_mode,
-            children_names,
-            state
-          )
+          CrashGroupUtils.extend_crash_group(options.group, children_names, state)
 
         options.crash_group_mode != nil ->
           CrashGroupUtils.add_crash_group(
