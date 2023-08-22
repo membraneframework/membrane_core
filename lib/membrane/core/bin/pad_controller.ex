@@ -34,23 +34,23 @@ defmodule Membrane.Core.Bin.PadController do
 
     pad_name = Pad.name_by_ref(pad_ref)
 
-    info =
+    pad_info =
       case Map.fetch(state.pads_info, pad_name) do
-        {:ok, info} ->
-          info
+        {:ok, pad_info} ->
+          pad_info
 
         :error ->
           raise LinkError,
                 "Tried to link via unknown pad #{inspect(pad_name)} of #{inspect(state.name)}"
       end
 
-    :ok = Child.PadController.validate_pad_being_linked!(direction, info)
+    :ok = Child.PadController.validate_pad_direction!(direction, pad_info)
     pad_options = Child.PadController.parse_pad_options!(pad_name, pad_options, state)
 
     state =
       case PadModel.get_data(state, pad_ref) do
         {:error, :unknown_pad} ->
-          init_pad_data(pad_ref, info, state)
+          init_pad_data(pad_ref, pad_info, state)
 
         # This case is for pads that were instantiated before the external link request,
         # that is in the internal link request (see `handle_internal_link_request/4`).
@@ -129,7 +129,7 @@ defmodule Membrane.Core.Bin.PadController do
     )
 
     pad_name = Pad.name_by_ref(pad_ref)
-    info = Map.fetch!(state.pads_info, pad_name)
+    pad_info = Map.fetch!(state.pads_info, pad_name)
 
     state =
       cond do
@@ -137,8 +137,8 @@ defmodule Membrane.Core.Bin.PadController do
           state
 
         # Static pads can be linked internally before the external link request
-        info.availability == :always ->
-          init_pad_data(pad_ref, info, state)
+        pad_info.availability == :always ->
+          init_pad_data(pad_ref, pad_info, state)
 
         true ->
           raise LinkError, "Dynamic pads must be firstly linked externally, then internally"
@@ -200,15 +200,11 @@ defmodule Membrane.Core.Bin.PadController do
           SpecificationParser.raw_endpoint(),
           SpecificationParser.raw_endpoint(),
           %{
-            stream_format_validation_params:
+            optional(:input_pad_info) => PadModel.pad_info() | nil,
+            optional(:link_metadata) => map(),
+            :stream_format_validation_params =>
               StreamFormatController.stream_format_validation_params()
-          }
-          | %{
-              other_info: PadModel.pad_info() | nil,
-              link_metadata: map,
-              stream_format_validation_params:
-                StreamFormatController.stream_format_validation_params()
-            },
+          },
           Core.Bin.State.t()
         ) :: {Core.Element.PadController.link_call_reply(), Core.Bin.State.t()}
   def handle_link(direction, endpoint, other_endpoint, params, state) do
@@ -217,32 +213,23 @@ defmodule Membrane.Core.Bin.PadController do
     with {:ok, pad_data} <- PadModel.get_data(state, endpoint.pad_ref) do
       %{spec_ref: spec_ref, endpoint: child_endpoint, name: pad_name} = pad_data
 
-      pad_props =
-        Map.merge(endpoint.pad_props, child_endpoint.pad_props, fn key,
-                                                                   external_value,
-                                                                   internal_value ->
-          if key in [
-               :target_queue_size,
-               :min_demand_factor,
-               :auto_demand_size,
-               :toilet_capacity,
-               :throttling_factor
-             ] do
+      child_pad_props =
+        Map.merge(endpoint.pad_props, child_endpoint.pad_props, fn
+          key, external_value, internal_value
+          when key in [
+                 :target_queue_size,
+                 :min_demand_factor,
+                 :auto_demand_size,
+                 :toilet_capacity,
+                 :throttling_factor
+               ] ->
             external_value || internal_value
-          else
+
+          _key, _external_value, internal_value ->
             internal_value
-          end
         end)
 
-      child_endpoint = %{child_endpoint | pad_props: pad_props}
-
-      if direction == :input do
-        :ok =
-          Child.PadController.validate_pad_mode!(
-            {endpoint.pad_ref, pad_data},
-            {other_endpoint.pad_ref, params.other_info}
-          )
-      end
+      child_endpoint = %{child_endpoint | pad_props: child_pad_props}
 
       params =
         Map.update!(
@@ -361,9 +348,10 @@ defmodule Membrane.Core.Bin.PadController do
     end
   end
 
-  defp init_pad_data(pad_ref, info, state) do
-    data =
-      Map.delete(info, :accepted_formats_str)
+  defp init_pad_data(pad_ref, pad_info, state) do
+    pad_data =
+      pad_info
+      |> Map.delete(:accepted_formats_str)
       |> Map.merge(%{
         ref: pad_ref,
         link_id: nil,
@@ -373,9 +361,8 @@ defmodule Membrane.Core.Bin.PadController do
         spec_ref: nil,
         options: nil
       })
+      |> then(&struct!(Membrane.Bin.PadData, &1))
 
-    data = struct!(Membrane.Bin.PadData, data)
-
-    put_in(state, [:pads_data, pad_ref], data)
+    put_in(state, [:pads_data, pad_ref], pad_data)
   end
 end

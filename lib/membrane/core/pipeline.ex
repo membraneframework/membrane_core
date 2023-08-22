@@ -75,9 +75,18 @@ defmodule Membrane.Core.Pipeline do
   end
 
   @impl GenServer
-  def handle_info(Message.new(:stream_management_event, [element_name, pad_ref, event]), state) do
+  def handle_info(
+        Message.new(:stream_management_event, [element_name, pad_ref, event, event_params]),
+        state
+      ) do
     state =
-      LifecycleController.handle_stream_management_event(event, element_name, pad_ref, state)
+      LifecycleController.handle_stream_management_event(
+        event,
+        element_name,
+        pad_ref,
+        event_params,
+        state
+      )
 
     {:noreply, state}
   end
