@@ -453,7 +453,7 @@ defmodule Membrane.Pipeline do
         """
         @spec start(
                 unquote(__MODULE__).pipeline_options(),
-                process_options :: GenServer.options()
+                unquote(__MODULE__).config()
               ) :: unquote(__MODULE__).on_start()
         def start(pipeline_options \\ nil, process_options \\ []) do
           unquote(__MODULE__).start(__MODULE__, pipeline_options, process_options)
