@@ -10,7 +10,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     ChildEntryParser,
     ChildrenModel,
     ClockHandler,
-    CrashGroup,
     Link,
     SpecificationParser
   }
@@ -265,19 +264,22 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = %{state | children: Map.merge(state.children, Map.new(children, &{&1.name, &1}))}
 
     children_names = children |> Enum.map(& &1.name)
-    children_pids = children |> Enum.map(& &1.pid)
 
-    # adding crash group to state
     state =
-      if options.crash_group_mode != nil do
-        CrashGroupUtils.add_crash_group(
-          {options.group, options.crash_group_mode},
-          children_names,
-          children_pids,
+      cond do
+        Map.has_key?(state.crash_groups, options.group) ->
+          CrashGroupUtils.extend_crash_group(options.group, children_names, state)
+
+        options.crash_group_mode != nil ->
+          CrashGroupUtils.add_crash_group(
+            options.group,
+            options.crash_group_mode,
+            children_names,
+            state
+          )
+
+        true ->
           state
-        )
-      else
-        state
       end
 
     {children_names, state}
@@ -519,7 +521,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     LinkUtils.remove_link(child_name, pad_ref, state)
   end
 
-  defp remove_children_from_specs(removed_children, state) do
+  @spec remove_children_from_specs(Child.name() | [Child.name()], Parent.state()) ::
+          Parent.state()
+  def remove_children_from_specs(removed_children, state) do
     removed_children = Bunch.listify(removed_children) |> MapSet.new()
 
     removed_children_specs =
@@ -652,46 +656,27 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  defp do_handle_child_death(child_name, :normal, state) do
-    {%{pid: child_pid}, state} = Bunch.Access.pop_in(state, [:children, child_name])
-    state = LinkUtils.unlink_element(child_name, state)
-    {_result, state} = remove_child_from_crash_group(state, child_pid)
-    {:ok, state}
-  end
-
   defp do_handle_child_death(child_name, reason, state) do
-    %{pid: child_pid} = ChildrenModel.get_child_data!(state, child_name)
+    state =
+      if reason == :normal,
+        do: LinkUtils.unlink_element(child_name, state),
+        else: state
 
-    with {:ok, group} <- CrashGroupUtils.get_group_by_member_pid(child_pid, state) do
+    with {:ok, crash_group} <- CrashGroupUtils.get_child_crash_group(child_name, state) do
       state =
-        group.members
-        |> Enum.filter(&Map.has_key?(state.children, &1))
-        |> remove_children_from_specs(state)
-
-      state =
-        crash_all_group_members(group, child_name, state)
-        |> remove_child_from_crash_group(group, child_pid)
-        |> case do
-          {:removed, state} ->
-            exec_handle_crash_group_down_callback(
-              group.name,
-              group.members,
-              group.crash_initiator || child_name,
-              state
-            )
-
-          {:not_removed, state} ->
-            state
-        end
-        |> Bunch.Access.delete_in([:children, child_name])
+        CrashGroupUtils.handle_crash_group_member_death(child_name, crash_group, reason, state)
+        |> ChildrenModel.delete_child(child_name)
 
       {:ok, state}
     else
-      {:error, :not_member} when reason == {:shutdown, :membrane_crash_group_kill} ->
+      :error when reason == :normal ->
+        {:ok, ChildrenModel.delete_child(state, child_name)}
+
+      :error when reason == {:shutdown, :membrane_crash_group_kill} ->
         raise Membrane.PipelineError,
               "Child #{inspect(child_name)} that was not a member of any crash group killed with :membrane_crash_group_kill."
 
-      {:error, :not_member} ->
+      :error ->
         Membrane.Logger.debug("""
         Child #{inspect(child_name)} crashed but was not a member of any crash group.
         Terminating.
@@ -728,55 +713,5 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state = %{state | pending_specs: Map.merge(state.pending_specs, related_specs)}
     related_specs |> Map.keys() |> Enum.reduce(state, &proceed_spec_startup/2)
-  end
-
-  defp exec_handle_crash_group_down_callback(
-         group_name,
-         group_members,
-         crash_initiator,
-         state
-       ) do
-    context_generator =
-      &Component.context_from_state(&1,
-        members: group_members,
-        crash_initiator: crash_initiator
-      )
-
-    CallbackHandler.exec_and_handle_callback(
-      :handle_crash_group_down,
-      Membrane.Core.Pipeline.ActionHandler,
-      %{context: context_generator},
-      [group_name],
-      state
-    )
-  end
-
-  # called when process was a member of a crash group
-  @spec crash_all_group_members(CrashGroup.t(), Child.name(), Parent.state()) ::
-          Parent.state()
-  defp crash_all_group_members(
-         %CrashGroup{triggered?: false} = crash_group,
-         crash_initiator,
-         state
-       ) do
-    %CrashGroup{alive_members_pids: members_pids} = crash_group
-    state = LinkUtils.unlink_crash_group(crash_group, state)
-    Enum.each(members_pids, &Process.exit(&1, {:shutdown, :membrane_crash_group_kill}))
-    CrashGroupUtils.set_triggered(state, crash_group.name, crash_initiator)
-  end
-
-  defp crash_all_group_members(_crash_group, _crash_initiator, state), do: state
-
-  defp remove_child_from_crash_group(state, child_pid) do
-    with {:ok, group} <- CrashGroupUtils.get_group_by_member_pid(child_pid, state) do
-      remove_child_from_crash_group(state, group, child_pid)
-    else
-      {:error, :not_member} -> {:not_removed, state}
-    end
-  end
-
-  defp remove_child_from_crash_group(state, group, child_pid) do
-    CrashGroupUtils.remove_member_of_crash_group(state, group.name, child_pid)
-    |> CrashGroupUtils.remove_crash_group_if_empty(group.name)
   end
 end

@@ -49,10 +49,14 @@ defmodule Membrane.Core.Element.PadControllerTest do
                    pad_props: %{options: [], toilet_capacity: nil, throttling_factor: nil}
                  },
                  %{
-                   other_info: %{direction: :output, flow_control: :manual, demand_unit: :buffers},
+                   output_pad_info: %{
+                     direction: :output,
+                     flow_control: :manual,
+                     demand_unit: :buffers
+                   },
                    link_metadata: %{toilet: make_ref(), observability_data: %{path: ""}},
                    stream_format_validation_params: [],
-                   other_effective_flow_control: :pull
+                   output_effective_flow_control: :pull
                  },
                  state
                )
@@ -80,7 +84,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
     {info, state} =
       elem_module
       |> prepare_state(name)
-      |> Bunch.Access.pop_in([:pads_info, pad_name])
+      |> pop_in([:pads_info, pad_name])
 
     data =
       struct(Membrane.Element.PadData,
@@ -90,7 +94,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
       |> Map.merge(info)
 
     state
-    |> Bunch.Access.put_in([:pads_data, pad_name], data)
+    |> put_in([:pads_data, pad_name], data)
   end
 
   defp prepare_dynamic_state(elem_module, name, pad_name, pad_ref) do
@@ -104,7 +108,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
       )
       |> Map.merge(info)
 
-    state |> Bunch.Access.put_in([:pads_data, pad_ref], data)
+    state |> put_in([:pads_data, pad_ref], data)
   end
 
   describe "handle_unlink" do

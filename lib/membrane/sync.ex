@@ -160,7 +160,11 @@ defmodule Membrane.Sync do
 
   @impl true
   def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
-    state = state |> Bunch.Access.delete_in([:processes, pid]) |> check_and_handle_sync()
+    state =
+      state
+      |> pop_in([:processes, pid])
+      |> elem(1)
+      |> check_and_handle_sync()
 
     if state.empty_exit? and state.processes |> Enum.empty?() do
       {:stop, :normal, state}

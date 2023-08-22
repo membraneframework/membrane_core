@@ -205,7 +205,8 @@ defmodule Membrane.Clock do
 
   defp handle_unsubscribe(pid, state) do
     Process.demonitor(state.subscribers[pid].monitor, [:flush])
-    state |> Bunch.Access.delete_in([:subscribers, pid])
+    {_subscriber, state} = pop_in(state, [:subscribers, pid])
+    state
   end
 
   defp handle_clock_update({nom, denom}, state) do
