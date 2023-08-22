@@ -64,10 +64,13 @@ defmodule Membrane.Core.Stalker do
   """
   @spec new(component_config(), pid()) :: t()
   def new(config, supervisor) do
-    ets = create_ets()
-
     {:ok, pid} =
-      Membrane.Core.SubprocessSupervisor.start_link_utility(supervisor, {__MODULE__, %{ets: ets}})
+      Membrane.Core.SubprocessSupervisor.start_link_utility(
+        supervisor,
+        {__MODULE__, %{pipeline: self()}}
+      )
+
+    ets = receive do: ({:ets, ets} -> ets)
 
     stalker = %__MODULE__{pid: pid, ets: ets}
     setup_process_local_observability(config, %{stalker: stalker})
@@ -333,8 +336,10 @@ defmodule Membrane.Core.Stalker do
   end
 
   @impl true
-  def init(%{ets: ets}) do
+  def init(%{pipeline: pipeline}) do
     Process.send_after(self(), :scrape_metrics, @scrape_interval)
+    ets = create_ets()
+    send(pipeline, {:ets, ets})
 
     {:ok,
      %{
