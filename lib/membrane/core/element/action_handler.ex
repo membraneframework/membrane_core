@@ -375,19 +375,12 @@ defmodule Membrane.Core.Element.ActionHandler do
            pid: pid,
            other_ref: other_ref,
            name: pad_name,
-           stream_format_validation_params: stream_format_validation_params
+           stream_format_validation_params: validation_params
          } <- pad_data do
-      stream_format_validation_params = [
-        {state.module, pad_name} | stream_format_validation_params
-      ]
+      validation_params = [{state.module, pad_name} | validation_params]
 
       :ok =
-        StreamFormatController.validate_stream_format!(
-          :output,
-          stream_format_validation_params,
-          stream_format,
-          state
-        )
+        StreamFormatController.validate_stream_format!(:output, validation_params, stream_format)
 
       state = PadModel.set_data!(state, pad_ref, :stream_format, stream_format)
       Message.send(pid, :stream_format, stream_format, for_pad: other_ref)
