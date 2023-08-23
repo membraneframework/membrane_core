@@ -461,7 +461,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
     if Event.event?(event) do
       %{pid: pid, other_ref: other_ref} = PadModel.get_data!(state, pad_ref)
-      state = handle_event(pad_ref, event, state)
+      state = handle_outgoing_event(pad_ref, event, state)
       Message.send(pid, :event, event, for_pad: other_ref)
       state
     else
@@ -470,8 +470,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec handle_event(Pad.ref(), Event.t(), State.t()) :: State.t()
-  defp handle_event(pad_ref, %Events.EndOfStream{}, state) do
+  @spec handle_outgoing_event(Pad.ref(), Event.t(), State.t()) :: State.t()
+  defp handle_outgoing_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
       state = PadController.remove_pad_associations(pad_ref, state)
       PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
@@ -484,5 +484,5 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  defp handle_event(_pad_ref, _event, state), do: state
+  defp handle_outgoing_event(_pad_ref, _event, state), do: state
 end

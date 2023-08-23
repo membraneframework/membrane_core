@@ -1,7 +1,10 @@
 defmodule Membrane.Core.Bin.CallbackContext do
   @moduledoc false
 
-  @type optional_fields :: [pad_options: map()]
+  @type optional_fields ::
+          [pad_options: map()]
+          | [members: [Membrane.Child.name()], crash_initiator: Membrane.Child.name()]
+          | [start_of_stream_received?: boolean()]
 
   @spec from_state(Membrane.Core.Bin.State.t(), optional_fields()) ::
           Membrane.Bin.CallbackContext.t()

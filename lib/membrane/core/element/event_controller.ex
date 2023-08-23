@@ -60,58 +60,90 @@ defmodule Membrane.Core.Element.EventController do
   end
 
   @spec exec_handle_event(Pad.ref(), Event.t(), params :: map, State.t()) :: State.t()
-  def exec_handle_event(pad_ref, event, params \\ %{}, state) do
-    case handle_special_event(pad_ref, event, state) do
-      {:handle, state} ->
-        :ok = check_sync(event, state)
-        do_exec_handle_event(pad_ref, event, params, state)
+  def exec_handle_event(pad_ref, event, params \\ %{}, state)
 
-      {:ignore, state} ->
-        state
-    end
-  end
-
-  @spec do_exec_handle_event(Pad.ref(), Event.t(), params :: map, State.t()) :: State.t()
-  defp do_exec_handle_event(pad_ref, %event_type{} = event, params, state)
-       when event_type in [Events.StartOfStream, Events.EndOfStream] do
-    data = PadModel.get_data!(state, pad_ref)
-    callback = stream_event_to_callback(event)
+  def exec_handle_event(pad_ref, %Events.StartOfStream{} = event, params, state) do
+    state = PadModel.set_data!(state, pad_ref, :start_of_stream?, true)
+    :ok = check_sync(state)
 
     new_params =
       Map.merge(params, %{
         context: &CallbackContext.from_state/1,
-        direction: data.direction
+        direction: PadModel.get_data!(state, pad_ref, :direction)
       })
 
     state =
       CallbackHandler.exec_and_handle_callback(
-        callback,
+        :handle_start_of_stream,
         ActionHandler,
         new_params,
         [pad_ref],
         state
       )
 
-    Message.send(state.parent_pid, :stream_management_event, [
-      state.name,
-      pad_ref,
-      event
-    ])
+    Message.send(
+      state.parent_pid,
+      :stream_management_event,
+      [state.name, pad_ref, event, []]
+    )
 
     state
   end
 
-  defp do_exec_handle_event(pad_ref, event, params, state) do
+  def exec_handle_event(pad_ref, %Events.EndOfStream{} = event, params, state) do
+    if PadModel.get_data!(state, pad_ref, :end_of_stream?) do
+      Membrane.Logger.debug("Ignoring end of stream as it has already arrived before")
+      state
+    else
+      Membrane.Logger.debug("Received end of stream on pad #{inspect(pad_ref)}")
+
+      state = PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
+      state = PadController.remove_pad_associations(pad_ref, state)
+
+      %{
+        start_of_stream?: start_of_stream?,
+        direction: direction
+      } = PadModel.get_data!(state, pad_ref)
+
+      event_params = [start_of_stream_received?: start_of_stream?]
+
+      new_params =
+        Map.merge(params, %{
+          context: &CallbackContext.from_state(&1, event_params),
+          direction: direction
+        })
+
+      state =
+        CallbackHandler.exec_and_handle_callback(
+          :handle_end_of_stream,
+          ActionHandler,
+          new_params,
+          [pad_ref],
+          state
+        )
+
+      Message.send(
+        state.parent_pid,
+        :stream_management_event,
+        [state.name, pad_ref, event, event_params]
+      )
+
+      state
+    end
+  end
+
+  def exec_handle_event(pad_ref, event, params, state) do
     data = PadModel.get_data!(state, pad_ref)
 
     params =
-      %{context: &CallbackContext.from_state/1, direction: data.direction} |> Map.merge(params)
+      %{context: &CallbackContext.from_state/1, direction: data.direction}
+      |> Map.merge(params)
 
     args = [pad_ref, event]
     CallbackHandler.exec_and_handle_callback(:handle_event, ActionHandler, params, args, state)
   end
 
-  defp check_sync(%Events.StartOfStream{}, state) do
+  defp check_sync(state) do
     if state.pads_data
        |> Map.values()
        |> Enum.filter(&(&1.direction == :input))
@@ -122,42 +154,7 @@ defmodule Membrane.Core.Element.EventController do
     :ok
   end
 
-  defp check_sync(_event, _state) do
-    :ok
-  end
-
-  @spec handle_special_event(Pad.ref(), Event.t(), State.t()) ::
-          {:handle | :ignore, State.t()}
-  defp handle_special_event(pad_ref, %Events.StartOfStream{}, state) do
-    Membrane.Logger.debug("received start of stream")
-    state = PadModel.set_data!(state, pad_ref, :start_of_stream?, true)
-    {:handle, state}
-  end
-
-  defp handle_special_event(pad_ref, %Events.EndOfStream{}, state) do
-    pad_data = PadModel.get_data!(state, pad_ref)
-
-    with %{start_of_stream?: true, end_of_stream?: false} <- pad_data do
-      state = PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
-      state = PadController.remove_pad_associations(pad_ref, state)
-      {:handle, state}
-    else
-      %{end_of_stream?: true} ->
-        Membrane.Logger.debug("Ignoring end of stream as it has already arrived before")
-        {:ignore, state}
-
-      %{start_of_stream?: false} ->
-        Membrane.Logger.debug("Ignoring end of stream as start of stream hasn't arrived yet")
-        {:ignore, state}
-    end
-  end
-
-  defp handle_special_event(_pad_ref, _event, state), do: {:handle, state}
-
   defp buffers_before_event_present?(pad_data) do
     pad_data.input_queue && not InputQueue.empty?(pad_data.input_queue)
   end
-
-  defp stream_event_to_callback(%Events.StartOfStream{}), do: :handle_start_of_stream
-  defp stream_event_to_callback(%Events.EndOfStream{}), do: :handle_end_of_stream
 end

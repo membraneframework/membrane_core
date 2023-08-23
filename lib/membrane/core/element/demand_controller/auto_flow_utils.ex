@@ -52,7 +52,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
       operation = if paused?, do: "pause", else: "resume"
 
       Membrane.Logger.debug(
-        "Trying to #{operation} auto demand on pad #{inspect(pad_ref)}, while it has been already #{operation}d"
+        "Tried to #{operation} auto demand on pad #{inspect(pad_ref)}, while it has been already #{operation}d"
       )
     end
 

@@ -41,12 +41,12 @@ defmodule Membrane.Core.TimerController do
       stop_and_unsubscribe(timer)
     end
 
-    Bunch.Access.put_in(state, [:synchronization, :timers], %{})
+    put_in(state, [:synchronization, :timers], %{})
   end
 
   @spec stop_timer(Timer.id(), Component.state()) :: Component.state()
   def stop_timer(id, state) do
-    {timer, state} = state |> Bunch.Access.pop_in([:synchronization, :timers, id])
+    {timer, state} = state |> pop_in([:synchronization, :timers, id])
 
     if timer |> is_nil do
       raise Membrane.TimerError, "Timer #{inspect(id)} doesn't exist"

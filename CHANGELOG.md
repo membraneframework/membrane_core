@@ -21,6 +21,7 @@
  * Make sure enumerable with all elements being `Membrane.Buffer.t()`, passed as `:output` parameter for `Membrane.Testing.Source` won't get rewrapped in `Membrane.Buffer.t()` struct.
  * Implement `Membrane.Debug.Filter` and `Membrane.Debug.Sink`. [#552](https://github.com/membraneframework/membrane_core/pull/552)
  * Add `:pause_auto_demand` and `:resume_auto_demand` actions. [#586](https://github.com/membraneframework/membrane_core/pull/586)
+ * Send `:end_of_stream`, even if it is not preceded by `:start_of_stream`. [#557](https://github.com/membraneframework/membrane_core/pull/577)
  
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
@@ -32,9 +33,9 @@
  * New `spec` action syntax - the structure of pipeline is now defined with the use of `Membrane.ChildrenSpec`
  * Rename `:caps` to `:stream_format`.
  * Use Elixir patterns as `:accepted_format` in pad definition.
- * Delete `:ok` from tuples returned from callbacks 
- * Remove `:type` from specs passed to `def_options/1` macro in bins and elements.  
- * Add `Membrane.Testing.MockResourceGuard`
+ * Delete `:ok` from tuples returned from callbacks.
+ * Remove `:type` from specs passed to `def_options/1` macro in bins and elements.
+ * Add `Membrane.Testing.MockResourceGuard`.
 
 ## 0.10.0
  * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)

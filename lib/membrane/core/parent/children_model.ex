@@ -40,6 +40,11 @@ defmodule Membrane.Core.Parent.ChildrenModel do
     %{state | children: children}
   end
 
+  @spec delete_child(Parent.state(), Child.name()) :: Parent.state()
+  def delete_child(%{children: children} = state, child) do
+    %{state | children: Map.delete(children, child)}
+  end
+
   @spec all?(Parent.state(), (ChildEntry.t() -> as_boolean(term))) :: boolean()
   def all?(state, predicate) do
     state.children
