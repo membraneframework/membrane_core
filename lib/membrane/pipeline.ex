@@ -436,9 +436,9 @@ defmodule Membrane.Pipeline do
         A proxy for `#{inspect(unquote(__MODULE__))}.start_link/3`
         """
         @spec start_link(
-                pipeline_options :: unquote(__MODULE__).pipeline_options(),
-                process_options :: GenServer.options()
-              ) :: GenServer.on_start()
+                unquote(__MODULE__).pipeline_options(),
+                unquote(__MODULE__).config()
+              ) :: unquote(__MODULE__).on_start()
         def start_link(pipeline_options \\ nil, process_options \\ []) do
           unquote(__MODULE__).start_link(__MODULE__, pipeline_options, process_options)
         end
@@ -452,9 +452,9 @@ defmodule Membrane.Pipeline do
         A proxy for `#{inspect(unquote(__MODULE__))}.start/3`
         """
         @spec start(
-                pipeline_options :: unquote(__MODULE__).pipeline_options(),
-                process_options :: GenServer.options()
-              ) :: GenServer.on_start()
+                unquote(__MODULE__).pipeline_options(),
+                unquote(__MODULE__).config()
+              ) :: unquote(__MODULE__).on_start()
         def start(pipeline_options \\ nil, process_options \\ []) do
           unquote(__MODULE__).start(__MODULE__, pipeline_options, process_options)
         end
@@ -464,7 +464,7 @@ defmodule Membrane.Pipeline do
         @doc """
         Changes pipeline's playback to `:stopped` and terminates its process.
         """
-        @spec terminate(pid, Keyword.t()) :: :ok
+        @spec terminate(pid, Keyword.t()) :: :ok | {:ok, pid()} | {:error, :timeout}
         defdelegate terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
       end
     end
