@@ -267,7 +267,7 @@ defmodule Membrane.Integration.DemandsTest do
     def handle_end_of_stream(_pad, ctx, state) do
       actions =
         Map.values(ctx.pads)
-        |> Enum.filter(& &1.direction == :output and not &1.end_of_stream?)
+        |> Enum.filter(&(&1.direction == :output and not &1.end_of_stream?))
         |> Enum.map(&{:end_of_stream, &1.ref})
 
       {actions, state}
