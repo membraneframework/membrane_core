@@ -38,7 +38,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   @spec handle_child_pad_removed(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
   def handle_child_pad_removed(child, pad, state) do
-    {:ok, link} = get_link(state.links, child, pad)
+    {:ok, link} = get_link(child, pad, state)
 
     state =
       opposite_endpoint(link, child)
@@ -57,7 +57,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   @spec remove_link(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()
   def remove_link(child_name, pad_ref, state) do
-    with {:ok, link} <- get_link(state.links, child_name, pad_ref) do
+    with {:ok, link} <- get_link(child_name, pad_ref, state) do
       state =
         [link.to, link.from]
         |> Enum.reduce(state, &unlink_endpoint/2)
@@ -168,10 +168,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     links
   end
 
-  defp get_link(links, child, pad) do
-    Enum.find(links, fn {_id, link} ->
+  @spec get_link(Child.name(), Pad.ref(), Parent.state()) ::
+          {:ok, Link.t()} | {:error, :not_found}
+  def get_link(child, child_pad_ref, state) do
+    Enum.find(state.links, fn {_id, link} ->
       [link.from, link.to]
-      |> Enum.any?(&(&1.child == child and &1.pad_ref == pad))
+      |> Enum.any?(&(&1.child == child and &1.pad_ref == child_pad_ref))
     end)
     |> case do
       {_id, %Link{} = link} -> {:ok, link}
