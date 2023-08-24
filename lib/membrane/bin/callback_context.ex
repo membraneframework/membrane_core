@@ -9,9 +9,6 @@ defmodule Membrane.Bin.CallbackContext do
   Field `:pad_options` is present only in `c:Membrane.Bin.handle_pad_added/3`
   and `c:Membrane.Bin.handle_pad_removed/3`.
 
-  Field `:start_of_stream_received?` is present only in
-  `c:Membrane.Bin.handle_element_end_of_stream/4`.
-
   Fields `:members` and `:crash_initiator` are present only in
   `c:Membrane.Pipeline.handle_crash_group_down/3`.
   """
@@ -26,7 +23,6 @@ defmodule Membrane.Bin.CallbackContext do
           :utility_supervisor => Membrane.UtilitySupervisor.t(),
           optional(:pad_options) => map(),
           optional(:members) => [Membrane.Child.name()],
-          optional(:crash_initiator) => Membrane.Child.name(),
-          optional(:start_of_stream_received?) => boolean()
+          optional(:crash_initiator) => Membrane.Child.name()
         }
 end

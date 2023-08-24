@@ -83,6 +83,12 @@ defmodule Membrane.Core.Element.EventControllerTest do
       assert state.pads_data.input.start_of_stream?
     end
 
+    test "ignoring end of stream when there was no start of stream prior", %{state: state} do
+      state = EventController.handle_event(:input, %Events.EndOfStream{}, state)
+      refute state.pads_data.input.end_of_stream?
+      refute state.pads_data.input.start_of_stream?
+    end
+
     test "end of stream successfully", %{state: state} do
       state = put_start_of_stream(state, :input)
 
