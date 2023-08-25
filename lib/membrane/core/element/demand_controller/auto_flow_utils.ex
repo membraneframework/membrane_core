@@ -51,7 +51,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     if old_value == paused? do
       operation = if paused?, do: "pause", else: "resume"
 
-      Membrane.Logger.debug(
+      Membrane.Logger.debug_verbose(
         "Tried to #{operation} auto demand on pad #{inspect(pad_ref)}, while it has been already #{operation}d"
       )
     end

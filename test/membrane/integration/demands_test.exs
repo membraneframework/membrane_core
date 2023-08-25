@@ -208,7 +208,7 @@ defmodule Membrane.Integration.DemandsTest do
       Testing.Pipeline.execute_actions(pipeline, notify_child: {:sink, :pause_auto_demand})
 
       assert_pipeline_notified(pipeline, :sink, {:buff_no, buff_no})
-      # sink should receive aropund 100 buffers, but the boundary is set to 70, in case of eg.
+      # sink should receive around 100 buffers, but the boundary is set to 70, in case of eg.
       # slowdown of the source when running all tests in the project asynchronously
       assert buff_no > 70
 
@@ -251,13 +251,13 @@ defmodule Membrane.Integration.DemandsTest do
 
       {pad_counter, state} = get_and_update_in(state, [:pads_counters, pad], &{&1, &1 + 1})
 
-      pad_upperbound = Map.get(state.pads_upperbounds, pad, :infinity)
-
       actions =
-        if pad_counter > pad_upperbound and not ctx.pads[pad].auto_demand_paused? do
+        with {:ok, upperbound} when pad_counter > upperbound <-
+               Map.fetch(state.pads_upperbounds, pad),
+             %{auto_demand_paused?: false} <- ctx.pads[pad] do
           [pause_auto_demand: pad, buffer: {:output, buffer}]
         else
-          [buffer: {:output, buffer}]
+          _other -> [buffer: {:output, buffer}]
         end
 
       {actions, state}
@@ -265,12 +265,11 @@ defmodule Membrane.Integration.DemandsTest do
 
     @impl true
     def handle_end_of_stream(_pad, ctx, state) do
-      actions =
-        Map.values(ctx.pads)
-        |> Enum.filter(&(&1.direction == :output and not &1.end_of_stream?))
-        |> Enum.map(&{:end_of_stream, &1.ref})
-
-      {actions, state}
+      if ctx.pads.output.end_of_stream? do
+        {[], state}
+      else
+        {[end_of_stream: :output], state}
+      end
     end
   end
 
