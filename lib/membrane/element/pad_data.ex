@@ -13,6 +13,7 @@ defmodule Membrane.Element.PadData do
     - `:options` - options passed in `Membrane.ParentSpec` when linking pad
     - `:ref` - see `t:Membrane.Pad.ref/0`
     - `:start_of_stream?` - flag determining whether the stream processing via the pad has been started
+    - `auto_demand_paused?` - flag determining if auto-demanding on the pad is paused or no
 
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
@@ -34,6 +35,7 @@ defmodule Membrane.Element.PadData do
           name: Pad.name(),
           ref: Pad.ref(),
           options: %{optional(atom) => any},
+          auto_demand_paused?: boolean(),
           stream_format_validation_params: private_field,
           pid: private_field,
           other_ref: private_field,
@@ -92,6 +94,7 @@ defmodule Membrane.Element.PadData do
                 stream_format_validation_params: [],
                 other_demand_unit: nil,
                 other_effective_flow_control: :push,
-                stalker_metrics: %{}
+                stalker_metrics: %{},
+                auto_demand_paused?: false
               ]
 end

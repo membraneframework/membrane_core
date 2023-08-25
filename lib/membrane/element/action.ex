@@ -92,6 +92,31 @@ defmodule Membrane.Element.Action do
   @type demand_size :: pos_integer | (pos_integer() -> non_neg_integer())
 
   @typedoc """
+  Pauses auto-demanding on the specific pad.
+
+  The pad must have input direction and work in `:auto` flow control mode.
+
+  This action does not guarantee that no more buffers will arrive on the specific pad,
+  but ensures, that demand on this pad will not increase until returning
+  `#{inspect(__MODULE__)}.resume_auto_demand()` action. Number of buffers, that will
+  arrive on the pad, depends on the behaviour of the elements earlier in the pipeline.
+
+  When auto-demanding is already paused, this action has no effect.
+  """
+  @type pause_auto_demand :: {:pause_auto_demand, Pad.ref() | [Pad.ref()]}
+
+  @typedoc """
+  Resumes auto-demanding on the specific pad.
+
+  The pad must have input direction and work in `:auto` flow control mode.
+
+  This action reverts the effects of `#{inspect(__MODULE__)}.pause_auto_demand()` action.
+
+  When auto demanding is not paused, this action has no effect.
+  """
+  @type resume_auto_demand :: {:resume_auto_demand, Pad.ref() | [Pad.ref()]}
+
+  @typedoc """
   Executes `c:Membrane.Element.WithOutputPads.handle_demand/5` callback
   for the given pad (or pads), that have demand greater than 0.
 
@@ -237,6 +262,8 @@ defmodule Membrane.Element.Action do
           | buffer
           | demand
           | redemand
+          | pause_auto_demand
+          | resume_auto_demand
           | forward
           | start_timer
           | timer_interval
