@@ -87,11 +87,20 @@ defmodule Membrane.Testing.PipelineTest do
   describe "When starting, Testing Pipeline" do
     test "exits with an error if not a module or non-existing module was passed" do
       Process.flag(:trap_exit, true)
-      Pipeline.start_link(module: [1, 2])
-      assert_receive {:EXIT, _pid, {exception, stacktrace}}
+      {:error, {exception, stacktrace}} = Pipeline.start_link(module: [1, 2])
+
+      if otp_lower_than_26() do
+        assert_receive {:EXIT, _pid, {^exception, ^stacktrace}}
+      end
+
       assert_raise RuntimeError, ~r/Not a module./, fn -> reraise exception, stacktrace end
-      Pipeline.start_link(module: NotExistingModule)
-      assert_receive {:EXIT, _pid, {exception, stacktrace}}
+
+      {:error, {exception, stacktrace}} = Pipeline.start_link(module: NotExistingModule)
+
+      if otp_lower_than_26() do
+        assert_receive {:EXIT, _pid, {^exception, ^stacktrace}}
+      end
+
       assert_raise RuntimeError, ~r/Unknown module./, fn -> reraise exception, stacktrace end
     end
   end
@@ -260,6 +269,15 @@ defmodule Membrane.Testing.PipelineTest do
       Pipeline.execute_actions(pipeline, notify_child: {:bin, :remove_link})
 
       refute_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
+    end
+  end
+
+  defp otp_lower_than_26() do
+    System.otp_release()
+    |> Integer.parse()
+    |> case do
+      {otp_version, _version_sufix} when otp_version < 26 -> true
+      _else -> false
     end
   end
 end

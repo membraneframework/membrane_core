@@ -25,6 +25,11 @@ defmodule Membrane.Integration.LinkingTest do
       demand_unit: :buffers
 
     @impl true
+    def handle_playing(_ctx, state) do
+      {[notify_parent: :playing], state}
+    end
+
+    @impl true
     def handle_demand(_pad, _size, _unit, _ctx, state) do
       {[], state}
     end
@@ -128,16 +133,16 @@ defmodule Membrane.Integration.LinkingTest do
       pipeline: pipeline
     } do
       spec = [
-        child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
+        child(:bin, %Bin{child: %Testing.Source{output: [~c"a", ~c"b", ~c"c"]}}),
         child(:sink, Testing.Sink),
         get_child(:bin) |> get_child(:sink)
       ]
 
       send(pipeline, {:start_spec, %{spec: spec}})
       assert_receive(:spec_started)
-      assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'a'})
-      assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'b'})
-      assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'c'})
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: ~c"a"})
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: ~c"b"})
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: ~c"c"})
       send(pipeline, {:remove_children, :sink})
       assert_pipeline_notified(pipeline, :bin, :handle_pad_removed)
     end
@@ -145,7 +150,7 @@ defmodule Membrane.Integration.LinkingTest do
     test "and element crashes, bin forwards the unlink message to child", %{pipeline: pipeline} do
       bin_spec = {
         child(:bin, %Bin{
-          child: %Testing.Source{output: ['a', 'b', 'c']},
+          child: %Testing.Source{output: [~c"a", ~c"b", ~c"c"]},
           remove_child_on_unlink: false
         }),
         crash_group_mode: :temporary, group: :group_1
@@ -191,7 +196,7 @@ defmodule Membrane.Integration.LinkingTest do
   } do
     spec = [
       {
-        child(:source, %Testing.Source{output: ['a', 'b', 'c']}),
+        child(:source, %Testing.Source{output: [~c"a", ~c"b", ~c"c"]}),
         group: :group_1, crash_group_mode: :temporary
       },
       {
@@ -216,7 +221,7 @@ defmodule Membrane.Integration.LinkingTest do
     pipeline: pipeline
   } do
     spec_1 = {
-      child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']}),
+      child(:source, %Testing.DynamicSource{output: [~c"a", ~c"b", ~c"c"]}),
       group: :group_1, crash_group_mode: :temporary
     }
 
@@ -250,7 +255,7 @@ defmodule Membrane.Integration.LinkingTest do
     }
 
     spec = {
-      [spec_inner, child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']})],
+      [spec_inner, child(:source, %Testing.DynamicSource{output: [~c"a", ~c"b", ~c"c"]})],
       crash_group_mode: :temporary, group: :group_1
     }
 
@@ -270,7 +275,7 @@ defmodule Membrane.Integration.LinkingTest do
   test "pipeline playback should change successfully after spec with links has been returned",
        %{pipeline: pipeline} do
     bin_spec = {
-      child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
+      child(:bin, %Bin{child: %Testing.Source{output: [~c"a", ~c"b", ~c"c"]}}),
       group: :group_1, crash_group_mode: :temporary
     }
 
@@ -473,8 +478,8 @@ defmodule Membrane.Integration.LinkingTest do
   test "Parent successfully unlinks children with dynamic pads using :remove_link action" do
     spec =
       [
-        child(:source, __MODULE__.Element),
-        child(:sink, __MODULE__.Element)
+        child(:source, Element),
+        child(:sink, Element)
       ] ++
         Enum.map(1..10, fn i ->
           get_child(:source)
@@ -484,6 +489,9 @@ defmodule Membrane.Integration.LinkingTest do
         end)
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+
+    assert_pipeline_notified(pipeline, :source, :playing)
+    assert_pipeline_notified(pipeline, :sink, :playing)
 
     for pad_id <- 1..10 do
       actions =
@@ -564,24 +572,24 @@ defmodule Membrane.Integration.LinkingTest do
   end
 
   test "links should be estabilished in the order they are created in the spec" do
-    defmodule PadsOrderBin do
-      use Membrane.Bin
+    defmodule PadsOrderSink do
+      use Membrane.Sink
 
       def_input_pad :input, availability: :on_request, accepted_format: _any
 
       @impl true
-      def handle_init(_ctx, _opts), do: {[], %{}}
+      def handle_init(_ctx, _opts), do: {[], %{pads_order: []}}
 
       @impl true
       def handle_pad_added(Pad.ref(:input, pad_id), _ctx, state) do
-        state = Map.update(state, :pads_order, [pad_id], &(&1 ++ [pad_id]))
+        state = Map.update!(state, :pads_order, &(&1 ++ [pad_id]))
         {[], state}
       end
 
       @impl true
-      def handle_parent_notification(:get_pads_order, _ctx, state) do
-        answer = {:pads_order, Map.get(state, :pads_order, [])}
-        {[notify_parent: answer], state}
+      def handle_playing(_ctx, state) do
+        notification = {:pads_order, Map.get(state, :pads_order, [])}
+        {[notify_parent: notification], state}
       end
     end
 
@@ -589,21 +597,20 @@ defmodule Membrane.Integration.LinkingTest do
       pads_ids = Enum.shuffle(1..32)
 
       children = [
-        child(:element, Element),
-        child(:bin, PadsOrderBin)
+        child(:endpoint, Element),
+        child(:sink, PadsOrderSink)
       ]
 
       links =
         Enum.map(pads_ids, fn pad_id ->
-          get_child(:element)
+          get_child(:endpoint)
           |> via_in(Pad.ref(:input, pad_id))
-          |> get_child(:bin)
+          |> get_child(:sink)
         end)
 
       pipeline = Testing.Pipeline.start_link_supervised!(spec: children ++ links)
 
-      Testing.Pipeline.execute_actions(pipeline, notify_child: {:bin, :get_pads_order})
-      assert_pipeline_notified(pipeline, :bin, {:pads_order, ^pads_ids})
+      assert_pipeline_notified(pipeline, :sink, {:pads_order, ^pads_ids})
 
       Testing.Pipeline.terminate(pipeline)
     end

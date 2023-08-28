@@ -344,7 +344,11 @@ defmodule Membrane.Pipeline do
     * `:ok` - if pipeline was gracefully terminated within `timeout`.
     * `{:error, :timeout}` - if pipeline was killed after a `timeout`.
   """
-  @spec terminate(pipeline :: pid, timeout: timeout(), force?: boolean(), asynchronous?: boolean()) ::
+  @spec terminate(pipeline :: pid,
+          timeout: timeout(),
+          force?: boolean(),
+          asynchronous?: boolean()
+        ) ::
           :ok | {:ok, pid()} | {:error, :timeout}
   def terminate(pipeline, opts \\ []) do
     [asynchronous?: asynchronous?] ++ opts =
