@@ -150,8 +150,7 @@ defmodule Membrane.Mixfile do
       # Testing
       {:mox, "~> 1.0", only: :test},
       {:junit_formatter, "~> 3.1", only: :test},
-      {:excoveralls, "~> 0.14", only: :test},
-      {:ssl_verify_fun, "~> 1.1.7", only: :test}
+      {:excoveralls, "~> 0.14", only: :test}
     ]
   end
 end

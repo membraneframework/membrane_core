@@ -310,7 +310,7 @@ defmodule Membrane.Integration.LinkingTest do
   after the second spec (the one with `independent_*` children). The last spec has a link to
   the `filter`, which is spawned in the first spec, so it has to wait till the first spec is linked.
   """
-  test "Children are linked in proper order" do
+  test "Children are linked in the proper order" do
     pipeline = Testing.Pipeline.start_link_supervised!()
 
     Testing.Pipeline.execute_actions(pipeline,
@@ -588,7 +588,7 @@ defmodule Membrane.Integration.LinkingTest do
 
       @impl true
       def handle_playing(_ctx, state) do
-        notification = {:pads_order, Map.get(state, :pads_order, [])}
+        notification = {:pads_order, state.pads_order}
         {[notify_parent: notification], state}
       end
     end
