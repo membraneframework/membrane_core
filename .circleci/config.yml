@@ -10,7 +10,6 @@ commands:
       - restore_cache:
           keys:
             - v1-mix-deps-cache-{{ checksum "mix.lock" }}
-            - v1-mix-deps-cache-
   save_build_cache:
     parameters:
       env:
