@@ -478,8 +478,8 @@ defmodule Membrane.Integration.LinkingTest do
   test "Parent successfully unlinks children with dynamic pads using :remove_link action" do
     spec =
       [
-        child(:source, Element),
-        child(:sink, Element)
+        child(:source, __MODULE__.Element),
+        child(:sink, __MODULE__.Element)
       ] ++
         Enum.map(1..10, fn i ->
           get_child(:source)
