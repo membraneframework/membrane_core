@@ -57,7 +57,7 @@ This is an [Elixir](elixir-lang.org) snippet, that streams an mp3 via HTTP and p
 
 - Option 1: Click the button below:
 
-  [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fmembraneframework%2F.github%2Fblob%2Freadme%2Fprofile%2Fquick_start.livemd)
+  [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fmembraneframework%2Fmembrane_core%2Fblob%2Freadme%2Fexample.livemd)
 
   It will install [Livebook](livebook.dev), an interactive notebook similar to Jupyter, and it'll open the snippet in there for you. Then just click the 'run' button in there.
 
