@@ -535,25 +535,14 @@ defmodule Membrane.Testing.Pipeline do
     allowed_keys_1 = [:mode, :spec, :test_process, :name, :raise_on_child_pad_removed?]
     allowed_keys_2 = [:module, :custom_args, :test_process, :name]
 
-    cond do
-      keyword_validate?(options, allowed_keys_1) ->
-        :ok
-
-      keyword_validate?(options, allowed_keys_2) ->
-        :ok
-
-      true ->
-        raise """
-        Options passed to #{inspect(__MODULE__)} start function has to fulfill type
-        #{inspect(__MODULE__)}.options, while they are #{inspect(options)}
-        """
-    end
-  end
-
-  defp keyword_validate?(keyword, allowed_keys) do
-    case Keyword.validate(keyword, allowed_keys) do
-      {:ok, _keyword} -> true
-      {:error, _illegal_keys} -> false
+    with {:error, _keys} <- Keyword.validate(options, allowed_keys_1),
+         {:error, _keys} <- Keyword.validate(options, allowed_keys_2) do
+      raise """
+      Options passed to #{inspect(__MODULE__)} start function has to fulfill type
+      #{inspect(__MODULE__)}.options, while they are #{inspect(options)}
+      """
+    else
+      {:ok, _keyword} -> :ok
     end
   end
 end

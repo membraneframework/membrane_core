@@ -128,16 +128,16 @@ defmodule Membrane.Integration.LinkingTest do
       pipeline: pipeline
     } do
       spec = [
-        child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
+        child(:bin, %Bin{child: %Testing.Source{output: [~c"a", ~c"b", ~c"c"]}}),
         child(:sink, Testing.Sink),
         get_child(:bin) |> get_child(:sink)
       ]
 
       send(pipeline, {:start_spec, %{spec: spec}})
       assert_receive(:spec_started)
-      assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'a'})
-      assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'b'})
-      assert_sink_buffer(pipeline, :sink, %Buffer{payload: 'c'})
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: ~c"a"})
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: ~c"b"})
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: ~c"c"})
       send(pipeline, {:remove_children, :sink})
       assert_pipeline_notified(pipeline, :bin, :handle_pad_removed)
     end
@@ -145,7 +145,7 @@ defmodule Membrane.Integration.LinkingTest do
     test "and element crashes, bin forwards the unlink message to child", %{pipeline: pipeline} do
       bin_spec = {
         child(:bin, %Bin{
-          child: %Testing.Source{output: ['a', 'b', 'c']},
+          child: %Testing.Source{output: [~c"a", ~c"b", ~c"c"]},
           remove_child_on_unlink: false
         }),
         crash_group_mode: :temporary, group: :group_1
@@ -191,7 +191,7 @@ defmodule Membrane.Integration.LinkingTest do
   } do
     spec = [
       {
-        child(:source, %Testing.Source{output: ['a', 'b', 'c']}),
+        child(:source, %Testing.Source{output: [~c"a", ~c"b", ~c"c"]}),
         group: :group_1, crash_group_mode: :temporary
       },
       {
@@ -216,7 +216,7 @@ defmodule Membrane.Integration.LinkingTest do
     pipeline: pipeline
   } do
     spec_1 = {
-      child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']}),
+      child(:source, %Testing.DynamicSource{output: [~c"a", ~c"b", ~c"c"]}),
       group: :group_1, crash_group_mode: :temporary
     }
 
@@ -250,7 +250,7 @@ defmodule Membrane.Integration.LinkingTest do
     }
 
     spec = {
-      [spec_inner, child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']})],
+      [spec_inner, child(:source, %Testing.DynamicSource{output: [~c"a", ~c"b", ~c"c"]})],
       crash_group_mode: :temporary, group: :group_1
     }
 
@@ -270,7 +270,7 @@ defmodule Membrane.Integration.LinkingTest do
   test "pipeline playback should change successfully after spec with links has been returned",
        %{pipeline: pipeline} do
     bin_spec = {
-      child(:bin, %Bin{child: %Testing.Source{output: ['a', 'b', 'c']}}),
+      child(:bin, %Bin{child: %Testing.Source{output: [~c"a", ~c"b", ~c"c"]}}),
       group: :group_1, crash_group_mode: :temporary
     }
 

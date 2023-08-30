@@ -29,7 +29,7 @@ defmodule Membrane.Testing.DynamicSourceTest do
       Testing.Pipeline.start_link_supervised!(
         spec:
           [
-            child(:source, %Testing.DynamicSource{output: ['a', 'b', 'c']}),
+            child(:source, %Testing.DynamicSource{output: [~c"a", ~c"b", ~c"c"]}),
             child(:sink_1, Testing.Sink),
             child(:sink_2, Testing.Sink)
           ] ++
@@ -39,12 +39,12 @@ defmodule Membrane.Testing.DynamicSourceTest do
             ]
       )
 
-    assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: 'a'})
-    assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: 'b'})
-    assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: 'c'})
-    assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: 'a'})
-    assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: 'b'})
-    assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: 'c'})
+    assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: ~c"a"})
+    assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: ~c"b"})
+    assert_sink_buffer(pipeline, :sink_1, %Buffer{payload: ~c"c"})
+    assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: ~c"a"})
+    assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: ~c"b"})
+    assert_sink_buffer(pipeline, :sink_2, %Buffer{payload: ~c"c"})
   end
 
   test "Source works properly when using generator function" do

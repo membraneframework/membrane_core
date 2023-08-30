@@ -65,7 +65,7 @@ defmodule Membrane.ElementTest do
 
   setup do
     links = [
-      child(:source, %Testing.Source{output: ['a', 'b', 'c']})
+      child(:source, %Testing.Source{output: [~c"a", ~c"b", ~c"c"]})
       |> child(:filter, %TestFilter{target: self()})
       |> child(:sink, Testing.Sink)
     ]

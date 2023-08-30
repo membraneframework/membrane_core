@@ -11,7 +11,7 @@ defmodule Membrane.Core.EndpointTest do
 
   describe "Starting and transmitting buffers" do
     test "with one endpoint and filter" do
-      buffers = ['a', 'b', 'c']
+      buffers = [~c"a", ~c"b", ~c"c"]
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
@@ -25,7 +25,7 @@ defmodule Membrane.Core.EndpointTest do
     end
 
     test "with one endpoint and many filters in between" do
-      buffers = ['a', 'b', 'c']
+      buffers = [~c"a", ~c"b", ~c"c"]
 
       pipeline =
         Testing.Pipeline.start_link_supervised!(
