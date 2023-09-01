@@ -150,6 +150,9 @@
         {Credo.Check.Warning.UnusedStringOperation, []},
         {Credo.Check.Warning.UnusedTupleOperation, []},
         {Credo.Check.Warning.UnsafeExec, []},
+        # The line below supresses unnecessary warnings about not having :mb_prefix in the metadata
+        # keys in the config
+        {Credo.Check.Warning.MissedMetadataKeyInLoggerConfig, [metadata_keys: [:mb_prefix]]},
 
         #
         # Checks scheduled for next check update (opt-in for now, just replace `false` with `[]`)
