@@ -43,8 +43,8 @@ defmodule Membrane.Logger do
 
       if is_function(message, 0) do
         fn ->
-          message_result_mapper.()
-          |> result_mapper.()
+          message.()
+          |> message_result_mapper.()
         end
       else
         [prefix, message]
