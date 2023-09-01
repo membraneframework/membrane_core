@@ -532,7 +532,7 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   defp validate_options!(options) do
-    allowed_keys_1 = [:mode, :spec, :test_process, :name, :raise_on_child_pad_removed?]
+    allowed_keys_1 = [:module, :mode, :spec, :test_process, :name, :raise_on_child_pad_removed?]
     allowed_keys_2 = [:module, :custom_args, :test_process, :name]
 
     with {:error, _keys} <- Keyword.validate(options, allowed_keys_1),
