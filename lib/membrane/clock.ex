@@ -68,7 +68,7 @@ defmodule Membrane.Clock do
   Check the moduledoc for more details.
   """
   @type option ::
-          {:time_provider, (-> Time.t())}
+          {:time_provider, (() -> Time.t())}
           | {:proxy, boolean}
           | {:proxy_for, pid | nil}
 
