@@ -44,7 +44,7 @@ defmodule Membrane.ResourceGuard do
   """
   @spec register(
           t,
-          (() -> any),
+          (-> any),
           opts :: [tag: any, timeout: milliseconds :: non_neg_integer]
         ) :: tag
         when tag: any()
