@@ -23,7 +23,7 @@ defmodule Benchmark.Run.Reductions do
     {r1, r2}
   end
 
-  @spec prepare_desired_function(non_neg_integer()) :: (() -> any())
+  @spec prepare_desired_function(non_neg_integer()) :: (-> any())
   def prepare_desired_function(how_many_reductions) do
     {r1, r2} = calculate()
     n = trunc((how_many_reductions - r2) / (r2 - r1) * (@n2 - @n1) + @n2)
