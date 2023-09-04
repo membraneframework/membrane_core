@@ -15,8 +15,8 @@ defmodule Membrane.Core.Pipeline.Supervisor do
         ) :: {:ok, supervisor_pid :: pid(), pipeline_pid :: pid()} | {:error, reason :: any()}
   def run(method, name, start_fun) do
     # Not doing start_link here is a nasty hack to avoid the current process becoming
-    # a 'pipeline process' (in the OTP meaning) of the spawned supervisor. Exit signals from
-    # 'pipeline processes' are not received in `handle_info`, but `terminate` is called immediately,
+    # a 'parent process' (in the OTP meaning) of the spawned supervisor. Exit signals from
+    # 'parent processes' are not received in `handle_info`, but `terminate` is called immediately,
     # what is unwanted here, as the supervisor has to make sure that all the children exit.
     # After that happens, the supervisor exits as well, so it follows the OTP conventions anyway.
     process_opts = if method == :start_link, do: [spawn_opt: [:link]], else: []

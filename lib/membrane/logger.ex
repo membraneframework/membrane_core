@@ -38,6 +38,7 @@ defmodule Membrane.Logger do
     quote bind_quoted: [message: message, prefix: @get_prefix_ast] do
       if is_function(message, 0) do
         fn ->
+          # credo:disable-for-next-line Credo.Check.Refactor.Nesting
           case message.() do
             {content, metadata} -> {[prefix, content], metadata}
             content -> [prefix, content]

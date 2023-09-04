@@ -14,7 +14,7 @@ defmodule Membrane.Core.BinTest do
 
   describe "Starting and transmitting buffers" do
     test "in simple, flat use case" do
-      buffers = ['a', 'b', 'c']
+      buffers = [~c"a", ~c"b", ~c"c"]
 
       links = [
         child(:source, %Testing.Source{output: buffers})
@@ -31,7 +31,7 @@ defmodule Membrane.Core.BinTest do
     end
 
     test "when bin is next to a bin" do
-      buffers = ['a', 'b', 'c']
+      buffers = [~c"a", ~c"b", ~c"c"]
 
       links = [
         child(:source, %Testing.Source{output: buffers})
@@ -52,7 +52,7 @@ defmodule Membrane.Core.BinTest do
     end
 
     test "when bins are nested" do
-      buffers = ['a', 'b', 'c']
+      buffers = [~c"a", ~c"b", ~c"c"]
 
       links = [
         child(:source, %Testing.Source{output: buffers})
@@ -72,7 +72,7 @@ defmodule Membrane.Core.BinTest do
     end
 
     test "when there are consecutive bins that are nested" do
-      buffers = ['a', 'b', 'c']
+      buffers = [~c"a", ~c"b", ~c"c"]
 
       links = [
         child(:source, %Testing.Source{output: buffers})
@@ -95,7 +95,7 @@ defmodule Membrane.Core.BinTest do
     end
 
     test "when pipeline has only one element being a padless bin" do
-      buffers = ['a', 'b', 'c']
+      buffers = [~c"a", ~c"b", ~c"c"]
 
       children =
         child(:test_bin, %TestBins.TestPadlessBin{
@@ -113,7 +113,7 @@ defmodule Membrane.Core.BinTest do
     end
 
     test "when bin is a sink bin" do
-      buffers = ['a', 'b', 'c']
+      buffers = [~c"a", ~c"b", ~c"c"]
 
       links = [
         child(:source, %Testing.Source{output: buffers})
@@ -166,7 +166,7 @@ defmodule Membrane.Core.BinTest do
     test "handle_pad_added is called for dynamic pads" do
       alias Membrane.Pad
       require Pad
-      buffers = ['a', 'b', 'c']
+      buffers = [~c"a", ~c"b", ~c"c"]
 
       links = [
         child(:source, %Testing.Source{output: buffers})
@@ -257,7 +257,7 @@ defmodule Membrane.Core.BinTest do
     end
 
     test "handle_parent_notification/3 works for Bin" do
-      buffers = ['a', 'b', 'c']
+      buffers = [~c"a", ~c"b", ~c"c"]
 
       links =
         child(:source, %Testing.Source{output: buffers})

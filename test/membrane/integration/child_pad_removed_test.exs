@@ -141,16 +141,11 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
           ] do
         pipeline = start_link_pipeline!(DynamicBin, DynamicSink)
 
+        assert_receive {:pad_added, :sink}
+
         execute_actions_in_bin(pipeline, bin_actions)
 
-        receive do
-          {:pad_added, :sink} ->
-            assert_receive {:pad_removed, :sink}
-        after
-          500 ->
-            refute_received {:pad_removed, :sink}
-        end
-
+        assert_receive {:pad_removed, :sink}
         assert_child_removed_output_pad(:bin)
         assert_child_exists(pipeline, :bin)
         assert_child_exists(pipeline, :sink)
