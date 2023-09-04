@@ -36,15 +36,13 @@ defmodule Membrane.Logger do
 
   defp runtime_prepend_prefix_ast(message) do
     quote bind_quoted: [message: message, prefix: @get_prefix_ast] do
-      message_result_mapper = fn
-        {content, metadata} -> {[prefix, content], metadata}
-        content -> [prefix, content]
-      end
-
       if is_function(message, 0) do
         fn ->
-          message.()
-          |> message_result_mapper.()
+          # credo:disable-for-next-line Credo.Check.Refactor.Nesting
+          case message.() do
+            {content, metadata} -> {[prefix, content], metadata}
+            content -> [prefix, content]
+          end
         end
       else
         [prefix, message]
