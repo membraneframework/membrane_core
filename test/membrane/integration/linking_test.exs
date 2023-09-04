@@ -25,6 +25,11 @@ defmodule Membrane.Integration.LinkingTest do
       demand_unit: :buffers
 
     @impl true
+    def handle_playing(_ctx, state) do
+      {[notify_parent: :playing], state}
+    end
+
+    @impl true
     def handle_demand(_pad, _size, _unit, _ctx, state) do
       {[], state}
     end
@@ -305,7 +310,7 @@ defmodule Membrane.Integration.LinkingTest do
   after the second spec (the one with `independent_*` children). The last spec has a link to
   the `filter`, which is spawned in the first spec, so it has to wait till the first spec is linked.
   """
-  test "Children are linked in proper order" do
+  test "Children are linked in the proper order" do
     pipeline = Testing.Pipeline.start_link_supervised!()
 
     Testing.Pipeline.execute_actions(pipeline,
@@ -485,6 +490,9 @@ defmodule Membrane.Integration.LinkingTest do
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
+    assert_pipeline_notified(pipeline, :source, :playing)
+    assert_pipeline_notified(pipeline, :sink, :playing)
+
     for pad_id <- 1..10 do
       actions =
         if rem(pad_id, 2) == 0,
@@ -564,24 +572,24 @@ defmodule Membrane.Integration.LinkingTest do
   end
 
   test "links should be estabilished in the order they are created in the spec" do
-    defmodule PadsOrderBin do
-      use Membrane.Bin
+    defmodule PadsOrderSink do
+      use Membrane.Sink
 
       def_input_pad :input, availability: :on_request, accepted_format: _any
 
       @impl true
-      def handle_init(_ctx, _opts), do: {[], %{}}
+      def handle_init(_ctx, _opts), do: {[], %{pads_order: []}}
 
       @impl true
       def handle_pad_added(Pad.ref(:input, pad_id), _ctx, state) do
-        state = Map.update(state, :pads_order, [pad_id], &(&1 ++ [pad_id]))
+        state = Map.update!(state, :pads_order, &(&1 ++ [pad_id]))
         {[], state}
       end
 
       @impl true
-      def handle_parent_notification(:get_pads_order, _ctx, state) do
-        answer = {:pads_order, Map.get(state, :pads_order, [])}
-        {[notify_parent: answer], state}
+      def handle_playing(_ctx, state) do
+        notification = {:pads_order, state.pads_order}
+        {[notify_parent: notification], state}
       end
     end
 
@@ -589,21 +597,20 @@ defmodule Membrane.Integration.LinkingTest do
       pads_ids = Enum.shuffle(1..32)
 
       children = [
-        child(:element, Element),
-        child(:bin, PadsOrderBin)
+        child(:endpoint, Element),
+        child(:sink, PadsOrderSink)
       ]
 
       links =
         Enum.map(pads_ids, fn pad_id ->
-          get_child(:element)
+          get_child(:endpoint)
           |> via_in(Pad.ref(:input, pad_id))
-          |> get_child(:bin)
+          |> get_child(:sink)
         end)
 
       pipeline = Testing.Pipeline.start_link_supervised!(spec: children ++ links)
 
-      Testing.Pipeline.execute_actions(pipeline, notify_child: {:bin, :get_pads_order})
-      assert_pipeline_notified(pipeline, :bin, {:pads_order, ^pads_ids})
+      assert_pipeline_notified(pipeline, :sink, {:pads_order, ^pads_ids})
 
       Testing.Pipeline.terminate(pipeline)
     end
