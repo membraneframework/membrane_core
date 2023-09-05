@@ -42,12 +42,16 @@ defmodule Membrane.Core.Pipeline do
       Telemetry.report_terminate(:pipeline)
     end)
 
-    {:ok, clock} = Clock.start_link(proxy: true)
+    {:ok, clock_proxy} =
+      SubprocessSupervisor.start_utility(
+        params.subprocess_supervisor,
+        {Clock, proxy: true}
+      )
 
     state = %State{
       module: params.module,
       synchronization: %{
-        clock_proxy: clock,
+        clock_proxy: clock_proxy,
         clock_provider: %{clock: nil, provider: nil, choice: :auto},
         timers: %{}
       },
