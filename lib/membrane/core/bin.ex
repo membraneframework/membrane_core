@@ -95,7 +95,12 @@ defmodule Membrane.Core.Bin do
     Membrane.Core.Stalker.register_component(options.stalker, observability_config)
     SubprocessSupervisor.set_parent_component(options.subprocess_supervisor, observability_config)
 
-    clock_proxy = Membrane.Clock.start_link(proxy: true) ~> ({:ok, pid} -> pid)
+    {:ok, clock_proxy} =
+      SubprocessSupervisor.start_utility(
+        options.subprocess_supervisor,
+        {Membrane.Clock, proxy: true}
+      )
+
     clock = if Bunch.Module.check_behaviour(module, :membrane_clock?), do: clock_proxy, else: nil
     Message.send(options.parent, :clock, [name, clock])
 
