@@ -59,6 +59,7 @@ defmodule Membrane.RCPipelineTest do
   describe "Membrane.RCPipeline.subscribe/2" do
     setup :setup_pipeline
 
+    @tag :flaky
     test "testing process should receive all subscribed events", %{pipeline: pipeline} do
       # SETUP
       RCPipeline.subscribe(pipeline, %RCMessage.Notification{

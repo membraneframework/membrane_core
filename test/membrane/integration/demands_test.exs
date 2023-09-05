@@ -34,6 +34,7 @@ defmodule Membrane.Integration.DemandsTest do
     |> assert_buffers_received(pid)
   end
 
+  @tag :flaky
   test "Regular pipeline with proper demands" do
     links =
       child(:source, Source)

@@ -84,6 +84,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     end
   end)
 
+  @tag :flaky
   test "buffers pass through auto-demand tee" do
     import Membrane.ChildrenSpec
 
