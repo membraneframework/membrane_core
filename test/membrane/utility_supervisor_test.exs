@@ -7,6 +7,8 @@ defmodule Membrane.UtilitySupervisorTest do
   alias Membrane.Testing
 
   test "Utility supervisor terminates utility when element exits" do
+    Process.register(self(), :utility_supervisor_test_process)
+
     defmodule TestFilter do
       use Membrane.Filter
 
@@ -16,7 +18,7 @@ defmodule Membrane.UtilitySupervisorTest do
           ctx.utility_supervisor,
           {Task,
            fn ->
-             Process.register(self(), :utility_supervisor_test_task)
+             send(:utility_supervisor_test_process, {:task_pid, self()})
              Process.sleep(:infinity)
            end}
         )
@@ -28,8 +30,11 @@ defmodule Membrane.UtilitySupervisorTest do
     pipeline = Testing.Pipeline.start_supervised!(spec: [child(:filter, TestFilter)])
 
     assert_pipeline_notified(pipeline, :filter, :setup)
-    monitor = Process.monitor(:utility_supervisor_test_task)
+    assert_receive {:task_pid, task_pid}
+
+    monitor_ref = Process.monitor(task_pid)
+
     Testing.Pipeline.terminate(pipeline)
-    assert_receive {:DOWN, ^monitor, :process, _pid, :shutdown}
+    assert_receive {:DOWN, ^monitor_ref, :process, _pid, :shutdown}
   end
 end
