@@ -222,6 +222,8 @@ defmodule Membrane.Integration.ToiletForwardingTest do
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
+    assert_sink_playing(pipeline, :sink)
+
     buffers =
       1..4000
       |> Enum.map(fn i -> %Membrane.Buffer{payload: <<i::64>>} end)

@@ -44,7 +44,7 @@ defmodule Membrane.PipelineSupervisorTest do
     element_exit_reason = :custom_exit_reason
     Process.exit(element, element_exit_reason)
 
-    pipeline_exit_reason = {:membrane_child_crash, :element}
+    pipeline_exit_reason = {:membrane_child_crash, {:element, element_exit_reason}}
 
     assert_receive {:DOWN, ^element_monitor_ref, _process, _pid, ^element_exit_reason}
     assert_receive {:DOWN, ^pipeline_monitor_ref, _process, _pid, ^pipeline_exit_reason}

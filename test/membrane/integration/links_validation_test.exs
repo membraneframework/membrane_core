@@ -126,7 +126,8 @@ defmodule Membrane.LinksValidationTest do
 
       Pipeline.execute_actions(pipeline, spec: spec)
 
-      assert_receive({:DOWN, ^ref, :process, ^pipeline, {%Membrane.LinkError{}, _stacktrace}})
+      assert_receive {:DOWN, ^ref, :process, ^pipeline, {%Membrane.LinkError{}, _stacktrace}},
+                     1000
     end
   end
 end

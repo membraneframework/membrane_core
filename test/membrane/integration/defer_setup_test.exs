@@ -132,7 +132,9 @@ defmodule Membrane.Integration.DeferSetupTest do
 
     monitor_ref = Process.monitor(pipeline)
     complete_child_setup(pipeline, :bin_2)
-    assert_receive {:DOWN, ^monitor_ref, :process, ^pipeline, {:membrane_child_crash, :bin_2}}
+
+    assert_receive {:DOWN, ^monitor_ref, :process, ^pipeline,
+                    {:membrane_child_crash, {:bin_2, _bin_reason}}}
   end
 
   defp complete_child_setup(pipeline, child) do

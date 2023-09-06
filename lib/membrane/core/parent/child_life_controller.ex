@@ -681,7 +681,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         Terminating.
         """)
 
-        {:error, {:membrane_child_crash, child_name}}
+        {:error, {:membrane_child_crash, {child_name, reason}}}
     end
   end
 

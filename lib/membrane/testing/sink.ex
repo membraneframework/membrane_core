@@ -52,13 +52,16 @@ defmodule Membrane.Testing.Sink do
   end
 
   @impl true
-  def handle_playing(_context, %{autodemand: true} = state),
-    do: {[demand: :input], state}
+  def handle_playing(_ctx, state) do
+    actions =
+      notify(:playing) ++
+        if(state.autodemand, do: [demand: :input], else: [])
 
-  def handle_playing(_context, state), do: {[], state}
+    {actions, state}
+  end
 
   @impl true
-  def handle_event(:input, event, _context, state) do
+  def handle_event(:input, event, _ctx, state) do
     {notify({:event, event}), state}
   end
 

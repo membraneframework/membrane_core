@@ -406,6 +406,40 @@ defmodule Membrane.Testing.Assertions do
   end
 
   @doc """
+  Asserts that `Membrane.Testing.Sink` with name `sink_name` entered the playing
+  playback.
+  """
+  defmacro assert_sink_playing(pipeline, sink_name, timeout \\ @default_timeout) do
+    do_sink_playing(&assert_receive_from_pipeline/3, pipeline, sink_name, timeout)
+  end
+
+  @doc """
+  Asserts that `Membrane.Testing.Sink` with name `sink_name` didn't enter the playing
+  playback.
+  """
+  defmacro refute_sink_playing(pipeline, sink_name, timeout \\ @default_timeout) do
+    do_sink_playing(&refute_receive_from_pipeline/3, pipeline, sink_name, timeout)
+  end
+
+  defp do_sink_playing(assertion, pipeline, sink_name, timeout) do
+    quote do
+      element_name_value = unquote(sink_name)
+
+      unquote(
+        assertion.(
+          pipeline,
+          {:handle_child_notification,
+           {:playing,
+            quote do
+              ^element_name_value
+            end}},
+          timeout
+        )
+      )
+    end
+  end
+
+  @doc """
   Asserts that `Membrane.Testing.Pipeline` received or is going to receive start_of_stream
   notification from the element with a name `element_name` within the `timeout` period
   specified in milliseconds.

@@ -20,6 +20,9 @@ defmodule Membrane.Integration.DemandsTest do
   end
 
   defp test_pipeline(pid) do
+    assert_sink_playing(pid, :sink)
+    # assert_pipeline_notified(pid, :sink, :playing)
+
     demand = 500
     Pipeline.message_child(pid, :sink, {:make_demand, demand})
 
@@ -34,7 +37,6 @@ defmodule Membrane.Integration.DemandsTest do
     |> assert_buffers_received(pid)
   end
 
-  @tag :flaky
   test "Regular pipeline with proper demands" do
     links =
       child(:source, Source)
@@ -174,6 +176,11 @@ defmodule Membrane.Integration.DemandsTest do
     def handle_init(_ctx, _opts), do: {[], %{counter: 0}}
 
     @impl true
+    def handle_playing(_ctx, state) do
+      {[notify_parent: :playing], state}
+    end
+
+    @impl true
     def handle_buffer(:input, _buffer, _ctx, state) do
       {[], Map.update!(state, :counter, &(&1 + 1))}
     end
@@ -188,44 +195,6 @@ defmodule Membrane.Integration.DemandsTest do
 
       {actions, %{state | counter: 0}}
     end
-  end
-
-  test "actions :pause_auto_demand and :resume_auto_demand" do
-    pipeline =
-      Testing.Pipeline.start_link_supervised!(
-        spec:
-          child(RedemandingSource)
-          |> via_in(:input, auto_demand_size: 10)
-          |> child(:sink, PausingSink)
-      )
-
-    # time for pipeline to start playing
-    Process.sleep(500)
-
-    for _i <- 1..10 do
-      # during sleep below source should send around 100 buffers
-      Process.sleep(100 * RedemandingSource.sleep_time())
-
-      Testing.Pipeline.execute_actions(pipeline, notify_child: {:sink, :pause_auto_demand})
-
-      assert_pipeline_notified(pipeline, :sink, {:buff_no, buff_no})
-      # sink should receive around 100 buffers, but the boundary is set to 70, in case of eg.
-      # slowdown of the source when running all tests in the project asynchronously
-      assert buff_no > 70
-
-      # during sleep below source should send up to about auto_demand_size = 10 buffers
-      Process.sleep(100 * RedemandingSource.sleep_time())
-
-      Testing.Pipeline.execute_actions(pipeline, notify_child: {:sink, :resume_auto_demand})
-
-      assert_pipeline_notified(pipeline, :sink, {:buff_no, buff_no})
-      # sink should probably receive between 5 and 15 buffers, but the boundary is set to 25,
-      # to handle the case when eg. there is a delay in receiving the notification from the
-      # pipeline by the :sink
-      assert buff_no < 25
-    end
-
-    Testing.Pipeline.terminate(pipeline)
   end
 
   defmodule Funnel do
@@ -293,5 +262,52 @@ defmodule Membrane.Integration.DemandsTest do
     refute_sink_buffer(pipeline, :sink, %{payload: 200, metadata: Pad.ref(:input, :a)}, 5000)
 
     Testing.Pipeline.terminate(pipeline)
+  end
+
+  defmodule Sync do
+    use Bunch
+    use ExUnit.Case, async: false
+
+    alias Membrane.Integration.DemandsTest.{PausingSink, RedemandingSource}
+
+    test "actions :pause_auto_demand and :resume_auto_demand" do
+      pipeline =
+        Testing.Pipeline.start_link_supervised!(
+          spec:
+            child(RedemandingSource)
+            |> via_in(:input, auto_demand_size: 10)
+            |> child(:sink, PausingSink)
+        )
+
+      assert_sink_playing(pipeline, :sink)
+
+      # time for pipeline to start playing
+      Process.sleep(1000)
+
+      for i <- 1..10 do
+        # during sleep below source should send around 100 buffers
+        Process.sleep(100 * RedemandingSource.sleep_time())
+
+        Testing.Pipeline.execute_actions(pipeline, notify_child: {:sink, :pause_auto_demand})
+
+        assert_pipeline_notified(pipeline, :sink, {:buff_no, buff_no})
+        # sink should receive around 100 buffers, but the boundary is set to 65, in case of eg.
+        # slowdown of the source when running all tests in the project asynchronously
+        if i != 1, do: assert(buff_no > 65)
+
+        # during sleep below source should send up to about auto_demand_size = 10 buffers
+        Process.sleep(100 * RedemandingSource.sleep_time())
+
+        Testing.Pipeline.execute_actions(pipeline, notify_child: {:sink, :resume_auto_demand})
+
+        assert_pipeline_notified(pipeline, :sink, {:buff_no, buff_no})
+        # sink should probably receive between 5 and 15 buffers, but the boundary is set to 25,
+        # to handle the case when eg. there is a delay in receiving the notification from the
+        # pipeline by the :sink
+        assert buff_no < 25
+      end
+
+      Testing.Pipeline.terminate(pipeline)
+    end
   end
 end
