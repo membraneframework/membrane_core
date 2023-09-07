@@ -7,7 +7,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   use Bunch
 
   alias Membrane.{Clock, Element, Sync}
-  alias Membrane.Core.{CallbackHandler, Element, Message}
+  alias Membrane.Core.{CallbackHandler, Element, Message, SubprocessSupervisor}
 
   alias Membrane.Core.Element.{
     ActionHandler,
@@ -33,7 +33,9 @@ defmodule Membrane.Core.Element.LifecycleController do
 
     clock =
       if Bunch.Module.check_behaviour(module, :membrane_clock?) do
-        {:ok, clock} = Clock.start_link()
+        {:ok, clock} =
+          SubprocessSupervisor.start_utility(state.subprocess_supervisor, {Clock, []})
+
         clock
       else
         nil
