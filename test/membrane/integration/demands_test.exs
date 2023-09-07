@@ -21,7 +21,6 @@ defmodule Membrane.Integration.DemandsTest do
 
   defp test_pipeline(pid) do
     assert_sink_playing(pid, :sink)
-    # assert_pipeline_notified(pid, :sink, :playing)
 
     demand = 500
     Pipeline.message_child(pid, :sink, {:make_demand, demand})

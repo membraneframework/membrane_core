@@ -242,7 +242,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
 
     assert_receive(
-      {:DOWN, _ref, :process, ^pipeline, {:membrane_child_crash, {:sink, _sink_reason}}}
+      {:DOWN, _ref, :process, ^pipeline, {:membrane_child_crash, :sink, _sink_reason}}
     )
   end
 
