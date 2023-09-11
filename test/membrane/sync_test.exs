@@ -1,6 +1,6 @@
 defmodule Membrane.SyncTest do
   use Bunch
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   @module Membrane.Sync
 

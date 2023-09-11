@@ -40,9 +40,12 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
     def_options test_process: [spec: pid()]
 
     @impl true
-    def handle_init(ctx, opts) do
-      send(opts.test_process, {:init, ctx.name})
-      {[], Map.from_struct(opts)}
+    def handle_init(_ctx, opts), do: {[], Map.from_struct(opts)}
+
+    @impl true
+    def handle_playing(ctx, state) do
+      send(state.test_process, {:playing, ctx.name})
+      {[], state}
     end
   end
 
@@ -161,7 +164,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
           ] do
         pipeline = start_pipeline!(DynamicBin, StaticSink)
 
-        assert_receive {:init, :sink}
+        assert_receive {:playing, :sink}
         sink_pid = Testing.Pipeline.get_child_pid!(pipeline, :sink)
         monitor_ref = Process.monitor(sink_pid)
 
@@ -183,7 +186,7 @@ defmodule Membrane.Integration.ChildPadRemovedTest do
           ] do
         pipeline = start_link_pipeline!(DynamicBin, StaticSink, remove_children: :sink)
 
-        assert_receive {:init, :sink}
+        assert_receive {:playing, :sink}
         sink_pid = Testing.Pipeline.get_child_pid!(pipeline, :sink)
         monitor_ref = Process.monitor(sink_pid)
 

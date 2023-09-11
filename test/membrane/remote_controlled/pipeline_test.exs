@@ -12,6 +12,8 @@ defmodule Membrane.RCPipelineTest do
     use Membrane.Filter
     alias Membrane.Buffer
 
+    require Membrane.Logger
+
     def_output_pad :output, flow_control: :manual, accepted_format: _any, availability: :always
 
     def_input_pad :input,
@@ -73,10 +75,11 @@ defmodule Membrane.RCPipelineTest do
 
       # TEST
       assert_receive %RCMessage.Notification{
-        from: ^pipeline,
-        element: :b,
-        data: %Membrane.Buffer{payload: "test"}
-      }
+                       from: ^pipeline,
+                       element: :b,
+                       data: %Membrane.Buffer{payload: "test"}
+                     },
+                     2000
 
       assert_receive %RCMessage.StartOfStream{from: ^pipeline, element: :b, pad: :input}
 
@@ -91,7 +94,7 @@ defmodule Membrane.RCPipelineTest do
       RCPipeline.exec_actions(pipeline, spec: @pipeline_spec)
 
       # TEST
-      assert_receive %RCMessage.EndOfStream{from: ^pipeline, element: :b, pad: :input}
+      assert_receive %RCMessage.EndOfStream{from: ^pipeline, element: :b, pad: :input}, 2000
 
       assert_receive %RCMessage.EndOfStream{from: ^pipeline, element: :c, pad: :input}
 

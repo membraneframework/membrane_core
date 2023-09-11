@@ -96,6 +96,8 @@ defmodule Membrane.Integration.AutoDemandsTest do
         ]
       )
 
+    assert_sink_playing(pipeline, :right_sink)
+
     Pipeline.message_child(pipeline, :right_sink, {:make_demand, 1000})
 
     Enum.each(1..1000, fn payload ->
@@ -191,7 +193,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     @impl true
     def handle_playing(_ctx, state) do
-      {[stream_format: {:output, %StreamFormat{}}], state}
+      {[stream_format: {:output, %StreamFormat{}}, notify_parent: :playing], state}
     end
   end
 
@@ -203,6 +205,8 @@ defmodule Membrane.Integration.AutoDemandsTest do
           |> child(:filter, AutoDemandFilter)
           |> child(:sink, Sink)
       )
+
+    assert_pipeline_notified(pipeline, :source, :playing)
 
     buffers = Enum.map(1..10, &%Membrane.Buffer{payload: &1})
     Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
@@ -232,9 +236,14 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     Process.monitor(pipeline)
 
+    assert_pipeline_notified(pipeline, :source, :playing)
+
     buffers = Enum.map(1..100_000, &%Membrane.Buffer{payload: &1})
     Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
-    assert_receive({:DOWN, _ref, :process, ^pipeline, {:membrane_child_crash, :sink}})
+
+    assert_receive(
+      {:DOWN, _ref, :process, ^pipeline, {:membrane_child_crash, :sink, _sink_reason}}
+    )
   end
 
   defp reduce_link(link, enum, fun) do
