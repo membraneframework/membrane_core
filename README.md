@@ -4,6 +4,11 @@
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_core/)
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_core.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_core)
 
+### Let's meet on 13th October at [RTC.ON](https://rtcon.live) - the first conference about Membrane & multimedia!
+### Learn more at [rtcon.live](https://rtcon.live)
+
+---
+
 Multimedia processing framework that focuses on reliability, concurrency and scalability.
 
 An easy to use abstraction layer for assembling mostly server-side applications that have to consume, produce or process multimedia streams.
