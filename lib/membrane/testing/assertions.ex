@@ -171,6 +171,10 @@ defmodule Membrane.Testing.Assertions do
     assert_receive_from_pipeline(pipeline, :setup, timeout)
   end
 
+  defmacro assert_pipeline_play(pipeline, timeout \\ @default_timeout) do
+    assert_receive_from_pipeline(pipeline, :play, timeout)
+  end
+
   @doc """
   Asserts that pipeline received or will receive a message matching
   `message_pattern` from another process within the `timeout` period specified

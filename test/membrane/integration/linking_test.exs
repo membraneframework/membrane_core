@@ -526,8 +526,7 @@ defmodule Membrane.Integration.LinkingTest do
     defmodule Sink do
       use Membrane.Sink
 
-      def_input_pad :input,
-        accepted_format: _any
+      def_input_pad :input, accepted_format: _any, flow_control: :auto
 
       @impl true
       def handle_init(_ctx, _opts) do

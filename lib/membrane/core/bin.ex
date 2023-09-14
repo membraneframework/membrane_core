@@ -176,7 +176,7 @@ defmodule Membrane.Core.Bin do
   end
 
   defp do_handle_info(
-         Message.new(:stream_management_event, [element_name, pad_ref, event, event_params]),
+         Message.new(:stream_management_event, [element_name, pad_ref, event]),
          state
        ) do
     state =
@@ -184,7 +184,6 @@ defmodule Membrane.Core.Bin do
         event,
         element_name,
         pad_ref,
-        event_params,
         state
       )
 

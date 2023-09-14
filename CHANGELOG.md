@@ -1,27 +1,53 @@
 # Changelog
 
-## 1.0.0
+# 0.12.9
+ * Add `:pause_auto_demand` and `:resume_auto_demand` actions. [#586](https://github.com/membraneframework/membrane_core/pull/586)
+ * Fix process leak in starting clocks. [#594](https://github.com/membraneframework/membrane_core/pull/594)
+ * Add child exit reason to the supervisor exit reason. [#595](https://github.com/membraneframework/membrane_core/pull/595)
+
+# 0.12.8
+ * Fix race condition in links deletion. [#591](https://github.com/membraneframework/membrane_core/pull/591)
+ * Improve error message, when stream format does not match the accepted format pattern. [#591](https://github.com/membraneframework/membrane_core/pull/591)
+ * Fix bug in default pipeline functions specs. [#585](https://github.com/membraneframework/membrane_core/pull/585)
+
+# 0.12.7
+ * Fix bug in generating processes names. [#584](https://github.com/membraneframework/membrane_core/pull/584)
+ * Fix bug in registering metrics. [#582](https://github.com/membraneframework/membrane_core/pull/582)
+ * Improve error message on lack of `handle_child_pad_removed/4` callback implementation. [#581](https://github.com/membraneframework/membrane_core/pull/581)
+ * Improve actions docs. [#580](https://github.com/membraneframework/membrane_core/pull/580)
+
+# 0.12.6
+ * Implement functionalities needed for integration with `membrane_kino_dashboard`. [#571](https://github.com/membraneframework/membrane_core/pull/571)
+
+# 0.12.5
+ * Fix compilation error occurring with Elixir 1.15. [#573](https://github.com/membraneframework/membrane_core/pull/573)
+
+# 0.12.4
+ * Fix compilation error occurring with Elixir 1.15. [#570](https://github.com/membraneframework/membrane_core/pull/570)
+
+# 0.12.3
+ * Fix bug in fields naming in callback contexts. [#569](https://github.com/membraneframework/membrane_core/pull/569)
+ * Update exit reasons of Membrane Components and their supervisors. [#567](https://github.com/membraneframework/membrane_core/pull/567)
+
+## 0.12.2
+ * Fix bug in order of handling actions returned from callbacks.
+
+## 0.12.1
  * Introduce `:remove_link` action in pipelines and bins.
  * Add children groups - a mechanism that allows refering to multiple children with a single identifier. 
- * Rename `remove_child` action into `remove_children` and allow for removing a children group with a single action.
  * Add an ability to spawn anonymous children.
- * Replace `Membrane.Time.round_to_<unit_name>` with `Membrane.Time.as_<unit_name>/2` with second argument equal `:round`. Rename `Membrane.Time.round_to_timebase` to `Membrane.Time.divide_by_timebase/2`. [#494](https://github.com/membraneframework/membrane_core/pull/494)
  * Remove `:playback` action. Introduce `:setup` action. [#496](https://github.com/membraneframework/membrane_core/pull/496)
  * Add `Membrane.Testing.Pipeline.get_child_pid/2`. [#497](https://github.com/membraneframework/membrane_core/pull/497)
  * Make callback contexts to be maps. [#504](https://github.com/membraneframework/membrane_core/pull/504)
  * All Membrane Elements can be compatible till now on - pads working in `:pull` mode, handling different `demand_units`, can be now linked.
  * Output pads working in `:pull` mode should have their `demand_unit` specified. If case it's not available, it's assumed that the pad handles demands in both `:bytes` and `:buffers` units.
- * Rename callbacks `handle_process/4` and `handle_write/4` to `handle_buffer/4` in [#506](https://github.com/membraneframework/membrane_core/pull/506)
- * The flow control of the pad is now set with a single `:flow_control` option instead of `:mode` and `:demand_mode` options.
  * Remove _t suffix from types [#509](https://github.com/membraneframework/membrane_core/pull/509)
  * Implement automatic demands in Membrane Sinks and Endpoints. [#512](https://github.com/membraneframework/membrane_core/pull/512)
  * Add `handle_child_pad_removed/4` callback in Bins and Pipelines. [#513](https://github.com/membraneframework/membrane_core/pull/513)
  * Introduce support for crash groups in Bins. [#521](https://github.com/membraneframework/membrane_core/pull/521)
- * Remove `assert_pipeline_play/2` from `Membrane.Testing.Assertions`. [#528](https://github.com/membraneframework/membrane_core/pull/528)
  * Make sure enumerable with all elements being `Membrane.Buffer.t()`, passed as `:output` parameter for `Membrane.Testing.Source` won't get rewrapped in `Membrane.Buffer.t()` struct.
  * Implement `Membrane.Debug.Filter` and `Membrane.Debug.Sink`. [#552](https://github.com/membraneframework/membrane_core/pull/552)
  * Add `:pause_auto_demand` and `:resume_auto_demand` actions. [#586](https://github.com/membraneframework/membrane_core/pull/586)
- * Send `:end_of_stream`, even if it is not preceded by `:start_of_stream`. [#557](https://github.com/membraneframework/membrane_core/pull/577)
  * Fix process leak in starting clocks. [#594](https://github.com/membraneframework/membrane_core/pull/594)
  * Add child exit reason to the supervisor exit reason. [#595](https://github.com/membraneframework/membrane_core/pull/595)
  
@@ -35,9 +61,9 @@
  * New `spec` action syntax - the structure of pipeline is now defined with the use of `Membrane.ChildrenSpec`
  * Rename `:caps` to `:stream_format`.
  * Use Elixir patterns as `:accepted_format` in pad definition.
- * Delete `:ok` from tuples returned from callbacks.
- * Remove `:type` from specs passed to `def_options/1` macro in bins and elements.
- * Add `Membrane.Testing.MockResourceGuard`.
+ * Delete `:ok` from tuples returned from callbacks 
+ * Remove `:type` from specs passed to `def_options/1` macro in bins and elements.  
+ * Add `Membrane.Testing.MockResourceGuard`
 
 ## 0.10.0
  * Remove all deprecated stuff [#399](https://github.com/membraneframework/membrane_core/pull/399)

@@ -145,7 +145,13 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   defp do_start(type, options) do
-    :ok = validate_options!(options)
+    options =
+      if Keyword.has_key?(options, :structure) do
+        {spec, options} = Keyword.pop(options, :structure)
+        [spec: spec] ++ options
+      else
+        options
+      end
 
     {process_options, options} = Keyword.split(options, [:name])
     options = Keyword.put_new(options, :test_process, self())
@@ -529,20 +535,5 @@ defmodule Membrane.Testing.Pipeline do
 
   defp combine_results({custom_actions, custom_state}, {actions, state}) do
     {Enum.concat(custom_actions, actions), Map.put(state, :custom_pipeline_state, custom_state)}
-  end
-
-  defp validate_options!(options) do
-    allowed_keys_1 = [:module, :mode, :spec, :test_process, :name, :raise_on_child_pad_removed?]
-    allowed_keys_2 = [:module, :custom_args, :test_process, :name]
-
-    with {:error, _keys} <- Keyword.validate(options, allowed_keys_1),
-         {:error, _keys} <- Keyword.validate(options, allowed_keys_2) do
-      raise """
-      Options passed to #{inspect(__MODULE__)} start function has to fulfill type
-      #{inspect(__MODULE__)}.options, while they are #{inspect(options)}
-      """
-    else
-      {:ok, _keyword} -> :ok
-    end
   end
 end

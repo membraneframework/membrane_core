@@ -188,42 +188,80 @@ defmodule Membrane.Core.Child.PadsSpecs do
               |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
                 accepted_formats_str: [],
-                flow_control: fn _config ->
-                  cond do
-                    component == :bin ->
-                      nil
-
-                    direction == :output and component != :filter ->
-                      [in: [:manual, :push]]
-
-                    direction == :input or component == :filter ->
-                      [in: [:auto, :manual, :push], default: :auto]
-                  end
-                end,
-                demand_unit:
-                  &cond do
-                    component == :bin or &1[:flow_control] != :manual ->
-                      nil
-
-                    direction == :input ->
-                      [in: [:buffers, :bytes]]
-
-                    direction == :output ->
-                      [in: [:buffers, :bytes, nil], default: nil]
-
-                    true ->
-                      nil
-                  end,
-                options: [default: nil]
+                options: [default: nil],
+                demand_unit: [in: [:buffers, :bytes, nil], default: nil],
+                flow_control: flow_control_parsing_options(config, direction, component),
+                mode: mode_parsing_options(config, component),
+                demand_mode: demand_mode_parsing_options(config, direction, component)
               ) do
-      config
-      |> Map.put(:direction, direction)
-      |> Map.put(:name, name)
-      ~> {:ok, {name, &1}}
+      case config do
+        _config when component == :bin ->
+          config
+          |> Map.drop([:demand_unit, :mode, :demand_mode, :flow_control])
+
+        %{mode: :push} ->
+          config
+          |> Map.drop([:mode, :demand_mode])
+          |> Map.put(:flow_control, :push)
+
+        %{mode: :pull, demand_mode: demand_mode} ->
+          config
+          |> Map.drop([:mode, :demand_mode])
+          |> Map.put(:flow_control, demand_mode)
+
+        %{flow_control: _flow_control} ->
+          config
+      end
+      |> Map.merge(%{direction: direction, name: name})
+      |> then(&{:ok, {name, &1}})
     else
       spec: spec -> {:error, {:invalid_pad_spec, spec}}
       config: {:error, reason} -> {:error, {reason, pad: name}}
     end
+  end
+
+  defp mode_parsing_options(config, component) do
+    old? = old_api?(config)
+
+    fn _config ->
+      if old? or component == :bin do
+        [in: [:pull, :push], default: :pull]
+      else
+        nil
+      end
+    end
+  end
+
+  defp demand_mode_parsing_options(config, direction, component) do
+    old? = old_api?(config)
+
+    fn _config ->
+      cond do
+        not old? -> nil
+        auto_allowed?(direction, component) -> [in: [:manual, :auto], default: :manual]
+        true -> [in: [:manual], default: :manual]
+      end
+    end
+  end
+
+  defp flow_control_parsing_options(config, direction, component) do
+    old? = old_api?(config)
+
+    fn _config ->
+      cond do
+        old? -> nil
+        auto_allowed?(direction, component) -> [in: [:auto, :manual, :push], default: :manual]
+        true -> [in: [:manual, :push], default: :manual]
+      end
+    end
+  end
+
+  defp old_api?(config) do
+    Keyword.has_key?(config, :mode) or Keyword.has_key?(config, :demand_mode)
+  end
+
+  defp auto_allowed?(direction, component) do
+    direction == :input or component in [:filter, :bin]
   end
 
   @doc """
