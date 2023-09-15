@@ -9,8 +9,6 @@
 
 ---
 
-Multimedia processing framework that focuses on reliability, concurrency and scalability.
-
 Membrane is a versatile multimedia streaming & processing framework. You can use it to build a media server of your need, that can:
 - stream via WebRTC, RTSP, RTMP, HLS, HTTP and other protocols,
 - transcode, mix and apply custom processing of video & audio,
