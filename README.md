@@ -19,7 +19,7 @@ Membrane is a versatile multimedia streaming & processing framework. You can use
 - seamlessly scale and recover from errors,
 - do whatever you imagine if you implement it yourself :D Membrane makes it easy to plug in your code at almost any point of processing.
 
-The abbreviations above don't ring any bells? Visit [membrane.stream/learn](membrane.stream/learn) and let Membrane introduce you to the multimedia world!
+The abbreviations above don't ring any bells? Visit [membrane.stream/learn](https://membrane.stream/learn) and let Membrane introduce you to the multimedia world!
 
 Want a generic media server, instead of building a custom one? Try [Jellyfish](https://github.com/jellyfish-dev/jellyfish) - it's built on top of Membrane and provides many of its features via simple, WebSocket API. We'll soon [provide it as a SAAS](https://membrane.stream/cloud) too.
 
@@ -76,7 +76,7 @@ To learn step-by-step what exactly happens here, follow [this tutorial](https://
 
 ## Learning
 
-The best place to learn Membrane is the [membrane.stream/learn](membrane.stream/learn) website and the [membrane_demo](github.com/membraneframework/membrane_demo) repository. Try them out, then hack something exciting!
+The best place to learn Membrane is the [membrane.stream/learn](https://membrane.stream/learn) website and the [membrane_demo](https://github.com/membraneframework/membrane_demo) repository. Try them out, then hack something exciting!
 
 ## Structure of the framework
 
@@ -90,15 +90,15 @@ To embrace modularity, Membrane is delivered to you in multiple packages, includ
 
 **Plugins**
 
-Plugins provide elements that you can use in your pipeline. Each plugin lives in a `membrane_X_plugin` repository, where X can be a protocol, codec, container or functionality, for example [mebrane_opus_plugin](github.com/membraneframework/membrane_opus_plugin). Plugins wrapping a tool or library are named `membrane_X_LIBRARYNAME_plugin` or just `membrane_LIBRARYNAME_plugin`, like [membrane_mp3_mad_plugin](github.com/membraneframework/membrane_mp3_mad_plugin). Plugins are published on [hex.pm](hex.pm), for example [hex.pm/packages/membrane_opus_plugin](hex.pm/pakcages/membrane_opus_plugin) and docs are at [hexdocs](hexdocs.pm), like [hexdocs.pm/membrane_opus_plugin](hexdocs.pm/membrane_opus_plugin). Some plugins require native libraries installed in your OS. Those requirements, along with usage examples are outlined in each plugin's readme.
+Plugins provide elements that you can use in your pipeline. Each plugin lives in a `membrane_X_plugin` repository, where X can be a protocol, codec, container or functionality, for example [mebrane_opus_plugin](https://github.com/membraneframework/membrane_opus_plugin). Plugins wrapping a tool or library are named `membrane_X_LIBRARYNAME_plugin` or just `membrane_LIBRARYNAME_plugin`, like [membrane_mp3_mad_plugin](https://github.com/membraneframework/membrane_mp3_mad_plugin). Plugins are published on [hex.pm](https://hex.pm), for example [hex.pm/packages/membrane_opus_plugin](https://hex.pm/pakcages/membrane_opus_plugin) and docs are at [hexdocs](https://hexdocs.pm), like [hexdocs.pm/membrane_opus_plugin](https://hexdocs.pm/membrane_opus_plugin). Some plugins require native libraries installed in your OS. Those requirements, along with usage examples are outlined in each plugin's readme.
 
 **Formats**
 
-Apart from plugins, Membrane has stream formats, which live in `membrane_X_format` repositories, where X is usually a codec or container, for example [mebrane_opus_format](github.com/membraneframework/mebrane_opus_format). Stream formats are published the same way as packages and are used by elements to define what kind of stream can be sent or received. They also provide utility functions to deal with a given codec/container.
+Apart from plugins, Membrane has stream formats, which live in `membrane_X_format` repositories, where X is usually a codec or container, for example [mebrane_opus_format](https://github.com/membraneframework/mebrane_opus_format). Stream formats are published the same way as packages and are used by elements to define what kind of stream can be sent or received. They also provide utility functions to deal with a given codec/container.
 
 **Core**
 
-The API for creating pipelines (and custom elements too) is provided by [membrane_core](github.com/membraneframework/membrane_core). To install it, add the following line to your `deps` in `mix.exs` and run `mix deps.get`
+The API for creating pipelines (and custom elements too) is provided by [membrane_core](https://github.com/membraneframework/membrane_core). To install it, add the following line to your `deps` in `mix.exs` and run `mix deps.get`
 
 ```elixir
 {:membrane_core, "~> 0.12.0"}
@@ -112,7 +112,7 @@ Or, if you'd like to try the latest release candidate, use this version:
 
 **Standalone libraries**
 
-Last but not least, Membrane provides tools and libraries that can be used standalone and don't depend on the membrane_core, for example [video_compositor](github.com/membraneframework/video_compositor), [ex_sdp](github.com/membraneframework/ex_sdp) or [unifex](github.com/membraneframework/unifex).
+Last but not least, Membrane provides tools and libraries that can be used standalone and don't depend on the membrane_core, for example [video_compositor](https://github.com/membraneframework/video_compositor), [ex_sdp](https://github.com/membraneframework/ex_sdp) or [unifex](https://github.com/membraneframework/unifex).
 
 ## Goals
 
