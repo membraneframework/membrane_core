@@ -77,6 +77,7 @@ packages =
     "membrane_ffmpeg_video_filter_plugin",
     "kim-company/membrane_video_mixer_plugin",
     {:md, "#### External APIs"},
+    "membrane_agora_plugin",
     "membrane_element_gcloud_speech_to_text",
     "membrane_element_ibm_speech_to_text",
     "YuzuTen/membrane_s3_plugin",
@@ -103,7 +104,6 @@ packages =
     "ex_dtls",
     "membrane_rtsp",
     "membrane_ffmpeg_generator",
-    "membrane_telemetry_dashboard",
     "webrtc-server",
     {:md, "### Utils"},
     "unifex",
@@ -231,7 +231,7 @@ packages_md =
   packages
   |> Enum.map_reduce(%{header_present: false}, fn
     %{type: :markdown, content: content}, acc ->
-      {content, %{acc | header_present: false}}
+      {"\n#{content}", %{acc | header_present: false}}
 
     %{type: :package} = package, acc ->
       prefix =
@@ -255,7 +255,7 @@ packages_md =
 
       result = """
       #{if acc.header_present, do: "", else: header}\
-      | #{url} | #{prefix}#{package.description} | #{hex_badge}#{hexdocs_badge} |\
+      | #{url} | #{prefix}#{package.description} | #{hex_badge} #{hexdocs_badge} |\
       """
 
       {result, %{acc | header_present: true}}
