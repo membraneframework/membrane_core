@@ -36,22 +36,29 @@ Mix.install([
   :membrane_portaudio_plugin,
 ])
 
-import Membrane.ChildrenSpec
-alias Membrane.RCPipeline
+defmodule MyPipeline do
+  use Membrane.Pipeline
+
+  @impl true
+  def handle_init(_ctx, mp3_url) do
+    spec =
+      child(%Membrane.Hackney.Source{
+        location: mp3_url, hackney_opts: [follow_redirect: true]
+      })
+      |> child(Membrane.MP3.MAD.Decoder)
+      |> child(Membrane.PortAudio.Sink)
+
+    {[spec: spec], %{}}
+  end
+end
 
 mp3_url = "https://raw.githubusercontent.com/membraneframework/membrane_demo/master/simple_pipeline/sample.mp3"
 
-pipeline = RCPipeline.start_link!()
-
-RCPipeline.exec_actions(pipeline, spec:
-  child(%Membrane.Hackney.Source{location: mp3_url, hackney_opts:[follow_redirect: true]})
-  |> child(Membrane.MP3.MAD.Decoder)
-  |> child(Membrane.PortAudio.Sink)
-)
+Membrane.Pipeline.start_link(MyPipeline, mp3_url)
 ```
 
-This is an [Elixir](elixir-lang.org) snippet, that streams an mp3 via HTTP and plays it on your speaker. To run it, do the following:
-- Install libmad and portaudio. Membrane uses these libs to decode the mp3 and to access your speaker, respectively. You can use these commands:
+This is an [Elixir](elixir-lang.org) snippet, that streams an mp3 via HTTP and plays it on your speaker. Here's how to run it:
+- Install [libmad](https://github.com/markjeee/libmad) and [portaudio](https://github.com/PortAudio/portaudio). Membrane uses these libs to decode the mp3 and to access your speaker, respectively. You can use these commands:
   - On Mac OS: `brew install libmad portaudio pkg-config`
   - On Debian: `apt install libmad0-dev portaudio19-dev`
 
@@ -71,13 +78,19 @@ To learn step-by-step what exactly happens here, follow [this tutorial](https://
 
 The best place to learn Membrane is the [membrane.stream/learn](membrane.stream/learn) website and the [membrane_demo](github.com/membraneframework/membrane_demo) repository. Try them out, then hack something exciting!
 
-## Usage
+## Structure of the framework
 
-Membrane API is mostly based on media processing pipelines. To create one, create an Elixir project, script or livebook and add some plugins to dependencies. Plugins provide elements that you can use in your pipeline, as demonstrated in the 'Quick start' section above.
+The most basic media processing entities of Membrane are `Element`s. An element might be able, for example, to mux incoming audio and video streams into MP4, or play raw audio using your sound card. You can create elements yourself, or choose from the ones provided by the framework.
+
+Elements can be organized into a pipeline - a sequence of linked elements that perform a specific task. For example, a pipeline might receive an incoming RTSP stream from a webcam and convert it to an HLS stream, or act as a selective forwarding unit (SFU) to implement your own videoconferencing room. The [Quick start](#quick-start) section above shows how to create a simple pipeline.
+
+### Membrane packages
+
+To embrace modularity, Membrane is delivered to you in multiple packages, including plugins, formats, core and standalone libraries. The complete list of all the Membrane packages maintained by the Membrane team is available [here](https://github.com/membraneframework/membrane_core/Membrane-packages).
 
 **Plugins**
 
-Each plugin lives in a `membrane_X_plugin` repository, where X can be a protocol, codec, container or functionality, for example [mebrane_opus_plugin](github.com/membraneframework/membrane_opus_plugin). Plugins wrapping a tool or library are named `membrane_X_LIBRARYNAME_plugin` or just `membrane_LIBRARYNAME_plugin`, like [membrane_mp3_mad_plugin](github.com/membraneframework/membrane_mp3_mad_plugin). Plugins are published on [hex.pm](hex.pm), for example [hex.pm/packages/membrane_opus_plugin](hex.pm/pakcages/membrane_opus_plugin) and docs are at [hexdocs](hexdocs.pm), like [hexdocs.pm/membrane_opus_plugin](hexdocs.pm/membrane_opus_plugin). Some plugins require native libraries installed in your OS. Those requirements, along with usage examples are outlined in each plugin's readme.
+Plugins provide elements that you can use in your pipeline. Each plugin lives in a `membrane_X_plugin` repository, where X can be a protocol, codec, container or functionality, for example [mebrane_opus_plugin](github.com/membraneframework/membrane_opus_plugin). Plugins wrapping a tool or library are named `membrane_X_LIBRARYNAME_plugin` or just `membrane_LIBRARYNAME_plugin`, like [membrane_mp3_mad_plugin](github.com/membraneframework/membrane_mp3_mad_plugin). Plugins are published on [hex.pm](hex.pm), for example [hex.pm/packages/membrane_opus_plugin](hex.pm/pakcages/membrane_opus_plugin) and docs are at [hexdocs](hexdocs.pm), like [hexdocs.pm/membrane_opus_plugin](hexdocs.pm/membrane_opus_plugin). Some plugins require native libraries installed in your OS. Those requirements, along with usage examples are outlined in each plugin's readme.
 
 **Formats**
 

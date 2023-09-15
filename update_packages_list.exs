@@ -1,4 +1,4 @@
-Mix.install([{:req, "~> 0.4.0"}, :kino])
+Mix.install([{:req, "~> 0.4.0"}])
 
 require Logger
 
