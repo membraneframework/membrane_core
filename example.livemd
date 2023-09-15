@@ -12,22 +12,29 @@ Mix.install([
 ## Play mp3
 
 ```elixir
-import Membrane.ChildrenSpec
-alias Membrane.RCPipeline
+defmodule MyPipeline do
+  use Membrane.Pipeline
+
+  @impl true
+  def handle_init(_ctx, mp3_url) do
+    spec =
+      child(%Membrane.Hackney.Source{
+        location: mp3_url, hackney_opts: [follow_redirect: true]
+      })
+      |> child(Membrane.MP3.MAD.Decoder)
+      |> child(Membrane.PortAudio.Sink)
+
+    {[spec: spec], %{}}
+  end
+end
 
 mp3_url = "https://raw.githubusercontent.com/membraneframework/membrane_demo/master/simple_pipeline/sample.mp3"
 
-pipeline = RCPipeline.start_link!()
-
-RCPipeline.exec_actions(pipeline, spec:
-  child(%Membrane.Hackney.Source{location: mp3_url, hackney_opts: [follow_redirect: true]})
-  |> child(Membrane.MP3.MAD.Decoder)
-  |> child(Membrane.PortAudio.Sink)
-)
+Membrane.Pipeline.start_link(MyPipeline, mp3_url)
 ```
 
 ## Terminate the pipeline
 
 ```elixir
-RCPipeline.terminate(pipeline)
+Membrane.Pipeline.terminate(pipeline)
 ```
