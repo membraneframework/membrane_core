@@ -2,10 +2,11 @@
 
 ```elixir
 Logger.configure(level: :info)
+
 Mix.install([
   :membrane_hackney_plugin,
   :membrane_mp3_mad_plugin,
-  :membrane_portaudio_plugin,
+  :membrane_portaudio_plugin
 ])
 ```
 
@@ -19,7 +20,8 @@ defmodule MyPipeline do
   def handle_init(_ctx, mp3_url) do
     spec =
       child(%Membrane.Hackney.Source{
-        location: mp3_url, hackney_opts: [follow_redirect: true]
+        location: mp3_url,
+        hackney_opts: [follow_redirect: true]
       })
       |> child(Membrane.MP3.MAD.Decoder)
       |> child(Membrane.PortAudio.Sink)
@@ -28,9 +30,10 @@ defmodule MyPipeline do
   end
 end
 
-mp3_url = "https://raw.githubusercontent.com/membraneframework/membrane_demo/master/simple_pipeline/sample.mp3"
+mp3_url =
+  "https://raw.githubusercontent.com/membraneframework/membrane_demo/master/simple_pipeline/sample.mp3"
 
-Membrane.Pipeline.start_link(MyPipeline, mp3_url)
+{:ok, _supervisor, pipeline} = Membrane.Pipeline.start_link(MyPipeline, mp3_url)
 ```
 
 ## Terminate the pipeline
