@@ -99,7 +99,7 @@ Apart from plugins, Membrane has stream formats, which live in `membrane_X_forma
 The API for creating pipelines (and custom elements too) is provided by [membrane_core](https://github.com/membraneframework/membrane_core). To install it, add the following line to your `deps` in `mix.exs` and run `mix deps.get`
 
 ```elixir
-{:membrane_core, "~> 0.12.0"}
+{:membrane_core, "~> 0.12.9"}
 ```
 
 Or, if you'd like to try the latest release candidate, use this version:
