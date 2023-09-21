@@ -236,7 +236,7 @@ defmodule Membrane.Core.BinTest do
     end
 
     test "Bin is clock_provider" do
-      {:ok, _supervisor, pid} = ClockPipeline.start_link()
+      {:ok, _supervisor, pid} = Membrane.Pipeline.start_link(ClockPipeline)
 
       %Membrane.Core.Pipeline.State{synchronization: %{clock_provider: pipeline_clock_provider}} =
         state = :sys.get_state(pid)
@@ -253,7 +253,7 @@ defmodule Membrane.Core.BinTest do
       refute is_nil(clock2)
 
       assert proxy_for?(clock1, clock2)
-      ClockPipeline.terminate(pid)
+      Membrane.Pipeline.terminate(pid)
     end
 
     test "handle_parent_notification/3 works for Bin" do

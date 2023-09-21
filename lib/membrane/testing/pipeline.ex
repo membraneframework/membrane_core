@@ -198,6 +198,9 @@ defmodule Membrane.Testing.Pipeline do
     apply(ExUnit.Callbacks, :start_supervised, [child_spec])
   end
 
+  @spec terminate(pid, Keyword.t()) :: :ok | {:ok, pid()} | {:error, :timeout}
+  defdelegate terminate(pipeline, opts \\ []), to: Pipeline
+
   @doc """
   Sends message to a child by Element name.
 
