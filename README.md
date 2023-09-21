@@ -4,8 +4,8 @@
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_core/)
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_core.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_core)
 
-### Let's meet on 13th October at [RTC.ON](https://rtcon.live) - the first conference about Membrane & multimedia!
-### Learn more at [rtcon.live](https://rtcon.live)
+### []() Let's meet on 13th October at [RTC.ON](https://rtcon.live) - the first conference about Membrane & multimedia!
+### []() Learn more at [rtcon.live](https://rtcon.live)
 
 ---
 
@@ -22,6 +22,8 @@ The abbreviations above don't ring any bells? Visit [membrane.stream/learn](http
 Want a generic media server, instead of building a custom one? Try [Jellyfish](https://github.com/jellyfish-dev/jellyfish) - it's built on top of Membrane and provides many of its features via simple, WebSocket API. We'll soon [provide it as a SAAS](https://membrane.stream/cloud) too.
 
 If you have questions or need consulting, we're for you at our [Discord](https://discord.gg/nwnfVSY), [forum](https://elixirforum.com/c/elixir-framework-forums/membrane-forum/), [GitHub discussions](https://github.com/orgs/membraneframework/discussions), [X (Twitter)](https://twitter.com/ElixirMembrane) and via [e-mail](mailto:info@membraneframework.org).
+
+You can also [follow Membrane on X (Twitter)](https://twitter.com/ElixirMembrane) or [join our Discord](https://discord.gg/nwnfVSY) to be up to date and get involved in the community.
 
 Membrane is maintained by [Software Mansion](swmansion.com).
 
@@ -84,7 +86,7 @@ Elements can be organized into a pipeline - a sequence of linked elements that p
 
 ### Membrane packages
 
-To embrace modularity, Membrane is delivered to you in multiple packages, including plugins, formats, core and standalone libraries. The complete list of all the Membrane packages maintained by the Membrane team is available [here](https://github.com/membraneframework/membrane_core/Membrane-packages).
+To embrace modularity, Membrane is delivered to you in multiple packages, including plugins, formats, core and standalone libraries. The complete list of all the Membrane packages maintained by the Membrane team is available [here](#Membrane-packages).
 
 **Plugins**
 
@@ -131,11 +133,11 @@ We welcome everyone to contribute to Membrane. Here are some ways to contribute:
 - Spread the word about Membrane! Even though multimedia are present everywhere today, media dev is still quite niche. Let it be no longer!
 - Create learning materials. We try our best but can cover only a limited number of Membrane use cases.
 - Improve docs. We know it's not the most exciting part, but if you had a hard time understanding the docs, you're the best person to fix them ;)
-- Contribute code - plugins, features and bug fixes. It's best to contact us before, so we can provide our help & assistance, and agree on important matters. For details see the [contribution guide](CONTRIBUTING.md)
+- Contribute code - plugins, features and bug fixes. It's best to contact us before, so we can provide our help & assistance, and agree on important matters. For details see the [contribution guide](CONTRIBUTING.md).
 
 ## Support and questions
 
-If you have any problems with Membrane Framework feel free to contact us via [Discord](https://discord.gg/nwnfVSY), [forum](https://elixirforum.com/c/elixir-framework-forums/membrane-forum/), [GitHub discussions](https://github.com/orgs/membraneframework/discussions), [X (Twitter)](https://twitter.com/ElixirMembrane) or [e-mail](mailto:info@membraneframework.org).
+If you have any questions regarding Membrane Framework or need consulting, feel free to contact us via [Discord](https://discord.gg/nwnfVSY), [forum](https://elixirforum.com/c/elixir-framework-forums/membrane-forum/), [GitHub discussions](https://github.com/orgs/membraneframework/discussions), [X (Twitter)](https://twitter.com/ElixirMembrane) or [e-mail](mailto:info@membraneframework.org).
 
 ## All packages
 
@@ -147,6 +149,7 @@ If you have any problems with Membrane Framework feel free to contact us via [Di
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_core](https://github.com/membraneframework/membrane_core) | The core of the Membrane Framework, advanced multimedia processing framework | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_core.svg)](https://hex.pm/api/packages/membrane_core) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_core/) |
+| [membrane_rtc_engine](https://github.com/jellyfish-dev/membrane_rtc_engine) | [Maintainer: [jellyfish-dev](https://github.com/jellyfish-dev)] Customizable Real-time Communication Engine/SFU library focused on WebRTC. | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_rtc_engine.svg)](https://hex.pm/api/packages/membrane_rtc_engine) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_rtc_engine/) |
 | [kino_membrane](https://github.com/membraneframework/kino_membrane) | Utilities for introspecting Membrane pipelines in Livebook | [![Hex.pm](https://img.shields.io/hexpm/v/kino_membrane.svg)](https://hex.pm/api/packages/kino_membrane) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/kino_membrane/) |
 | [docker_membrane](https://github.com/membraneframework-labs/docker_membrane) | [Labs] A docker image based on Ubuntu, with Erlang, Elixir and libraries necessary to test and run the Membrane Framework. |   |
 | [membrane_demo](https://github.com/membraneframework/membrane_demo) | Examples of using the Membrane Framework |   |
@@ -158,7 +161,6 @@ If you have any problems with Membrane Framework feel free to contact us via [Di
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_file_plugin](https://github.com/membraneframework/membrane_file_plugin) | Membrane plugin for reading and writing to files | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_file_plugin.svg)](https://hex.pm/api/packages/membrane_file_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_file_plugin/) |
-| [membrane_udp_plugin](https://github.com/membraneframework/membrane_udp_plugin) | Membrane plugin for sending and receiving UDP streams | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_udp_plugin.svg)](https://hex.pm/api/packages/membrane_udp_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_udp_plugin/) |
 | [membrane_hackney_plugin](https://github.com/membraneframework/membrane_hackney_plugin) | HTTP sink and source based on Hackney | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_hackney_plugin.svg)](https://hex.pm/api/packages/membrane_hackney_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_hackney_plugin/) |
 | [membrane_scissors_plugin](https://github.com/membraneframework/membrane_scissors_plugin) | Element for cutting off parts of the stream | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_scissors_plugin.svg)](https://hex.pm/api/packages/membrane_scissors_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_scissors_plugin/) |
 | [membrane_tee_plugin](https://github.com/membraneframework/membrane_tee_plugin) | Membrane plugin for splitting data from a single input to multiple outputs | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_tee_plugin.svg)](https://hex.pm/api/packages/membrane_tee_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_tee_plugin/) |
@@ -176,6 +178,8 @@ If you have any problems with Membrane Framework feel free to contact us via [Di
 | [membrane_webrtc_plugin](https://github.com/jellyfish-dev/membrane_webrtc_plugin) | [Maintainer: [jellyfish-dev](https://github.com/jellyfish-dev)] Membrane plugin for sending and receiving media with WebRTC | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_webrtc_plugin.svg)](https://hex.pm/api/packages/membrane_webrtc_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_webrtc_plugin/) |
 | [membrane_rtmp_plugin](https://github.com/membraneframework/membrane_rtmp_plugin) | RTMP server & client | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_rtmp_plugin.svg)](https://hex.pm/api/packages/membrane_rtmp_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_rtmp_plugin/) |
 | [membrane_http_adaptive_stream_plugin](https://github.com/membraneframework/membrane_http_adaptive_stream_plugin) | Plugin generating manifests for HLS (DASH support planned) | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_http_adaptive_stream_plugin.svg)](https://hex.pm/api/packages/membrane_http_adaptive_stream_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_http_adaptive_stream_plugin/) |
+| [membrane_ice_plugin](https://github.com/jellyfish-dev/membrane_ice_plugin) | [Maintainer: [jellyfish-dev](https://github.com/jellyfish-dev)] Membrane plugin for ICE protocol | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_ice_plugin.svg)](https://hex.pm/api/packages/membrane_ice_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_ice_plugin/) |
+| [membrane_udp_plugin](https://github.com/membraneframework/membrane_udp_plugin) | Membrane plugin for sending and receiving UDP streams | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_udp_plugin.svg)](https://hex.pm/api/packages/membrane_udp_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_udp_plugin/) |
 | [membrane_rtp_plugin](https://github.com/membraneframework/membrane_rtp_plugin) | Membrane bins and elements for sending and receiving RTP/SRTP and RTCP/SRTCP streams | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_rtp_plugin.svg)](https://hex.pm/api/packages/membrane_rtp_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_rtp_plugin/) |
 | [membrane_rtp_h264_plugin](https://github.com/membraneframework/membrane_rtp_h264_plugin) | Membrane RTP payloader and depayloader for H264 | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_rtp_h264_plugin.svg)](https://hex.pm/api/packages/membrane_rtp_h264_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_rtp_h264_plugin/) |
 | [membrane_rtp_vp8_plugin](https://github.com/membraneframework/membrane_rtp_vp8_plugin) | Membrane elements for payloading and depayloading VP8 into RTP | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_rtp_vp8_plugin.svg)](https://hex.pm/api/packages/membrane_rtp_vp8_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_rtp_vp8_plugin/) |
