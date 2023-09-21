@@ -7,6 +7,7 @@ packages =
   [
     {:md, "### General"},
     "membrane_core",
+    "membrane_rtc_engine",
     "kino_membrane",
     "docker_membrane",
     "membrane_demo",
@@ -14,7 +15,6 @@ packages =
     {:md, "### Plugins"},
     {:md, "#### General purpose"},
     "membrane_file_plugin",
-    "membrane_udp_plugin",
     "membrane_hackney_plugin",
     "membrane_scissors_plugin",
     "membrane_tee_plugin",
@@ -29,6 +29,8 @@ packages =
     "membrane_webrtc_plugin",
     "membrane_rtmp_plugin",
     "membrane_http_adaptive_stream_plugin",
+    "membrane_ice_plugin",
+    "membrane_udp_plugin",
     "membrane_rtp_plugin",
     "membrane_rtp_h264_plugin",
     "membrane_rtp_vp8_plugin",
@@ -137,49 +139,51 @@ gh_req_mock = false
 repos =
   ["membraneframework", "membraneframework-labs", "jellyfish-dev"]
   |> Enum.flat_map(fn org ->
-    Process.sleep(gh_req_timeout)
-
-    Req.get!(
-      "https://api.github.com/orgs/#{org}/repos?per_page=100",
-      decode_json: [keys: :atoms]
-    ).body
+    Stream.iterate(1, &(&1 + 1))
+    |> Stream.map(fn page ->
+      Process.sleep(gh_req_timeout)
+      url = "https://api.github.com/orgs/#{org}/repos?per_page=100&page=#{page}"
+      IO.puts("Fetching #{url}")
+      Req.get!(url, decode_json: [keys: :atoms]).body
+    end)
+    |> Enum.take_while(&(&1 != []))
+    |> Enum.flat_map(& &1)
   end)
   |> Map.new(&{&1.name, &1})
-
 
 # find repos from the membraneframework organization that aren't in the list
 
 package_names =
-  packages |> Enum.filter(&(&1.type == :package)) |> Enum.map(& &1.name) |> MapSet.new()
+  packages |> Enum.filter(&(&1.type == :package)) |> MapSet.new(& &1.name)
+
+packages_blacklist = [
+  "circleci-orb",
+  "guide",
+  "design-system",
+  ~r/.*_tutorial/,
+  "membrane_resources",
+  "membrane_gigachad",
+  "static",
+  "membrane_videoroom",
+  ".github",
+  "membraneframework.github.io",
+  "membrane_rtc_engine_timescaledb"
+]
 
 lacking_repos =
   repos
   |> Map.values()
-  |> Enum.filter(&(&1.owner.login == "membraneframework"))
-  |> Enum.map(& &1.name)
-  |> Enum.reject(&(&1 in package_names))
-  |> Enum.reject(
-    &Enum.any?(
-      [
-        "circleci-orb",
-        "guide",
-        "design-system",
-        ~r/.*_tutorial/,
-        "membrane_resources",
-        "membrane_gigachad",
-        "static",
-        "membrane_videoroom",
-        ".github",
-        "membraneframework.github.io"
-      ],
-      fn repo -> &1 =~ repo end
-    )
-  )
+  |> Enum.filter(fn repo ->
+    repo.name not in package_names and
+      repo.owner.login in ["membraneframework", "jellyfish-dev"] and
+      (repo.owner.login == "membraneframework" or repo.name =~ ~r/^membrane_.*/) and
+      not Enum.any?(packages_blacklist, fn name -> repo.name =~ name end)
+  end)
 
 unless Enum.empty?(lacking_repos) do
   Logger.warning("""
-  The following repositories from the membraneframework organization aren't mentioned in the package list:
-  #{Enum.join(lacking_repos, ",\n")}
+  The following repositories aren't mentioned in the package list:
+  #{Enum.map_join(lacking_repos, ",\n", & &1.name)}
   """)
 end
 
@@ -197,23 +201,23 @@ packages =
 
           :error when owner != nil ->
             Process.sleep(gh_req_timeout)
-            IO.puts("Fetching https://api.github.com/repos/#{owner}/#{name}")
-
-            Req.get!("https://api.github.com/repos/#{owner}/#{name}", decode_json: [keys: :atoms]).body
+            url = "https://api.github.com/repos/#{owner}/#{name}"
+            IO.puts("Fetching #{url}")
+            Req.get!(url, decode_json: [keys: :atoms]).body
 
           :error ->
             raise "Package #{inspect(name)} repo not found, please specify owner."
         end
 
       hex = Req.get!("https://hex.pm/api/packages/#{name}", decode_json: [keys: :atoms])
-      hex_present = hex.status == 200
+      is_hex_present = hex.status == 200
 
       Map.merge(package, %{
         owner: repo.owner.login,
         url: repo.html_url,
         description: repo.description,
-        hex_url: if(hex_present, do: hex.body.url),
-        hexdocs_url: if(hex_present, do: hex.body.docs_html_url)
+        hex_url: if(is_hex_present, do: hex.body.url),
+        hexdocs_url: if(is_hex_present, do: hex.body.docs_html_url)
       })
 
     other ->
@@ -229,9 +233,9 @@ header = """
 
 packages_md =
   packages
-  |> Enum.map_reduce(%{header_present: false}, fn
+  |> Enum.map_reduce(%{is_header_present: false}, fn
     %{type: :markdown, content: content}, acc ->
-      {"\n#{content}", %{acc | header_present: false}}
+      {"\n#{content}", %{acc | is_header_present: false}}
 
     %{type: :package} = package, acc ->
       prefix =
@@ -254,11 +258,11 @@ packages_md =
       url = "[#{package.name}](#{package.url})"
 
       result = """
-      #{if acc.header_present, do: "", else: header}\
+      #{if acc.is_header_present, do: "", else: header}\
       | #{url} | #{prefix}#{package.description} | #{hex_badge} #{hexdocs_badge} |\
       """
 
-      {result, %{acc | header_present: true}}
+      {result, %{acc | is_header_present: true}}
   end)
   |> elem(0)
   |> Enum.join("\n")
