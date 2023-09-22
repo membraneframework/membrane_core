@@ -247,7 +247,8 @@ defmodule Benchmark.Run do
     time_meassurement = Time.start_meassurement()
 
     {:ok, _supervisor_pid, pipeline_pid} =
-      Benchmark.Run.Pipeline.start(
+      Membrane.Pipeline.start(
+        Benchmark.Run.Pipeline,
         monitoring_process: self(),
         spec: spec
       )

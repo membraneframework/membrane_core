@@ -430,50 +430,6 @@ defmodule Membrane.Pipeline do
     :erpc.call(node, __MODULE__, :list_pipelines, [])
   end
 
-  @doc false
-  defmacro __before_compile__(_env) do
-    quote do
-      unless Enum.any?(0..2, &Module.defines?(__MODULE__, {:start_link, &1})) do
-        @doc """
-        Starts the pipeline `#{inspect(__MODULE__)}` and links it to the current process.
-
-        A proxy for `#{inspect(unquote(__MODULE__))}.start_link/3`
-        """
-        @spec start_link(
-                unquote(__MODULE__).pipeline_options(),
-                unquote(__MODULE__).config()
-              ) :: unquote(__MODULE__).on_start()
-        def start_link(pipeline_options \\ nil, process_options \\ []) do
-          unquote(__MODULE__).start_link(__MODULE__, pipeline_options, process_options)
-        end
-      end
-
-      unless Enum.any?(0..2, &Module.defines?(__MODULE__, {:start, &1})) do
-        @doc """
-        Starts the pipeline `#{inspect(__MODULE__)}` without linking it
-        to the current process.
-
-        A proxy for `#{inspect(unquote(__MODULE__))}.start/3`
-        """
-        @spec start(
-                unquote(__MODULE__).pipeline_options(),
-                unquote(__MODULE__).config()
-              ) :: unquote(__MODULE__).on_start()
-        def start(pipeline_options \\ nil, process_options \\ []) do
-          unquote(__MODULE__).start(__MODULE__, pipeline_options, process_options)
-        end
-      end
-
-      unless Enum.any?(1..2, &Module.defines?(__MODULE__, {:terminate, &1})) do
-        @doc """
-        Changes pipeline's playback to `:stopped` and terminates its process.
-        """
-        @spec terminate(pid, Keyword.t()) :: :ok | {:ok, pid()} | {:error, :timeout}
-        defdelegate terminate(pipeline, opts \\ []), to: unquote(__MODULE__)
-      end
-    end
-  end
-
   @doc """
   Brings all the stuff necessary to implement a pipeline.
 
@@ -502,8 +458,6 @@ defmodule Membrane.Pipeline do
     quote do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
-
-      @before_compile Pipeline
 
       unquote(bring_spec)
       unquote(bring_pad)

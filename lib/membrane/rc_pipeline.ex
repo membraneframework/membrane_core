@@ -90,6 +90,9 @@ defmodule Membrane.RCPipeline do
     pipeline
   end
 
+  @spec terminate(pid, Keyword.t()) :: :ok | {:ok, pid()} | {:error, :timeout}
+  defdelegate terminate(pipeline, opts \\ []), to: Pipeline
+
   defmacrop pin_leaf_nodes(ast) do
     quote do
       Macro.postwalk(unquote(ast), fn node ->
