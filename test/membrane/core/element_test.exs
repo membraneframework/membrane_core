@@ -288,7 +288,7 @@ defmodule Membrane.Core.ElementTest do
               flow_control: :manual,
               direction: :input,
               name: :dynamic_input,
-              options: nil
+              options: []
             },
             %{
               atomic_demand: %Element.AtomicDemand{},

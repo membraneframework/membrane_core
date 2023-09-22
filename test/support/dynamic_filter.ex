@@ -30,4 +30,15 @@ defmodule Membrane.Support.Element.DynamicFilter do
   def handle_event(ref, event, _ctx, state) do
     {[forward: event], state |> Map.put(:last_event, {ref, event})}
   end
+
+  @impl true
+  def handle_end_of_stream(_pad_ref, ctx, state) do
+    actions =
+      Enum.flat_map(ctx.pads, fn
+        {pad_ref, %{direction: :output, end_of_stream?: false}} -> [end_of_stream: pad_ref]
+        _other -> []
+      end)
+
+    {actions, state}
+  end
 end
