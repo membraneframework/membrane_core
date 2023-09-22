@@ -41,7 +41,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
           :filter | :endpoint | :source | :sink | :bin
         ) :: Macro.t()
   def def_pad(pad_name, direction, specs, component) do
-    {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, specs[:options])
+    pad_opts = Keyword.get(specs, :options, [])
+    {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, pad_opts)
 
     specs = Keyword.put(specs, :options, escaped_pad_opts)
     {accepted_format, specs} = Keyword.pop!(specs, :accepted_format)
@@ -275,16 +276,18 @@ defmodule Membrane.Core.Child.PadsSpecs do
       |> Enum.map_join("\n", &generate_pad_property_doc(&1, Map.fetch!(config, &1)))
 
     options_doc =
-      if config.options do
-        quote do
-          """
-          Pad options:
+      case config.options do
+        [] ->
+          quote_expr("")
 
-          #{unquote(OptionsSpecs.generate_opts_doc(config.options))}
-          """
-        end
-      else
-        quote_expr("")
+        options ->
+          quote do
+            """
+            Pad options:
+
+            #{unquote(OptionsSpecs.generate_opts_doc(options))}
+            """
+          end
       end
 
     quote do

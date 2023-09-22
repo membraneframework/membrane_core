@@ -56,12 +56,12 @@ defmodule Membrane.Core.OptionsSpecs do
   end
 
   @spec def_pad_options(Pad.name(), nil | Keyword.t()) :: {Macro.t(), Macro.t()}
-  def def_pad_options(_pad_name, nil) do
+  def def_pad_options(_pad_name, []) do
     no_code =
       quote do
       end
 
-    {nil, no_code}
+    {[], no_code}
   end
 
   def def_pad_options(pad_name, options) do
