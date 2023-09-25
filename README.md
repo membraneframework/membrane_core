@@ -287,7 +287,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 ### Utils
 | Package | Description | Links |
 | --- | --- | --- |
-| [unifex](https://github.com/membraneframework/unifex) |  | [![Hex.pm](https://img.shields.io/hexpm/v/unifex.svg)](https://hex.pm/api/packages/unifex) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/unifex/) |
+| [unifex](https://github.com/membraneframework/unifex) | Tool for generating interfaces between native C code and Elixir | [![Hex.pm](https://img.shields.io/hexpm/v/unifex.svg)](https://hex.pm/api/packages/unifex) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/unifex/) |
 | [bundlex](https://github.com/membraneframework/bundlex) | Multiplatform app bundler tool for Elixir | [![Hex.pm](https://img.shields.io/hexpm/v/bundlex.svg)](https://hex.pm/api/packages/bundlex) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/bundlex/) |
 | [beamchmark](https://github.com/membraneframework/beamchmark) | Elixir tool for benchmarking EVM performance | [![Hex.pm](https://img.shields.io/hexpm/v/beamchmark.svg)](https://hex.pm/api/packages/beamchmark) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/beamchmark/) |
 | [bunch](https://github.com/membraneframework/bunch) | A bunch of helper functions, intended to make life easier | [![Hex.pm](https://img.shields.io/hexpm/v/bunch.svg)](https://hex.pm/api/packages/bunch) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/bunch/) |
