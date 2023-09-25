@@ -25,7 +25,7 @@
  * Fix process leak in starting clocks. [#594](https://github.com/membraneframework/membrane_core/pull/594)
  * Add child exit reason to the supervisor exit reason. [#595](https://github.com/membraneframework/membrane_core/pull/595)
  * Remove default implementation of `start_/2`, `start_link/2` and `terminate/2` in modules using `Membrane.Pipeline`. [#598](https://github.com/membraneframework/membrane_core/pull/598) 
- * Remove callback `handle_buffers_batch/4` from `Membrane.Element.WithInputPads`. [#601](https://github.com/membraneframework/membrane_core/pull/601)
+ * Remove callback _Membrane.Element.WithInputPads.handle_buffers_batch/4_. [#601](https://github.com/membraneframework/membrane_core/pull/601)
  
 ## 0.11.0
  * Separate element_name and pad arguments in handle_element_{start, end}_of_stream signature [#219](https://github.com/membraneframework/membrane_core/issues/219)
