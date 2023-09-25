@@ -134,8 +134,8 @@ defmodule Membrane.FilterAggregator do
   end
 
   @impl true
-  def handle_buffers_batch(:input, buffers, _ctx, %{states: states}) do
-    {actions, states} = pipe_downstream([buffer: {:output, buffers}], states)
+  def handle_buffer(:input, buffer, _ctx, %{states: states}) do
+    {actions, states} = pipe_downstream([buffer: {:output, buffer}], states)
     actions = reject_internal_actions(actions)
 
     {actions, %{states: states}}
@@ -191,12 +191,8 @@ defmodule Membrane.FilterAggregator do
     end
   end
 
-  defp perform_action({:buffer, {:output, []}}, _module, _context, state) do
-    {[], state}
-  end
-
   defp perform_action({:buffer, {:output, buffer}}, module, context, state) do
-    module.handle_buffers_batch(:input, List.wrap(buffer), context, state)
+    module.handle_buffer(:input, buffer, context, state)
   end
 
   defp perform_action({:stream_format, {:output, stream_format}}, module, context, state) do

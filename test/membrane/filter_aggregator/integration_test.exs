@@ -29,15 +29,10 @@ defmodule Membrane.FilterAggregator.IntegrationTest do
     def_output_pad :output, flow_control: :auto, accepted_format: RemoteStream
 
     @impl true
-    def handle_buffers_batch(:input, buffers, _ctx, state) do
-      buffers =
-        buffers
-        |> Enum.map(fn %Buffer{payload: <<idx, payload::binary>>} ->
-          payload = for <<i <- payload>>, into: <<>>, do: <<i - 1>>
-          %Buffer{payload: <<idx, payload::binary>>}
-        end)
-
-      {[buffer: {:output, buffers}], state}
+    def handle_buffer(:input, %Buffer{payload: <<idx, payload::binary>>}, _ctx, state) do
+      payload = for <<i <- payload>>, into: <<>>, do: <<i - 1>>
+      buffer = %Buffer{payload: <<idx, payload::binary>>}
+      {[buffer: {:output, buffer}], state}
     end
   end
 

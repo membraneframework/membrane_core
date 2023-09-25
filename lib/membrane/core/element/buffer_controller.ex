@@ -91,7 +91,7 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   @doc """
-  Executes `handle_buffers_batch` callback.
+  Executes `handle_buffer` callback.
   """
   @spec exec_buffer_callback(
           Pad.ref(),
@@ -113,12 +113,16 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   defp do_exec_buffer_callback(pad_ref, buffers, state) do
-    CallbackHandler.exec_and_handle_callback(
-      :handle_buffers_batch,
-      ActionHandler,
-      %{context: &CallbackContext.from_state/1},
-      [pad_ref, buffers],
-      state
-    )
+    buffers
+    |> List.wrap()
+    |> Enum.reduce(state, fn buffer, state ->
+      CallbackHandler.exec_and_handle_callback(
+        :handle_buffer,
+        ActionHandler,
+        %{context: &CallbackContext.from_state/1},
+        [pad_ref, buffer],
+        state
+      )
+    end)
   end
 end

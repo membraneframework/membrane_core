@@ -49,25 +49,10 @@ defmodule Membrane.Element.WithInputPads do
   @doc """
   Callback that is called when buffer should be processed by the Element.
 
-  By default calls `c:handle_buffer/4` for each buffer.
-
-  For pads in pull mode it is called when buffers have been demanded (by returning
+  For pads in pull mode it is called when buffer have been demanded (by returning
   `:demand` action from any callback).
 
-  For pads in push mode it is invoked when buffers arrive.
-  """
-  @callback handle_buffers_batch(
-              pad :: Pad.ref(),
-              buffers :: list(Buffer.t()),
-              context :: CallbackContext.t(),
-              state :: Element.state()
-            ) :: Membrane.Element.Base.callback_return()
-
-  @doc """
-  Callback that is called when buffer should be processed by the Element. In contrast
-  to `c:handle_buffers_batch/4`, it is passed only a single buffer.
-
-  Called by default implementation of `c:handle_buffers_batch/4`.
+  For pads in push mode it is invoked when buffer arrive.
   """
   @callback handle_buffer(
               pad :: Pad.ref(),
@@ -99,16 +84,9 @@ defmodule Membrane.Element.WithInputPads do
       @impl true
       def handle_end_of_stream(pad, _context, state), do: {[], state}
 
-      @impl true
-      def handle_buffers_batch(pad, buffers, _context, state) do
-        args_list = buffers |> Enum.map(&[pad, &1])
-        {[split: {:handle_buffer, args_list}], state}
-      end
-
       defoverridable handle_stream_format: 4,
                      handle_start_of_stream: 3,
-                     handle_end_of_stream: 3,
-                     handle_buffers_batch: 4
+                     handle_end_of_stream: 3
     end
   end
 end
