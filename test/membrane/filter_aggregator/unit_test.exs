@@ -3,7 +3,6 @@ defmodule Membrane.FilterAggregator.UnitTest do
 
   import Mox
 
-  alias Membrane.FilterAggregator.IntegrationTest.FilterA
   alias Membrane.Buffer
   alias Membrane.Element.PadData
   alias Membrane.FilterAggregator
