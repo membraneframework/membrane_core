@@ -1,0 +1,28 @@
+name: Update packages list
+on:
+  schedule:
+    - cron: '0 0 1 1-12/1 *' # Run every month
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Update packages list in README
+    steps:
+      - uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '26.1'
+          elixir-version: '1.15.6'
+      - name: Update packages list
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          elixir update_packages_list.exs
+          git config user.name 'Membrane Bot'
+          git config user.email 'bot@membrane.stream'
+          git checkout -b auto-update-packages-list
+          git add README.md
+          git commit -m"auto update packages list in readme" --allow-empty
+          git push -f -u origin auto-update-packages-list
+          gh pr create -B master -H auto-update-packages-list --title 'Auto update packages list' --body ''
