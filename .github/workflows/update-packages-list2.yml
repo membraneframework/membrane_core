@@ -1,0 +1,30 @@
+name: Update packages list
+on:
+  schedule:
+    - cron: '0 0 1 1-12/3 *' # Run every three months
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/license.yml
+
+jobs:
+  test:
+    runs-on: elixir
+    name: Update packages list in README
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.BOT_TOKEN }}
+      - name: Update packages list
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          elixir update_packages_list.exs
+          git config user.name 'Membrane Bot'
+          git config user.email 'bot@membrane.stream'
+          git checkout -b auto-update-packages-list
+          git add README.md
+          git commit -m"auto update packages list in readme"
+          git push -u origin auto-update-packages-list
+          gh pr create -B master -H auto-update-packages-list --title 'Auto update packages list'
