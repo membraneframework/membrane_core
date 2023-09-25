@@ -113,9 +113,7 @@ defmodule Membrane.Core.Element.BufferController do
   end
 
   defp do_exec_buffer_callback(pad_ref, buffers, state) do
-    buffers
-    |> List.wrap()
-    |> Enum.reduce(state, fn buffer, state ->
+    Enum.reduce(buffers, state, fn buffer, state ->
       CallbackHandler.exec_and_handle_callback(
         :handle_buffer,
         ActionHandler,
