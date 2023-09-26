@@ -271,17 +271,11 @@ defmodule Membrane.FilterAggregator.UnitTest do
     assert ctx_b.playback == :playing
   end
 
-  test "handle_buffers_batch splitting and mapping buffers", ctx do
-    test_range = 1..10
-    buffers = test_range |> Enum.map(&%Buffer{payload: <<&1>>})
-    buffers_count = Enum.count(test_range)
+  test "handle_buffer mapping buffers", ctx do
+    buffer = %Buffer{payload: <<1>>}
 
     FilterA
-    |> expect(:handle_buffers_batch, fn :input, buffers, %{}, %{module: FilterA} = state ->
-      args_list = buffers |> Enum.map(&[:input, &1])
-      {[split: {:handle_buffer, args_list}], state}
-    end)
-    |> expect(:handle_buffer, buffers_count, fn :input, buffer, %{}, state ->
+    |> expect(:handle_buffer, fn :input, buffer, %{}, state ->
       assert state.module == FilterA
       assert %Buffer{payload: <<payload>>} = buffer
       out_payload = payload + 1
@@ -290,7 +284,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
     end)
 
     FilterB
-    |> expect(:handle_buffers_batch, buffers_count, fn :input, [buffer], %{}, state ->
+    |> expect(:handle_buffer, fn :input, buffer, %{}, state ->
       assert state.module == FilterB
       assert %Buffer{payload: <<payload>>} = buffer
       out_payload = payload * 2
@@ -299,11 +293,9 @@ defmodule Membrane.FilterAggregator.UnitTest do
     end)
 
     assert {actions, %{states: states}} =
-             FilterAggregator.handle_buffers_batch(:input, buffers, %{}, %{states: ctx.states})
+             FilterAggregator.handle_buffer(:input, buffer, %{}, %{states: ctx.states})
 
-    expected_actions =
-      test_range
-      |> Enum.map(&{:buffer, {:output, %Buffer{payload: <<(&1 + 1) * 2>>}}})
+    expected_actions = [buffer: {:output, %Buffer{payload: <<(1 + 1) * 2>>}}]
 
     assert actions == expected_actions
 
@@ -312,8 +304,8 @@ defmodule Membrane.FilterAggregator.UnitTest do
              {:b, FilterB, ctx_b, %{module: FilterB, state: state_b}}
            ] = states
 
-    assert state_a == test_range |> Enum.map(&(&1 + 1)) |> Enum.sum()
-    assert state_b == test_range |> Enum.map(&((&1 + 1) * 2)) |> Enum.sum()
+    assert state_a == 1 + 1
+    assert state_b == (1 + 1) * 2
 
     assert ctx_a == ctx.states |> Enum.at(0) |> elem(2)
     assert ctx_b == ctx.states |> Enum.at(1) |> elem(2)
@@ -327,9 +319,9 @@ defmodule Membrane.FilterAggregator.UnitTest do
       assert ctx.pads.input.start_of_stream? == true
       {[], state}
     end)
-    |> expect(:handle_buffers_batch, fn :input, [^buffer], %{} = ctx, state ->
+    |> expect(:handle_buffer, fn :input, ^buffer, %{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
-      {[forward: [buffer]], state}
+      {[forward: buffer], state}
     end)
     |> expect(:handle_end_of_stream, fn :input, %{} = ctx, state ->
       assert ctx.pads.input.end_of_stream? == true
@@ -341,9 +333,9 @@ defmodule Membrane.FilterAggregator.UnitTest do
       assert ctx.pads.input.start_of_stream? == true
       {[], state}
     end)
-    |> expect(:handle_buffers_batch, fn :input, [^buffer], %{} = ctx, state ->
+    |> expect(:handle_buffer, fn :input, ^buffer, %{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
-      {[buffer: {:output, [buffer]}], state}
+      {[buffer: {:output, buffer}], state}
     end)
     |> expect(:handle_end_of_stream, fn :input, %{} = ctx, state ->
       assert ctx.pads.input.end_of_stream? == true
@@ -356,7 +348,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
              })
 
     assert {[buffer: {:output, buffers}], %{states: states}} =
-             FilterAggregator.handle_buffers_batch(:input, [buffer], %{}, %{states: states})
+             FilterAggregator.handle_buffer(:input, buffer, %{}, %{states: states})
 
     assert List.wrap(buffers) == [buffer]
 
