@@ -21,8 +21,8 @@ jobs:
           elixir update_packages_list.exs
           git config user.name 'Membrane Bot'
           git config user.email 'bot@membrane.stream'
-          git checkout -b auto-update-packages-list
+          git checkout -B auto-update-packages-list
           git add README.md
-          git commit -m"auto update packages list in readme" --allow-empty
+          git commit -m "auto update packages list in readme" --allow-empty
           git push -f -u origin auto-update-packages-list
           gh pr create -B master -H auto-update-packages-list --title 'Auto update packages list' --body ''

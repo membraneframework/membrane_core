@@ -286,4 +286,4 @@ File.read!(readme_path)
   ~r/<!-- packages-list-start -->(.|\n)*<!-- packages-list-end -->/m,
   packages_md
 )
-|> then(&File.write(readme_path, &1))
+|> then(&File.write!(readme_path, &1))
