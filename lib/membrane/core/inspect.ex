@@ -71,7 +71,8 @@ defmodule Membrane.Core.Inspect do
 
       fields ->
         raise """
-        Fields #{inspect(fields)} from #{inspect(state_module)} structure are omitted in @fields_order module attribute in #{inspect(__MODULE__)}. Add them to @fields_order, to define where they will occur in the error logs.
+        Fields #{inspect(fields)} from #{inspect(state_module)} structure are omitted in @fields_order module attribute in #{inspect(__MODULE__)}.\
+        Add them to @fields_order, to define where they will occur in the error logs.
         """
     end
   end
