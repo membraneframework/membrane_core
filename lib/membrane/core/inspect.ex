@@ -64,7 +64,7 @@ defmodule Membrane.Core.Inspect do
   def ensure_all_struct_fields_inspected!(state_module) do
     state_module.__info__(:struct)
     |> Enum.map(& &1.field)
-    |> Enum.filter(&(&1 not in @fields_order))
+    |> Enum.reject(&(&1 in @fields_order))
     |> case do
       [] ->
         :ok
