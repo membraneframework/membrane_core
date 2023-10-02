@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0
+## 1.0.0-rc1
  * Introduce `:remove_link` action in pipelines and bins.
  * Add children groups - a mechanism that allows refering to multiple children with a single identifier. 
  * Rename `remove_child` action into `remove_children` and allow for removing a children group with a single action.
