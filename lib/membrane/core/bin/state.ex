@@ -8,7 +8,7 @@ defmodule Membrane.Core.Bin.State do
   use Bunch
   use Bunch.Access
 
-  alias Membrane.{Child, Clock, Sync}
+  alias Membrane.{Child, Clock, Pad, Sync}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Parent.ChildLifeController
   alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
@@ -20,6 +20,7 @@ defmodule Membrane.Core.Bin.State do
           children: ChildrenModel.children(),
           subprocess_supervisor: pid(),
           name: Membrane.Bin.name() | nil,
+          pad_refs: [Pad.ref()],
           pads_info: PadModel.pads_info() | nil,
           pads_data: PadModel.pads_data() | nil,
           parent_pid: pid,
@@ -55,6 +56,7 @@ defmodule Membrane.Core.Bin.State do
                 internal_state: nil,
                 children: %{},
                 name: nil,
+                pad_refs: [],
                 pads_info: nil,
                 pads_data: nil,
                 parent_pid: nil,

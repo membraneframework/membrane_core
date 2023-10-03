@@ -12,6 +12,7 @@ defmodule Membrane.Core.Inspect do
     :playback,
     :type,
     :internal_state,
+    :pad_refs,
     :pads_info,
     :children,
     :links,
