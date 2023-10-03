@@ -65,6 +65,7 @@ defmodule Membrane.Mixfile do
         "CONTRIBUTING.md",
         "guides/upgrading/v0.11.md",
         "guides/upgrading/v1.0.0-rc0.md",
+        "guides/upgrading/v1.0.0-rc1.md",
         LICENSE: [title: "License"]
       ],
       formatters: ["html"],
