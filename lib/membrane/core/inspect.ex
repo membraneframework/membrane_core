@@ -63,7 +63,7 @@ defmodule Membrane.Core.Inspect do
 
   @spec ensure_all_struct_fields_inspected!(module()) :: :ok | no_return()
   def ensure_all_struct_fields_inspected!(state_module) do
-    apply(state_module, :__info__, [:struct])
+    state_module.__info__(:struct)
     |> Enum.map(& &1.field)
     |> Enum.reject(&(&1 in @fields_order))
     |> case do
