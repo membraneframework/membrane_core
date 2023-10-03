@@ -13,7 +13,6 @@ defmodule Membrane.Core.Inspect do
     :type,
     :internal_state,
     :pads_info,
-    :pads_data,
     :children,
     :links,
     :crash_groups,
@@ -32,8 +31,9 @@ defmodule Membrane.Core.Inspect do
     :children_log_metadata,
     :handle_demand_loop_counter,
     :demand_size,
+    :pads_to_snapshot,
     :playback_queue,
-    :pads_to_snapshot
+    :pads_data
   ]
 
   @spec inspect(Component.state(), Inspect.Opts.t()) :: Inspect.Algebra.t()
