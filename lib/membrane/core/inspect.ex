@@ -4,7 +4,10 @@ defmodule Membrane.Core.Inspect do
   alias Inspect.Algebra
   alias Membrane.Core.Component
 
-  # inspectes state sorting its fields within the order in which they occur in the list passed to defstruct
+  @doc """
+  A function, that inspects passed state sorting its fields withing the order in which
+  they occur in the list passed to `defstruct`.
+  """
   @spec inspect(Component.state(), Inspect.Opts.t()) :: Inspect.Algebra.t()
   def inspect(%state_module{} = state, opts) do
     ordered_fields =
