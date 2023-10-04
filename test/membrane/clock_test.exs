@@ -172,7 +172,7 @@ defmodule Membrane.ClockTest do
                synchronization: %{clock_proxy: result_proxy, clock_provider: result_provider}
              } = ClockHandler.choose_clock(children, :el2, dummy_pipeline_state)
 
-      assert %{choice: :manual, clock: ^clock, provider: :el2} = result_provider
+      assert %{clock: ^clock, provider: :el2} = result_provider
       assert ^proxy_clock = result_proxy
     end
 
@@ -188,7 +188,7 @@ defmodule Membrane.ClockTest do
       dummy_pipeline_state =
         struct(State,
           module: __MODULE__,
-          synchronization: %{clock_proxy: proxy_clock, clock_provider: %{choice: :auto}}
+          synchronization: %{clock_proxy: proxy_clock, clock_provider: %{}}
         )
 
       assert_raise Membrane.ParentError, ~r/.*el1.*clock provider/, fn ->
@@ -196,7 +196,7 @@ defmodule Membrane.ClockTest do
       end
     end
 
-    test "when provider is not specified and there are multiple clock providers among children" do
+    test "when provider is not specified" do
       {:ok, clock} = Clock.start_link()
       {:ok, clock2} = Clock.start_link()
       {:ok, proxy_clock} = Clock.start_link(proxy: true)
@@ -210,36 +210,11 @@ defmodule Membrane.ClockTest do
       dummy_pipeline_state =
         struct(State,
           module: __MODULE__,
-          synchronization: %{clock_proxy: proxy_clock, clock_provider: %{choice: :auto}}
+          synchronization: %{clock_proxy: proxy_clock, clock_provider: %{}}
         )
 
-      assert_raise Membrane.ParentError, ~r/.*multiple components.*/, fn ->
-        ClockHandler.choose_clock(children, nil, dummy_pipeline_state)
-      end
-    end
-
-    test "when there is no clock provider and there is exactly one clock provider among children" do
-      {:ok, clock} = Clock.start_link()
-      {:ok, proxy_clock} = Clock.start_link(proxy: true)
-
-      children = [
-        %ChildEntry{name: :el1, pid: :c.pid(0, 1, 0)},
-        %ChildEntry{name: :el2, clock: clock, pid: :c.pid(0, 2, 0)},
-        %ChildEntry{name: :el3, pid: :c.pid(0, 3, 0)}
-      ]
-
-      dummy_pipeline_state =
-        struct(State,
-          module: __MODULE__,
-          synchronization: %{clock_proxy: proxy_clock, clock_provider: %{choice: :auto}}
-        )
-
-      assert %State{
-               synchronization: %{clock_proxy: result_proxy, clock_provider: result_provider}
-             } = ClockHandler.choose_clock(children, nil, dummy_pipeline_state)
-
-      assert %{choice: :auto, clock: ^clock, provider: :el2} = result_provider
-      assert ^proxy_clock = result_proxy
+      assert dummy_pipeline_state ==
+               ClockHandler.choose_clock(children, nil, dummy_pipeline_state)
     end
   end
 

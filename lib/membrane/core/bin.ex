@@ -119,7 +119,7 @@ defmodule Membrane.Core.Bin do
           parent_clock: options.parent_clock,
           timers: %{},
           clock: clock,
-          clock_provider: %{clock: nil, provider: nil, choice: :auto},
+          clock_provider: %{clock: nil, provider: nil},
           clock_proxy: clock_proxy,
           # This is a sync for siblings. This is not yet allowed.
           stream_sync: Membrane.Sync.no_sync(),

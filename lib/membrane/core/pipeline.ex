@@ -52,7 +52,7 @@ defmodule Membrane.Core.Pipeline do
       module: params.module,
       synchronization: %{
         clock_proxy: clock_proxy,
-        clock_provider: %{clock: nil, provider: nil, choice: :auto},
+        clock_provider: %{clock: nil, provider: nil},
         timers: %{}
       },
       subprocess_supervisor: subprocess_supervisor,
