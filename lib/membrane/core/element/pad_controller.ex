@@ -228,7 +228,10 @@ defmodule Membrane.Core.Element.PadController do
       state = generate_eos_if_needed(pad_ref, state)
       state = maybe_handle_pad_removed(pad_ref, state)
       state = remove_pad_associations(pad_ref, state)
-      {pad_data, state} = PadModel.pop_data!(state, pad_ref)
+
+      {pad_data, state} =
+        Map.update!(state, :pad_refs, &List.delete(&1, pad_ref))
+        |> PadModel.pop_data!(pad_ref)
 
       with %{direction: :input, flow_control: :auto, other_effective_flow_control: :pull} <-
              pad_data do
@@ -314,7 +317,10 @@ defmodule Membrane.Core.Element.PadController do
       |> merge_pad_mode_data(endpoint.pad_props, other_pad_info, state)
       |> then(&struct!(Membrane.Element.PadData, &1))
 
-    state = put_in(state, [:pads_data, endpoint.pad_ref], pad_data)
+    state =
+      state
+      |> put_in([:pads_data, endpoint.pad_ref], pad_data)
+      |> Map.update!(:pad_refs, &[endpoint.pad_ref | &1])
 
     :ok =
       AtomicDemand.set_sender_status(
