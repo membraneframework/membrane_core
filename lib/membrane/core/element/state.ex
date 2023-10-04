@@ -19,6 +19,7 @@ defmodule Membrane.Core.Element.State do
           type: Element.type(),
           name: Element.name(),
           internal_state: Element.state() | nil,
+          pad_refs: [Pad.ref()] | nil,
           pads_info: PadModel.pads_info() | nil,
           pads_data: PadModel.pads_data() | nil,
           parent_pid: pid,
@@ -45,29 +46,39 @@ defmodule Membrane.Core.Element.State do
           stalker: Membrane.Core.Stalker.t()
         }
 
+  # READ THIS BEFORE ADDING NEW FIELD!!!
+
+  # Fields of this structure will be inspected in the same order, in which they occur in the
+  # list passed to `defstruct`. Take a look at lib/membrane/core/inspect.ex to get more info.
+  # If you want to add a new field to the state, place it at the spot corresponding to its
+  # importance and possibly near other related fields. It is suggested, to keep `:pads_data`
+  # as the last item in the list, because sometimes it is so big, that everything after it
+  # might be truncated during the inspection.
+
   defstruct [
     :module,
-    :type,
     :name,
-    :internal_state,
-    :pads_info,
-    :pads_data,
     :parent_pid,
-    :supplying_demand?,
-    :delayed_demands,
-    :handle_demand_loop_counter,
-    :synchronization,
-    :demand_size,
-    :initialized?,
     :playback,
-    :playback_queue,
-    :resource_guard,
-    :subprocess_supervisor,
+    :type,
+    :internal_state,
+    :pad_refs,
+    :pads_info,
+    :synchronization,
+    :delayed_demands,
+    :effective_flow_control,
+    :initialized?,
     :terminating?,
     :setup_incomplete?,
-    :effective_flow_control,
+    :supplying_demand?,
     :handling_action?,
+    :stalker,
+    :resource_guard,
+    :subprocess_supervisor,
+    :handle_demand_loop_counter,
+    :demand_size,
     :pads_to_snapshot,
-    :stalker
+    :playback_queue,
+    :pads_data
   ]
 end
