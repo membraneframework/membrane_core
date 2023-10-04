@@ -50,24 +50,34 @@ defmodule Membrane.Core.Bin.State do
           stalker: Membrane.Core.Stalker.t()
         }
 
-  @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard, :stalker]
-  defstruct @enforce_keys ++
-              [
-                internal_state: nil,
-                children: %{},
-                name: nil,
-                pad_refs: [],
-                pads_info: nil,
-                pads_data: nil,
-                parent_pid: nil,
-                crash_groups: %{},
-                children_log_metadata: [],
-                links: %{},
-                pending_specs: %{},
-                playback: :stopped,
-                initialized?: false,
-                terminating?: false,
-                setup_incomplete?: false,
-                handling_action?: false
-              ]
+  # READ THIS BEFORE ADDING NEW FIELD!!!
+
+  # Fields of this structure will be inspected in the same order, in which they occur in the
+  # list passed to `defstruct`. Take a look at lib/membrane/core/inspect.ex to get more info.
+  # If you want to add a new field to the state, place it at the spot corresponding to its
+  # importance and possibly near other related fields. It is suggested, to keep `:pads_data`
+  # as the last item in the list, because sometimes it is so big, that everything after it
+  # might be truncated during the inspection.
+
+  defstruct module: nil,
+            name: nil,
+            parent_pid: nil,
+            playback: :stopped,
+            internal_state: nil,
+            pad_refs: [],
+            pads_info: nil,
+            children: %{},
+            links: %{},
+            crash_groups: %{},
+            pending_specs: %{},
+            synchronization: nil,
+            initialized?: false,
+            terminating?: false,
+            setup_incomplete?: false,
+            handling_action?: false,
+            stalker: nil,
+            resource_guard: nil,
+            subprocess_supervisor: nil,
+            children_log_metadata: [],
+            pads_data: nil
 end
