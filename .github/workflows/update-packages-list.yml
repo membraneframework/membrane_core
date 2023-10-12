@@ -18,7 +18,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
-          elixir update_packages_list.exs
+          elixir scripts/update_packages_list.exs
           git config user.name 'Membrane Bot'
           git config user.email 'bot@membrane.stream'
           git checkout -B auto-update-packages-list

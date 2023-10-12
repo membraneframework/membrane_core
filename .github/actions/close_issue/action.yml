@@ -1,0 +1,39 @@
+name: 'Close issue when opened'
+description: 'Closes a newly opened issue, tags it and puts it in the proper column in Smackore project board.'
+inputs:
+  GITHUB_TOKEN:
+    description: 'GitHub token'
+    required: true
+  ISSUE_URL:
+    description: 'Issue URL'
+    required: true
+  ISSUE_NUMBER:
+    description: 'Issue number'
+    required: true
+  REPOSITORY:
+    description: 'Repository'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        otp-version: '26.1'
+        elixir-version: '1.15.6'
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Create ticket and close issue
+      run: |
+        gh issue edit $ISSUE_URL --add-project "Smackore" --add-label closed-by-membrane-bot
+        sleep 10        
+        export TICKET_ID=$(gh project item-list 19 --owner membraneframework --format json --limit 10000000 | elixir get_ticket_id.exs "$ISSUE_URL" | awk '/TICKET_ID/{print $2}')
+        gh issue close $ISSUE_URL --comment "Only PRs welcome ;)" --reason "not planned"
+        sleep 10
+        gh project item-edit --id "$TICKET_ID" --field-id PVTSSF_lADOAYE_z84AWEIBzgOGd1k --project-id PVT_kwDOAYE_z84AWEIB --single-select-option-id "fa223107"
+      env:
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+        ISSUE_URL: ${{ inputs.ISSUE_URL }}
+        ISSUE_NUMBER: ${{ inputs.ISSUE_NUMBER }}
+        REPOSITORY: ${{ inputs.REPOSITORY }}
+      shell: bash
