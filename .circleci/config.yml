@@ -154,7 +154,6 @@ jobs:
           at: .
       - run: cp -r benchmark/ ~/benchmark_backup/
       - run: cp mix.exs ~/benchmark_backup/
-      - run: docker pull membraneframeworklabs/docker_membrane
       - run: docker run -e MIX_ENV=benchmark -v ./:/root/app -v ~/results:/root/results -w /root/app membraneframeworklabs/docker_membrane mix do deps.get, deps.compile --force --all, run benchmark/run.exs /root/results/feature_branch_results
       - run: git checkout -f master
       - run: cp  ~/benchmark_backup/mix.exs ~/app
