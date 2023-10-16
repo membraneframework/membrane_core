@@ -51,6 +51,7 @@ defmodule Membrane.Core.Bin.PadController do
       case PadModel.get_data(state, pad_ref) do
         {:error, :unknown_pad} ->
           init_pad_data(pad_ref, pad_info, state)
+          |> Map.update!(:pad_refs, &[pad_ref | &1])
 
         # This case is for pads that were instantiated before the external link request,
         # that is in the internal link request (see `handle_internal_link_request/4`).
@@ -281,8 +282,10 @@ defmodule Membrane.Core.Bin.PadController do
   @spec handle_unlink(Pad.ref(), Core.Bin.State.t()) :: Core.Bin.State.t()
   def handle_unlink(pad_ref, state) do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
-      state = maybe_handle_pad_removed(pad_ref, state)
-      {pad_data, state} = PadModel.pop_data!(state, pad_ref)
+      {pad_data, state} =
+        maybe_handle_pad_removed(pad_ref, state)
+        |> Map.update!(:pad_refs, &List.delete(&1, pad_ref))
+        |> PadModel.pop_data!(pad_ref)
 
       if pad_data.endpoint do
         Message.send(pad_data.endpoint.pid, :handle_unlink, pad_data.endpoint.pad_ref)
