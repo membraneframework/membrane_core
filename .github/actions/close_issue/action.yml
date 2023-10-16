@@ -25,12 +25,21 @@ runs:
       uses: actions/checkout@v3
     - name: Create ticket and close issue
       run: |
+        export PROJECT_NUMBER=19
+        export PROJECT_ID=PVT_kwDOAYE_z84AWEIB
+        export STATUS_FIELD_ID=PVTSSF_lADOAYE_z84AWEIBzgOGd1k
+        export TARGET_COLUMN_ID=fa223107
+        export CORE_URL=https://github.com/membraneframework/membrane_core
+        export ISSUE_CLOSE_COMMENT="Issues related to $REPOSITORY are stored in [membrane_core]($CORE_URL), so we close this issue here and we encourage you to open it [there]($CORE_URL) with labels describing, which repositories relate to the issue."
+
         gh issue edit $ISSUE_URL --add-project "Smackore" --add-label closed-by-membrane-bot
         sleep 10        
-        export TICKET_ID=$(gh project item-list 19 --owner membraneframework --format json --limit 10000000 | elixir get_ticket_id.exs "$ISSUE_URL" | awk '/TICKET_ID/{print $2}')
-        gh issue close $ISSUE_URL --comment "Only PRs welcome ;)" --reason "not planned"
+
+        export TICKET_ID=$(gh project item-list $PROJECT_NUMBER --owner membraneframework --format json --limit 10000000 | elixir get_ticket_id.exs "$ISSUE_URL" | awk '/TICKET_ID/{print $2}')
+        gh issue close $ISSUE_URL --comment "$ISSUE_CLOSE_COMMENT" --reason "not planned"
         sleep 10
-        gh project item-edit --id "$TICKET_ID" --field-id PVTSSF_lADOAYE_z84AWEIBzgOGd1k --project-id PVT_kwDOAYE_z84AWEIB --single-select-option-id "fa223107"
+
+        gh project item-edit --id $TICKET_ID --field-id $STATUS_FIELD_ID --project-id $PROJECT_ID --single-select-option-id $TARGET_COLUMN_ID
       env:
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
         ISSUE_URL: ${{ inputs.ISSUE_URL }}
