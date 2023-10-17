@@ -64,6 +64,7 @@ defmodule Membrane.Mixfile do
         "CHANGELOG.md",
         "CONTRIBUTING.md",
         "guides/upgrading/v0.11.md",
+        "guides/upgrading/v0.12.md",
         "guides/upgrading/v1.0.0-rc0.md",
         "guides/upgrading/v1.0.0-rc1.md",
         LICENSE: [title: "License"]
