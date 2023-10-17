@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.1
+ * Specify the order in which state fields will be printed in the error logs. [#614](https://github.com/membraneframework/membrane_core/pull/614)
+
 ## 1.0.0
  * Introduce `:remove_link` action in pipelines and bins.
  * Add children groups - a mechanism that allows refering to multiple children with a single identifier. 
