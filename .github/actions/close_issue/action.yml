@@ -30,7 +30,7 @@ runs:
         export STATUS_FIELD_ID=PVTSSF_lADOAYE_z84AWEIBzgOGd1k
         export TARGET_COLUMN_ID=fa223107
         export CORE_URL=https://github.com/membraneframework/membrane_core
-        export ISSUE_CLOSE_COMMENT="Issues related to $REPOSITORY are stored in [membrane_core]($CORE_URL), so we close this issue here and we encourage you to open it [there]($CORE_URL) with labels describing, which repositories relate to the issue."
+        export ISSUE_CLOSE_COMMENT="Issues related to $REPOSITORY are stored in [membrane_core]($CORE_URL), so we close this issue here and we encourage you to open it [there]($CORE_URL)."
 
         gh issue edit $ISSUE_URL --add-project "Smackore" --add-label closed-by-membrane-bot
         sleep 10        
