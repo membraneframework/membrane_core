@@ -23,6 +23,8 @@ runs:
         elixir-version: '1.15.6'
     - name: Checkout code
       uses: actions/checkout@v3
+      with:
+        repository: membraneframework/membrane_core
     - name: Create ticket and close issue
       run: |
         export PROJECT_NUMBER=19
