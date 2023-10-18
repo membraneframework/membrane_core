@@ -9,15 +9,17 @@ defmodule Membrane.Core.Pipeline.State do
   use Bunch.Access
 
   alias Membrane.Child
-  alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
+  alias Membrane.Core.Parent.{ChildLifeController, ChildrenModel, CrashGroup, Link}
   alias Membrane.Core.Timer
 
   @type t :: %__MODULE__{
-          internal_state: Membrane.Pipeline.state() | nil,
           module: module,
+          playback: Membrane.Playback.t(),
+          internal_state: Membrane.Pipeline.state() | nil,
           children: ChildrenModel.children(),
-          crash_groups: %{CrashGroup.name() => CrashGroup.t()},
           links: %{Link.id() => Link.t()},
+          crash_groups: %{CrashGroup.name() => CrashGroup.t()},
+          pending_specs: ChildLifeController.pending_specs(),
           synchronization: %{
             timers: %{Timer.id() => Timer.t()},
             clock_provider: %{
@@ -27,27 +29,35 @@ defmodule Membrane.Core.Pipeline.State do
             },
             clock_proxy: Membrane.Clock.t()
           },
-          playback: Membrane.Playback.t(),
           initialized?: boolean(),
           terminating?: boolean(),
           resource_guard: Membrane.ResourceGuard.t(),
           setup_incomplete?: boolean(),
           handling_action?: boolean(),
-          stalker: Membrane.Core.Stalker.t()
+          stalker: Membrane.Core.Stalker.t(),
+          subprocess_supervisor: pid()
         }
 
-  @enforce_keys [:module, :synchronization, :subprocess_supervisor, :resource_guard, :stalker]
-  defstruct @enforce_keys ++
-              [
-                internal_state: nil,
-                children: %{},
-                crash_groups: %{},
-                links: %{},
-                pending_specs: %{},
-                playback: :stopped,
-                initialized?: false,
-                terminating?: false,
-                setup_incomplete?: false,
-                handling_action?: false
-              ]
+  # READ THIS BEFORE ADDING NEW FIELD!!!
+
+  # Fields of this structure will be inspected in the same order, in which they occur in the
+  # list passed to `defstruct`. Take a look at lib/membrane/core/inspect.ex to get more info.
+  # If you want to add a new field to the state, place it at the spot corresponding to its
+  # importance and possibly near other related fields.
+
+  defstruct module: nil,
+            playback: :stopped,
+            internal_state: nil,
+            children: %{},
+            links: %{},
+            crash_groups: %{},
+            pending_specs: %{},
+            synchronization: nil,
+            initialized?: false,
+            terminating?: false,
+            setup_incomplete?: false,
+            handling_action?: false,
+            stalker: nil,
+            resource_guard: nil,
+            subprocess_supervisor: nil
 end
