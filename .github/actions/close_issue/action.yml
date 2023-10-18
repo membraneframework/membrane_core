@@ -32,7 +32,7 @@ runs:
         export CORE_URL=https://github.com/membraneframework/membrane_core
         export ISSUE_CLOSE_COMMENT="Issues related to $REPOSITORY are stored in [membrane_core]($CORE_URL), so we close this issue here and we encourage you to open it [there]($CORE_URL)."
 
-        gh issue edit $ISSUE_URL --add-project "Smackore" --add-label closed-by-membrane-bot
+        gh issue edit $ISSUE_URL --add-project "Smackore"
         sleep 10        
 
         export TICKET_ID=$(gh project item-list $PROJECT_NUMBER --owner membraneframework --format json --limit 10000000 | elixir get_ticket_id.exs "$ISSUE_URL" | awk '/TICKET_ID/{print $2}')
