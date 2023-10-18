@@ -10,5 +10,5 @@ runs:
     - run: |
         gh label create closed-by-membrane-bot --description "Automatically closed by Membrane bot" --color EB3467 || true
       env:
-        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ inputs.GITHUB_TOKEN }}
       shell: bash

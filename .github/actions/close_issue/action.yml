@@ -41,7 +41,7 @@ runs:
 
         gh project item-edit --id $TICKET_ID --field-id $STATUS_FIELD_ID --project-id $PROJECT_ID --single-select-option-id $TARGET_COLUMN_ID
       env:
-        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ inputs.GITHUB_TOKEN }}
         ISSUE_URL: ${{ inputs.ISSUE_URL }}
         ISSUE_NUMBER: ${{ inputs.ISSUE_NUMBER }}
         REPOSITORY: ${{ inputs.REPOSITORY }}
