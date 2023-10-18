@@ -35,7 +35,7 @@ runs:
         gh issue edit $ISSUE_URL --add-project "Smackore"
         sleep 10        
 
-        export TICKET_ID=$(gh project item-list $PROJECT_NUMBER --owner membraneframework --format json --limit 10000000 | elixir get_ticket_id.exs "$ISSUE_URL" | awk '/TICKET_ID/{print $2}')
+        export TICKET_ID=$(gh project item-list $PROJECT_NUMBER --owner membraneframework --format json --limit 10000000 | elixir ./scripts/get_ticket_id.exs "$ISSUE_URL" | awk '/TICKET_ID/{print $2}')
         gh issue close $ISSUE_URL --comment "$ISSUE_CLOSE_COMMENT" --reason "not planned"
         sleep 10
 
