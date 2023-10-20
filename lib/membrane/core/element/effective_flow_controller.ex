@@ -132,9 +132,9 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
     end)
 
     state.pads_data
-    |> Enum.filter(fn
-      {_pad_ref, %{direction: :input, flow_contorl: :auto}} -> true
-      _other -> false
+    |> Enum.flat_map(fn
+      {pad_ref, %{direction: :input, flow_control: :auto}} -> [pad_ref]
+      _other -> []
     end)
     |> AutoFlowUtils.auto_adjust_atomic_demand(state)
   end

@@ -152,7 +152,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     pad_to_queue_map =
       pad_ref_list
       |> Enum.filter(&hard_corcked?(&1, state))
-      |> Map.new(&PadModel.get_data!(state, &1, [:auto_flow_queue]))
+      |> Map.new(&{&1, PadModel.get_data!(state, &1, :auto_flow_queue)})
 
     state = handle_queued_items(pad_to_queue_map, state)
 
@@ -176,7 +176,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
       {:empty, _empty_queue} ->
         pad_to_queue_map
-        |> Map.pop(pad_ref)
+        |> Map.delete(pad_ref)
         |> handle_queued_items(state)
     end
   end
