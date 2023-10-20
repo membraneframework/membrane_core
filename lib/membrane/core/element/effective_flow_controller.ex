@@ -104,8 +104,8 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
     state.pads_data
     |> Enum.filter(fn {_ref, %{flow_control: flow_control}} -> flow_control == :auto end)
-    |> Enum.reduce(state, fn
-      {_ref, %{direction: :output} = pad_data}, state ->
+    |> Enum.each(fn
+      {_ref, %{direction: :output} = pad_data} ->
         :ok =
           AtomicDemand.set_sender_status(
             pad_data.atomic_demand,
@@ -120,9 +120,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
           [pad_data.other_ref, new_effective_flow_control]
         )
 
-        state
-
-      {pad_ref, %{direction: :input} = pad_data}, state ->
+      {pad_ref, %{direction: :input} = pad_data} ->
         if triggering_pad in [pad_ref, nil] or
              AtomicDemand.get_receiver_status(pad_data.atomic_demand) != :to_be_resolved do
           :ok =
@@ -131,8 +129,13 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
               {:resolved, new_effective_flow_control}
             )
         end
-
-        AutoFlowUtils.auto_adjust_atomic_demand(pad_ref, state)
     end)
+
+    state.pads_data
+    |> Enum.filter(fn
+      {_pad_ref, %{direction: :input, flow_contorl: :auto}} -> true
+      _other -> false
+    end)
+    |> AutoFlowUtils.auto_adjust_atomic_demand(state)
   end
 end

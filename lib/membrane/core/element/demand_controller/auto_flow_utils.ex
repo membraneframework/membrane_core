@@ -1,9 +1,16 @@
 defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   @moduledoc false
 
+  alias Membrane.Buffer
+  alias Membrane.Event
+  alias Membrane.StreamFormat
+
   alias Membrane.Core.Element.{
     AtomicDemand,
-    State
+    BufferController,
+    EventController,
+    State,
+    StreamFormatController
   }
 
   require Membrane.Core.Child.PadModel, as: PadModel
@@ -59,12 +66,45 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     state
   end
 
+  @spec hard_corcked?(Pad.ref(), State.t()) :: boolean()
+  def hard_corcked?(pad_ref, state) do
+    pad_data = PadModel.get_data!(state, pad_ref)
+
+    state.effective_flow_control == :pull and pad_data.direction == :input and
+      pad_data.flow_control == :auto and pad_data.demand < -1 * pad_data.auto_demand_size / 2
+  end
+
+  @spec store_buffers_in_queue(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
+  def store_buffers_in_queue(pad_ref, buffers, state) do
+    store_in_queue(pad_ref, :buffers, buffers, state)
+  end
+
+  @spec store_event_in_queue(Pad.ref(), Event.t(), State.t()) :: State.t()
+  def store_event_in_queue(pad_ref, event, state) do
+    store_in_queue(pad_ref, :event, event, state)
+  end
+
+  @spec store_stream_format_in_queue(Pad.ref(), StreamFormat.t(), State.t()) :: State.t()
+  def store_stream_format_in_queue(pad_ref, stream_format, state) do
+    store_in_queue(pad_ref, :stream_format, stream_format, state)
+  end
+
+  defp store_in_queue(pad_ref, type, item, state) do
+    PadModel.update_data!(state, pad_ref, :auto_flow_queue, &Qex.push(&1, {type, item}))
+  end
+
   @spec auto_adjust_atomic_demand(Pad.ref() | [Pad.ref()], State.t()) :: State.t()
   def auto_adjust_atomic_demand(pad_ref_list, state) when is_list(pad_ref_list) do
-    Enum.reduce(pad_ref_list, state, &auto_adjust_atomic_demand/2)
+    state = Enum.reduce(pad_ref_list, state, &do_auto_adjust_atomic_demand/2)
+    flush_auto_flow_queues(pad_ref_list, state)
   end
 
   def auto_adjust_atomic_demand(pad_ref, state) when Pad.is_pad_ref(pad_ref) do
+    state = do_auto_adjust_atomic_demand(pad_ref, state)
+    flush_auto_flow_queues([pad_ref], state)
+  end
+
+  defp do_auto_adjust_atomic_demand(pad_ref, state) when Pad.is_pad_ref(pad_ref) do
     PadModel.get_data!(state, pad_ref)
     |> do_auto_adjust_atomic_demand(state)
   end
@@ -106,5 +146,50 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
       |> AtomicDemand.get()
 
     atomic_demand_value > 0
+  end
+
+  defp flush_auto_flow_queues(pad_ref_list, state) do
+    pad_to_queue_map =
+      pad_ref_list
+      |> Enum.filter(&hard_corcked?(&1, state))
+      |> Map.new(&PadModel.get_data!(state, &1, [:auto_flow_queue]))
+
+    state = handle_queued_items(pad_to_queue_map, state)
+
+    Enum.reduce(pad_ref_list, state, fn pad_ref, state ->
+      PadModel.set_data!(state, pad_ref, :auto_flow_queue, Qex.new())
+    end)
+  end
+
+  defp handle_queued_items(pad_to_queue_map, state) when pad_to_queue_map == %{}, do: state
+
+  defp handle_queued_items(pad_to_queue_map, state) do
+    {pad_ref, queue} = Enum.random(pad_to_queue_map)
+
+    case Qex.pop(queue) do
+      {{:value, queue_item}, popped_queue} ->
+        state = do_handle_queue_item(pad_ref, queue_item, state)
+
+        pad_to_queue_map
+        |> Map.put(pad_ref, popped_queue)
+        |> handle_queued_items(state)
+
+      {:empty, _empty_queue} ->
+        pad_to_queue_map
+        |> Map.pop(pad_ref)
+        |> handle_queued_items(state)
+    end
+  end
+
+  defp do_handle_queue_item(pad_ref, {:buffers, buffers}, state) do
+    BufferController.exec_buffer_callback(pad_ref, buffers, state)
+  end
+
+  defp do_handle_queue_item(pad_ref, {:event, event}, state) do
+    EventController.exec_handle_event(pad_ref, event, state)
+  end
+
+  defp do_handle_queue_item(pad_ref, {:stream_format, stream_format}, state) do
+    StreamFormatController.exec_handle_stream_format(pad_ref, stream_format, state)
   end
 end

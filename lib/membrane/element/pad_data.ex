@@ -40,6 +40,7 @@ defmodule Membrane.Element.PadData do
           pid: private_field,
           other_ref: private_field,
           input_queue: private_field,
+          auto_flow_queue: private_field,
           incoming_demand: integer() | nil,
           demand_unit: private_field,
           other_demand_unit: private_field,
@@ -80,6 +81,7 @@ defmodule Membrane.Element.PadData do
   defstruct @enforce_keys ++
               [
                 input_queue: nil,
+                auto_flow_queue: Qex.new(),
                 demand: 0,
                 incoming_demand: nil,
                 demand_unit: nil,

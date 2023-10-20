@@ -18,6 +18,8 @@ defmodule Membrane.Core.Element.EventController do
     State
   }
 
+  alias Membrane.Core.Element.DemandController.AutoFlowUtils
+
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
@@ -39,15 +41,22 @@ defmodule Membrane.Core.Element.EventController do
           playback: %State{playback: :playing} <- state do
       Telemetry.report_metric(:event, 1, inspect(pad_ref))
 
-      if not Event.async?(event) and buffers_before_event_present?(data) do
-        PadModel.update_data!(
-          state,
-          pad_ref,
-          :input_queue,
-          &InputQueue.store(&1, :event, event)
-        )
-      else
-        exec_handle_event(pad_ref, event, state)
+      cond do
+        # events goes to the manual flow control input queue
+        not Event.async?(event) and buffers_before_event_present?(data) ->
+          PadModel.update_data!(
+            state,
+            pad_ref,
+            :input_queue,
+            &InputQueue.store(&1, :event, event)
+          )
+
+        # event goes to the auto flow control queue
+        AutoFlowUtils.hard_corcked?(pad_ref, state) ->
+          AutoFlowUtils.store_event_in_queue(pad_ref, event, state)
+
+        true ->
+          exec_handle_event(pad_ref, event, state)
       end
     else
       pad: {:error, :unknown_pad} ->
