@@ -24,8 +24,7 @@ defmodule Membrane.Core.Pipeline.State do
             timers: %{Timer.id() => Timer.t()},
             clock_provider: %{
               clock: Membrane.Clock.t() | nil,
-              provider: Child.name() | nil,
-              choice: :auto | :manual
+              provider: Child.name() | nil
             },
             clock_proxy: Membrane.Clock.t()
           },
