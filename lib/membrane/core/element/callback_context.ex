@@ -18,8 +18,7 @@ defmodule Membrane.Core.Element.CallbackContext do
       name: state.name,
       playback: state.playback,
       resource_guard: state.resource_guard,
-      utility_supervisor: state.subprocess_supervisor,
-      big_state: state
+      utility_supervisor: state.subprocess_supervisor
     })
   end
 end

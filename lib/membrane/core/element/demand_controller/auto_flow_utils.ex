@@ -74,11 +74,6 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
       pad_data.flow_control == :auto and pad_data.demand < 0
   end
 
-  @spec auto_flow_queue_empty?(Pad.ref(), State.t()) :: boolean()
-  def auto_flow_queue_empty?(pad_ref, state) do
-    PadModel.get_data!(state, pad_ref, :auto_flow_queue) == Qex.new()
-  end
-
   @spec store_buffers_in_queue(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
   def store_buffers_in_queue(pad_ref, buffers, state) do
     store_in_queue(pad_ref, :buffers, buffers, state)
@@ -99,9 +94,11 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   end
 
   @spec auto_adjust_atomic_demand(Pad.ref() | [Pad.ref()], State.t()) :: State.t()
-  def auto_adjust_atomic_demand(pad_ref_list, state) when is_list(pad_ref_list) do
+  def auto_adjust_atomic_demand(ref_or_ref_list, state)
+      when Pad.is_pad_ref(ref_or_ref_list) or is_list(ref_or_ref_list) do
     {bumped_pads, state} =
-      pad_ref_list
+      ref_or_ref_list
+      |> Bunch.listify()
       |> Enum.flat_map_reduce(state, fn pad_ref, state ->
         PadModel.get_data!(state, pad_ref)
         |> do_auto_adjust_atomic_demand(state)
@@ -112,18 +109,6 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
       end)
 
     flush_auto_flow_queues(bumped_pads, state)
-  end
-
-  def auto_adjust_atomic_demand(pad_ref, state) when Pad.is_pad_ref(pad_ref) do
-    PadModel.get_data!(state, pad_ref)
-    |> do_auto_adjust_atomic_demand(state)
-    |> case do
-      {:increased, state} ->
-        flush_auto_flow_queues([pad_ref], state)
-
-      {:unchanged, state} ->
-        state
-    end
   end
 
   defp do_auto_adjust_atomic_demand(pad_data, state) when is_input_auto_pad_data(pad_data) do
@@ -167,15 +152,9 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     atomic_demand_value > 0
   end
 
-  defp flush_auto_flow_queues(pad_ref_list, state) do
-    pad_ref_list
-    |> Enum.reject(&hard_corcked?(&1, state))
-    |> do_flush_auto_flow_queues(state)
-  end
+  defp flush_auto_flow_queues([], state), do: state
 
-  defp do_flush_auto_flow_queues([], state), do: state
-
-  defp do_flush_auto_flow_queues(pads_to_flush, state) do
+  defp flush_auto_flow_queues(pads_to_flush, state) do
     selected_pad = Enum.random(pads_to_flush)
 
     PadModel.get_data!(state, selected_pad, :auto_flow_queue)
@@ -186,14 +165,14 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
           exec_queue_item_callback(selected_pad, queue_item, state)
           |> PadModel.set_data!(selected_pad, :auto_flow_queue, popped_queue)
 
-          do_flush_auto_flow_queues(pads_to_flush, state)
+        flush_auto_flow_queues(pads_to_flush, state)
 
       {:empty, empty_queue} ->
         state = PadModel.set_data!(state, selected_pad, :auto_flow_queue, empty_queue)
 
         pads_to_flush
         |> List.delete(selected_pad)
-        |> do_flush_auto_flow_queues(state)
+        |> flush_auto_flow_queues(state)
     end
   end
 
