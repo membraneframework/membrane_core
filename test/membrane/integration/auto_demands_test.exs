@@ -4,9 +4,12 @@ defmodule Membrane.Integration.AutoDemandsTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
+  alias Membrane.Buffer
   alias Membrane.Testing.{Pipeline, Sink, Source}
 
-  defmodule AutoDemandFilter do
+  require Membrane.Pad, as: Pad
+
+  defmodule ExponentialAutoFilter do
     use Membrane.Filter
 
     def_input_pad :input, accepted_format: _any
@@ -33,6 +36,32 @@ defmodule Membrane.Integration.AutoDemandsTest do
         {[buffer: {:output, buffer}], %{state | counter: 1}}
       end
     end
+  end
+
+  defmodule NotifyingAutoFilter do
+    use Membrane.Filter
+
+    def_input_pad :input, accepted_format: _any, availability: :on_request
+    def_output_pad :output, accepted_format: _any
+
+    @impl true
+    def handle_playing(_ctx, state), do: {[notify_parent: :playing], state}
+
+    @impl true
+    def handle_parent_notification(actions, _ctx, state), do: {actions, state}
+
+    @impl true
+    def handle_buffer(pad, buffer, _ctx, state) do
+      actions = [
+        notify_parent: {:handling_buffer, pad, buffer},
+        buffer: {:output, buffer}
+      ]
+
+      {actions, state}
+    end
+
+    @impl true
+    def handle_end_of_stream(_pad, _ctx, state), do: {[], state}
   end
 
   defmodule AutoDemandTee do
@@ -64,7 +93,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
           :down -> {mult_payloads, payloads}
         end
 
-      filter = %AutoDemandFilter{factor: factor, direction: direction}
+      filter = %ExponentialAutoFilter{factor: factor, direction: direction}
 
       pipeline =
         Pipeline.start_link_supervised!(
@@ -202,7 +231,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       Pipeline.start_link_supervised!(
         spec:
           child(:source, PushSource)
-          |> child(:filter, AutoDemandFilter)
+          |> child(:filter, ExponentialAutoFilter)
           |> child(:sink, Sink)
       )
 
@@ -230,7 +259,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       Pipeline.start_supervised!(
         spec:
           child(:source, PushSource)
-          |> child(:filter, AutoDemandFilter)
+          |> child(:filter, ExponentialAutoFilter)
           |> child(:sink, %Sink{autodemand: false})
       )
 
@@ -244,6 +273,151 @@ defmodule Membrane.Integration.AutoDemandsTest do
     assert_receive(
       {:DOWN, _ref, :process, ^pipeline, {:membrane_child_crash, :sink, _sink_reason}}
     )
+  end
+
+  defp source_definiton(name) do
+    # Testing.Source fed with such a actopns generator will produce buffers with incremenal
+    # sequence of numbers as payloads
+    actions_generator =
+      fn counter, _size ->
+        Process.sleep(1)
+
+        buffer = %Buffer{
+          metadata: %{creator: name},
+          payload: counter
+        }
+
+        actions = [buffer: {:output, buffer}, redemand: :output]
+        {actions, counter + 1}
+      end
+
+    %Source{output: {1, actions_generator}}
+  end
+
+  defp setup_pipeline_with_notifying_auto_filter(_context) do
+    pipeline =
+      Pipeline.start_link_supervised!(
+        spec: [
+          child({:source, 0}, source_definiton({:source, 0}))
+          |> via_in(Pad.ref(:input, 0))
+          |> child(:filter, NotifyingAutoFilter)
+          |> child(:sink, %Sink{autodemand: false}),
+          child({:source, 1}, source_definiton({:source, 1}))
+          |> via_in(Pad.ref(:input, 1))
+          |> get_child(:filter)
+        ]
+      )
+
+    # time for NotifyingAutoFilter to return `setup: :incomplete` from handle_setup
+    Process.sleep(500)
+
+    [pipeline: pipeline]
+  end
+
+  describe "auto flow queue" do
+    setup :setup_pipeline_with_notifying_auto_filter
+
+    test "when there is no demand on the output pad", %{pipeline: pipeline} do
+      auto_demand_size = 400
+
+      assert_pipeline_notified(pipeline, :filter, :playing)
+
+      for i <- 1..auto_demand_size, source_idx <- [0, 1] do
+        expected_buffer = %Buffer{payload: i, metadata: %{creator: {:source, source_idx}}}
+
+        assert_pipeline_notified(
+          pipeline,
+          :filter,
+          {:handling_buffer, _pad, ^expected_buffer}
+        )
+      end
+
+      for _source_idx <- [0, 1] do
+        refute_pipeline_notified(
+          pipeline,
+          :filter,
+          {:handling_buffer, _pad, %Buffer{}}
+        )
+      end
+
+      Pipeline.message_child(pipeline, :sink, {:make_demand, 2 * auto_demand_size})
+
+      for i <- 1..auto_demand_size, source_idx <- [0, 1] do
+        expected_buffer = %Buffer{payload: i, metadata: %{creator: {:source, source_idx}}}
+        assert_sink_buffer(pipeline, :sink, ^expected_buffer)
+      end
+
+      for i <- (auto_demand_size + 1)..(auto_demand_size * 2), source_idx <- [0, 1] do
+        expected_buffer = %Buffer{payload: i, metadata: %{creator: {:source, source_idx}}}
+
+        assert_pipeline_notified(
+          pipeline,
+          :filter,
+          {:handling_buffer, _pad, ^expected_buffer}
+        )
+      end
+
+      for _source_idx <- [0, 1] do
+        refute_pipeline_notified(
+          pipeline,
+          :filter,
+          {:handling_buffer, _pad, %Buffer{}}
+        )
+      end
+
+      Pipeline.terminate(pipeline)
+    end
+
+    test "when an element returns :pause_auto_demand action", %{pipeline: pipeline} do
+      auto_demand_size = 400
+
+      assert_pipeline_notified(pipeline, :filter, :playing)
+
+      Pipeline.message_child(pipeline, :filter, pause_auto_demand: Pad.ref(:input, 0))
+
+      for i <- 1..auto_demand_size do
+        assert_pipeline_notified(
+          pipeline,
+          :filter,
+          {:handling_buffer, Pad.ref(:input, 0), %Buffer{payload: ^i}}
+        )
+      end
+
+      refute_pipeline_notified(
+        pipeline,
+        :filter,
+        {:handling_buffer, Pad.ref(:input, 0), %Buffer{payload: _any}}
+      )
+
+      Pipeline.message_child(pipeline, :sink, {:make_demand, 3 * auto_demand_size})
+
+      for i <- 1..(2 * auto_demand_size) do
+        assert_pipeline_notified(
+          pipeline,
+          :filter,
+          {:handling_buffer, Pad.ref(:input, 1), %Buffer{payload: ^i}}
+        )
+      end
+
+      refute_pipeline_notified(
+        pipeline,
+        :filter,
+        {:handling_buffer, Pad.ref(:input, 0), %Buffer{payload: _any}}
+      )
+
+      Pipeline.message_child(pipeline, :filter, resume_auto_demand: Pad.ref(:input, 0))
+      Pipeline.message_child(pipeline, :sink, {:make_demand, 4 * auto_demand_size})
+
+      for i <- (auto_demand_size + 1)..(auto_demand_size * 2) do
+        assert_pipeline_notified(
+          pipeline,
+          :filter,
+          {:handling_buffer, Pad.ref(:input, 0), %Buffer{payload: ^i}}
+        )
+      end
+
+      Pipeline.terminate(pipeline)
+    end
   end
 
   defp reduce_link(link, enum, fun) do
