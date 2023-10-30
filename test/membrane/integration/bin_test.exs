@@ -241,7 +241,7 @@ defmodule Membrane.Core.BinTest do
       %Membrane.Core.Pipeline.State{synchronization: %{clock_provider: pipeline_clock_provider}} =
         state = :sys.get_state(pid)
 
-      assert %{choice: :manual, clock: clock1, provider: :bin_child} = pipeline_clock_provider
+      assert %{clock: clock1, provider: :bin_child} = pipeline_clock_provider
       refute is_nil(clock1)
 
       %{pid: bin_pid} = state.children[:bin_child]
@@ -249,7 +249,7 @@ defmodule Membrane.Core.BinTest do
       %Membrane.Core.Bin.State{synchronization: %{clock_provider: bin_clock_provider}} =
         :sys.get_state(bin_pid)
 
-      assert %{choice: :manual, clock: clock2, provider: :element_child} = bin_clock_provider
+      assert %{clock: clock2, provider: :element_child} = bin_clock_provider
       refute is_nil(clock2)
 
       assert proxy_for?(clock1, clock2)

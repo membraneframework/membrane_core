@@ -35,8 +35,7 @@ defmodule Membrane.Core.Bin.State do
             clock_proxy: Clock.t(),
             clock_provider: %{
               clock: Clock.t() | nil,
-              provider: Child.name() | nil,
-              choice: :auto | :manual
+              provider: Child.name() | nil
             }
           },
           children_log_metadata: Keyword.t(),
