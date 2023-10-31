@@ -131,7 +131,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 ## All packages
 
 <!-- packages-list-start -->
-<!-- Generated code, do not edit. See `update_packages_list.exs`. -->
+<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
 
 
 ### General
