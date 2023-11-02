@@ -10,8 +10,7 @@ locals_without_parens =
 
 [
   inputs: [
-    "{lib,test,config,benchmark}/**/*.{ex,exs}",
-    "scripts/*.exs",
+    "{lib,test,config,benchmark,scripts}/**/*.{ex,exs}",
     "*.exs"
   ],
   locals_without_parens: locals_without_parens,

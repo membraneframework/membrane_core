@@ -270,7 +270,7 @@ packages_md =
 packages_md =
   """
   <!-- packages-list-start -->
-  <!-- Generated code, do not edit. See `update_packages_list.exs`. -->
+  <!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
 
   #{packages_md}
 
