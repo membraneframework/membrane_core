@@ -484,6 +484,7 @@ defmodule Membrane.Core.Element.PadController do
             PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))
           end)
           |> PadModel.set_data!(pad_ref, :associated_pads, [])
+          |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
 
         if pad_data.direction == :output,
           do: AutoFlowUtils.auto_adjust_atomic_demand(pad_data.associated_pads, state),

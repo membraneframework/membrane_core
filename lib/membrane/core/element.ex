@@ -159,7 +159,8 @@ defmodule Membrane.Core.Element do
         effective_flow_control: :push,
         handling_action?: false,
         pads_to_snapshot: MapSet.new(),
-        stalker: options.stalker
+        stalker: options.stalker,
+        satisfied_auto_output_pads: MapSet.new()
       }
       |> PadSpecHandler.init_pads()
 

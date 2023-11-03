@@ -71,7 +71,9 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     pad_data = PadModel.get_data!(state, pad_ref)
 
     state.effective_flow_control == :pull and pad_data.direction == :input and
-      pad_data.flow_control == :auto and pad_data.demand < 0
+      pad_data.flow_control == :auto and
+      # pad_data.demand < 0
+      not output_auto_demand_positive?(state)
   end
 
   @spec store_buffers_in_queue(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
@@ -108,6 +110,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
         end
       end)
 
+    # aktualnie flushujemy bumpniętę pady, a powinniśmy flushować wszystkie auto input pady po tym jak sprawiamy ze mapset jest pusty
     flush_auto_flow_queues(bumped_pads, state)
   end
 
@@ -141,15 +144,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     state.effective_flow_control == :pull and
       not pad_data.auto_demand_paused? and
       pad_data.demand < pad_data.auto_demand_size / 2 and
-      Enum.all?(pad_data.associated_pads, &atomic_demand_positive?(&1, state))
-  end
-
-  defp atomic_demand_positive?(pad_ref, state) do
-    atomic_demand_value =
-      PadModel.get_data!(state, pad_ref, :atomic_demand)
-      |> AtomicDemand.get()
-
-    atomic_demand_value > 0
+      output_auto_demand_positive?(state)
   end
 
   defp flush_auto_flow_queues([], state), do: state
@@ -167,14 +162,49 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
         flush_auto_flow_queues(pads_to_flush, state)
 
-      {:empty, empty_queue} ->
-        state = PadModel.set_data!(state, selected_pad, :auto_flow_queue, empty_queue)
-
+      {:empty, _empty_queue} ->
         pads_to_flush
         |> List.delete(selected_pad)
         |> flush_auto_flow_queues(state)
     end
   end
+
+  def flush_auto_flow_queues1(state) do
+    Enum.flat_map(state.pads_data, fn {pad_ref, pad_data} ->
+      with %{direction: :input, flow_control: :auto, auto_flow_queue: queue} <- pad_data,
+           {:value, _value} <- Qex.first(queue) do
+        [pad_ref]
+      else
+        _other -> []
+      end
+    end)
+    |> do_flush_auto_flow_queues1(state)
+  end
+
+  def do_flush_auto_flow_queues1(pads_to_flush, state) do
+    if pads_to_flush != [] and output_auto_demand_positive?(state) do
+      selected_pad = Enum.random(pads_to_flush)
+
+      PadModel.get_data!(state, selected_pad, :auto_flow_queue)
+      |> Qex.pop()
+      |> case do
+        {{:value, queue_item}, popped_queue} ->
+          state = PadModel.set_data!(state, selected_pad, popped_queue)
+          state = exec_queue_item_callback(selected_pad, queue_item, state)
+          do_flush_auto_flow_queues1(pads_to_flush, state)
+
+        {:empty, _empty_queue} ->
+          pads_to_flush
+          |> List.delete(selected_pad)
+          |> do_flush_auto_flow_queues1(state)
+      end
+    else
+      state
+    end
+  end
+
+  defp output_auto_demand_positive?(%State{satisfied_auto_output_pads: pads}),
+    do: MapSet.size(pads) == 0
 
   defp exec_queue_item_callback(pad_ref, {:buffers, buffers}, state) do
     BufferController.exec_buffer_callback(pad_ref, buffers, state)

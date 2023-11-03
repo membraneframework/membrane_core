@@ -317,7 +317,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     queue = InputQueue.store(queue, [%Buffer{payload: "12345678"}])
     queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
     queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
-    queue = Map.update!(queue, :atomic_demand, &AtomicDemand.decrease(&1, 16))
+    queue = Map.update!(queue, :atomic_demand, &elem(AtomicDemand.decrease(&1, 16), 1))
     assert queue.size == 16
     assert queue.demand == -6
     {out, queue} = InputQueue.take(queue, 2)
@@ -354,7 +354,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     queue = InputQueue.store(queue, [%Buffer{payload: "12345678"}])
     queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
     queue = InputQueue.store(queue, [%Buffer{payload: "12"}])
-    queue = Map.update!(queue, :atomic_demand, &AtomicDemand.decrease(&1, 4))
+    queue = Map.update!(queue, :atomic_demand, &elem(AtomicDemand.decrease(&1, 4), 1))
     assert queue.size == 4
     assert queue.demand == -1
     {out, queue} = InputQueue.take(queue, 2)

@@ -49,6 +49,18 @@ defmodule Membrane.Core.Element.DemandController do
     } = pad_data
 
     if AtomicDemand.get(atomic_demand) > 0 do
+      # tutaj powinno mieć miejsce
+      #  - usuniecie pada z mapsetu
+      #  - sflushowanie kolejek, jesli mapset jest pusty
+      # zwroc uwage, czy gdzies w czyms w stylu handle_outgoing_buffers nie wjedzie ci tutaj jakas nieprzyjemna rekurencja
+      # kolejna rzecz: przerwanie rekurencji moze nastąpić, nawet wtedy, gdy kolejki będą miały w sobie bufory
+      state = Map.update!(state, :satisfied_auto_output_pads, &MapSet.delete(&1, pad_data.ref))
+      if MapSet.size(state.satisfied_auto_output_pads) == 0 do
+        AutoFlowUtils.flush_auto_flow_queues1(state)
+      else
+        state
+      end
+
       AutoFlowUtils.auto_adjust_atomic_demand(associated_pads, state)
     else
       state
@@ -91,9 +103,16 @@ defmodule Membrane.Core.Element.DemandController do
     buffers_size = Buffer.Metric.from_unit(pad_data.demand_unit).buffers_size(buffers)
 
     demand = pad_data.demand - buffers_size
-    atomic_demand = AtomicDemand.decrease(pad_data.atomic_demand, buffers_size)
+    {decrease_result, atomic_demand} = AtomicDemand.decrease(pad_data.atomic_demand, buffers_size)
 
-    PadModel.set_data!(state, pad_ref, %{
+    with {:decreased, new_value} when new_value + buffers_size > 0 and new_value <= 0 <-
+           decrease_result,
+         %{flow_control: :auto} <- pad_data do
+      Map.update!(state, :satisfied_auto_output_pads, &MapSet.put(&1, pad_ref))
+    else
+      _other -> state
+    end
+    |> PadModel.set_data!(pad_ref, %{
       pad_data
       | demand: demand,
         atomic_demand: atomic_demand
