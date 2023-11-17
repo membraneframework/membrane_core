@@ -1,0 +1,19 @@
+name: Add PR to Smackore project board, if the author is from outside Membrane Team
+on:
+  pull_request_target:
+    types:
+      - opened
+jobs:
+  maybe_add_to_project_board:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout membrane_core
+      uses: actions/checkout@v3
+      with:
+        repository: membraneframework/membrane_core
+    - name: Puts PR in "New PRs by community" column in the Smackore project, if the author is from outside Membrane Team
+      uses: ./.github/actions/add_pr_to_smackore_board
+      with:
+        GITHUB_TOKEN: ${{ secrets.MEMBRANEFRAMEWORKADMIN_TOKEN }}
+        AUTHOR_LOGIN: ${{ github.event.pull_request.user.login }}
+        PR_URL: ${{ github.event.pull_request.html_url }}
