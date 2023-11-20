@@ -135,7 +135,7 @@ defmodule Membrane.Bin do
   as an internal membrane message.
 
   Can be used for receiving data from non-membrane processes.
-  By default, it ignores the received message.
+  By default, it logs and ignores the received message.
   """
   @callback handle_info(
               message :: any,
@@ -317,6 +317,7 @@ defmodule Membrane.Bin do
         only: [def_input_pad: 2, def_output_pad: 2, def_options: 1, def_clock: 0, def_clock: 1]
 
       require Membrane.Core.Child.PadsSpecs
+      require Membrane.Logger
 
       Membrane.Core.Child.PadsSpecs.ensure_default_membrane_pads()
 
@@ -344,7 +345,14 @@ defmodule Membrane.Bin do
       def handle_playing(_ctx, state), do: {[], state}
 
       @impl true
-      def handle_info(message, _ctx, state), do: {[], state}
+      def handle_info(message, _ctx, state) do
+        Membrane.Logger.warning("""
+        Received message but no handle_info callback has been specified. Ignoring.
+        Message: #{inspect(message)}\
+        """)
+
+        {[], state}
+      end
 
       @impl true
       def handle_spec_started(new_children, _ctx, state), do: {[], state}

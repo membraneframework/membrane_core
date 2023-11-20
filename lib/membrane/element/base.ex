@@ -78,7 +78,7 @@ defmodule Membrane.Element.Base do
   as an internal membrane message.
 
   Useful for receiving ticks from timer, data sent from NIFs or other stuff.
-  By default, it ignores the received message.
+  By default, it logs and ignores the received message.
   """
   @callback handle_info(
               message :: any(),
@@ -251,6 +251,7 @@ defmodule Membrane.Element.Base do
       import unquote(__MODULE__), only: [def_clock: 0, def_clock: 1, def_options: 1]
 
       require Membrane.Core.Child.PadsSpecs
+      require Membrane.Logger
 
       Membrane.Core.Child.PadsSpecs.ensure_default_membrane_pads()
 
@@ -274,7 +275,14 @@ defmodule Membrane.Element.Base do
       def handle_playing(_context, state), do: {[], state}
 
       @impl true
-      def handle_info(_message, _context, state), do: {[], state}
+      def handle_info(message, _context, state) do
+        Membrane.Logger.warning("""
+        Received message but no handle_info callback has been specified. Ignoring.
+        Message: #{inspect(message)}\
+        """)
+
+        {[], state}
+      end
 
       @impl true
       def handle_pad_added(_pad, _context, state), do: {[], state}
