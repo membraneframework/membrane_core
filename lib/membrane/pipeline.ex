@@ -170,7 +170,7 @@ defmodule Membrane.Pipeline do
   as an internal membrane message.
 
   Useful for receiving data sent from NIFs or other stuff.
-  By default, it ignores the received message.
+  By default, it logs and ignores the received message.
   """
   @callback handle_info(
               message :: any,
@@ -457,6 +457,7 @@ defmodule Membrane.Pipeline do
     # credo:disable-for-next-line Credo.Check.Refactor.LongQuoteBlocks
     quote do
       alias unquote(__MODULE__)
+      require Membrane.Logger
       @behaviour unquote(__MODULE__)
 
       unquote(bring_spec)
@@ -492,7 +493,14 @@ defmodule Membrane.Pipeline do
       def handle_playing(_ctx, state), do: {[], state}
 
       @impl true
-      def handle_info(message, _ctx, state), do: {[], state}
+      def handle_info(message, _ctx, state) do
+        Membrane.Logger.warning("""
+        Received message but no handle_info callback has been specified. Ignoring.
+        Message: #{inspect(message)}\
+        """)
+
+        {[], state}
+      end
 
       @impl true
       def handle_spec_started(new_children, _ctx, state), do: {[], state}
