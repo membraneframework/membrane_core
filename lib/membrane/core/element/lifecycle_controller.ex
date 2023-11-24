@@ -93,6 +93,10 @@ defmodule Membrane.Core.Element.LifecycleController do
   end
 
   @spec handle_terminate_request(State.t()) :: State.t()
+  def handle_terminate_request(%{terminating?: true} = state) do
+    state
+  end
+
   def handle_terminate_request(state) do
     Membrane.Logger.debug("Received terminate request")
 
