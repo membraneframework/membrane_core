@@ -58,6 +58,8 @@ defmodule Membrane.Core.TimerController do
 
   @spec handle_tick(Timer.id(), Component.state()) :: Component.state()
   def handle_tick(timer_id, state) when is_timer_present(timer_id, state) do
+    state = %{state | supplying_demand?: true}
+
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_tick,
@@ -68,11 +70,15 @@ defmodule Membrane.Core.TimerController do
       )
 
     # in case the timer was removed in handle_tick
-    if is_timer_present(timer_id, state) do
-      update_in(state, [:synchronization, :timers, timer_id], &Timer.tick/1)
-    else
-      state
-    end
+    state =
+      if is_timer_present(timer_id, state) do
+        update_in(state, [:synchronization, :timers, timer_id], &Timer.tick/1)
+      else
+        state
+      end
+
+    state = %{state | supplying_demand?: false}
+    Membrane.Core.Element.DemandHandler.handle_delayed_demands(state)
   end
 
   def handle_tick(_timer_id, state) do
