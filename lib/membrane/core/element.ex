@@ -256,7 +256,10 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:timer_tick, timer_id), state) do
+    state = %{state | supplying_demand?: true}
     state = TimerController.handle_tick(timer_id, state)
+    state = %{state | supplying_demand?: false}
+    state = Membrane.Core.Element.DemandHandler.handle_delayed_demands(state)
     {:noreply, state}
   end
 
