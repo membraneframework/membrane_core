@@ -139,6 +139,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     refute_sink_buffer(pipeline, :left_sink, %{payload: 25_000})
   end
 
+  @tag :asd
   test "handle removed branch" do
     pipeline =
       Pipeline.start_link_supervised!(
@@ -152,10 +153,33 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Process.sleep(500)
     Pipeline.execute_actions(pipeline, remove_children: :right_sink)
 
+    IO.puts("START OF THE ASSERTIONS")
+
     Enum.each(1..100_000, fn payload ->
+      IO.puts("ASSERTION NO. #{inspect(payload)}")
+
+      if payload == 801 do
+        Process.sleep(500)
+
+        for name <- [:source, :tee, :left_sink] do
+          Pipeline.get_child_pid!(pipeline, name)
+          |> :sys.get_state()
+          |> IO.inspect(label: "NAME OF #{inspect(name)}", limit: :infinity)
+        end
+
+        Pipeline.get_child_pid!(pipeline, :left_sink)
+        |> :sys.get_state()
+        |> get_in([:pads_data, :input, :input_queue])
+        |> Map.get(:atomic_demand)
+        |> Membrane.Core.Element.AtomicDemand.get()
+        |> IO.inspect(label: "ATOMIC DEMAND VALUE")
+      end
+
       assert_sink_buffer(pipeline, :left_sink, buffer)
       assert buffer.payload == payload
     end)
+
+    Pipeline.terminate(pipeline)
   end
 
   defmodule NotifyingSink do

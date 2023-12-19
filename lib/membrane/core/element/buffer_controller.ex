@@ -66,23 +66,23 @@ defmodule Membrane.Core.Element.BufferController do
     %{demand: demand, demand_unit: demand_unit, stalker_metrics: stalker_metrics} = data
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
 
-    # we check if pad should be corcked before decrementing :demand field in PadData
-    # 1) to avoid situation, when big chunk of data is stored in the queue only because it
-    #    exceeds auto_demand_size
-    # 2) to handle start of stream caused by first buffer arrival possibly early
-    hard_corcked? = AutoFlowUtils.hard_corcked?(pad_ref, state)
-
     state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
     :atomics.put(stalker_metrics.demand, 1, demand - buf_size)
 
-    state =
-      if hard_corcked? do
-        AutoFlowUtils.store_buffers_in_queue(pad_ref, buffers, state)
-      else
-        exec_buffer_callback(pad_ref, buffers, state)
+    if state.effective_flow_control == :pull and MapSet.size(state.satisfied_auto_output_pads) > 0 do
+      AutoFlowUtils.store_buffers_in_queue(pad_ref, buffers, state)
+    else
+      if pad_ref in state.awaiting_auto_input_pads do
+        raise "to nie powinno sie zdarzyc dupa 1"
       end
 
-    AutoFlowUtils.auto_adjust_atomic_demand(pad_ref, state)
+      if PadModel.get_data!(state, pad_ref, [:auto_flow_queue]) != Qex.new() do
+        raise "to nie powinno sie zdarzyc dupa 2"
+      end
+
+      state = exec_buffer_callback(pad_ref, buffers, state)
+      AutoFlowUtils.auto_adjust_atomic_demand(pad_ref, state)
+    end
   end
 
   defp do_handle_buffer(pad_ref, %{flow_control: :manual} = data, buffers, state) do

@@ -52,7 +52,7 @@ defmodule Membrane.Core.Element.EventController do
           )
 
         # event goes to the auto flow control queue
-        AutoFlowUtils.hard_corcked?(pad_ref, state) ->
+        pad_ref in state.awaiting_auto_input_pads ->
           AutoFlowUtils.store_event_in_queue(pad_ref, event, state)
 
         true ->

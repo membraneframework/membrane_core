@@ -330,10 +330,15 @@ defmodule Membrane.Core.Element.PadController do
 
     state = update_associated_pads(pad_data, state)
 
-    if pad_data.direction == :input and pad_data.flow_control == :auto do
-      AutoFlowUtils.auto_adjust_atomic_demand(endpoint.pad_ref, state)
-    else
-      state
+    case pad_data do
+      %{direction: :output, flow_control: :auto} ->
+        Map.update!(state, :satisfied_auto_output_pads, &MapSet.put(&1, pad_data.ref))
+
+      %{direction: :input, flow_control: :auto} ->
+        AutoFlowUtils.auto_adjust_atomic_demand(endpoint.pad_ref, state)
+
+      _pad_data ->
+        state
     end
   end
 
@@ -484,6 +489,9 @@ defmodule Membrane.Core.Element.PadController do
             PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))
           end)
           |> PadModel.set_data!(pad_ref, :associated_pads, [])
+          |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
+          |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
+          |> AutoFlowUtils.pop_auto_flow_queues_while_needed()
 
         if pad_data.direction == :output,
           do: AutoFlowUtils.auto_adjust_atomic_demand(pad_data.associated_pads, state),

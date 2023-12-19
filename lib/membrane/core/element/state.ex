@@ -43,7 +43,9 @@ defmodule Membrane.Core.Element.State do
           effective_flow_control: EffectiveFlowController.effective_flow_control(),
           handling_action?: boolean(),
           pads_to_snapshot: MapSet.t(),
-          stalker: Membrane.Core.Stalker.t()
+          stalker: Membrane.Core.Stalker.t(),
+          satisfied_auto_output_pads: MapSet.t(),
+          awaiting_auto_input_pads: MapSet.t()
         }
 
   # READ THIS BEFORE ADDING NEW FIELD!!!
@@ -79,6 +81,8 @@ defmodule Membrane.Core.Element.State do
     :demand_size,
     :pads_to_snapshot,
     :playback_queue,
-    :pads_data
+    :pads_data,
+    :satisfied_auto_output_pads,
+    :awaiting_auto_input_pads
   ]
 end
