@@ -25,8 +25,12 @@ defmodule Membrane.Element.WithInputPads do
               stream_format :: Membrane.StreamFormat.t(),
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: Membrane.Element.Base.callback_return()
-
+            ) ::
+              {[
+                 Membrane.Element.Action.common_actions()
+                 | Membrane.Element.Action.stream_actions()
+                 | Membrane.Element.Action.forward()
+               ], Element.state()}
   @doc """
   Callback invoked when element receives `Membrane.Event.StartOfStream` event.
   """
@@ -34,7 +38,12 @@ defmodule Membrane.Element.WithInputPads do
               pad :: Pad.ref(),
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: Membrane.Element.Base.callback_return()
+            ) ::
+              {[
+                 Membrane.Element.Action.common_actions()
+                 | Membrane.Element.Action.stream_actions()
+                 | Membrane.Element.Action.forward()
+               ], Element.state()}
 
   @doc """
   Callback invoked when the previous element has finished processing via the pad,
@@ -44,7 +53,12 @@ defmodule Membrane.Element.WithInputPads do
               pad :: Pad.ref(),
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: Membrane.Element.Base.callback_return()
+            ) ::
+              {[
+                 Membrane.Element.Action.common_actions()
+                 | Membrane.Element.Action.stream_actions()
+                 | Membrane.Element.Action.forward()
+               ], Element.state()}
 
   @doc """
   Callback that is called when buffer should be processed by the Element.
@@ -59,7 +73,12 @@ defmodule Membrane.Element.WithInputPads do
               buffer :: Buffer.t(),
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: Membrane.Element.Base.callback_return()
+            ) ::
+              {[
+                 Membrane.Element.Action.common_actions()
+                 | Membrane.Element.Action.stream_actions()
+                 | Membrane.Element.Action.forward()
+               ], Element.state()}
 
   @optional_callbacks handle_buffer: 4, handle_stream_format: 4
 

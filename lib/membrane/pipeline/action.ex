@@ -125,12 +125,9 @@ defmodule Membrane.Pipeline.Action do
   @type terminate :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
 
   @typedoc """
-  Type describing actions that can be returned from pipeline callbacks.
-
-  Returning actions is a way of pipeline interaction with its children and
-  other parts of framework.
+  Type describing the actions that can be returned from any pipeline callback.
   """
-  @type t ::
+  @type common_actions ::
           setup
           | notify_child
           | spec
@@ -139,7 +136,14 @@ defmodule Membrane.Pipeline.Action do
           | start_timer
           | timer_interval
           | stop_timer
-          | reply
           | reply_to
           | terminate
+
+  @typedoc """
+  Type describing the union of all actions that can be returned from pipeline callbacks.
+
+  Returning actions is a way of pipeline interaction with its children and
+  other parts of framework.
+  """
+  @type t :: reply | common_actions
 end

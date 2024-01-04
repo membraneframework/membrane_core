@@ -13,9 +13,10 @@ defmodule Membrane.Bin.Action do
   @typedoc """
   Action that manages the end of the component setup.
 
-  By default, component setup ends with the end of `c:Membrane.Bin.handle_setup/2` callback.
+  By default, component setup ends with the end of  callback.
   If `{:setup, :incomplete}` is returned there, setup lasts until `{:setup, :complete}`
-  is returned from antoher callback.
+  is returned from antoher callback. You cannot return `{:setup, :incomplete}` from any other
+  callback than `c:Membrane.Bin.handle_setup/2`.
 
   Untils the setup lasts, the component won't enter `:playing` playback.
   """
