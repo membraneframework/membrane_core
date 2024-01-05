@@ -105,11 +105,7 @@ defmodule Membrane.Core.Element.BufferController do
   @doc """
   Executes `handle_buffer` callback.
   """
-  @spec exec_buffer_callback(
-          Pad.ref(),
-          [Buffer.t()] | Buffer.t(),
-          State.t()
-        ) :: State.t()
+  @spec exec_buffer_callback(          Pad.ref(),          [Buffer.t()],          State.t()        ) :: State.t()
   def exec_buffer_callback(pad_ref, buffers, %State{type: :filter} = state) do
     Telemetry.report_metric("buffer", 1, inspect(pad_ref))
 

@@ -131,11 +131,13 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
         end
     end)
 
-    state.pads_data
-    |> Enum.flat_map(fn
-      {pad_ref, %{direction: :input, flow_control: :auto}} -> [pad_ref]
-      _other -> []
-    end)
-    |> AutoFlowUtils.auto_adjust_atomic_demand(state)
+    AutoFlowUtils.pop_queues_and_bump_demand(state)
+
+    # state.pads_data
+    # |> Enum.flat_map(fn
+    #   {pad_ref, %{direction: :input, flow_control: :auto}} -> [pad_ref]
+    #   _other -> []
+    # end)
+    # |> AutoFlowUtils.auto_adjust_atomic_demand(state)
   end
 end

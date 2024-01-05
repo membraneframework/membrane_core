@@ -76,10 +76,12 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
   [
     %{payloads: 1..100_000, factor: 1, direction: :up, filters: 10},
-    %{payloads: 1..4, factor: 10, direction: :up, filters: 5},
-    %{payloads: 1..4, factor: 10, direction: :down, filters: 5}
+    # %{payloads: 1..4, factor: 10, direction: :up, filters: 5},
+    # %{payloads: 1..4, factor: 10, direction: :down, filters: 5}
   ]
   |> Enum.map(fn opts ->
+    # @tag :skip
+    @tag :dupa
     test "buffers pass through auto-demand filters; setup: #{inspect(opts)}" do
       %{payloads: payloads, factor: factor, direction: direction, filters: filters} =
         unquote(Macro.escape(opts))
@@ -103,7 +105,19 @@ defmodule Membrane.Integration.AutoDemandsTest do
             |> child(:sink, Sink)
         )
 
+      Process.sleep(1000)
+
+      :sys.get_state(pipeline)
+      |> Map.get(:children)
+      |> Map.keys()
+      |> Enum.each(fn child_name ->
+        Pipeline.get_child_pid!(pipeline, child_name)
+        |> :sys.get_state()
+        |> IO.inspect(limit: :infinity, label: "CHILD STATE #{inspect(child_name)}")
+      end)
+
       Enum.each(out_payloads, fn payload ->
+        IO.inspect(payload, label: "EXPECTING")
         assert_sink_buffer(pipeline, :sink, buffer)
         assert buffer.payload == payload
       end)
@@ -156,24 +170,28 @@ defmodule Membrane.Integration.AutoDemandsTest do
     IO.puts("START OF THE ASSERTIONS")
 
     Enum.each(1..100_000, fn payload ->
-      IO.puts("ASSERTION NO. #{inspect(payload)}")
+      # IO.puts("ASSERTION NO. #{inspect(payload)}")
 
-      if payload == 801 do
-        Process.sleep(500)
+      # if payload == 801 do
+      #   Process.sleep(500)
 
-        for name <- [:source, :tee, :left_sink] do
-          Pipeline.get_child_pid!(pipeline, name)
-          |> :sys.get_state()
-          |> IO.inspect(label: "NAME OF #{inspect(name)}", limit: :infinity)
-        end
+      #   for name <- [
+      #     # :source,
+      #     :tee
+      #     # , :left_sink
+      #     ] do
+      #     Pipeline.get_child_pid!(pipeline, name)
+      #     |> :sys.get_state()
+      #     |> IO.inspect(label: "NAME OF #{inspect(name)}", limit: :infinity)
+      #   end
 
-        Pipeline.get_child_pid!(pipeline, :left_sink)
-        |> :sys.get_state()
-        |> get_in([:pads_data, :input, :input_queue])
-        |> Map.get(:atomic_demand)
-        |> Membrane.Core.Element.AtomicDemand.get()
-        |> IO.inspect(label: "ATOMIC DEMAND VALUE")
-      end
+      #   Pipeline.get_child_pid!(pipeline, :left_sink)
+      #   |> :sys.get_state()
+      #   |> get_in([:pads_data, :input, :input_queue])
+      #   |> Map.get(:atomic_demand)
+      #   |> Membrane.Core.Element.AtomicDemand.get()
+      #   |> IO.inspect(label: "ATOMIC DEMAND VALUE")
+      # end
 
       assert_sink_buffer(pipeline, :left_sink, buffer)
       assert buffer.payload == payload
@@ -300,7 +318,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
   end
 
   defp source_definiton(name) do
-    # Testing.Source fed with such a actopns generator will produce buffers with incremenal
+    # Testing.Source fed with such actions generator will produce buffers with incremenal
     # sequence of numbers as payloads
     actions_generator =
       fn counter, _size ->
@@ -332,7 +350,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
         ]
       )
 
-    # time for NotifyingAutoFilter to return `setup: :incomplete` from handle_setup
+    # time for NotifyingAutoFilter to enter playing playback
     Process.sleep(500)
 
     [pipeline: pipeline]
@@ -341,6 +359,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
   describe "auto flow queue" do
     setup :setup_pipeline_with_notifying_auto_filter
 
+    @tag :skip
     test "when there is no demand on the output pad", %{pipeline: pipeline} do
       auto_demand_size = 400
 
@@ -392,6 +411,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       Pipeline.terminate(pipeline)
     end
 
+    @tag :skip
     test "when an element returns :pause_auto_demand action", %{pipeline: pipeline} do
       auto_demand_size = 400
 

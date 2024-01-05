@@ -158,6 +158,7 @@ defmodule Membrane.Core.Element do
         setup_incomplete?: false,
         effective_flow_control: :push,
         handling_action?: false,
+        popping_queue?: false,
         pads_to_snapshot: MapSet.new(),
         stalker: options.stalker,
         satisfied_auto_output_pads: MapSet.new(),

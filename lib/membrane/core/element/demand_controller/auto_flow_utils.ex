@@ -69,21 +69,25 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   @spec store_buffers_in_queue(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
   def store_buffers_in_queue(pad_ref, buffers, state) do
     state = Map.update!(state, :awaiting_auto_input_pads, &MapSet.put(&1, pad_ref))
-    store_in_queue(pad_ref, :buffers, buffers, state)
+    # PadModel.update_data!(state, pad_ref, :auto_flow_queue, &Qex.push(&1, {:buffers, buffers}))
+
+    PadModel.update_data!(state, pad_ref, :auto_flow_queue, fn queue ->
+      Enum.reduce(buffers, queue, fn buffer, queue ->
+        Qex.push(queue, {:buffer, buffer})
+      end)
+    end)
   end
 
   @spec store_event_in_queue(Pad.ref(), Event.t(), State.t()) :: State.t()
   def store_event_in_queue(pad_ref, event, state) do
-    store_in_queue(pad_ref, :event, event, state)
+    queue_item =  {:event, event}
+    PadModel.update_data!(state, pad_ref, :auto_flow_queue, &Qex.push(&1, queue_item))
   end
 
   @spec store_stream_format_in_queue(Pad.ref(), StreamFormat.t(), State.t()) :: State.t()
   def store_stream_format_in_queue(pad_ref, stream_format, state) do
-    store_in_queue(pad_ref, :stream_format, stream_format, state)
-  end
-
-  defp store_in_queue(pad_ref, type, item, state) do
-    PadModel.update_data!(state, pad_ref, :auto_flow_queue, &Qex.push(&1, {type, item}))
+    queue_item =  {:stream_format, stream_format}
+    PadModel.update_data!(state, pad_ref, :auto_flow_queue, &Qex.push(&1, queue_item))
   end
 
   @spec auto_adjust_atomic_demand(Pad.ref() | [Pad.ref()], State.t()) :: State.t()
@@ -94,7 +98,8 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     |> Enum.reduce(state, fn pad_ref, state ->
       PadModel.get_data!(state, pad_ref)
       |> do_auto_adjust_atomic_demand(state)
-      |> elem(1)  # todo: usun to :increased / :unchanged, ktore discardujesz w tym elem(1)
+      # todo: usun to :increased / :unchanged, ktore discardujesz w tym elem(1)
+      |> elem(1)
     end)
   end
 
@@ -131,6 +136,31 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
       output_auto_demand_positive?(state)
   end
 
+  @spec pop_queues_and_bump_demand(State.t()) :: State.t()
+  def pop_queues_and_bump_demand(%State{popping_queue?: false} = state) do
+    %{state | popping_queue?: true}
+    |> bump_demand()
+    |> pop_auto_flow_queues_while_needed()
+    |> bump_demand()
+    |> Map.put(:popping_queue?, false)
+  end
+
+  def pop_queues_and_bump_demand(%State{popping_queue?: true} = state), do: state
+
+  defp bump_demand(state) do
+    if state.effective_flow_control == :pull and
+         MapSet.size(state.satisfied_auto_output_pads) == 0 do
+      state.pads_data
+      |> Enum.flat_map(fn
+        {ref, %{direction: :input, flow_control: :auto}} -> [ref]
+        _other -> []
+      end)
+      |> auto_adjust_atomic_demand(state)
+    else
+      state
+    end
+  end
+
   @spec pop_auto_flow_queues_while_needed(State.t()) :: State.t()
   def pop_auto_flow_queues_while_needed(state) do
     if (state.effective_flow_control == :push or
@@ -143,15 +173,42 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     end
   end
 
+  # @spec pop_auto_flow_queues_while_needed(State.t()) :: State.t()
+  # def pop_auto_flow_queues_while_needed(state) do
+  #   if state.name == :tee do
+  #     {state.effective_flow_control, state.satisfied_auto_output_pads} |> IO.inspect(label: "TAKIE TAM W POP WHILE")
+  #   end
+
+  #   if (state.effective_flow_control == :push or
+  #         MapSet.size(state.satisfied_auto_output_pads) == 0) and
+  #        MapSet.size(state.awaiting_auto_input_pads) > 0 do
+
+  #         if state.name == :tee do
+  #           IO.puts("A")
+  #         end
+
+  #     pop_random_auto_flow_queue(state)
+  #     |> pop_auto_flow_queues_while_needed()
+  #   else
+  #     if state.name == :tee do
+  #       IO.puts("B")
+  #     end
+
+  #     state
+  #   end
+  # end
+
   defp pop_random_auto_flow_queue(state) do
     pad_ref = Enum.random(state.awaiting_auto_input_pads)
 
-    PadModel.get_data!(state, pad_ref, :auto_flow_queue)
+    state
+    # pop_stream_formats_and_events(pad_ref, state)
+    |> PadModel.get_data!(pad_ref, :auto_flow_queue)
     |> Qex.pop()
     |> case do
-      {{:value, {:buffers, buffers}}, popped_queue} ->
+      {{:value, {:buffer, buffer}}, popped_queue} ->
         state = PadModel.set_data!(state, pad_ref, :auto_flow_queue, popped_queue)
-        state = BufferController.exec_buffer_callback(pad_ref, buffers, state)
+        state = BufferController.exec_buffer_callback(pad_ref, [buffer], state)
         pop_stream_formats_and_events(pad_ref, state)
 
       {:empty, _empty_queue} ->
@@ -163,12 +220,17 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     PadModel.get_data!(state, pad_ref, :auto_flow_queue)
     |> Qex.pop()
     |> case do
-      {{:value, {type, item}}, popped_queue} when type in [:event, :stream_format] ->
+      {{:value, {:event, event}}, popped_queue} ->
         state = PadModel.set_data!(state, pad_ref, :auto_flow_queue, popped_queue)
-        state = exec_queue_item_callback(pad_ref, {type, item}, state)
+        state = EventController.exec_handle_event(pad_ref, event, state)
         pop_stream_formats_and_events(pad_ref, state)
 
-      {{:value, {:buffers, _buffers}}, _popped_queue} ->
+      {{:value, {:stream_format, stream_format}}, popped_queue} ->
+        state = PadModel.set_data!(state, pad_ref, :auto_flow_queue, popped_queue)
+        state = StreamFormatController.exec_handle_stream_format(pad_ref, stream_format, state)
+        pop_stream_formats_and_events(pad_ref, state)
+
+      {{:value, {:buffer, _buffer}}, _popped_queue} ->
         state
 
       {:empty, _empty_queue} ->
@@ -178,16 +240,4 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   defp output_auto_demand_positive?(%State{satisfied_auto_output_pads: pads}),
     do: MapSet.size(pads) == 0
-
-  defp exec_queue_item_callback(pad_ref, {:buffers, buffers}, state) do
-    BufferController.exec_buffer_callback(pad_ref, buffers, state)
-  end
-
-  defp exec_queue_item_callback(pad_ref, {:event, event}, state) do
-    EventController.exec_handle_event(pad_ref, event, state)
-  end
-
-  defp exec_queue_item_callback(pad_ref, {:stream_format, stream_format}, state) do
-    StreamFormatController.exec_handle_stream_format(pad_ref, stream_format, state)
-  end
 end

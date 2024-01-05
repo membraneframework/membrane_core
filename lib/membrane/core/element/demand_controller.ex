@@ -28,6 +28,14 @@ defmodule Membrane.Core.Element.DemandController do
       if pad_data.direction == :input,
         do: raise("cannot snapshot atomic counter in input pad")
 
+      if state.name == {:filter, 10}, do: IO.puts("snapshot_atomic_demand")
+      IO.inspect(state)
+
+
+#       aktualnie bug polega na tym, ze w tescie z tagiem :dupa,
+# ze mamy efc push, dodajemy go do satisfied auto output pads
+# przechodzimy w pull, ale sciąganie rzeczy z kolejki jest obwarowane if set empty
+
       do_snapshot_atomic_demand(pad_data, state)
     else
       {:error, :unknown_pad} ->
@@ -43,29 +51,39 @@ defmodule Membrane.Core.Element.DemandController do
          %{flow_control: :auto} = pad_data,
          %{effective_flow_control: :pull} = state
        ) do
-    %{
-      atomic_demand: atomic_demand,
-      associated_pads: associated_pads
-    } = pad_data
 
-    if AtomicDemand.get(atomic_demand) > 0 do
+    if state.name == {:filter, 10} do
+      IO.puts("ALA MA KOTA")
+      AtomicDemand.get(pad_data.atomic_demand)
+      |> IO.inspect()
+      IO.inspect(state.satisfied_auto_output_pads)
+    end
+
+
+    if AtomicDemand.get(pad_data.atomic_demand) > 0 do
       # tutaj powinno mieć miejsce
       #  - usuniecie pada z mapsetu
       #  - sflushowanie kolejek, jesli mapset jest pusty
       # zwroc uwage, czy gdzies w czyms w stylu handle_outgoing_buffers nie wjedzie ci tutaj jakas nieprzyjemna rekurencja
       # kolejna rzecz: przerwanie rekurencji moze nastąpić, nawet wtedy, gdy kolejki będą miały w sobie bufory
 
+
+
       state = Map.update!(state, :satisfied_auto_output_pads, &MapSet.delete(&1, pad_data.ref))
+      IO.inspect(state.satisfied_auto_output_pads)
+
 
       # dobra, wyglada git
 
-      state = AutoFlowUtils.pop_auto_flow_queues_while_needed(state)
+      AutoFlowUtils.pop_queues_and_bump_demand(state)
 
-      if MapSet.size(state.satisfied_auto_output_pads) == 0 do
-        AutoFlowUtils.auto_adjust_atomic_demand(associated_pads, state)
-      else
-        state
-      end
+      # state = AutoFlowUtils.pop_auto_flow_queues_while_needed(state)
+
+      # if MapSet.size(state.satisfied_auto_output_pads) == 0 do
+      #   AutoFlowUtils.auto_adjust_atomic_demand(associated_pads, state)
+      # else
+      #   state
+      # end
     else
       state
     end
