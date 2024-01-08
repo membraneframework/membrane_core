@@ -18,6 +18,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
   # Effective flow control of a single element can switch between :push and :pull many times during the element's lifetime.
 
+  alias Membrane.Core.Element.DemandController
   alias Membrane.Core.Element.DemandController.AutoFlowUtils
   alias Membrane.Core.Element.{AtomicDemand, State}
 
@@ -131,7 +132,20 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
         end
     end)
 
-    AutoFlowUtils.pop_queues_and_bump_demand(state)
+    # no to tak, albo mozna przy efc push zawsze sprawdzac output demand przy wyslaniu bufora lub otrzymaniu notifa ze
+    # demand wzrol na dodania wartosc
+    # albo mozna sprawdzac wszystko przy wejsciu na pull
+    # tutaj zaimplementuje to 2 opcje
+
+    with %{effective_flow_control: :pull} <- state do
+      state.pads_data
+      |> Map.values()
+      |> Enum.filter(& &1.direction == :output and &1.flow_control == :auto)
+      |> Enum.reduce(state, fn pad_data, state ->
+        DemandController.snapshot_atomic_demand(pad_data.ref, state)
+      end)
+    end
+    |> AutoFlowUtils.pop_queues_and_bump_demand()
 
     # state.pads_data
     # |> Enum.flat_map(fn

@@ -76,12 +76,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
   [
     %{payloads: 1..100_000, factor: 1, direction: :up, filters: 10},
-    # %{payloads: 1..4, factor: 10, direction: :up, filters: 5},
-    # %{payloads: 1..4, factor: 10, direction: :down, filters: 5}
+    %{payloads: 1..4, factor: 10, direction: :up, filters: 5},
+    %{payloads: 1..4, factor: 10, direction: :down, filters: 5}
   ]
   |> Enum.map(fn opts ->
-    # @tag :skip
-    @tag :dupa
     test "buffers pass through auto-demand filters; setup: #{inspect(opts)}" do
       %{payloads: payloads, factor: factor, direction: direction, filters: filters} =
         unquote(Macro.escape(opts))
@@ -105,19 +103,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
             |> child(:sink, Sink)
         )
 
-      Process.sleep(1000)
-
-      :sys.get_state(pipeline)
-      |> Map.get(:children)
-      |> Map.keys()
-      |> Enum.each(fn child_name ->
-        Pipeline.get_child_pid!(pipeline, child_name)
-        |> :sys.get_state()
-        |> IO.inspect(limit: :infinity, label: "CHILD STATE #{inspect(child_name)}")
-      end)
-
       Enum.each(out_payloads, fn payload ->
-        IO.inspect(payload, label: "EXPECTING")
         assert_sink_buffer(pipeline, :sink, buffer)
         assert buffer.payload == payload
       end)

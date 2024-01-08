@@ -29,7 +29,7 @@ defmodule Membrane.Core.Element.DemandController do
         do: raise("cannot snapshot atomic counter in input pad")
 
       if state.name == {:filter, 10}, do: IO.puts("snapshot_atomic_demand")
-      IO.inspect(state)
+      # IO.inspect(state)
 
 
 #       aktualnie bug polega na tym, ze w tescie z tagiem :dupa,
@@ -52,12 +52,13 @@ defmodule Membrane.Core.Element.DemandController do
          %{effective_flow_control: :pull} = state
        ) do
 
-    if state.name == {:filter, 10} do
-      IO.puts("ALA MA KOTA")
-      AtomicDemand.get(pad_data.atomic_demand)
-      |> IO.inspect()
-      IO.inspect(state.satisfied_auto_output_pads)
-    end
+        # last comment
+    # if state.name == {:filter, 10} do
+    #   IO.puts("ALA MA KOTA")
+    #   AtomicDemand.get(pad_data.atomic_demand)
+    #   |> IO.inspect()
+    #   IO.inspect(state.satisfied_auto_output_pads)
+    # end
 
 
     if AtomicDemand.get(pad_data.atomic_demand) > 0 do
@@ -70,7 +71,7 @@ defmodule Membrane.Core.Element.DemandController do
 
 
       state = Map.update!(state, :satisfied_auto_output_pads, &MapSet.delete(&1, pad_data.ref))
-      IO.inspect(state.satisfied_auto_output_pads)
+      # IO.inspect(state.satisfied_auto_output_pads)
 
 
       # dobra, wyglada git
