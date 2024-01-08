@@ -258,18 +258,18 @@ defmodule Membrane.Element.Action do
           | stream_format
           | buffer
           | demand
-          | redemand
           | pause_auto_demand
           | resume_auto_demand
           | end_of_stream
           | redemand
 
   @typedoc """
-  Type that defines a union of actions that may be returned from some element callbacks.
+  Type that defines a union of actions that may be returned from most of the callbacks.
 
   Depending on element type, callback, current playback and other
   circumstances there may be different actions available.
+  Check the typespec and documentation of particular callbacks
+  for details.
   """
-
   @type t :: common_actions | stream_actions | latency | forward | setup
 end

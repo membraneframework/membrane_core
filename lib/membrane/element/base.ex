@@ -33,11 +33,6 @@ defmodule Membrane.Element.Base do
   alias Membrane.{Element, Event, Pad}
   alias Membrane.Element.{Action, CallbackContext}
 
-  # @typedoc """
-  # Type that defines all valid return values from most callbacks.
-  # """
-  # @type callback_return :: {[Action.t()], Element.state()}
-
   @doc """
   Callback invoked on initialization of element.
 
