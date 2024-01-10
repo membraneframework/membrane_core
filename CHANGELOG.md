@@ -5,6 +5,7 @@
  * Fix clock selection [#626](https://github.com/membraneframework/membrane_core/pull/626)
  * Log messages in the default handle_info implementation [#680](https://github.com/membraneframework/membrane_core/pull/680)
  * Fix typespecs in Membrane.UtilitySupervisor [#681](https://github.com/membraneframework/membrane_core/pull/681)
+ * Improve callback return types and group actions types [#702](https://github.com/membraneframework/membrane_core/pull/702) 
 
 ## 1.0.0
  * Introduce `:remove_link` action in pipelines and bins.

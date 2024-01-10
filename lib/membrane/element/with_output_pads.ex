@@ -37,7 +37,11 @@ defmodule Membrane.Element.WithOutputPads do
               unit :: Buffer.Metric.unit(),
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: Membrane.Element.Base.callback_return()
+            ) ::
+              {[
+                 Membrane.Element.Action.common_actions()
+                 | Membrane.Element.Action.stream_actions()
+               ], Element.state()}
 
   @optional_callbacks handle_demand: 5
 

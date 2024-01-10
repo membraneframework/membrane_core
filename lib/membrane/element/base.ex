@@ -33,11 +33,6 @@ defmodule Membrane.Element.Base do
   alias Membrane.{Element, Event, Pad}
   alias Membrane.Element.{Action, CallbackContext}
 
-  @typedoc """
-  Type that defines all valid return values from most callbacks.
-  """
-  @type callback_return :: {[Action.t()], Element.state()}
-
   @doc """
   Callback invoked on initialization of element.
 
@@ -48,7 +43,7 @@ defmodule Membrane.Element.Base do
   By default, it converts the `opts` struct to a map and sets them as the element's state.
   """
   @callback handle_init(context :: CallbackContext.t(), options :: Element.options()) ::
-              callback_return
+              {[Action.common_actions() | Action.latency()], Element.state()}
 
   @doc """
   Callback invoked on element startup, right after `c:handle_init/2`.
@@ -59,7 +54,7 @@ defmodule Membrane.Element.Base do
   @callback handle_setup(
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: callback_return
+            ) :: {[Action.common_actions() | Action.setup()], Element.state()}
 
   @doc """
   Callback invoked when bin switches the playback to `:playing`.
@@ -71,7 +66,7 @@ defmodule Membrane.Element.Base do
   @callback handle_playing(
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: callback_return
+            ) :: {[Action.common_actions() | Action.stream_actions()], Element.state()}
 
   @doc """
   Callback invoked when element receives a message that is not recognized
@@ -84,7 +79,9 @@ defmodule Membrane.Element.Base do
               message :: any(),
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: callback_return
+            ) ::
+              {[Action.common_actions() | Action.stream_actions() | Action.setup()],
+               Element.state()}
 
   @doc """
   Callback that is called when new pad has beed added to element. Executed
@@ -97,7 +94,9 @@ defmodule Membrane.Element.Base do
               pad :: Pad.ref(),
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: callback_return
+            ) ::
+              {[Action.common_actions() | Action.stream_actions() | Action.setup()],
+               Element.state()}
 
   @doc """
   Callback that is called when some pad of the element has beed removed. Executed
@@ -110,7 +109,9 @@ defmodule Membrane.Element.Base do
               pad :: Pad.ref(),
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: callback_return
+            ) ::
+              {[Action.common_actions() | Action.stream_actions() | Action.setup()],
+               Element.state()}
 
   @doc """
   Callback that is called when event arrives.
@@ -124,7 +125,7 @@ defmodule Membrane.Element.Base do
               event :: Event.t(),
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: callback_return
+            ) :: {[Action.common_actions() | Action.stream_actions()], Element.state()}
 
   @doc """
   Callback invoked upon each timer tick. A timer can be started with `Membrane.Element.Action.start_timer`
@@ -134,7 +135,9 @@ defmodule Membrane.Element.Base do
               timer_id :: any,
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: callback_return
+            ) ::
+              {[Action.common_actions() | Action.stream_actions() | Action.setup()],
+               Element.state()}
 
   @doc """
   Callback invoked when a message from the parent is received.
@@ -144,7 +147,9 @@ defmodule Membrane.Element.Base do
               notification :: Membrane.ParentNotification.t(),
               context :: CallbackContext.t(),
               state :: Element.state()
-            ) :: callback_return
+            ) ::
+              {[Action.common_actions() | Action.stream_actions() | Action.setup()],
+               Element.state()}
 
   @doc """
   Callback invoked when element is removed by its parent.
@@ -155,7 +160,8 @@ defmodule Membrane.Element.Base do
               context :: CallbackContext.t(),
               state :: Element.state()
             ) ::
-              callback_return()
+              {[Action.common_actions() | Action.stream_actions() | Action.setup()],
+               Element.state()}
 
   @doc """
   A callback for constructing struct. Will be defined by `def_options/1` if used.
