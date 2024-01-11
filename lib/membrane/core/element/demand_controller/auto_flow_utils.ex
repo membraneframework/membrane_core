@@ -80,13 +80,13 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   @spec store_event_in_queue(Pad.ref(), Event.t(), State.t()) :: State.t()
   def store_event_in_queue(pad_ref, event, state) do
-    queue_item =  {:event, event}
+    queue_item = {:event, event}
     PadModel.update_data!(state, pad_ref, :auto_flow_queue, &Qex.push(&1, queue_item))
   end
 
   @spec store_stream_format_in_queue(Pad.ref(), StreamFormat.t(), State.t()) :: State.t()
   def store_stream_format_in_queue(pad_ref, stream_format, state) do
-    queue_item =  {:stream_format, stream_format}
+    queue_item = {:stream_format, stream_format}
     PadModel.update_data!(state, pad_ref, :auto_flow_queue, &Qex.push(&1, queue_item))
   end
 

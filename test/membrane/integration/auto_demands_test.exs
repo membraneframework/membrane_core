@@ -110,6 +110,8 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
       assert_end_of_stream(pipeline, :sink)
       refute_sink_buffer(pipeline, :sink, _buffer, 0)
+
+      Pipeline.terminate(pipeline)
     end
   end)
 
@@ -137,9 +139,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
     end)
 
     refute_sink_buffer(pipeline, :left_sink, %{payload: 25_000})
+
+    Pipeline.terminate(pipeline)
   end
 
-  @tag :asd
   test "handle removed branch" do
     pipeline =
       Pipeline.start_link_supervised!(
@@ -231,6 +234,8 @@ defmodule Membrane.Integration.AutoDemandsTest do
           {:buffer_arrived, %Membrane.Buffer{payload: ^payload}}
         )
       end
+
+      Pipeline.terminate(pipeline)
     end
   end)
 
@@ -336,68 +341,62 @@ defmodule Membrane.Integration.AutoDemandsTest do
         ]
       )
 
-    # time for NotifyingAutoFilter to enter playing playback
-    Process.sleep(500)
-
     [pipeline: pipeline]
   end
 
   describe "auto flow queue" do
     setup :setup_pipeline_with_notifying_auto_filter
 
-    @tag :skip
+    defp receive_processed_buffers(pipeline, limit, acc \\ [])
+
+    defp receive_processed_buffers(_pipeline, limit, acc) when limit <= 0 do
+      Enum.reverse(acc)
+    end
+
+    defp receive_processed_buffers(pipeline, limit, acc) do
+      receive do
+        {Pipeline, ^pipeline,
+         {:handle_child_notification, {{:handling_buffer, _pad, buffer}, :filter}}} ->
+          receive_processed_buffers(pipeline, limit - 1, [buffer | acc])
+      after
+        500 -> Enum.reverse(acc)
+      end
+    end
+
+    @tag :asd
     test "when there is no demand on the output pad", %{pipeline: pipeline} do
-      auto_demand_size = 400
+      manual_flow_queue_size = 40
 
       assert_pipeline_notified(pipeline, :filter, :playing)
 
-      for i <- 1..auto_demand_size, source_idx <- [0, 1] do
-        expected_buffer = %Buffer{payload: i, metadata: %{creator: {:source, source_idx}}}
+      buffers = receive_processed_buffers(pipeline, 100)
+      assert length(buffers) == manual_flow_queue_size
 
-        assert_pipeline_notified(
-          pipeline,
-          :filter,
-          {:handling_buffer, _pad, ^expected_buffer}
-        )
-      end
+      demand = 10_000
+      Pipeline.message_child(pipeline, :sink, {:make_demand, demand})
 
-      for _source_idx <- [0, 1] do
-        refute_pipeline_notified(
-          pipeline,
-          :filter,
-          {:handling_buffer, _pad, %Buffer{}}
-        )
-      end
+      buffers = receive_processed_buffers(pipeline, 2 * demand)
+      buffers_number = length(buffers)
 
-      Pipeline.message_child(pipeline, :sink, {:make_demand, 2 * auto_demand_size})
+      # check if filter processed proper number of buffers
+      assert demand <= buffers_number
+      assert buffers_number <= demand + manual_flow_queue_size
 
-      for i <- 1..auto_demand_size, source_idx <- [0, 1] do
-        expected_buffer = %Buffer{payload: i, metadata: %{creator: {:source, source_idx}}}
-        assert_sink_buffer(pipeline, :sink, ^expected_buffer)
-      end
+      # check if filter processed buffers from both sources
+      buffers_by_creator = Enum.group_by(buffers, & &1.metadata.creator)
+      assert Enum.count(buffers_by_creator) == 2
 
-      for i <- (auto_demand_size + 1)..(auto_demand_size * 2), source_idx <- [0, 1] do
-        expected_buffer = %Buffer{payload: i, metadata: %{creator: {:source, source_idx}}}
+      # check if filter balanced procesesd buffers by their origin
+      counter_0 = Map.fetch!(buffers_by_creator, {:source, 0}) |> length()
+      counter_1 = Map.fetch!(buffers_by_creator, {:source, 1}) |> length()
 
-        assert_pipeline_notified(
-          pipeline,
-          :filter,
-          {:handling_buffer, _pad, ^expected_buffer}
-        )
-      end
-
-      for _source_idx <- [0, 1] do
-        refute_pipeline_notified(
-          pipeline,
-          :filter,
-          {:handling_buffer, _pad, %Buffer{}}
-        )
-      end
+      assert 0.8 < counter_0 / counter_1
+      assert 1.2 > counter_0 / counter_1
 
       Pipeline.terminate(pipeline)
     end
 
-    @tag :skip
+    # @tag :skip
     test "when an element returns :pause_auto_demand action", %{pipeline: pipeline} do
       auto_demand_size = 400
 

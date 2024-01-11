@@ -133,6 +133,8 @@ defmodule Membrane.Core.Element.ActionHandler do
         %State{type: type} = state
       )
       when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
+    require Membrane.Logger, as: L
+    L.warning("HANDLING ACTION SEND STREAM FORMAT")
     send_stream_format(pad_ref, stream_format, state)
   end
 

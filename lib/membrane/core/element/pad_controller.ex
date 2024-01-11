@@ -496,8 +496,9 @@ defmodule Membrane.Core.Element.PadController do
           PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))
         end)
         |> PadModel.set_data!(pad_ref, :associated_pads, [])
-        # |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
-        # |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
+
+      # |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
+      # |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
 
       # |> AutoFlowUtils.pop_queues_and_bump_demand()
 

@@ -140,7 +140,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
     with %{effective_flow_control: :pull} <- state do
       state.pads_data
       |> Map.values()
-      |> Enum.filter(& &1.direction == :output and &1.flow_control == :auto)
+      |> Enum.filter(&(&1.direction == :output and &1.flow_control == :auto))
       |> Enum.reduce(state, fn pad_data, state ->
         DemandController.snapshot_atomic_demand(pad_data.ref, state)
       end)
