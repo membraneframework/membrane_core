@@ -69,7 +69,6 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   @spec store_buffers_in_queue(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
   def store_buffers_in_queue(pad_ref, buffers, state) do
     state = Map.update!(state, :awaiting_auto_input_pads, &MapSet.put(&1, pad_ref))
-    # PadModel.update_data!(state, pad_ref, :auto_flow_queue, &Qex.push(&1, {:buffers, buffers}))
 
     PadModel.update_data!(state, pad_ref, :auto_flow_queue, fn queue ->
       Enum.reduce(buffers, queue, fn buffer, queue ->
@@ -173,36 +172,10 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     end
   end
 
-  # @spec pop_auto_flow_queues_while_needed(State.t()) :: State.t()
-  # def pop_auto_flow_queues_while_needed(state) do
-  #   if state.name == :tee do
-  #     {state.effective_flow_control, state.satisfied_auto_output_pads} |> IO.inspect(label: "TAKIE TAM W POP WHILE")
-  #   end
-
-  #   if (state.effective_flow_control == :push or
-  #         MapSet.size(state.satisfied_auto_output_pads) == 0) and
-  #        MapSet.size(state.awaiting_auto_input_pads) > 0 do
-
-  #         if state.name == :tee do
-  #           IO.puts("A")
-  #         end
-
-  #     pop_random_auto_flow_queue(state)
-  #     |> pop_auto_flow_queues_while_needed()
-  #   else
-  #     if state.name == :tee do
-  #       IO.puts("B")
-  #     end
-
-  #     state
-  #   end
-  # end
-
   defp pop_random_auto_flow_queue(state) do
     pad_ref = Enum.random(state.awaiting_auto_input_pads)
 
     state
-    # pop_stream_formats_and_events(pad_ref, state)
     |> PadModel.get_data!(pad_ref, :auto_flow_queue)
     |> Qex.pop()
     |> case do

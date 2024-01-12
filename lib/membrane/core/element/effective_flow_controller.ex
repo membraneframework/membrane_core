@@ -132,11 +132,6 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
         end
     end)
 
-    # no to tak, albo mozna przy efc push zawsze sprawdzac output demand przy wyslaniu bufora lub otrzymaniu notifa ze
-    # demand wzrol na dodania wartosc
-    # albo mozna sprawdzac wszystko przy wejsciu na pull
-    # tutaj zaimplementuje to 2 opcje
-
     with %{effective_flow_control: :pull} <- state do
       state.pads_data
       |> Map.values()
@@ -146,12 +141,5 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
       end)
     end
     |> AutoFlowUtils.pop_queues_and_bump_demand()
-
-    # state.pads_data
-    # |> Enum.flat_map(fn
-    #   {pad_ref, %{direction: :input, flow_control: :auto}} -> [pad_ref]
-    #   _other -> []
-    # end)
-    # |> AutoFlowUtils.auto_adjust_atomic_demand(state)
   end
 end

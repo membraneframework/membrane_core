@@ -94,12 +94,6 @@ defmodule Membrane.Core.Element.StreamFormatController do
       """
     end
 
-    require Membrane.Logger, as: L
-
-    L.warning(
-      "VALIDATING STREAM FORMAT #{inspect({direction, stream_format, params}, pretty: true, limit: :infinity)}"
-    )
-
     for {module, pad_name} <- params do
       unless module.membrane_stream_format_match?(pad_name, stream_format) do
         pattern_string =

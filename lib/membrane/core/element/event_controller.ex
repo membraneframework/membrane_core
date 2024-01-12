@@ -53,19 +53,7 @@ defmodule Membrane.Core.Element.EventController do
 
         # event goes to the auto flow control queue
         pad_ref in state.awaiting_auto_input_pads ->
-          # with %Membrane.Core.Events.EndOfStream{} <- event do
-          #   PadModel.get_data!(state, pad_ref, :auto_flow_queue)
-          #   |> IO.inspect(label: "AFQ 1 #{inspect(state.name)}", limit: :infinity)
-          # end
-
-          state = AutoFlowUtils.store_event_in_queue(pad_ref, event, state)
-
-          # with %Membrane.Core.Events.EndOfStream{} <- event do
-          #   PadModel.get_data!(state, pad_ref, :auto_flow_queue)
-          #   |> IO.inspect(label: "AFQ 2 #{inspect(state.name)}", limit: :infinity)
-          # end
-
-          state
+          AutoFlowUtils.store_event_in_queue(pad_ref, event, state)
 
         true ->
           exec_handle_event(pad_ref, event, state)

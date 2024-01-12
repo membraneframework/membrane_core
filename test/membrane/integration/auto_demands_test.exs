@@ -156,32 +156,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Process.sleep(500)
     Pipeline.execute_actions(pipeline, remove_children: :right_sink)
 
-    IO.puts("START OF THE ASSERTIONS")
-
     Enum.each(1..100_000, fn payload ->
-      # IO.puts("ASSERTION NO. #{inspect(payload)}")
-
-      # if payload == 801 do
-      #   Process.sleep(500)
-
-      #   for name <- [
-      #     # :source,
-      #     :tee
-      #     # , :left_sink
-      #     ] do
-      #     Pipeline.get_child_pid!(pipeline, name)
-      #     |> :sys.get_state()
-      #     |> IO.inspect(label: "NAME OF #{inspect(name)}", limit: :infinity)
-      #   end
-
-      #   Pipeline.get_child_pid!(pipeline, :left_sink)
-      #   |> :sys.get_state()
-      #   |> get_in([:pads_data, :input, :input_queue])
-      #   |> Map.get(:atomic_demand)
-      #   |> Membrane.Core.Element.AtomicDemand.get()
-      #   |> IO.inspect(label: "ATOMIC DEMAND VALUE")
-      # end
-
       assert_sink_buffer(pipeline, :left_sink, buffer)
       assert buffer.payload == payload
     end)
@@ -424,7 +399,8 @@ defmodule Membrane.Integration.AutoDemandsTest do
       assert demand <= buffers_number
       assert buffers_number <= demand + manual_flow_queue_size
 
-      counter_0 = Map.fetch!(buffers_by_creator, {:source, 0}, []) |> length()
+      buffers_by_creator = Enum.group_by(buffers, & &1.metadata.creator)
+      counter_0 = Map.get(buffers_by_creator, {:source, 0}, []) |> length()
       counter_1 = Map.fetch!(buffers_by_creator, {:source, 1}) |> length()
 
       # at most auto_flow_demand_size buffers came from {:source, 0}

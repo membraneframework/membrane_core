@@ -233,9 +233,6 @@ defmodule Membrane.Core.Element.PadController do
         Map.update!(state, :pad_refs, &List.delete(&1, pad_ref))
         |> PadModel.pop_data!(pad_ref)
 
-      # IO.inspect(pad_ref, label: "PAD REF")
-      # IO.inspect(state, label: "PRZED", limit: :infinity)
-
       with %{direction: :input, flow_control: :auto, other_effective_flow_control: :pull} <-
              pad_data do
         EffectiveFlowController.resolve_effective_flow_control(state)
@@ -244,7 +241,6 @@ defmodule Membrane.Core.Element.PadController do
       end
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
       |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
-      # |> IO.inspect(label: "PO", limit: :infinity)
       |> AutoFlowUtils.pop_queues_and_bump_demand()
     else
       {:ok, %{availability: :always}} when state.terminating? ->
@@ -487,26 +483,15 @@ defmodule Membrane.Core.Element.PadController do
   @doc """
   Removes all associations between the given pad and any other_endpoint pads.
   """
+  # todo: zobacz gdzie to jest wywolywane, upewnij sie ze wszedzie tam jest poprawne popowanie z kolejek
   @spec remove_pad_associations(Pad.ref(), State.t()) :: State.t()
   def remove_pad_associations(pad_ref, state) do
     case PadModel.get_data!(state, pad_ref) do
       %{flow_control: :auto} = pad_data ->
-        # state =
         Enum.reduce(pad_data.associated_pads, state, fn pad, state ->
           PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))
         end)
         |> PadModel.set_data!(pad_ref, :associated_pads, [])
-
-      # |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
-      # |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
-
-      # |> AutoFlowUtils.pop_queues_and_bump_demand()
-
-      #   |> AutoFlowUtils.pop_auto_flow_queues_while_needed()
-
-      # if pad_data.direction == :output,
-      #   do: AutoFlowUtils.auto_adjust_atomic_demand(pad_data.associated_pads, state),
-      #   else: state
 
       _pad_data ->
         state
