@@ -363,7 +363,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
       end
     end
 
-    @tag :asd
     test "when there is no demand on the output pad", %{pipeline: pipeline} do
       manual_flow_queue_size = 40
 
@@ -386,64 +385,80 @@ defmodule Membrane.Integration.AutoDemandsTest do
       buffers_by_creator = Enum.group_by(buffers, & &1.metadata.creator)
       assert Enum.count(buffers_by_creator) == 2
 
-      # check if filter balanced procesesd buffers by their origin
+      # check if filter balanced procesesd buffers by their origin - numbers of
+      # buffers coming from each source should be similar
       counter_0 = Map.fetch!(buffers_by_creator, {:source, 0}) |> length()
       counter_1 = Map.fetch!(buffers_by_creator, {:source, 1}) |> length()
+      sources_ratio = counter_0 / counter_1
 
-      assert 0.8 < counter_0 / counter_1
-      assert 1.2 > counter_0 / counter_1
+      assert 0.8 < sources_ratio and sources_ratio < 1.2
 
       Pipeline.terminate(pipeline)
     end
 
-    # @tag :skip
-    test "when an element returns :pause_auto_demand action", %{pipeline: pipeline} do
-      auto_demand_size = 400
+    test "when an element returns :pause_auto_demand and :resume_auto_demand action", %{
+      pipeline: pipeline
+    } do
+      manual_flow_queue_size = 40
+      auto_flow_demand_size = 400
 
       assert_pipeline_notified(pipeline, :filter, :playing)
 
       Pipeline.message_child(pipeline, :filter, pause_auto_demand: Pad.ref(:input, 0))
 
-      for i <- 1..auto_demand_size do
-        assert_pipeline_notified(
-          pipeline,
-          :filter,
-          {:handling_buffer, Pad.ref(:input, 0), %Buffer{payload: ^i}}
-        )
-      end
+      # time for :filter to pause demand on Pad.ref(:input, 0)
+      Process.sleep(500)
 
-      refute_pipeline_notified(
-        pipeline,
-        :filter,
-        {:handling_buffer, Pad.ref(:input, 0), %Buffer{payload: _any}}
-      )
+      buffers = receive_processed_buffers(pipeline, 100)
+      assert length(buffers) == manual_flow_queue_size
 
-      Pipeline.message_child(pipeline, :sink, {:make_demand, 3 * auto_demand_size})
+      demand = 10_000
+      Pipeline.message_child(pipeline, :sink, {:make_demand, demand})
 
-      for i <- 1..(2 * auto_demand_size) do
-        assert_pipeline_notified(
-          pipeline,
-          :filter,
-          {:handling_buffer, Pad.ref(:input, 1), %Buffer{payload: ^i}}
-        )
-      end
+      # fliter paused auto demand on Pad.ref(:input, 0), so it should receive
+      # at most auto_flow_demand_size buffers from there and rest of the buffers
+      # from Pad.ref(:input, 1)
+      buffers = receive_processed_buffers(pipeline, 2 * demand)
+      buffers_number = length(buffers)
 
-      refute_pipeline_notified(
-        pipeline,
-        :filter,
-        {:handling_buffer, Pad.ref(:input, 0), %Buffer{payload: _any}}
-      )
+      assert demand <= buffers_number
+      assert buffers_number <= demand + manual_flow_queue_size
+
+      counter_0 = Map.fetch!(buffers_by_creator, {:source, 0}, []) |> length()
+      counter_1 = Map.fetch!(buffers_by_creator, {:source, 1}) |> length()
+
+      # at most auto_flow_demand_size buffers came from {:source, 0}
+      assert auto_flow_demand_size - manual_flow_queue_size <= counter_0
+      assert counter_0 <= auto_flow_demand_size
+
+      # rest of them came from {:source, 1}
+      assert demand - auto_flow_demand_size <= counter_1
 
       Pipeline.message_child(pipeline, :filter, resume_auto_demand: Pad.ref(:input, 0))
-      Pipeline.message_child(pipeline, :sink, {:make_demand, 4 * auto_demand_size})
 
-      for i <- (auto_demand_size + 1)..(auto_demand_size * 2) do
-        assert_pipeline_notified(
-          pipeline,
-          :filter,
-          {:handling_buffer, Pad.ref(:input, 0), %Buffer{payload: ^i}}
-        )
-      end
+      # time for :filter to resume demand on Pad.ref(:input, 0)
+      Process.sleep(500)
+
+      Pipeline.message_child(pipeline, :sink, {:make_demand, demand})
+
+      buffers = receive_processed_buffers(pipeline, 2 * demand)
+      buffers_number = length(buffers)
+
+      # check if filter processed proper number of buffers
+      assert demand <= buffers_number
+      assert buffers_number <= demand + manual_flow_queue_size
+
+      # check if filter processed buffers from both sources
+      buffers_by_creator = Enum.group_by(buffers, & &1.metadata.creator)
+      assert Enum.count(buffers_by_creator) == 2
+
+      # check if filter balanced procesesd buffers by their origin - numbers of
+      # buffers coming from each source should be similar
+      counter_0 = Map.fetch!(buffers_by_creator, {:source, 0}) |> length()
+      counter_1 = Map.fetch!(buffers_by_creator, {:source, 1}) |> length()
+      sources_ratio = counter_0 / counter_1
+
+      assert 0.8 < sources_ratio and sources_ratio < 1.2
 
       Pipeline.terminate(pipeline)
     end
