@@ -227,7 +227,6 @@ defmodule Membrane.Core.Element.PadController do
       Stalker.unregister_link(state.stalker, pad_ref)
       state = generate_eos_if_needed(pad_ref, state)
       state = maybe_handle_pad_removed(pad_ref, state)
-      state = remove_pad_associations(pad_ref, state)
 
       {pad_data, state} =
         Map.update!(state, :pad_refs, &List.delete(&1, pad_ref))
@@ -310,7 +309,6 @@ defmodule Membrane.Core.Element.PadController do
         stream_format: nil,
         start_of_stream?: false,
         end_of_stream?: false,
-        associated_pads: [],
         atomic_demand: metadata.atomic_demand,
         stalker_metrics: %{
           total_buffers: total_buffers_metric
@@ -331,8 +329,6 @@ defmodule Membrane.Core.Element.PadController do
         {:resolved, EffectiveFlowController.get_pad_effective_flow_control(pad_data.ref, state)}
       )
 
-    state = update_associated_pads(pad_data, state)
-
     case pad_data do
       %{direction: :output, flow_control: :auto} ->
         Map.update!(state, :satisfied_auto_output_pads, &MapSet.put(&1, pad_data.ref))
@@ -344,22 +340,6 @@ defmodule Membrane.Core.Element.PadController do
         state
     end
   end
-
-  defp update_associated_pads(%{flow_control: :auto} = pad_data, state) do
-    state.pads_data
-    |> Map.values()
-    |> Enum.filter(&(&1.direction != pad_data.direction and &1.flow_control == :auto))
-    |> Enum.reduce(state, fn associated_pad_data, state ->
-      PadModel.update_data!(
-        state,
-        associated_pad_data.ref,
-        :associated_pads,
-        &[pad_data.ref | &1]
-      )
-    end)
-  end
-
-  defp update_associated_pads(_pad_data, state), do: state
 
   defp merge_pad_direction_data(%{direction: :input} = pad_data, metadata, _state) do
     pad_data
@@ -420,14 +400,8 @@ defmodule Membrane.Core.Element.PadController do
          %{flow_control: :auto, direction: direction} = pad_data,
          pad_props,
          _other_info,
-         %State{} = state
+         _state
        ) do
-    associated_pads =
-      state.pads_data
-      |> Map.values()
-      |> Enum.filter(&(&1.direction != direction and &1.flow_control == :auto))
-      |> Enum.map(& &1.ref)
-
     auto_demand_size =
       cond do
         direction == :output ->
@@ -457,7 +431,6 @@ defmodule Membrane.Core.Element.PadController do
     pad_data
     |> Map.merge(%{
       demand: 0,
-      associated_pads: associated_pads,
       auto_demand_size: auto_demand_size
     })
     |> put_in([:stalker_metrics, :demand], demand_metric)
@@ -477,24 +450,6 @@ defmodule Membrane.Core.Element.PadController do
       EventController.exec_handle_event(pad_ref, %Events.EndOfStream{}, state)
     else
       state
-    end
-  end
-
-  @doc """
-  Removes all associations between the given pad and any other_endpoint pads.
-  """
-  # todo: zobacz gdzie to jest wywolywane, upewnij sie ze wszedzie tam jest poprawne popowanie z kolejek
-  @spec remove_pad_associations(Pad.ref(), State.t()) :: State.t()
-  def remove_pad_associations(pad_ref, state) do
-    case PadModel.get_data!(state, pad_ref) do
-      %{flow_control: :auto} = pad_data ->
-        Enum.reduce(pad_data.associated_pads, state, fn pad, state ->
-          PadModel.update_data!(state, pad, :associated_pads, &List.delete(&1, pad_data.ref))
-        end)
-        |> PadModel.set_data!(pad_ref, :associated_pads, [])
-
-      _pad_data ->
-        state
     end
   end
 

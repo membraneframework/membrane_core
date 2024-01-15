@@ -13,7 +13,6 @@ defmodule Membrane.Core.Element.EventController do
     ActionHandler,
     CallbackContext,
     InputQueue,
-    PadController,
     PlaybackQueue,
     State
   }
@@ -106,8 +105,9 @@ defmodule Membrane.Core.Element.EventController do
     else
       Membrane.Logger.debug("Received end of stream on pad #{inspect(pad_ref)}")
 
-      state = PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
-      state = PadController.remove_pad_associations(pad_ref, state)
+      state =
+        PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
+        |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
 
       %{
         start_of_stream?: start_of_stream?,

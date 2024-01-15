@@ -151,7 +151,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
          MapSet.size(state.satisfied_auto_output_pads) == 0 do
       state.pads_data
       |> Enum.flat_map(fn
-        {ref, %{direction: :input, flow_control: :auto}} -> [ref]
+        {ref, %{direction: :input, flow_control: :auto, end_of_stream?: false}} -> [ref]
         _other -> []
       end)
       |> auto_adjust_atomic_demand(state)

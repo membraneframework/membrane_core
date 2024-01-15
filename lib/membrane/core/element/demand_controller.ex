@@ -23,13 +23,20 @@ defmodule Membrane.Core.Element.DemandController do
 
   @spec snapshot_atomic_demand(Pad.ref(), State.t()) :: State.t()
   def snapshot_atomic_demand(pad_ref, state) do
-    with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
+    with {:ok, pad_data} when not pad_data.end_of_stream? <- PadModel.get_data(state, pad_ref),
          %State{playback: :playing} <- state do
       if pad_data.direction == :input,
         do: raise("cannot snapshot atomic counter in input pad")
 
       do_snapshot_atomic_demand(pad_data, state)
     else
+      {:ok, %{end_of_stream?: true}} ->
+        Membrane.Logger.debug_verbose(
+          "Skipping snapshot of pad #{inspect(pad_ref)}, because it has flag :end_of_stream? set to true"
+        )
+
+        state
+
       {:error, :unknown_pad} ->
         # We've got a :atomic_demand_increased message on already unlinked pad
         state

@@ -4,6 +4,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   # Module validating and executing actions returned by element's callbacks.
 
   use Bunch
+  alias Membrane.Core.Element.DemandController.AutoFlowUtils
   use Membrane.Core.CallbackHandler
 
   import Membrane.Pad, only: [is_pad_ref: 1]
@@ -24,7 +25,6 @@ defmodule Membrane.Core.Element.ActionHandler do
   alias Membrane.Core.Element.{
     DemandController,
     DemandHandler,
-    PadController,
     State,
     StreamFormatController
   }
@@ -466,8 +466,9 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_outgoing_event(Pad.ref(), Event.t(), State.t()) :: State.t()
   defp handle_outgoing_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
-      state = PadController.remove_pad_associations(pad_ref, state)
-      PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
+      Map.update!(state, :satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
+      |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
+      |> AutoFlowUtils.pop_queues_and_bump_demand()
     else
       %{direction: :input} ->
         raise PadDirectionError, action: "end of stream", direction: :input, pad: pad_ref
