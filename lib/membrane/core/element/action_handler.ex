@@ -32,7 +32,6 @@ defmodule Membrane.Core.Element.ActionHandler do
   alias Membrane.Core.{Events, TimerController}
   alias Membrane.Element.Action
 
-
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry

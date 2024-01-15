@@ -15,16 +15,17 @@ defmodule Membrane.Core.Element.PadControllerTest do
   @module Membrane.Core.Element.PadController
 
   defp prepare_state(elem_module, name \\ :element) do
-    struct(State,
+    struct!(State,
       name: name,
       module: elem_module,
-      callback_depth_counter: 0,
       pads_to_snapshot: MapSet.new(),
       parent_pid: self(),
       internal_state: %{},
       synchronization: %{clock: nil, parent_clock: nil},
       subprocess_supervisor: SubprocessSupervisor.start_link!(),
-      stalker: %Membrane.Core.Stalker{pid: spawn(fn -> :ok end), ets: nil}
+      stalker: %Membrane.Core.Stalker{pid: spawn(fn -> :ok end), ets: nil},
+      satisfied_auto_output_pads: MapSet.new(),
+      awaiting_auto_input_pads: MapSet.new()
     )
     |> PadSpecHandler.init_pads()
   end

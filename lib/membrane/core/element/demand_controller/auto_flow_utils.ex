@@ -143,7 +143,6 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     |> Map.put(:popping_queue?, false)
   end
 
-
   defp bump_demand(state) do
     if state.effective_flow_control == :pull and
          MapSet.size(state.satisfied_auto_output_pads) == 0 do

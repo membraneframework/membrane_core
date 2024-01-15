@@ -35,10 +35,9 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
       })
 
     state =
-      struct(State,
+      struct!(State,
         module: Filter,
         name: :test_name,
-        parent: self(),
         type: :filter,
         playback: :playing,
         synchronization: %{clock: nil, parent_clock: nil},
@@ -54,7 +53,9 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
               input_queue: input_queue,
               demand: 0
             )
-        }
+        },
+        satisfied_auto_output_pads: MapSet.new(),
+        awaiting_auto_input_pads: MapSet.new()
       )
 
     assert_received Message.new(:atomic_demand_increased, :some_pad)
