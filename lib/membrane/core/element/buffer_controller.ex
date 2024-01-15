@@ -72,12 +72,9 @@ defmodule Membrane.Core.Element.BufferController do
     if state.effective_flow_control == :pull and MapSet.size(state.satisfied_auto_output_pads) > 0 do
       AutoFlowUtils.store_buffers_in_queue(pad_ref, buffers, state)
     else
-      if pad_ref in state.awaiting_auto_input_pads do
-        raise "to nie powinno sie zdarzyc dupa 1"
-      end
-
-      if PadModel.get_data!(state, pad_ref, [:auto_flow_queue]) != Qex.new() do
-        raise "to nie powinno sie zdarzyc dupa 2"
+      if MapSet.member?(state.awaiting_auto_input_pads, pad_ref) or
+           PadModel.get_data!(state, pad_ref, [:auto_flow_queue]) != Qex.new() do
+        raise "cannot execute handle_buffer callback for an awaiting input pad"
       end
 
       state = exec_buffer_callback(pad_ref, buffers, state)

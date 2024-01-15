@@ -97,8 +97,6 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     |> Enum.reduce(state, fn pad_ref, state ->
       PadModel.get_data!(state, pad_ref)
       |> do_auto_adjust_atomic_demand(state)
-      # todo: usun to :increased / :unchanged, ktore discardujesz w tym elem(1)
-      |> elem(1)
     end)
   end
 
@@ -117,10 +115,9 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
       :atomics.put(stalker_metrics.demand, 1, auto_demand_size)
 
-      state = PadModel.set_data!(state, ref, :demand, auto_demand_size)
-      {:increased, state}
+      PadModel.set_data!(state, ref, :demand, auto_demand_size)
     else
-      {:unchanged, state}
+      state
     end
   end
 

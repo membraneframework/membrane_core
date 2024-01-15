@@ -4,7 +4,6 @@ defmodule Membrane.Core.Element.ActionHandler do
   # Module validating and executing actions returned by element's callbacks.
 
   use Bunch
-  alias Membrane.Core.Element.DemandController.AutoFlowUtils
   use Membrane.Core.CallbackHandler
 
   import Membrane.Pad, only: [is_pad_ref: 1]
@@ -29,8 +28,10 @@ defmodule Membrane.Core.Element.ActionHandler do
     StreamFormatController
   }
 
+  alias Membrane.Core.Element.DemandController.AutoFlowUtils
   alias Membrane.Core.{Events, TimerController}
   alias Membrane.Element.Action
+
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
