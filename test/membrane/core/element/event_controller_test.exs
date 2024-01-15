@@ -43,7 +43,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
       })
 
     state =
-      struct(State,
+      struct!(State,
         module: MockEventHandlingElement,
         name: :test_name,
         type: :filter,
@@ -64,7 +64,9 @@ defmodule Membrane.Core.Element.EventControllerTest do
               input_queue: input_queue,
               demand: 0
             )
-        }
+        },
+        satisfied_auto_output_pads: MapSet.new(),
+        awaiting_auto_input_pads: MapSet.new()
       )
 
     assert AtomicDemand.get(atomic_demand) > 0

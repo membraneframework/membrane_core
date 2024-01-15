@@ -133,7 +133,9 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   end
 
   @spec pop_queues_and_bump_demand(State.t()) :: State.t()
-  def pop_queues_and_bump_demand(%State{popping_queue?: false} = state) do
+  def pop_queues_and_bump_demand(%State{popping_queue?: true} = state), do: state
+
+  def pop_queues_and_bump_demand(%State{} = state) do
     %{state | popping_queue?: true}
     |> bump_demand()
     |> pop_auto_flow_queues_while_needed()
@@ -141,7 +143,6 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     |> Map.put(:popping_queue?, false)
   end
 
-  def pop_queues_and_bump_demand(%State{popping_queue?: true} = state), do: state
 
   defp bump_demand(state) do
     if state.effective_flow_control == :pull and
