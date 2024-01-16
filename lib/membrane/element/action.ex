@@ -221,7 +221,7 @@ defmodule Membrane.Element.Action do
   @typedoc """
   This action sets the latency for the element.
 
-  This action is not premitted in callback `c:Membrane.Element.Base.handle_init/2`.
+  This action is permitted only in callback `c:Membrane.Element.Base.handle_init/2`.
   """
   @type latency :: {:latency, latency :: Membrane.Time.non_neg()}
 
@@ -245,27 +245,31 @@ defmodule Membrane.Element.Action do
   @type terminate :: {:terminate, reason :: :normal | :shutdown | {:shutdown, term} | term}
 
   @typedoc """
-  Type that defines a single action that may be returned from element callbacks.
-
-  Depending on element type, callback, current playback and other
-  circumstances there may be different actions available.
+  Action that can be always returned from each of the callbacks.
   """
-  @type t ::
-          setup
-          | event
-          | notify_parent
-          | split
+  @type common_actions ::
+          notify_parent | start_timer | timer_interval | stop_timer | terminate | split
+
+  @typedoc """
+  Actions that can be returned from callbacks when the element is in `playback: :playing` state.
+  """
+  @type stream_actions ::
+          event
           | stream_format
           | buffer
           | demand
-          | redemand
           | pause_auto_demand
           | resume_auto_demand
-          | forward
-          | start_timer
-          | timer_interval
-          | stop_timer
-          | latency
           | end_of_stream
-          | terminate
+          | redemand
+
+  @typedoc """
+  Type that defines a union of actions that may be returned from most of the callbacks.
+
+  Depending on element type, callback, current playback and other
+  circumstances there may be different actions available.
+  Check the typespec and documentation of particular callbacks
+  for details.
+  """
+  @type t :: common_actions | stream_actions | latency | forward | setup
 end

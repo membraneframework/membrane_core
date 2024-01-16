@@ -9,11 +9,6 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   alias Membrane.Core.Pipeline.State
 
   @impl CallbackHandler
-  def handle_action({action, _args}, :handle_init, _params, _state) when action != :spec do
-    raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
-  end
-
-  @impl CallbackHandler
   def handle_action({:spec, args}, _cb, _params, %State{terminating?: true}) do
     raise Membrane.ParentError,
           "Action #{inspect({:spec, args})} cannot be handled because the pipeline is already terminating"

@@ -25,16 +25,22 @@ defmodule Membrane.UtilitySupervisor do
 
   @doc """
   Starts a process under the utility supervisor.
+
+  Semantics of the `child_spec` argument is the same as in `Supervisor.child_spec/2`.
   """
-  @spec start_child(t, Supervisor.child_spec()) :: Supervisor.on_start_child()
+  @spec start_child(t, Supervisor.child_spec() | {module(), term()} | module()) ::
+          Supervisor.on_start_child()
   defdelegate start_child(supervisor, child_spec),
     to: Membrane.Core.SubprocessSupervisor,
     as: :start_utility
 
   @doc """
   Starts a process under the utility supervisor and links it to the current process.
+
+  Semantics of the `child_spec` argument is the same as in `Supervisor.child_spec/2`.
   """
-  @spec start_link_child(t, Supervisor.child_spec()) :: Supervisor.on_start_child()
+  @spec start_link_child(t, Supervisor.child_spec() | {module(), term()} | module()) ::
+          Supervisor.on_start_child()
   defdelegate start_link_child(supervisor, child_spec),
     to: Membrane.Core.SubprocessSupervisor,
     as: :start_link_utility

@@ -106,7 +106,7 @@ defmodule Membrane.Pipeline do
   By default, it converts the `opts` to a map if they're a struct and sets them as the pipeline state.
   """
   @callback handle_init(context :: CallbackContext.t(), options :: pipeline_options) ::
-              callback_return()
+              {[Action.common_actions()], state()}
 
   @doc """
   Callback invoked when pipeline is requested to terminate with `terminate/2`.
@@ -114,7 +114,7 @@ defmodule Membrane.Pipeline do
   By default, it returns `t:Membrane.Pipeline.Action.terminate/0` with reason `:normal`.
   """
   @callback handle_terminate_request(context :: CallbackContext.t(), state) ::
-              callback_return()
+              {[Action.common_actions()], state()}
 
   @doc """
   Callback invoked on pipeline startup, right after `c:handle_init/2`.
@@ -126,7 +126,7 @@ defmodule Membrane.Pipeline do
               context :: CallbackContext.t(),
               state
             ) ::
-              callback_return
+              {[Action.common_actions()], state()}
 
   @doc """
   Callback invoked when pipeline switches the playback to `:playing`.
@@ -136,7 +136,7 @@ defmodule Membrane.Pipeline do
               context :: CallbackContext.t(),
               state
             ) ::
-              callback_return
+              {[Action.common_actions()], state()}
 
   @doc """
   Callback invoked when a child removes its pad.
@@ -151,7 +151,7 @@ defmodule Membrane.Pipeline do
               pad :: Pad.ref(),
               context :: CallbackContext.t(),
               state :: state
-            ) :: callback_return
+            ) :: {[Action.common_actions()], state()}
 
   @doc """
   Callback invoked when a notification comes in from a child.
@@ -163,21 +163,21 @@ defmodule Membrane.Pipeline do
               element :: Child.name(),
               context :: CallbackContext.t(),
               state
-            ) :: callback_return
+            ) :: {[Action.common_actions()], state()}
 
   @doc """
   Callback invoked when pipeline receives a message that is not recognized
   as an internal membrane message.
 
   Useful for receiving data sent from NIFs or other stuff.
-  By default, it ignores the received message.
+  By default, it logs and ignores the received message.
   """
   @callback handle_info(
               message :: any,
               context :: CallbackContext.t(),
               state
             ) ::
-              callback_return
+              {[Action.common_actions()], state()}
 
   @doc """
   Callback invoked when a child element starts processing stream via given pad.
@@ -189,7 +189,7 @@ defmodule Membrane.Pipeline do
               pad :: Pad.ref(),
               context :: CallbackContext.t(),
               state
-            ) :: callback_return
+            ) :: {[Action.common_actions()], state()}
 
   @doc """
   Callback invoked when a child element finishes processing stream via given pad.
@@ -201,7 +201,7 @@ defmodule Membrane.Pipeline do
               pad :: Pad.ref(),
               context :: CallbackContext.t(),
               state
-            ) :: callback_return
+            ) :: {[Action.common_actions()], state()}
 
   @doc """
   Callback invoked when children of `Membrane.ChildrenSpec` are started.
@@ -212,7 +212,7 @@ defmodule Membrane.Pipeline do
               children :: [Child.name()],
               context :: CallbackContext.t(),
               state
-            ) :: callback_return
+            ) :: {[Action.common_actions()], state()}
 
   @doc """
   Callback invoked upon each timer tick. A timer can be started with `Membrane.Pipeline.Action.start_timer`
@@ -222,7 +222,7 @@ defmodule Membrane.Pipeline do
               timer_id :: any,
               context :: CallbackContext.t(),
               state
-            ) :: callback_return
+            ) :: {[Action.common_actions()], state()}
 
   @doc """
   Callback invoked when crash of the crash group happens.
@@ -234,7 +234,7 @@ defmodule Membrane.Pipeline do
               group_name :: Child.group(),
               context :: CallbackContext.t(),
               state
-            ) :: callback_return
+            ) :: {[Action.common_actions()], state()}
 
   @doc """
   Callback invoked when pipeline is called using a synchronous call.
@@ -247,7 +247,7 @@ defmodule Membrane.Pipeline do
               context :: CallbackContext.t(),
               state
             ) ::
-              callback_return
+              {[Action.common_actions() | Action.reply()], state()}
 
   @optional_callbacks handle_init: 2,
                       handle_setup: 2,
@@ -457,6 +457,7 @@ defmodule Membrane.Pipeline do
     # credo:disable-for-next-line Credo.Check.Refactor.LongQuoteBlocks
     quote do
       alias unquote(__MODULE__)
+      require Membrane.Logger
       @behaviour unquote(__MODULE__)
 
       unquote(bring_spec)
@@ -492,7 +493,14 @@ defmodule Membrane.Pipeline do
       def handle_playing(_ctx, state), do: {[], state}
 
       @impl true
-      def handle_info(message, _ctx, state), do: {[], state}
+      def handle_info(message, _ctx, state) do
+        Membrane.Logger.warning("""
+        Received message but no handle_info callback has been specified. Ignoring.
+        Message: #{inspect(message)}\
+        """)
+
+        {[], state}
+      end
 
       @impl true
       def handle_spec_started(new_children, _ctx, state), do: {[], state}

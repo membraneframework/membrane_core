@@ -24,7 +24,7 @@ runs:
           export STATUS_FIELD_ID=PVTSSF_lADOAYE_z84AWEIBzgOGd1k
           export TARGET_COLUMN_ID=e6b1ee10
           
-          export AUTHOR_ORIGIN=$(curl --request GET --url "https://api.github.com/orgs/membraneframework/members" --header "Authorization: Bearer $GH_TOKEN" -s | python scripts/python/get_author_origin.py "$AUTHOR_LOGIN")
+          export AUTHOR_ORIGIN=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/membraneframework/teams/membraneteam/members | python scripts/python/get_author_origin.py $AUTHOR_LOGIN)
 
           if [ "$AUTHOR_ORIGIN" == "COMMUNITY" ]
           then
