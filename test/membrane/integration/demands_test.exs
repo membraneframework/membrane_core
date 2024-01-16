@@ -269,7 +269,7 @@ defmodule Membrane.Integration.DemandsTest do
 
     alias Membrane.Integration.DemandsTest.{PausingSink, RedemandingSource}
 
-    @tag :xd
+    @tag :long_running
     test "actions :pause_auto_demand and :resume_auto_demand" do
       pipeline =
         Testing.Pipeline.start_link_supervised!(
@@ -288,7 +288,6 @@ defmodule Membrane.Integration.DemandsTest do
         Testing.Pipeline.execute_actions(pipeline, notify_child: {:sink, :pause_auto_demand})
 
         assert_pipeline_notified(pipeline, :sink, {:buff_no, buff_no})
-        IO.inspect(buff_no, label: "XDXDXD")
         # sink should receive around 1000 buffers, but the boundary is set to 800, in case of eg.
         # slowdown of the source when running all tests in the project asynchronously
         if i != 1, do: assert(buff_no > 800)
