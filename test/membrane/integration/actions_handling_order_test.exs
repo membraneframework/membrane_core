@@ -26,7 +26,7 @@ defmodule Membrane.Integration.ActionsHandlingOrderTest do
     end
 
     @impl true
-    def handle_tick(:one, ctx, %{ticked?: false} = state) do
+    def handle_tick(:one, _ctx, %{ticked?: false} = state) do
       {[setup: :complete, timer_interval: {:one, :no_interval}], %{state | ticked?: true}}
     end
 
@@ -55,13 +55,13 @@ defmodule Membrane.Integration.ActionsHandlingOrderTest do
     end
 
     @impl true
-    def handle_info(:time_to_play, _ctx, state) do
-      {[setup: :complete, notify_child: {:child, :first_notification}], state}
+    def handle_playing(_ctx, state) do
+      {[notify_child: {:child, :second_notification}], state}
     end
 
     @impl true
-    def handle_playing(_ctx, state) do
-      {[notify_child: {:child, :second_notification}], state}
+    def handle_info(:time_to_play, _ctx, state) do
+      {[setup: :complete, notify_child: {:child, :first_notification}], state}
     end
 
     @impl true
@@ -113,7 +113,7 @@ defmodule Membrane.Integration.ActionsHandlingOrderTest do
     end
 
     @impl true
-    def handle_tick(:timer, _ctx, %{ticekd?: false} = state) do
+    def handle_tick(:timer, _ctx, %{ticked?: false} = state) do
       actions = [
         demand: {:input, 1},
         timer_interval: {:timer, :no_interval}
@@ -153,5 +153,22 @@ defmodule Membrane.Integration.ActionsHandlingOrderTest do
     assert_receive {:notifications, [:first_notification, :second_notification]}
 
     Membrane.Pipeline.terminate(pipeline)
+  end
+
+  test "order of handling :timer_interval and :demand actions" do
+    spec =
+      child(:source, %Testing.Source{output: [<<>>]})
+      |> child(:sink, TickingSink)
+
+    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+
+    # time for pipeline to play
+    Process.sleep(500)
+
+    Testing.Pipeline.message_child(pipeline, :sink, :start_timer)
+
+    assert_pipeline_notified(pipeline, :sink, :second_tick)
+
+    Testing.Pipeline.terminate(pipeline)
   end
 end
