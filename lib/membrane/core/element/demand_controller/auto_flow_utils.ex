@@ -17,6 +17,72 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   require Membrane.Logger
   require Membrane.Pad, as: Pad
 
+  # Description of the auto flow control queueing mechanism
+
+  # General concept: Buffers coming to auto input pads should be handled only if
+  # all auto output pads have positive demand. Buffers arriving when any of the auto
+  # output pads has negative demand should be queued and only processed when the
+  # demand everywhere is positive
+
+  # Fields in Element state, that take important part in this mechanism:
+  #   - satisfied_auto_output_pads - MapSet of auto output pads, whose demand is less than or equal to 0.
+  #     We consider only pads with the end_of_stream? flag set to false
+  #   - awaiting_auto_input_pads - MapSet of auto input pads, which have a non-empty auto_flow_queue
+  #   - popping_queue? - a flag determining whether we are on the stack somewhere above popping a queue.
+  #     It's used to avoid situations where the function that pops from the queue calls itself multiple times,
+  #     what could potentially lead to things like altering the order of sent buffers.
+
+  # Each auto input pad in PadData contains a queue in the :auto_flow_queue field, in which it stores queued
+  # buffers, events and stream formats. If queue is non-empty, corresponding pad_ref should be
+  # in the Mapset awaiting_auto_input_pads in element state
+
+  # The introduced mechanism consists of two parts, the pseudocode for which is included below
+
+  # def onBufferArrivedInMessage() do
+  #   if element uncorked do
+  #     exec handle_buffer
+  #   else
+  #     store buffer in queue
+  #   end
+  # end
+
+  # def onUncorck() do
+  #   # EFC means `effective flow control`
+
+  #   if EFC == pull do
+  #     bump demand on auto input pads with an empty queue
+  #   end
+
+  #   while (output demand positive or EFC == push) and some queues are not empty do
+  #     pop random queue and handle its head
+  #   end
+
+  #   if EFC == pull do
+  #     bump demand on auto input pads with an empty queue
+  #   end
+  # end
+
+  # An Element is `corked` when its effective flow control is :pull and it has an auto output pad,
+  # who's demand is non-positive
+
+  # The following events can make the element shift from `corked` state to `uncorked` state:
+  #   - change of effective flow control from :pull to :push
+  #   - increase in the value of auto output pad demand. We check the demand value:
+  #     - after sending the buffer to a given output pad
+  #     - after receiving a message :atomic_demand_increased from the next element
+  #   - unlinking the auto output pad
+  #   - sending an EOS to the auto output pad
+
+  # In addition, an invariant is maintained, which is that the head of all non-empty
+  # auto_flow_queue queues contains a buffer (the queue can also contain events and
+  # stream formats). After popping a queue
+  # of a given pad, if it has an event or stream format in its head, we pop it further,
+  # until it becomes empty or a buffer is encountered.
+
+  # auto_flow_queues hold single buffers, event if they arrive to the element in batch, because if we
+  # done otherwise, we would have to handle whole batch after popping it from the queue, even if demand
+  # of all output pads would be satisfied after handling first buffer
+
   defguardp is_input_auto_pad_data(pad_data)
             when is_map(pad_data) and is_map_key(pad_data, :flow_control) and
                    pad_data.flow_control == :auto and is_map_key(pad_data, :direction) and
@@ -68,9 +134,9 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   @spec store_buffers_in_queue(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
   def store_buffers_in_queue(pad_ref, buffers, state) do
-    state = Map.update!(state, :awaiting_auto_input_pads, &MapSet.put(&1, pad_ref))
-
-    PadModel.update_data!(state, pad_ref, :auto_flow_queue, fn queue ->
+    state
+    |> Map.update!(:awaiting_auto_input_pads, &MapSet.put(&1, pad_ref))
+    |> PadModel.update_data!(pad_ref, :auto_flow_queue, fn queue ->
       Enum.reduce(buffers, queue, fn buffer, queue ->
         Qex.push(queue, {:buffer, buffer})
       end)
