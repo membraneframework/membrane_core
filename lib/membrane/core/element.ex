@@ -256,20 +256,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:timer_tick, timer_id), state) do
-    # Guarding the `TimerController.handle_tick/2` invocation is
-    # required since there might be a case in which `handle_tick`
-    # callback's implementation returns demand action.
-    # In this scenario, without this guard, there would a possibility that
-    # the `handle_buffer` would be called immediately, returning
-    # some action that would affect the timer and the original state
-    # of the timer, set with actions returned from `handle_tick`,
-    # would be overwritten with that action.
-    #
-    # For more information see: https://github.com/membraneframework/membrane_core/issues/670
-    state = %{state | supplying_demand?: true}
     state = TimerController.handle_tick(timer_id, state)
-    state = %{state | supplying_demand?: false}
-    state = Membrane.Core.Element.DemandHandler.handle_delayed_demands(state)
     {:noreply, state}
   end
 
