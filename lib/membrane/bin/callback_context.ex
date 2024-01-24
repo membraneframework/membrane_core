@@ -27,7 +27,7 @@ defmodule Membrane.Bin.CallbackContext do
           optional(:pad_options) => map(),
           optional(:members) => [Membrane.Child.name()],
           optional(:crash_initiator) => Membrane.Child.name(),
-          optional(:reason) => Membrane.Core.Parent.CrashGroup.reason(),
+          optional(:reason) => any(),
           optional(:start_of_stream_received?) => boolean()
         }
 end

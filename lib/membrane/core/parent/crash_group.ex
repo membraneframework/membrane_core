@@ -10,7 +10,6 @@ defmodule Membrane.Core.Parent.CrashGroup do
   use Bunch.Access
 
   @type name() :: any()
-  @type reason() :: any()
 
   @type t :: %__MODULE__{
           name: name(),
@@ -18,7 +17,7 @@ defmodule Membrane.Core.Parent.CrashGroup do
           members: [Membrane.Child.name()],
           detonating?: boolean(),
           crash_initiator: Membrane.Child.name(),
-          reason: reason()
+          reason: any()
         }
 
   @enforce_keys [:name, :mode]
