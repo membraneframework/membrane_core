@@ -11,7 +11,7 @@ defmodule Membrane.Pipeline.CallbackContext do
   Field `:start_of_stream_received?` is present only in
   `c:Membrane.Pipeline.handle_element_end_of_stream/4`.
 
-  Fields `:members` and `:crash_initiator` are present only in
+  Fields `:members`, `:crash_initiator` and `:reason` are present only in
   `c:Membrane.Pipeline.handle_crash_group_down/3`.
   """
   @type t :: %{
@@ -23,6 +23,7 @@ defmodule Membrane.Pipeline.CallbackContext do
           optional(:from) => [GenServer.from()],
           optional(:members) => [Membrane.Child.name()],
           optional(:crash_initiator) => Membrane.Child.name(),
+          optional(:reason) => Membrane.Core.Parent.CrashGroup.reason(),
           optional(:start_of_stream_received?) => boolean()
         }
 end

@@ -53,7 +53,27 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     end
   end
 
-  def handle_crash_group_member_death(child_name, %CrashGroup{} = group, _reason, state) do
+  def handle_crash_group_member_death(
+        child_name,
+        %CrashGroup{} = group,
+        {:shutdown, :membrane_crash_group_kill},
+        state
+      ) do
+    handle_non_normal_member_death(child_name, group, state)
+  end
+
+  def handle_crash_group_member_death(child_name, %CrashGroup{} = group, reason, state) do
+    state =
+      update_in(
+        state,
+        [:crash_groups, group.name],
+        &%CrashGroup{&1 | reason: reason}
+      )
+
+    handle_non_normal_member_death(child_name, group, state)
+  end
+
+  defp handle_non_normal_member_death(child_name, group, state) do
     state =
       if group.detonating? do
         state
@@ -108,7 +128,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     context_generator =
       &Component.context_from_state(&1,
         members: crash_group.members,
-        crash_initiator: crash_group.crash_initiator
+        crash_initiator: crash_group.crash_initiator,
+        reason: crash_group.reason
       )
 
     CallbackHandler.exec_and_handle_callback(
