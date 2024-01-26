@@ -5,6 +5,7 @@ defmodule Membrane.Core.Pipeline.CallbackContext do
           [from: GenServer.from()]
           | [members: [Membrane.Child.name()], crash_initiator: Membrane.Child.name()]
           | [start_of_stream_received?: boolean()]
+          | [reason: any()]
 
   @spec from_state(Membrane.Core.Pipeline.State.t(), optional_fields()) ::
           Membrane.Pipeline.CallbackContext.t()
