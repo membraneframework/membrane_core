@@ -56,5 +56,13 @@ defmodule Membrane.Core.LifecycleController do
     """
   end
 
+  defp assert_operation_allowed!(operation, _status)
+       when operation not in [:incomplete, :complete] do
+    raise SetupError, """
+    Action {:setup, #{inspect(operation)}} was returned, but second element in the tuple must
+    be :complete or :incomplete
+    """
+  end
+
   defp assert_operation_allowed!(_operation, _status), do: :ok
 end
