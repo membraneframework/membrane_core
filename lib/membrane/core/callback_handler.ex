@@ -7,6 +7,7 @@ defmodule Membrane.Core.CallbackHandler do
 
   use Bunch
 
+  alias Membrane.Core.Component
   alias Membrane.CallbackError
 
   require Membrane.Logger
@@ -191,6 +192,9 @@ defmodule Membrane.Core.CallbackHandler do
     was_handling_action? = state.handling_action?
     state = %{state | handling_action?: true}
 
+    was_supplying_demand? = Map.get(state, :supplying_demand?, false)
+    state = if Component.is_element?(state), do: %{state | supplying_demand?: true}, else: state
+
     state =
       Enum.reduce(actions, state, fn action, state ->
         try do
@@ -209,6 +213,11 @@ defmodule Membrane.Core.CallbackHandler do
       if was_handling_action?,
         do: state,
         else: %{state | handling_action?: false}
+
+    state =
+      if Component.is_element?(state) and not was_supplying_demand?,
+        do: %{state | supplying_demand?: false},
+        else: state
 
     handler_module.handle_end_of_actions(state)
   end

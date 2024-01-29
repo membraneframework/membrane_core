@@ -12,6 +12,7 @@ defmodule Membrane.Core.Element.EventController do
   alias Membrane.Core.Element.{
     ActionHandler,
     CallbackContext,
+    DemandHandler,
     InputQueue,
     PadController,
     PlaybackQueue,
@@ -98,6 +99,7 @@ defmodule Membrane.Core.Element.EventController do
       Membrane.Logger.debug("Received end of stream on pad #{inspect(pad_ref)}")
 
       state = PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
+      state = DemandHandler.remove_pad_from_delayed_demands(pad_ref, state)
       state = PadController.remove_pad_associations(pad_ref, state)
 
       %{

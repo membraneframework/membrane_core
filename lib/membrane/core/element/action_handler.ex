@@ -47,13 +47,20 @@ defmodule Membrane.Core.Element.ActionHandler do
   defguardp is_demand_size(size) when is_integer(size) or is_function(size)
 
   @impl CallbackHandler
-  def handle_end_of_actions(state) when not state.handling_action? do
-    Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
-    |> Map.put(:pads_to_snapshot, MapSet.new())
-  end
+  def handle_end_of_actions(state) do
+    state =
+      with %{handling_action?: false} <- state do
+        Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
+        |> Map.put(:pads_to_snapshot, MapSet.new())
+      end
 
-  @impl CallbackHandler
-  def handle_end_of_actions(state), do: state
+    state =
+      with %{supplying_demand?: false} <- state do
+        DemandHandler.handle_delayed_demands(state)
+      end
+
+    state
+  end
 
   @impl CallbackHandler
   def handle_action({action, _}, :handle_init, _params, _state)
@@ -467,7 +474,9 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp handle_outgoing_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
       state = PadController.remove_pad_associations(pad_ref, state)
-      PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
+
+      DemandHandler.remove_pad_from_delayed_demands(pad_ref, state)
+      |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
     else
       %{direction: :input} ->
         raise PadDirectionError, action: "end of stream", direction: :input, pad: pad_ref
