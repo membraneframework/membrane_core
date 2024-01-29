@@ -103,4 +103,13 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   def handle_action(action, _callback, _params, _state) do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Pipeline.Action}
   end
+
+  @impl CallbackHandler
+  def handle_end_of_actions(state) when state.awaiting_setup_completition? do
+    %{state | awaiting_setup_completition?: false}
+    |> Membrane.Core.LifecycleController.complete_setup()
+  end
+
+  @impl CallbackHandler
+  def handle_end_of_actions(state), do: state
 end
