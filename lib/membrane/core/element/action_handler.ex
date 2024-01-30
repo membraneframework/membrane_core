@@ -48,18 +48,37 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_end_of_actions(state) do
-    state =
-      with %{handling_action?: false} <- state do
-        Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
-        |> Map.put(:pads_to_snapshot, MapSet.new())
-      end
+    # Fixed order of handling demand of manual and auto pads would lead to
+    # favoring manual pads over auto pads (or vice versa), especially after
+    # introducting auto flow queues.
+    manual_demands_first? = Enum.random([1, 2]) == 1
 
     state =
-      with %{supplying_demand?: false} <- state do
-        DemandHandler.handle_delayed_demands(state)
-      end
+      if manual_demands_first?,
+        do: maybe_handle_delayed_demands(state),
+        else: state
+
+    state = maybe_handle_pads_to_snapshot(state)
+
+    state =
+      if manual_demands_first?,
+        do: state,
+        else: maybe_handle_delayed_demands(state)
 
     state
+  end
+
+  defp maybe_handle_delayed_demands(state) do
+    with %{supplying_demand?: false} <- state do
+      DemandHandler.handle_delayed_demands(state)
+    end
+  end
+
+  defp maybe_handle_pads_to_snapshot(state) do
+    with %{handling_action?: false} <- state do
+      Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
+      |> Map.put(:pads_to_snapshot, MapSet.new())
+    end
   end
 
   @impl CallbackHandler
