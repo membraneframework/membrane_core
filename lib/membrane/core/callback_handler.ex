@@ -7,8 +7,8 @@ defmodule Membrane.Core.CallbackHandler do
 
   use Bunch
 
-  alias Membrane.Core.Component
   alias Membrane.CallbackError
+  alias Membrane.Core.Component
 
   require Membrane.Logger
 

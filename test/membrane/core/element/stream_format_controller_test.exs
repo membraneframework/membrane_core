@@ -44,6 +44,7 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
         handling_action?: false,
         supplying_demand?: false,
         pads_to_snapshot: MapSet.new(),
+        delayed_demands: MapSet.new(),
         handle_demand_loop_counter: 0,
         pads_data: %{
           input:
