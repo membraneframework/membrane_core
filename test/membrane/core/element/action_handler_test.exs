@@ -50,7 +50,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         },
         satisfied_auto_output_pads: MapSet.new(),
         awaiting_auto_input_pads: MapSet.new(),
-        popping_queue?: false
+        popping_auto_flow_queue?: false
       )
 
     [state: state]
@@ -146,7 +146,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         },
         satisfied_auto_output_pads: MapSet.new(),
         awaiting_auto_input_pads: MapSet.new(),
-        popping_queue?: false
+        popping_auto_flow_queue?: false
       )
 
     [state: state]

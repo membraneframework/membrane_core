@@ -28,7 +28,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   #   - satisfied_auto_output_pads - MapSet of auto output pads, whose demand is less than or equal to 0.
   #     We consider only pads with the end_of_stream? flag set to false
   #   - awaiting_auto_input_pads - MapSet of auto input pads, which have a non-empty auto_flow_queue
-  #   - popping_queue? - a flag determining whether we are on the stack somewhere above popping a queue.
+  #   - popping_auto_flow_queue? - a flag determining whether we are on the stack somewhere above popping a queue.
   #     It's used to avoid situations where the function that pops from the queue calls itself multiple times,
   #     what could potentially lead to things like altering the order of sent buffers.
 
@@ -38,7 +38,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   # The introduced mechanism consists of two parts, the pseudocode for which is included below
 
-  # def onBufferArrivedInMessage() do
+  # def onBufferArrived() do
   #   if element uncorked do
   #     exec handle_buffer
   #   else
@@ -199,14 +199,14 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   end
 
   @spec pop_queues_and_bump_demand(State.t()) :: State.t()
-  def pop_queues_and_bump_demand(%State{popping_queue?: true} = state), do: state
+  def pop_queues_and_bump_demand(%State{popping_auto_flow_queue?: true} = state), do: state
 
   def pop_queues_and_bump_demand(%State{} = state) do
-    %{state | popping_queue?: true}
+    %{state | popping_auto_flow_queue?: true}
     |> bump_demand()
     |> pop_auto_flow_queues_while_needed()
     |> bump_demand()
-    |> Map.put(:popping_queue?, false)
+    |> Map.put(:popping_auto_flow_queue?, false)
   end
 
   defp bump_demand(state) do
