@@ -6,6 +6,7 @@ require Logger
 packages =
   [
     {:md, "### General"},
+    "membrane_sdk",
     "membrane_core",
     "membrane_rtc_engine",
     "kino_membrane",
@@ -37,6 +38,7 @@ packages =
     "membrane_rtp_vp9_plugin",
     "membrane_rtp_mpegaudio_plugin",
     "membrane_rtp_opus_plugin",
+    "membrane_rtp_g711_plugin",
     "mickel8/membrane_quic_plugin",
     "kim-company/membrane_mpeg_ts_plugin",
     "kim-company/membrane_hls_plugin",
@@ -54,6 +56,7 @@ packages =
     "membrane_mp3_mad_plugin",
     "membrane_opus_plugin",
     "membrane_wav_plugin",
+    "membrane_g711_plugin",
     {:md, "#### Video codecs"},
     "membrane_h264_plugin",
     "membrane_h264_ffmpeg_plugin",
@@ -73,6 +76,7 @@ packages =
     "membrane_video_merger_plugin",
     "membrane_video_compositor_plugin",
     "membrane_camera_capture_plugin",
+    "membrane_rpicam_plugin",
     "membrane_framerate_converter_plugin",
     "membrane_sdl_plugin",
     "membrane_ffmpeg_swscale_plugin",
@@ -98,15 +102,15 @@ packages =
     "membrane_h264_format",
     "membrane_vp8_format",
     "membrane_vp9_format",
+    "membrane_g711_format",
     {:md, "### Standalone media libs"},
     "video_compositor",
     "ex_sdp",
     "ex_libnice",
     "ex_libsrtp",
-    "ex_dtls",
+    "ex_m3u8",
     "membrane_rtsp",
     "membrane_ffmpeg_generator",
-    "webrtc-server",
     {:md, "### Utils"},
     "unifex",
     "bundlex",
@@ -116,7 +120,8 @@ packages =
     "shmex",
     "membrane_common_c",
     "membrane_telemetry_metrics",
-    "membrane_opentelemetry"
+    "membrane_opentelemetry",
+    "membrane_precompiled_dependency_provider"
   ]
   |> Enum.map(fn
     {:md, markdown} ->
@@ -158,16 +163,15 @@ package_names =
 
 packages_blacklist = [
   "circleci-orb",
-  "guide",
   "design-system",
   ~r/.*_tutorial/,
   "membrane_resources",
-  "membrane_gigachad",
   "static",
-  "membrane_videoroom",
   ".github",
   "membraneframework.github.io",
-  "membrane_rtc_engine_timescaledb"
+  "membrane_rtc_engine_timescaledb",
+  "membrane_g711_ffmpeg_plugin",
+  "github_actions_test"
 ]
 
 lacking_repos =
@@ -192,20 +196,20 @@ packages =
   Enum.map(packages, fn
     %{type: :package, name: name, owner: owner} = package ->
       repo =
-        case Map.fetch(repos, name) do
-          {:ok, repo} ->
-            repo
-
-          :error when owner != nil and gh_req_mock ->
+        cond do
+          owner != nil and gh_req_mock ->
             %{owner: %{login: :mock}, html_url: :mock, description: :mock}
 
-          :error when owner != nil ->
+          owner != nil ->
             Process.sleep(gh_req_timeout)
             url = "https://api.github.com/repos/#{owner}/#{name}"
             IO.puts("Fetching #{url}")
             Req.get!(url, decode_json: [keys: :atoms]).body
 
-          :error ->
+          Map.has_key?(repos, name) ->
+            Map.fetch!(repos, name)
+
+          true ->
             raise "Package #{inspect(name)} repo not found, please specify owner."
         end
 
