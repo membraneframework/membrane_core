@@ -21,12 +21,28 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
       child(:center_filter, Filter)
       |> child(:sink, Testing.Sink)
 
-    {[spec: spec], %{}}
+    {[spec: spec], %{send_to: nil}}
   end
 
   @impl true
   def handle_info({:create_path, spec}, _ctx, state) do
     {[spec: spec], state}
+  end
+
+  @impl true
+  def handle_info({:inform_about_crash, send_to}, _ctx, state) do
+    {[], %{state | send_to: send_to}}
+  end
+
+  @impl true
+  def handle_crash_group_down(_group_name, _ctx, %{send_to: nil} = state) do
+    {[], state}
+  end
+
+  @impl true
+  def handle_crash_group_down(_group_name, %{reason: reason}, %{send_to: pid} = state) do
+    send(pid, {:crash, reason: reason})
+    {[], state}
   end
 
   @spec add_single_source(pid(), any(), any(), any()) :: any()
@@ -91,5 +107,10 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
       end
 
     send(pid, {:create_path, spec})
+  end
+
+  @spec inform_about_details_in_case_of_crash(pid(), pid()) :: any()
+  def inform_about_details_in_case_of_crash(pid, send_to) do
+    send(pid, {:inform_about_crash, send_to})
   end
 end
