@@ -22,5 +22,5 @@ defmodule Membrane.Core.Parent.CrashGroup do
 
   @enforce_keys [:name, :mode]
   defstruct @enforce_keys ++
-              [members: [], detonating?: false, crash_initiator: nil, reason: :normal]
+              [members: [], detonating?: false, crash_initiator: nil, reason: nil]
 end

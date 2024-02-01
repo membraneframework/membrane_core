@@ -3,9 +3,12 @@ defmodule Membrane.Core.Bin.CallbackContext do
 
   @type optional_fields ::
           [pad_options: map()]
-          | [members: [Membrane.Child.name()], crash_initiator: Membrane.Child.name()]
+          | [
+              members: [Membrane.Child.name()],
+              crash_initiator: Membrane.Child.name(),
+              reason: any()
+            ]
           | [start_of_stream_received?: boolean()]
-          | [reason: any()]
 
   @spec from_state(Membrane.Core.Bin.State.t(), optional_fields()) ::
           Membrane.Bin.CallbackContext.t()

@@ -53,32 +53,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     end
   end
 
-  def handle_crash_group_member_death(
-        child_name,
-        %CrashGroup{} = group,
-        {:shutdown, :membrane_crash_group_kill},
-        state
-      ) do
-    handle_non_normal_member_death(child_name, group, state)
-  end
-
   def handle_crash_group_member_death(child_name, %CrashGroup{} = group, reason, state) do
-    state =
-      update_in(
-        state,
-        [:crash_groups, group.name],
-        &%CrashGroup{&1 | reason: reason}
-      )
-
-    handle_non_normal_member_death(child_name, group, state)
-  end
-
-  defp handle_non_normal_member_death(child_name, group, state) do
     state =
       if group.detonating? do
         state
       else
-        detonate_crash_group(child_name, group, state)
+        detonate_crash_group(child_name, group, reason, state)
       end
 
     all_members_dead? =
@@ -92,7 +72,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     end
   end
 
-  defp detonate_crash_group(crash_initiator, %CrashGroup{} = group, state) do
+  defp detonate_crash_group(crash_initiator, %CrashGroup{} = group, reason, state) do
     state = ChildLifeController.remove_children_from_specs(group.members, state)
     state = LinkUtils.unlink_crash_group(group, state)
 
@@ -108,7 +88,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
       &%CrashGroup{
         &1
         | detonating?: true,
-          crash_initiator: crash_initiator
+          crash_initiator: crash_initiator,
+          reason: reason
       }
     )
   end
