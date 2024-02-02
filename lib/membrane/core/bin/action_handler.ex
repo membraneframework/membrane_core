@@ -6,6 +6,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   alias Membrane.Core
   alias Membrane.Core.Bin.State
   alias Membrane.Core.{Message, Parent, TimerController}
+  alias Membrane.Core.Parent.ChildLifeController
 
   require Membrane.Logger
   require Message
@@ -34,7 +35,14 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:spec, spec}, _cb, _params, state) do
+  def handle_action({:spec, spec}, cb, _params, state) do
+    if cb == :handle_spec_started do
+      Membrane.Logger.warning("""
+      Action :spec was returned from handle_spec_started/3 callback. It is suggested not to do this,
+      because it might lead to infinite loof of handle_spec_started/3 executions.
+      """)
+    end
+
     Parent.ChildLifeController.handle_spec(spec, state)
   end
 
@@ -107,5 +115,10 @@ defmodule Membrane.Core.Bin.ActionHandler do
   @impl CallbackHandler
   def handle_action(action, _callback, _params, _state) do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Bin.Action}
+  end
+
+  @impl CallbackHandler
+  def handle_end_of_actions(state) do
+    ChildLifeController.trigger_specs(state)
   end
 end

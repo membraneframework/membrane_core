@@ -5,8 +5,10 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   alias Membrane.ActionError
   alias Membrane.Core
   alias Membrane.Core.{Parent, TimerController}
-  alias Membrane.Core.Parent.LifecycleController
+  alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.Pipeline.State
+
+  require Membrane.Logger
 
   @impl CallbackHandler
   def handle_action({:spec, args}, _cb, _params, %State{terminating?: true}) do
@@ -32,7 +34,14 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:spec, spec}, _cb, _params, state) do
+  def handle_action({:spec, spec}, cb, _params, state) do
+    if cb == :handle_spec_started do
+      Membrane.Logger.warning("""
+      Action :spec was returned from handle_spec_started/3 callback. It is suggested not to do this,
+      because it might lead to infinite loof of handle_spec_started/3 executions.
+      """)
+    end
+
     Parent.ChildLifeController.handle_spec(spec, state)
   end
 
@@ -105,11 +114,11 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_end_of_actions(state) when state.awaiting_setup_completition? do
-    %{state | awaiting_setup_completition?: false}
-    |> Membrane.Core.LifecycleController.complete_setup()
+  def handle_end_of_actions(state) do
+    with %{awaiting_setup_completition?: true} <- state do
+      %{state | awaiting_setup_completition?: false}
+      |> Membrane.Core.LifecycleController.complete_setup()
+    end
+    |> ChildLifeController.trigger_specs()
   end
-
-  @impl CallbackHandler
-  def handle_end_of_actions(state), do: state
 end

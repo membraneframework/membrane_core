@@ -71,6 +71,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     log_metadata: []
   }
 
+  # todo: handle documentation
+  @spec handle_spec(ChildrenSpec.t(), Parent.state()) :: Parent.state()
+  def handle_spec(spec, state) do
+    Map.update!(state, :specs_to_trigger, &[spec | &1])
+  end
+
   @doc """
   Handles `Membrane.ChildrenSpec` returned with `spec` action.
 
@@ -99,8 +105,16 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   - Cleanup spec: remove it from `pending_specs` and all other specs' `dependent_specs` and try proceeding startup
     for all other pending specs that depended on the spec.
   """
-  @spec handle_spec(ChildrenSpec.t(), Parent.state()) :: Parent.state() | no_return()
-  def handle_spec(spec, state) do
+  @spec trigger_specs(Parent.state()) :: Parent.state() | no_return()
+  def trigger_specs(state) do
+    specs_to_trigger = state.specs_to_trigger
+    state = %{state | specs_to_trigger: []}
+
+    List.foldr(specs_to_trigger, state, &do_trigger_spec/2)
+  end
+
+  @spec do_trigger_spec(ChildrenSpec.t(), Parent.state()) :: Parent.state() | no_return()
+  defp do_trigger_spec(spec, state) do
     spec_ref = make_ref()
     canonical_spec = make_canonical(spec)
 

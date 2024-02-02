@@ -79,6 +79,7 @@ defmodule Membrane.Core.PipelineTest do
           [],
           state
         )
+        |> ActionHandler.handle_end_of_actions()
       end
     end
 
@@ -92,6 +93,7 @@ defmodule Membrane.Core.PipelineTest do
           [],
           state
         )
+        |> ActionHandler.handle_end_of_actions()
       end
     end
   end
