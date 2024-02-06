@@ -40,9 +40,10 @@ defmodule Membrane.Core.Element.EventController do
       Telemetry.report_metric(:event, 1, inspect(pad_ref))
 
       state =
-        if event in [%Events.StartOfStream{}, %Events.EndOfStream{}] or data.start_of_stream?,
-          do: state,
-          else: handle_start_of_stream(pad_ref, state)
+        if event in [%Events.StartOfStream{}, %Events.EndOfStream{}] or data.start_of_stream? or
+             data.direction == :output,
+           do: state,
+           else: handle_start_of_stream(pad_ref, state)
 
       if not Event.async?(event) and buffers_before_event_present?(data) do
         PadModel.update_data!(
