@@ -41,7 +41,7 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
         parent: self(),
         type: :filter,
         playback: :playing,
-        synchronization: %{clock: nil, parent_clock: nil},
+        synchronization: %{clock: nil, parent_clock: nil, stream_sync: Membrane.Sync.no_sync()},
         handling_action?: false,
         pads_to_snapshot: MapSet.new(),
         pads_data: %{
@@ -50,6 +50,7 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
               direction: :input,
               name: :input,
               pid: self(),
+              start_of_stream?: true,
               flow_control: :manual,
               input_queue: input_queue,
               demand: 0

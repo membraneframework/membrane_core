@@ -43,13 +43,13 @@ defmodule Membrane.Core.Element.EventControllerTest do
       })
 
     state =
-      struct(State,
+      struct!(State,
         module: MockEventHandlingElement,
         name: :test_name,
         type: :filter,
         playback: :playing,
         parent_pid: self(),
-        synchronization: %{clock: nil, parent_clock: nil, stream_sync: nil},
+        synchronization: %{clock: nil, parent_clock: nil, stream_sync: Membrane.Sync.no_sync()},
         handling_action?: false,
         pads_to_snapshot: MapSet.new(),
         pads_data: %{
@@ -59,7 +59,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
               direction: :input,
               pid: self(),
               flow_control: :manual,
-              start_of_stream?: false,
+              start_of_stream?: true,
               end_of_stream?: false,
               input_queue: input_queue,
               demand: 0

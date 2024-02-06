@@ -8,7 +8,15 @@ defmodule Membrane.Core.Element.StreamFormatController do
   alias Membrane.{Pad, StreamFormat}
   alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, CallbackContext, InputQueue, PlaybackQueue, State}
+
+  alias Membrane.Core.Element.{
+    ActionHandler,
+    CallbackContext,
+    EventController,
+    InputQueue,
+    PlaybackQueue,
+    State
+  }
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Telemetry
@@ -25,6 +33,11 @@ defmodule Membrane.Core.Element.StreamFormatController do
           playback: %State{playback: :playing} <- state do
       %{direction: :input} = data
       Telemetry.report_metric(:stream_format, 1, inspect(pad_ref))
+
+      state =
+        if data.start_of_stream?,
+          do: state,
+          else: EventController.handle_start_of_stream(pad_ref, state)
 
       queue = data.input_queue
 
