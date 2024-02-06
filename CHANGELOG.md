@@ -6,6 +6,7 @@
  * Log messages in the default handle_info implementation [#680](https://github.com/membraneframework/membrane_core/pull/680)
  * Fix typespecs in Membrane.UtilitySupervisor [#681](https://github.com/membraneframework/membrane_core/pull/681)
  * Improve callback return types and group actions types [#702](https://github.com/membraneframework/membrane_core/pull/702) 
+ * Ensure `c:Membrane.Element.WithInputPads.handle_start_of_stream/3` is always executed before any `c:Membrane.Element.WithInputPads.handle_event/3` or `c:Membrane.Element.WithInputPads.handle_stream_format/3`. [#743](https://github.com/membraneframework/membrane_core/pull/743)
 
 ## 1.0.0
  * Introduce `:remove_link` action in pipelines and bins.
