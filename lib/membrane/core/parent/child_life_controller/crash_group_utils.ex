@@ -110,7 +110,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
       &Component.context_from_state(&1,
         members: crash_group.members,
         crash_initiator: crash_group.crash_initiator,
-        reason: crash_group.reason
+        crash_reason: crash_group.reason
       )
 
     CallbackHandler.exec_and_handle_callback(

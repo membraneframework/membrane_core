@@ -6,7 +6,7 @@ defmodule Membrane.Core.Bin.CallbackContext do
           | [
               members: [Membrane.Child.name()],
               crash_initiator: Membrane.Child.name(),
-              reason: any()
+              crash_reason: :normal | :shutdown | {:shutdown, term()} | term()
             ]
           | [start_of_stream_received?: boolean()]
 

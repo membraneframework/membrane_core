@@ -17,7 +17,7 @@ defmodule Membrane.Core.Parent.CrashGroup do
           members: [Membrane.Child.name()],
           detonating?: boolean(),
           crash_initiator: Membrane.Child.name(),
-          reason: any()
+          reason: :normal | :shutdown | {:shutdown, term()} | term()
         }
 
   @enforce_keys [:name, :mode]

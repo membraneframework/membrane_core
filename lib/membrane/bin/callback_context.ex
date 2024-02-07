@@ -12,7 +12,7 @@ defmodule Membrane.Bin.CallbackContext do
   Field `:start_of_stream_received?` is present only in
   `c:Membrane.Bin.handle_element_end_of_stream/4`.
 
-  Fields `:members`, `:crash_initiator` and `reason` and  are present only in
+  Fields `:members`, `:crash_initiator` and `crash_reason` and  are present only in
   `c:Membrane.Bin.handle_crash_group_down/3`.
   """
   @type t :: %{
@@ -27,7 +27,7 @@ defmodule Membrane.Bin.CallbackContext do
           optional(:pad_options) => map(),
           optional(:members) => [Membrane.Child.name()],
           optional(:crash_initiator) => Membrane.Child.name(),
-          optional(:reason) => any(),
+          optional(:crash_reason) => :normal | :shutdown | {:shutdown, term()} | term(),
           optional(:start_of_stream_received?) => boolean()
         }
 end
