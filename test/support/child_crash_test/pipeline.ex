@@ -40,8 +40,8 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
   end
 
   @impl true
-  def handle_crash_group_down(_group_name, %{reason: reason}, %{send_to: pid} = state) do
-    send(pid, {:crash, reason: reason})
+  def handle_crash_group_down(_group_name, %{crash_reason: crash_reason}, %{send_to: pid} = state) do
+    send(pid, {:crash, crash_reason: crash_reason})
     {[], state}
   end
 
@@ -109,8 +109,8 @@ defmodule Membrane.Support.ChildCrashTest.Pipeline do
     send(pid, {:create_path, spec})
   end
 
-  @spec inform_about_details_in_case_of_crash(pid(), pid()) :: any()
-  def inform_about_details_in_case_of_crash(pid, send_to) do
-    send(pid, {:inform_about_crash, send_to})
+  @spec inform_about_details_in_case_of_crash(pid()) :: any()
+  def inform_about_details_in_case_of_crash(pid) do
+    send(pid, {:inform_about_crash, self()})
   end
 end

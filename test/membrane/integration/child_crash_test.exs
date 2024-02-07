@@ -67,20 +67,21 @@ defmodule Membrane.Integration.ChildCrashTest do
     assert_pipeline_crash_group_down(pipeline_pid, 1)
   end
 
-  test "Pipeline receive correct crash reason" do
-    Process.flag(:trap_exit, true)
-
-    pipeline_pid = Testing.Pipeline.start_link_supervised!(module: ChildCrashTest.Pipeline)
-
+  test "Pipeline receives correct crash reason" do
+    pipeline_pid = Testing.Pipeline.start_supervised!(module: ChildCrashTest.Pipeline)
     ChildCrashTest.Pipeline.add_path(pipeline_pid, [], :source, 1, :group_1)
 
-    [source_pid] = [:source] |> Enum.map(&get_pid_and_link(&1, pipeline_pid))
+    # time for pipeline to start :source
+    Process.sleep(100)
 
-    ChildCrashTest.Pipeline.inform_about_details_in_case_of_crash(pipeline_pid, self())
+    ChildCrashTest.Pipeline.inform_about_details_in_case_of_crash(pipeline_pid)
 
-    Process.exit(source_pid, :crash)
+    Testing.Pipeline.get_child_pid!(pipeline_pid, :source)
+    |> Process.exit(:custom_crash_reason)
 
-    assert_receive({:crash, reason: :crash})
+    assert_receive {:crash, crash_reason: :custom_crash_reason}
+
+    Testing.Pipeline.terminate(pipeline_pid)
   end
 
   test "Crash group consisting of bin crashes" do
