@@ -17,10 +17,10 @@ defmodule Membrane.Core.Parent.CrashGroup do
           members: [Membrane.Child.name()],
           detonating?: boolean(),
           crash_initiator: Membrane.Child.name(),
-          reason: :normal | :shutdown | {:shutdown, term()} | term()
+          crash_reason: :normal | :shutdown | {:shutdown, term()} | term()
         }
 
   @enforce_keys [:name, :mode]
   defstruct @enforce_keys ++
-              [members: [], detonating?: false, crash_initiator: nil, reason: nil]
+              [members: [], detonating?: false, crash_initiator: nil, crash_reason: nil]
 end

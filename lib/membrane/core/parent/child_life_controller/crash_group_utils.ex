@@ -53,12 +53,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     end
   end
 
-  def handle_crash_group_member_death(child_name, %CrashGroup{} = group, reason, state) do
+  def handle_crash_group_member_death(child_name, %CrashGroup{} = group, crash_reason, state) do
     state =
       if group.detonating? do
         state
       else
-        detonate_crash_group(child_name, group, reason, state)
+        detonate_crash_group(child_name, group, crash_reason, state)
       end
 
     all_members_dead? =
@@ -72,7 +72,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     end
   end
 
-  defp detonate_crash_group(crash_initiator, %CrashGroup{} = group, reason, state) do
+  defp detonate_crash_group(crash_initiator, %CrashGroup{} = group, crash_reason, state) do
     state = ChildLifeController.remove_children_from_specs(group.members, state)
     state = LinkUtils.unlink_crash_group(group, state)
 
@@ -89,7 +89,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
         &1
         | detonating?: true,
           crash_initiator: crash_initiator,
-          reason: reason
+          crash_reason: crash_reason
       }
     )
   end
@@ -110,7 +110,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
       &Component.context_from_state(&1,
         members: crash_group.members,
         crash_initiator: crash_group.crash_initiator,
-        crash_reason: crash_group.reason
+        crash_reason: crash_group.crash_reason
       )
 
     CallbackHandler.exec_and_handle_callback(
