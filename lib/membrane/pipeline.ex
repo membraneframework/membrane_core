@@ -18,8 +18,8 @@ defmodule Membrane.Pipeline do
 
   ### Starting under a supervision tree
 
-   A pipeline can be spawned under a supervision tree like any other `GenServer`. `use Membrane.Pipeline` injects a `child_spec/1` function.
-   A simple scenario could look like this:
+   A pipeline can be spawned under a supervision tree like any other `GenServer`.\\
+   `use Membrane.Pipeline` injects a `child_spec/1` function. A simple scenario could look like this:
 
       defmodule MyPipeline do
         use Membrane.Pipeline
