@@ -186,7 +186,7 @@ defmodule Membrane.Core.Bin.PadController do
         end
       end,
       fn state -> {[state], state} end,
-      fn _ -> :ok end
+      fn _acc -> :ok end
     )
     |> Enum.to_list()
     |> List.first()
