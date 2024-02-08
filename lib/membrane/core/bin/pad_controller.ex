@@ -163,23 +163,33 @@ defmodule Membrane.Core.Bin.PadController do
     state.pads_data
     |> Map.values()
     |> Enum.filter(&(&1.spec_ref == spec_ref))
-    |> Enum.reduce(state, fn pad_data, state ->
-      if pad_data.link_id do
-        Membrane.Logger.debug(
-          "Sending link response, link_id: #{inspect(pad_data.link_id)}, pad: #{inspect(pad_data.ref)}"
-        )
+    |> Enum.reduce(
+      state,
+      fn pad_data, state ->
+        if pad_data.link_id do
+          Membrane.Logger.debug(
+            "Sending link response, link_id: #{inspect(pad_data.link_id)}, pad: #{inspect(pad_data.ref)}"
+          )
 
-        Message.send(state.parent_pid, :link_response, [pad_data.link_id, pad_data.direction])
-        state
-      else
-        Membrane.Core.Child.PadModel.set_data!(
-          state,
-          pad_data.ref,
-          :response_received?,
-          true
-        )
-      end
-    end)
+          Message.send(state.parent_pid, :link_response, [pad_data.link_id, pad_data.direction])
+          {[], state}
+        else
+          new_state =
+            Membrane.Core.Child.PadModel.set_data!(
+              state,
+              pad_data.ref,
+              :response_received?,
+              true
+            )
+
+          {[], new_state}
+        end
+      end,
+      fn state -> {[state], state} end,
+      fn _acc -> :ok end
+    )
+    |> Enum.to_list()
+    |> List.first()
   end
 
   @doc """
