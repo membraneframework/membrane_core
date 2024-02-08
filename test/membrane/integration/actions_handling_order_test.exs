@@ -100,36 +100,47 @@ defmodule Membrane.Integration.ActionsHandlingOrderTest do
   defmodule TickingSink do
     use Membrane.Sink
 
-    @tick_time Membrane.Time.milliseconds(100)
+    @short_tick_time Membrane.Time.milliseconds(100)
+    @long_tick_time Membrane.Time.seconds(2)
 
     def_input_pad :input, flow_control: :manual, demand_unit: :buffers, accepted_format: _any
 
     @impl true
-    def handle_init(_ctx, _opts), do: {[], %{ticked?: false}}
+    def handle_init(_ctx, _opts), do: {[], %{tick_counter: 0}}
 
     @impl true
     def handle_parent_notification(:start_timer, _ctx, state) do
-      {[start_timer: {:timer, @tick_time}], state}
+      {[start_timer: {:timer, @short_tick_time}], state}
     end
 
     @impl true
-    def handle_tick(:timer, _ctx, %{ticked?: false} = state) do
+    def handle_tick(:timer, _ctx, %{tick_counter: 0} = state) do
       actions = [
         demand: {:input, 1},
         timer_interval: {:timer, :no_interval}
       ]
 
-      {actions, %{state | ticked?: true}}
+      {actions, %{state | tick_counter: 1}}
     end
 
     @impl true
-    def handle_tick(:timer, _ctx, %{ticked?: true} = state) do
-      {[notify_parent: :second_tick], state}
+    def handle_tick(:timer, _ctx, %{tick_counter: 1} = state) do
+      actions = [
+        notify_parent: :second_tick,
+        timer_interval: {:timer, @long_tick_time}
+      ]
+
+      {actions, %{state | tick_counter: 2}}
+    end
+
+    @impl true
+    def handle_tick(:timer, _ctx, %{tick_counter: 2} = state) do
+      {[notify_parent: :third_tick], %{state | tick_counter: 3}}
     end
 
     @impl true
     def handle_buffer(:input, _buffer, _ctx, state) do
-      {[timer_interval: {:timer, @tick_time}], state}
+      {[timer_interval: {:timer, @short_tick_time}], state}
     end
   end
 
@@ -155,7 +166,7 @@ defmodule Membrane.Integration.ActionsHandlingOrderTest do
     Membrane.Pipeline.terminate(pipeline)
   end
 
-  test "order of handling :timer_interval and :demand actions" do
+  test ":demand and :timer_interval actions don't interact with each other" do
     spec =
       child(:source, %Testing.Source{output: [<<>>]})
       |> child(:sink, TickingSink)
@@ -163,11 +174,17 @@ defmodule Membrane.Integration.ActionsHandlingOrderTest do
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
     # time for pipeline to play
-    Process.sleep(500)
+    Process.sleep(100)
 
     Testing.Pipeline.message_child(pipeline, :sink, :start_timer)
 
     assert_pipeline_notified(pipeline, :sink, :second_tick)
+
+    # third tick should arrive after two seconds, not ealier
+    refute_pipeline_notified(pipeline, :sink, :third_tick, 1_500)
+    assert_pipeline_notified(pipeline, :sink, :third_tick)
+
+    assert Testing.Pipeline.get_child_pid!(pipeline, :source) |> Process.alive?()
 
     Testing.Pipeline.terminate(pipeline)
   end

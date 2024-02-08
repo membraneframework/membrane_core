@@ -15,11 +15,13 @@ defmodule Membrane.Core.Timer do
           clock: Clock.t(),
           next_tick_time: Time.t(),
           ratio: Clock.ratio(),
-          timer_ref: reference() | nil
+          timer_ref: reference() | nil,
+          awaiting_message?: boolean()
         }
 
   @enforce_keys [:interval, :clock, :init_time, :id]
-  defstruct @enforce_keys ++ [next_tick_time: 0, ratio: Ratio.new(1), timer_ref: nil]
+  defstruct @enforce_keys ++
+              [next_tick_time: 0, ratio: Ratio.new(1), timer_ref: nil, awaiting_message?: false]
 
   @spec start(id, interval, Clock.t()) :: t
   def start(id, interval, clock) do
@@ -42,8 +44,14 @@ defmodule Membrane.Core.Timer do
     %__MODULE__{timer | ratio: ratio}
   end
 
+  @spec handle_message_arrived(t) :: t
+  def handle_message_arrived(%__MODULE__{awaiting_message?: true} = timer) do
+    %{timer | awaiting_message?: false}
+  end
+
   @spec tick(t) :: t
-  def tick(%__MODULE__{interval: :no_interval} = timer) do
+  def tick(%__MODULE__{} = timer)
+      when timer.awaiting_message? or timer.interval == :no_interval do
     timer
   end
 
@@ -67,7 +75,12 @@ defmodule Membrane.Core.Timer do
     timer_ref =
       Process.send_after(self(), Message.new(:timer_tick, id), beam_next_tick_time, abs: true)
 
-    %__MODULE__{timer | next_tick_time: next_tick_time |> Ratio.floor(), timer_ref: timer_ref}
+    %__MODULE__{
+      timer
+      | next_tick_time: next_tick_time |> Ratio.floor(),
+        timer_ref: timer_ref,
+        awaiting_message?: true
+    }
   end
 
   @spec set_interval(t, interval) :: t
