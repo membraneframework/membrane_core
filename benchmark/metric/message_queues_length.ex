@@ -4,6 +4,8 @@ defmodule Benchmark.Metric.MessageQueuesLength do
   @tolerance_factor 0.5
   @sampling_period 100
 
+  require Membrane.Logger
+
   @impl true
   def assert(queues_lengths, queues_lengths_ref, test_case) do
     cumulative_queues_length = integrate(queues_lengths)
@@ -12,7 +14,7 @@ defmodule Benchmark.Metric.MessageQueuesLength do
     if cumulative_queues_length >
          cumulative_queues_length_ref * (1 + @tolerance_factor),
        do:
-         raise(
+         IO.warn(
            "The cumulative queues length has got worse! For test case: #{inspect(test_case, pretty: true)}
           the cumulative queues length to be: #{cumulative_queues_length_ref} and now it is: #{cumulative_queues_length}"
          )

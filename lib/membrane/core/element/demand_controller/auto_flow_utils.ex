@@ -17,6 +17,8 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   require Membrane.Logger
   require Membrane.Pad, as: Pad
 
+  @empty_map_set MapSet.new()
+
   # Description of the auto flow control queueing mechanism
 
   # General concept: Buffers coming to auto input pads should be handled only if
@@ -156,14 +158,17 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   end
 
   @spec auto_adjust_atomic_demand(Pad.ref() | [Pad.ref()], State.t()) :: State.t()
-  def auto_adjust_atomic_demand(ref_or_ref_list, state)
-      when Pad.is_pad_ref(ref_or_ref_list) or is_list(ref_or_ref_list) do
-    ref_or_ref_list
-    |> Bunch.listify()
+  def auto_adjust_atomic_demand(pad_ref_list, state) when is_list(pad_ref_list) do
+    pad_ref_list
     |> Enum.reduce(state, fn pad_ref, state ->
       PadModel.get_data!(state, pad_ref)
       |> do_auto_adjust_atomic_demand(state)
     end)
+  end
+
+  def auto_adjust_atomic_demand(pad_ref, state) do
+    PadModel.get_data!(state, pad_ref)
+    |> do_auto_adjust_atomic_demand(state)
   end
 
   defp do_auto_adjust_atomic_demand(pad_data, state) when is_input_auto_pad_data(pad_data) do
@@ -192,10 +197,11 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   end
 
   defp increase_atomic_demand?(pad_data, state) do
+    # MapSet.size(state.satisfied_auto_output_pads) == 0
     state.effective_flow_control == :pull and
       not pad_data.auto_demand_paused? and
       pad_data.demand < pad_data.auto_demand_size / 2 and
-      output_auto_demand_positive?(state)
+      state.satisfied_auto_output_pads == @empty_map_set
   end
 
   @spec pop_queues_and_bump_demand(State.t()) :: State.t()
@@ -203,25 +209,51 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   def pop_queues_and_bump_demand(%State{} = state) do
     %{state | popping_auto_flow_queue?: true}
-    |> bump_demand()
+    # |> bump_demand()
     |> pop_auto_flow_queues_while_needed()
     |> bump_demand()
     |> Map.put(:popping_auto_flow_queue?, false)
   end
 
-  defp bump_demand(state) do
-    if state.effective_flow_control == :pull and
-         MapSet.size(state.satisfied_auto_output_pads) == 0 do
-      state.pads_data
-      |> Enum.flat_map(fn
-        {ref, %{direction: :input, flow_control: :auto, end_of_stream?: false}} -> [ref]
-        _other -> []
-      end)
-      |> auto_adjust_atomic_demand(state)
-    else
-      state
-    end
+  # defp bump_demand(state) do
+  #   if state.effective_flow_control == :pull and
+  #        MapSet.size(state.satisfied_auto_output_pads) == 0 do
+  #     # state.pads_data
+  #     # |> Enum.flat_map(fn
+  #     #   {ref, %{direction: :input, flow_control: :auto, end_of_stream?: false}} -> [ref]
+  #     #   _other -> []
+  #     # end)
+  #     state.auto_input_pads
+  #     |> Enum.reject(& &1 in state.awaiting_auto_input_pads)
+  #     |> auto_adjust_atomic_demand(state)
+  #   else
+  #     state
+  #   end
+  # end
+
+  defp bump_demand(
+         %{effective_flow_control: :pull, satisfied_auto_output_pads: @empty_map_set} = state
+       ) do
+    state.auto_input_pads
+    |> Enum.reject(&MapSet.member?(state.awaiting_auto_input_pads, &1))
+    |> Enum.reduce(state, fn pad_ref, state ->
+      pad_data = PadModel.get_data!(state, pad_ref)
+
+      if not pad_data.auto_demand_paused? and
+           pad_data.demand < pad_data.auto_demand_size / 2 do
+        diff = pad_data.auto_demand_size - pad_data.demand
+        :ok = AtomicDemand.increase(pad_data.atomic_demand, diff)
+
+        :atomics.put(pad_data.stalker_metrics.demand, 1, pad_data.auto_demand_size)
+
+        PadModel.set_data!(state, pad_ref, :demand, pad_data.auto_demand_size)
+      else
+        state
+      end
+    end)
   end
+
+  defp bump_demand(state), do: state
 
   @spec pop_auto_flow_queues_while_needed(State.t()) :: State.t()
   def pop_auto_flow_queues_while_needed(state) do
@@ -244,6 +276,7 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     |> case do
       {{:value, {:buffer, buffer}}, popped_queue} ->
         state = PadModel.set_data!(state, pad_ref, :auto_flow_queue, popped_queue)
+        state = Map.update!(state, :queued_buffers, &(&1 + 1))
         state = BufferController.exec_buffer_callback(pad_ref, [buffer], state)
         pop_stream_formats_and_events(pad_ref, state)
 
@@ -274,6 +307,6 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     end
   end
 
-  defp output_auto_demand_positive?(%State{satisfied_auto_output_pads: pads}),
-    do: MapSet.size(pads) == 0
+  # defp output_auto_demand_positive?(%State{satisfied_auto_output_pads: pads}),
+  #   do: MapSet.size(pads) == 0
 end
