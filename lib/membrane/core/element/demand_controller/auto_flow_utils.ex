@@ -26,6 +26,32 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   # output pads has negative demand should be queued and only processed when the
   # demand everywhere is positive
 
+  # An Element is `corked` when its effective flow control is :pull and it has an auto output pad,
+  # who's demand is non-positive
+
+  # The following events can make the element shift from `corked` state to `uncorked` state:
+  #   - change of effective flow control from :pull to :push
+  #   - increase in the value of auto output pad demand. We check the demand value:
+  #     - after sending the buffer to a given output pad
+  #     - after receiving a message :atomic_demand_increased from the next element
+  #   - unlinking an auto output pad
+  #   - sending EOS to an auto output pad
+
+  # Analogically, transition from `uncorcked` to `corcked` might be caused by:
+  #   - change of effective flow control from :push to :pull
+  #   - sending a buffer through an output pad
+  #   - linking an output pad
+
+  # In addition, an invariant is maintained, which is that the head of all non-empty
+  # auto_flow_queue queues contains a buffer (the queue can also contain events and
+  # stream formats). After popping a queue
+  # of a given pad, if it has an event or stream format in its head, we pop it further,
+  # until it becomes empty or a buffer is encountered.
+
+  # auto_flow_queues hold single buffers, event if they arrive to the element in batch, because if we
+  # done otherwise, we would have to handle whole batch after popping it from the queue, even if demand
+  # of all output pads would be satisfied after handling first buffer
+
   # Fields in Element state, that take important part in this mechanism:
   #   - satisfied_auto_output_pads - MapSet of auto output pads, whose demand is less than or equal to 0.
   #     We consider only pads with the end_of_stream? flag set to false
@@ -63,27 +89,6 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   #     bump demand on auto input pads with an empty queue
   #   end
   # end
-
-  # An Element is `corked` when its effective flow control is :pull and it has an auto output pad,
-  # who's demand is non-positive
-
-  # The following events can make the element shift from `corked` state to `uncorked` state:
-  #   - change of effective flow control from :pull to :push
-  #   - increase in the value of auto output pad demand. We check the demand value:
-  #     - after sending the buffer to a given output pad
-  #     - after receiving a message :atomic_demand_increased from the next element
-  #   - unlinking the auto output pad
-  #   - sending an EOS to the auto output pad
-
-  # In addition, an invariant is maintained, which is that the head of all non-empty
-  # auto_flow_queue queues contains a buffer (the queue can also contain events and
-  # stream formats). After popping a queue
-  # of a given pad, if it has an event or stream format in its head, we pop it further,
-  # until it becomes empty or a buffer is encountered.
-
-  # auto_flow_queues hold single buffers, event if they arrive to the element in batch, because if we
-  # done otherwise, we would have to handle whole batch after popping it from the queue, even if demand
-  # of all output pads would be satisfied after handling first buffer
 
   defguardp is_input_auto_pad_data(pad_data)
             when is_map(pad_data) and is_map_key(pad_data, :flow_control) and
