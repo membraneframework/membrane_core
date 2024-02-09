@@ -101,7 +101,9 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
       "Transiting `flow_control: :auto` pads to #{inspect(new_effective_flow_control)} effective flow control"
     )
 
-    state = %{state | effective_flow_control: new_effective_flow_control}
+    state =
+      %{state | effective_flow_control: new_effective_flow_control}
+      |> AutoFlowUtils.set_corcked_flag()
 
     state.pads_data
     |> Enum.filter(fn {_ref, %{flow_control: flow_control}} -> flow_control == :auto end)

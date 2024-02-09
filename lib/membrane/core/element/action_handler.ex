@@ -176,7 +176,11 @@ defmodule Membrane.Core.Element.ActionHandler do
         _other -> :output
       end
 
-    pads = state |> PadModel.filter_data(%{direction: dir}) |> Map.keys()
+    pads =
+      Enum.flat_map(state.pads_data, fn
+        {pad_ref, %{direction: ^dir}} -> [pad_ref]
+        _pad_entry -> []
+      end)
 
     Enum.reduce(pads, state, fn pad, state ->
       action =
@@ -199,6 +203,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         %State{type: type} = state
       )
       when is_pad_ref(pad_ref) and type in [:sink, :filter, :endpoint] do
+    # IO.inspect(state.supplying_demand?, label: "A")
     handle_action({:demand, {pad_ref, 1}}, cb, params, state)
   end
 
@@ -337,6 +342,8 @@ defmodule Membrane.Core.Element.ActionHandler do
            stalker_metrics: stalker_metrics
          }
          when stream_format != nil <- pad_data do
+      # IO.inspect({state.name, buffers})
+
       state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
       :atomics.add(stalker_metrics.total_buffers, 1, length(buffers))
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
@@ -466,7 +473,9 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_outgoing_event(Pad.ref(), Event.t(), State.t()) :: State.t()
   defp handle_outgoing_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
-      Map.update!(state, :satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
+      state
+      |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
+      |> AutoFlowUtils.set_corcked_flag()
       |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
       |> AutoFlowUtils.pop_queues_and_bump_demand()
     else

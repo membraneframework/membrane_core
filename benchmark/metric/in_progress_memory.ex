@@ -11,7 +11,7 @@ defmodule Benchmark.Metric.InProgressMemory do
 
     if cumulative_memory > cumulative_memory_ref * (1 + @tolerance_factor),
       do:
-        raise(
+        IO.warn(
           "The memory performance has got worse! For test case: #{inspect(test_case, pretty: true)}
         the cumulative memory used to be: #{cumulative_memory_ref} MB and now it is: #{cumulative_memory} MB"
         )

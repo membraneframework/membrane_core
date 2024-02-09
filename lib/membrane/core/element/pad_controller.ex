@@ -240,6 +240,8 @@ defmodule Membrane.Core.Element.PadController do
       end
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
       |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
+      |> Map.update!(:auto_input_pads, &List.delete(&1, pad_ref))
+      |> AutoFlowUtils.set_corcked_flag()
       |> AutoFlowUtils.pop_queues_and_bump_demand()
     else
       {:ok, %{availability: :always}} when state.terminating? ->
@@ -331,10 +333,13 @@ defmodule Membrane.Core.Element.PadController do
 
     case pad_data do
       %{direction: :output, flow_control: :auto} ->
-        Map.update!(state, :satisfied_auto_output_pads, &MapSet.put(&1, pad_data.ref))
+        state
+        |> Map.update!(:satisfied_auto_output_pads, &MapSet.put(&1, pad_data.ref))
+        |> AutoFlowUtils.set_corcked_flag()
 
       %{direction: :input, flow_control: :auto} ->
         AutoFlowUtils.auto_adjust_atomic_demand(endpoint.pad_ref, state)
+        |> Map.update!(:auto_input_pads, &[endpoint.pad_ref | &1])
 
       _pad_data ->
         state

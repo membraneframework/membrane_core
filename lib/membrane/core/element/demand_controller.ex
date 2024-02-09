@@ -53,6 +53,7 @@ defmodule Membrane.Core.Element.DemandController do
     if AtomicDemand.get(pad_data.atomic_demand) > 0 do
       state
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_data.ref))
+      |> AutoFlowUtils.set_corcked_flag()
       |> AutoFlowUtils.pop_queues_and_bump_demand()
     else
       state
@@ -99,7 +100,9 @@ defmodule Membrane.Core.Element.DemandController do
 
     with {:decreased, new_value} when new_value <= 0 <- decrease_result,
          %{flow_control: :auto} <- pad_data do
-      Map.update!(state, :satisfied_auto_output_pads, &MapSet.put(&1, pad_ref))
+      state
+      |> Map.update!(:satisfied_auto_output_pads, &MapSet.put(&1, pad_ref))
+      |> AutoFlowUtils.set_corcked_flag()
     else
       _other -> state
     end

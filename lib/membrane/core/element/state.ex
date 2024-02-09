@@ -33,6 +33,7 @@ defmodule Membrane.Core.Element.State do
             stream_sync: Sync.t(),
             clock: Clock.t() | nil
           },
+          auto_input_pads: [Pad.ref()],
           initialized?: boolean(),
           playback: Membrane.Playback.t(),
           playback_queue: Membrane.Core.Element.PlaybackQueue.t(),
@@ -46,7 +47,8 @@ defmodule Membrane.Core.Element.State do
           pads_to_snapshot: MapSet.t(),
           stalker: Membrane.Core.Stalker.t(),
           satisfied_auto_output_pads: MapSet.t(),
-          awaiting_auto_input_pads: MapSet.t()
+          awaiting_auto_input_pads: MapSet.t(),
+          corcked?: boolean()
         }
 
   # READ THIS BEFORE ADDING NEW FIELD!!!
@@ -85,6 +87,10 @@ defmodule Membrane.Core.Element.State do
     :playback_queue,
     :pads_data,
     :satisfied_auto_output_pads,
-    :awaiting_auto_input_pads
+    :awaiting_auto_input_pads,
+    queued_buffers: 0,
+    unqueued_buffers: 0,
+    auto_input_pads: [],
+    corcked?: false
   ]
 end

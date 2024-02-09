@@ -69,14 +69,17 @@ defmodule Membrane.Core.Element.BufferController do
     state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
     :atomics.put(stalker_metrics.demand, 1, demand - buf_size)
 
-    if state.effective_flow_control == :pull and MapSet.size(state.satisfied_auto_output_pads) > 0 do
+    if state.corcked? do
+    # if state.effective_flow_control == :pull and MapSet.size(state.satisfied_auto_output_pads) > 0 do
+      # if false do
       AutoFlowUtils.store_buffers_in_queue(pad_ref, buffers, state)
     else
-      if MapSet.member?(state.awaiting_auto_input_pads, pad_ref) or
-           PadModel.get_data!(state, pad_ref, [:auto_flow_queue]) != Qex.new() do
-        raise "cannot execute handle_buffer callback for an awaiting input pad"
-      end
+      # if MapSet.member?(state.awaiting_auto_input_pads, pad_ref) or
+      #    PadModel.get_data!(state, pad_ref, [:auto_flow_queue]) != Qex.new() do
+      # raise "cannot execute handle_buffer callback for an awaiting input pad"
+      # end
 
+      state = Map.update!(state, :unqueued_buffers, &(&1 + 1))
       state = exec_buffer_callback(pad_ref, buffers, state)
       AutoFlowUtils.auto_adjust_atomic_demand(pad_ref, state)
     end

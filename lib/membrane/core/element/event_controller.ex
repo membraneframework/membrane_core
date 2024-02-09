@@ -108,6 +108,7 @@ defmodule Membrane.Core.Element.EventController do
       state =
         PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
         |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
+        |> Map.update!(:auto_input_pads, &List.delete(&1, pad_ref))
 
       %{
         start_of_stream?: start_of_stream?,
@@ -130,6 +131,8 @@ defmodule Membrane.Core.Element.EventController do
           [pad_ref],
           state
         )
+
+      IO.inspect({state.name, state.queued_buffers, state.unqueued_buffers}, label: "STATS")
 
       Message.send(
         state.parent_pid,
