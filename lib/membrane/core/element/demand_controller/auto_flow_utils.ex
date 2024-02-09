@@ -276,7 +276,6 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
     |> case do
       {{:value, {:buffer, buffer}}, popped_queue} ->
         state = PadModel.set_data!(state, pad_ref, :auto_flow_queue, popped_queue)
-        state = Map.update!(state, :queued_buffers, &(&1 + 1))
         state = BufferController.exec_buffer_callback(pad_ref, [buffer], state)
         pop_stream_formats_and_events(pad_ref, state)
 

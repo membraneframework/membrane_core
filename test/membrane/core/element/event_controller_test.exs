@@ -66,7 +66,8 @@ defmodule Membrane.Core.Element.EventControllerTest do
             )
         },
         satisfied_auto_output_pads: MapSet.new(),
-        awaiting_auto_input_pads: MapSet.new()
+        awaiting_auto_input_pads: MapSet.new(),
+        auto_input_pads: []
       )
 
     assert AtomicDemand.get(atomic_demand) > 0

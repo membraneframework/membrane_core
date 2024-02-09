@@ -162,7 +162,8 @@ defmodule Membrane.Core.Element do
         pads_to_snapshot: MapSet.new(),
         stalker: options.stalker,
         satisfied_auto_output_pads: MapSet.new(),
-        awaiting_auto_input_pads: MapSet.new()
+        awaiting_auto_input_pads: MapSet.new(),
+        auto_input_pads: []
       }
       |> PadSpecHandler.init_pads()
 

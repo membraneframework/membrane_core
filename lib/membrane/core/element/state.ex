@@ -87,8 +87,6 @@ defmodule Membrane.Core.Element.State do
     :pads_data,
     :satisfied_auto_output_pads,
     :awaiting_auto_input_pads,
-    queued_buffers: 0,
-    unqueued_buffers: 0,
-    auto_input_pads: []
+    :auto_input_pads
   ]
 end

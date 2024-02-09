@@ -65,7 +65,8 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
             )
         },
         satisfied_auto_output_pads: MapSet.new(),
-        awaiting_auto_input_pads: MapSet.new()
+        awaiting_auto_input_pads: MapSet.new(),
+        auto_input_pads: []
       )
 
     assert_received Message.new(:atomic_demand_increased, :some_pad)

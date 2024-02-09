@@ -132,8 +132,6 @@ defmodule Membrane.Core.Element.EventController do
           state
         )
 
-      IO.inspect({state.name, state.queued_buffers, state.unqueued_buffers}, label: "STATS")
-
       Message.send(
         state.parent_pid,
         :stream_management_event,
