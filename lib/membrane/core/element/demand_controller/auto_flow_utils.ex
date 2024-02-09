@@ -292,7 +292,4 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
         Map.update!(state, :awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
     end
   end
-
-  # defp output_auto_demand_positive?(%State{satisfied_auto_output_pads: pads}),
-  #   do: MapSet.size(pads) == 0
 end
