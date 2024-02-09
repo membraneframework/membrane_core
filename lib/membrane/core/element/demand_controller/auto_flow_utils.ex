@@ -197,7 +197,6 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
   end
 
   defp increase_atomic_demand?(pad_data, state) do
-    # MapSet.size(state.satisfied_auto_output_pads) == 0
     state.effective_flow_control == :pull and
       not pad_data.auto_demand_paused? and
       pad_data.demand < pad_data.auto_demand_size / 2 and
@@ -209,31 +208,21 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
 
   def pop_queues_and_bump_demand(%State{} = state) do
     %{state | popping_auto_flow_queue?: true}
-    # |> bump_demand()
     |> pop_auto_flow_queues_while_needed()
     |> bump_demand()
     |> Map.put(:popping_auto_flow_queue?, false)
   end
 
-  # defp bump_demand(state) do
-  #   if state.effective_flow_control == :pull and
-  #        MapSet.size(state.satisfied_auto_output_pads) == 0 do
-  #     # state.pads_data
-  #     # |> Enum.flat_map(fn
-  #     #   {ref, %{direction: :input, flow_control: :auto, end_of_stream?: false}} -> [ref]
-  #     #   _other -> []
-  #     # end)
-  #     state.auto_input_pads
-  #     |> Enum.reject(& &1 in state.awaiting_auto_input_pads)
-  #     |> auto_adjust_atomic_demand(state)
-  #   else
-  #     state
-  #   end
-  # end
+  defp bump_demand(state) do
+    if state.effective_flow_control == :pull and
+         state.satisfied_auto_output_pads == @empty_map_set do
+      do_bump_demand(state)
+    else
+      state
+    end
+  end
 
-  defp bump_demand(
-         %{effective_flow_control: :pull, satisfied_auto_output_pads: @empty_map_set} = state
-       ) do
+  defp do_bump_demand(state) do
     state.auto_input_pads
     |> Enum.reject(&MapSet.member?(state.awaiting_auto_input_pads, &1))
     |> Enum.reduce(state, fn pad_ref, state ->
@@ -252,8 +241,6 @@ defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
       end
     end)
   end
-
-  defp bump_demand(state), do: state
 
   @spec pop_auto_flow_queues_while_needed(State.t()) :: State.t()
   def pop_auto_flow_queues_while_needed(state) do
