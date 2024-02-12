@@ -85,7 +85,7 @@ defmodule Membrane.Pipeline do
           | {:error, {:already_started, pid()} | term()}
 
   @typedoc """
-  The Pipeline state.
+  The pipeline state.
   """
   @type state :: any()
 
