@@ -6,7 +6,7 @@ defmodule Membrane.Pipeline do
   Pipelines facilitate the convenient instantiation, linking, and management of elements and bins.\\
   Linking pipeline children together enables them to pass and process data.
 
-  Use `use Membrane.Pipeline` and its callbacks to implement the `Membrane.Pipeline` behaviour.\\
+  To create a pipeline, use `use Membrane.Pipeline` and implement callbacks of `Membrane.Pipeline`  behaviour.
   See `Membrane.ChildrenSpec` for details on instantiating and linking children.
   ## Starting and supervision
 
