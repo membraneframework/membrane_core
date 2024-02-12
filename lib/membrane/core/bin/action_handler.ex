@@ -116,9 +116,4 @@ defmodule Membrane.Core.Bin.ActionHandler do
   def handle_action(action, _callback, _params, _state) do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Bin.Action}
   end
-
-  @impl CallbackHandler
-  def handle_end_of_actions(state) do
-    ChildLifeController.trigger_specs(state)
-  end
 end

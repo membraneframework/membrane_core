@@ -119,6 +119,5 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
       %{state | awaiting_setup_completition?: false}
       |> Membrane.Core.LifecycleController.complete_setup()
     end
-    |> ChildLifeController.trigger_specs()
   end
 end

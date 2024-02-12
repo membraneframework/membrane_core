@@ -459,6 +459,7 @@ defmodule Membrane.Pipeline do
       alias unquote(__MODULE__)
       require Membrane.Logger
       @behaviour unquote(__MODULE__)
+      @after_compile Membrane.Core.Parent
 
       unquote(bring_spec)
       unquote(bring_pad)
@@ -502,8 +503,8 @@ defmodule Membrane.Pipeline do
         {[], state}
       end
 
-      @impl true
-      def handle_spec_started(new_children, _ctx, state), do: {[], state}
+      # @impl true
+      # def handle_spec_started(new_children, _ctx, state), do: {[], state}
 
       @impl true
       def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {[], state}
@@ -528,7 +529,7 @@ defmodule Membrane.Pipeline do
                      handle_setup: 2,
                      handle_playing: 2,
                      handle_info: 3,
-                     handle_spec_started: 3,
+                    #  handle_spec_started: 3,
                      handle_element_start_of_stream: 4,
                      handle_element_end_of_stream: 4,
                      handle_child_notification: 4,

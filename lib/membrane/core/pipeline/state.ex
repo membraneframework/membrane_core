@@ -20,7 +20,6 @@ defmodule Membrane.Core.Pipeline.State do
           links: %{Link.id() => Link.t()},
           crash_groups: %{CrashGroup.name() => CrashGroup.t()},
           pending_specs: ChildLifeController.pending_specs(),
-          specs_to_trigger: [ChildLifeController.spec_ref()],
           synchronization: %{
             timers: %{Timer.id() => Timer.t()},
             clock_provider: %{
@@ -53,7 +52,6 @@ defmodule Membrane.Core.Pipeline.State do
             links: %{},
             crash_groups: %{},
             pending_specs: %{},
-            specs_to_trigger: [],
             synchronization: nil,
             initialized?: false,
             terminating?: false,

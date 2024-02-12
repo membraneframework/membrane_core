@@ -40,7 +40,6 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def transform_actions(actions, callback, _handler_params, state) do
     actions = join_buffers(actions)
-    ensure_nothing_after_redemand(actions, callback, state)
     {actions, state}
   end
 
@@ -304,30 +303,6 @@ defmodule Membrane.Core.Element.ActionHandler do
           other
       end
     )
-  end
-
-  defp ensure_nothing_after_redemand(actions, callback, state) do
-    {redemands, actions_after_redemands} =
-      actions
-      |> Enum.drop_while(fn
-        {:redemand, _args} -> false
-        _other_action -> true
-      end)
-      |> Enum.split_while(fn
-        {:redemand, _args} -> true
-        _other_action -> false
-      end)
-
-    case {redemands, actions_after_redemands} do
-      {_redemands, []} ->
-        :ok
-
-      {[redemand | _redemands], _actions_after_redemands} ->
-        raise ActionError,
-          reason: :actions_after_redemand,
-          action: redemand,
-          callback: {state.module, callback}
-    end
   end
 
   @spec send_buffer(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
