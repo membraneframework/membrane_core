@@ -3,7 +3,7 @@ defmodule Membrane.Pipeline do
   A behaviour module for implementing pipelines.
 
   `Membrane.Pipeline` contains the callbacks and functions for constructing and supervising pipelines.
-  Pipelines facilitate the conveneient instantiation, linking, and management of elements and bins.\\
+  Pipelines facilitate the convenient instantiation, linking, and management of elements and bins.\\
   Linking pipeline children together enables them to pass and process data.
 
   Use `use Membrane.Pipeline` and its callbacks to implement the `Membrane.Pipeline` behaviour.\\
