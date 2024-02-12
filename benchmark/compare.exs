@@ -24,7 +24,19 @@ defmodule Benchmark.Compare do
           #{inspect(Map.get(test_case_results, metric_module), pretty: true, limit: :infinity)}
           2. In #{ref_results_name}:
           #{inspect(Map.get(test_case_results_ref, metric_module), pretty: true, limit: :infinity)}
-          """
+          """ <> (
+            if metric_module == Elixir.Benchmark.Metric.Time do
+              ratio = Map.get(test_case_results, metric_module) / Map.get(test_case_results_ref, metric_module)
+              """
+
+              RATIO TIME: #{inspect(ratio)}
+
+
+              """
+            else
+              ""
+            end
+          )
         end)
         |> Enum.join()
 

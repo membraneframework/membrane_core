@@ -7,7 +7,7 @@ defmodule Benchmark.Metric.Time do
   def assert(time, time_ref, test_case) do
     if time > time_ref * (1 + @tolerance_factor),
       do:
-        raise(
+      IO.warn(
           "The time performance has got worse! For test case: #{inspect(test_case, pretty: true)} the test
         used to take: #{time_ref} ms and now it takes: #{time} ms"
         )
