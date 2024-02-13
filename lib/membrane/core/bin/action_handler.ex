@@ -6,7 +6,6 @@ defmodule Membrane.Core.Bin.ActionHandler do
   alias Membrane.Core
   alias Membrane.Core.Bin.State
   alias Membrane.Core.{Message, Parent, TimerController}
-  alias Membrane.Core.Parent.ChildLifeController
 
   require Membrane.Logger
   require Message

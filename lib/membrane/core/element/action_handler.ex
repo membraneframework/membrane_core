@@ -38,7 +38,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   require Membrane.Logger
 
   @impl CallbackHandler
-  def transform_actions(actions, callback, _handler_params, state) do
+  def transform_actions(actions, _callback, _handler_params, state) do
     actions = join_buffers(actions)
     {actions, state}
   end

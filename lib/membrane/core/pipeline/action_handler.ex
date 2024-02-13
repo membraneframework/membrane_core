@@ -5,7 +5,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   alias Membrane.ActionError
   alias Membrane.Core
   alias Membrane.Core.{Parent, TimerController}
-  alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
+  alias Membrane.Core.Parent.LifecycleController
   alias Membrane.Core.Pipeline.State
 
   require Membrane.Logger
