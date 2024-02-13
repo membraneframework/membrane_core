@@ -7,6 +7,7 @@
  * Fix typespecs in Membrane.UtilitySupervisor. [#681](https://github.com/membraneframework/membrane_core/pull/681)
  * Improve callback return types and group actions types. [#702](https://github.com/membraneframework/membrane_core/pull/702)
  * Fix bug in the order of handling actions from callbacks. [#708](https://github.com/membraneframework/membrane_core/pull/708)
+ * Deprecate `handle_spec_started/3` callback in Bins and Pipelines. [#708](https://github.com/membraneframework/membrane_core/pull/708)
 
 ## 1.0.0
  * Introduce `:remove_link` action in pipelines and bins.
