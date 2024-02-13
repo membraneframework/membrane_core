@@ -12,7 +12,7 @@ defmodule Benchmark.Metric.MessageQueuesLength do
     if cumulative_queues_length >
          cumulative_queues_length_ref * (1 + @tolerance_factor),
        do:
-       IO.warn(
+         raise(
            "The cumulative queues length has got worse! For test case: #{inspect(test_case, pretty: true)}
           the cumulative queues length to be: #{cumulative_queues_length_ref} and now it is: #{cumulative_queues_length}"
          )
