@@ -1,14 +1,16 @@
 defmodule Membrane.StreamFormat do
   @moduledoc """
-  Describes capabilities of some pad.
+  Defines the capabilities of a pad within the Membrane framework.
 
-  Every pad has some capabilities, which define a type of data that pad is
-  expecting. This format can be, for example, raw audio with specific sample
-  rate or encoded audio in given format.
+  Each pad in a multimedia pipeline has specific capabilities, determining the type and format
+  of data it can handle. For example, a pad's capabilities might include handling raw audio
+  with a specific sample rate or managing encoded audio in a specified format.
 
-  To link two pads together, their capabilities have to be compatible.
+  To successfully link two pads together, their capabilities must be compatible.
   """
 
-  @typedoc @moduledoc
+  @typedoc """
+  Represents a pad's capabilities.
+  """
   @type t :: struct
 end
