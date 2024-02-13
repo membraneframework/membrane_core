@@ -34,14 +34,7 @@ defmodule Membrane.Core.Bin.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:spec, spec}, cb, _params, state) do
-    if cb == :handle_spec_started do
-      Membrane.Logger.warning("""
-      Action :spec was returned from handle_spec_started/3 callback. It is suggested not to do this,
-      because it might lead to infinite loof of handle_spec_started/3 executions.
-      """)
-    end
-
+  def handle_action({:spec, spec}, _cb, _params, state) do
     Parent.ChildLifeController.handle_spec(spec, state)
   end
 
