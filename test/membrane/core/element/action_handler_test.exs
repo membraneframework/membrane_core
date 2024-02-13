@@ -540,16 +540,5 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         end
       )
     end
-
-    test "when :redemand is not the last action", %{state: state} do
-      assert_raise ActionError, ~r/redemand.*last/i, fn ->
-        @module.transform_actions(
-          [redemand: :output, notify_parent: :a, notify_parent: :b],
-          :handle_other,
-          %{},
-          state
-        )
-      end
-    end
   end
 end

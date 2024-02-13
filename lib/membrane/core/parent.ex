@@ -3,14 +3,23 @@ defmodule Membrane.Core.Parent do
 
   @type state :: Membrane.Core.Bin.State.t() | Membrane.Core.Pipeline.State.t()
 
-  @warn_whitelist [Membrane.Testing.Pipeline]
+  defmacro bring_after_compile_check() do
+    quote do
+      @after_compile {__MODULE__, :__membrane_check_deprecated_functions__}
 
-  @spec __after_compile__(Macro.Env.t(), binary()) :: any()
-  def __after_compile__(env, _bytecode) do
-    if env.module not in @warn_whitelist and Module.defines?(__MODULE__, {:handle_spec_started, 3}, :def) do
-                  IO.warn("""
-            Callback handle_spec_started/3 has been deprecated since :membrane_core v1.0.1, but it is implemented in #{inspect(__MODULE__)}
-            """)
+      def __membrane_check_deprecated_functions__(env, _bytecode) do
+        modules_whitelist = [Membrane.Testing.Pipeline]
+
+        if env.module not in modules_whitelist and
+             Module.defines?(env.module, {:handle_spec_started, 3}, :def) do
+          warn_message = """
+          Callback handle_spec_started/3 has been deprecated since \
+          :membrane_core v1.0.1, but it is implemented in #{inspect(env.module)}
+          """
+
+          IO.warn(warn_message, [])
+        end
+      end
     end
   end
 end

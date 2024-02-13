@@ -459,7 +459,9 @@ defmodule Membrane.Pipeline do
       alias unquote(__MODULE__)
       require Membrane.Logger
       @behaviour unquote(__MODULE__)
-      @after_compile Membrane.Core.Parent
+
+      require Membrane.Core.Parent
+      Membrane.Core.Parent.bring_after_compile_check()
 
       unquote(bring_spec)
       unquote(bring_pad)
@@ -529,7 +531,7 @@ defmodule Membrane.Pipeline do
                      handle_setup: 2,
                      handle_playing: 2,
                      handle_info: 3,
-                    #  handle_spec_started: 3,
+                     #  handle_spec_started: 3,
                      handle_element_start_of_stream: 4,
                      handle_element_end_of_stream: 4,
                      handle_child_notification: 4,
