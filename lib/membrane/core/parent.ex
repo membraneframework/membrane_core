@@ -7,6 +7,7 @@ defmodule Membrane.Core.Parent do
     quote do
       @after_compile {__MODULE__, :__membrane_check_deprecated_functions__}
 
+      @spec __membrane_check_deprecated_functions__(Macro.Env.t(), binary) :: :ok
       def __membrane_check_deprecated_functions__(env, _bytecode) do
         modules_whitelist = [Membrane.Testing.Pipeline]
 
@@ -19,6 +20,8 @@ defmodule Membrane.Core.Parent do
 
           IO.warn(warn_message, [])
         end
+
+        :ok
       end
     end
   end
