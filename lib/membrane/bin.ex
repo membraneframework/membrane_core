@@ -357,9 +357,6 @@ defmodule Membrane.Bin do
         {[], state}
       end
 
-      # @impl true
-      # def handle_spec_started(new_children, _ctx, state), do: {[], state}
-
       @impl true
       def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {[], state}
 
