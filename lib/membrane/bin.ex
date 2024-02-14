@@ -167,7 +167,7 @@ defmodule Membrane.Bin do
             ) :: callback_return
 
   @doc """
-  This callback is deprecated since v1.0.1.
+  This callback is deprecated since v1.1.0-rc0
 
   Callback invoked when children of `Membrane.ChildrenSpec` are started.
 
@@ -311,9 +311,7 @@ defmodule Membrane.Bin do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
-
-      require Membrane.Core.Parent
-      Membrane.Core.Parent.bring_after_compile_check()
+      @after_compile {Membrane.Core.Parent, :check_deprecated_callbacks}
 
       unquote(bring_spec)
       unquote(bring_pad)

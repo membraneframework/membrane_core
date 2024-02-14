@@ -3,26 +3,20 @@ defmodule Membrane.Core.Parent do
 
   @type state :: Membrane.Core.Bin.State.t() | Membrane.Core.Pipeline.State.t()
 
-  defmacro bring_after_compile_check() do
-    quote do
-      @after_compile {__MODULE__, :__membrane_check_deprecated_functions__}
+  @spec check_deprecated_callbacks(Macro.Env.t(), binary) :: :ok
+  def check_deprecated_callbacks(env, _bytecode) do
+    modules_whitelist = [Membrane.Testing.Pipeline]
 
-      @spec __membrane_check_deprecated_functions__(Macro.Env.t(), binary) :: :ok
-      def __membrane_check_deprecated_functions__(env, _bytecode) do
-        modules_whitelist = [Membrane.Testing.Pipeline]
+    if env.module not in modules_whitelist and
+         Module.defines?(env.module, {:handle_spec_started, 3}, :def) do
+      warn_message = """
+      Callback handle_spec_started/3 has been deprecated since \
+      :membrane_core v1.1.0-rc0, but it is implemented in #{inspect(env.module)}
+      """
 
-        if env.module not in modules_whitelist and
-             Module.defines?(env.module, {:handle_spec_started, 3}, :def) do
-          warn_message = """
-          Callback handle_spec_started/3 has been deprecated since \
-          :membrane_core v1.0.1, but it is implemented in #{inspect(env.module)}
-          """
-
-          IO.warn(warn_message, [])
-        end
-
-        :ok
-      end
+      IO.warn(warn_message, [])
     end
+
+    :ok
   end
 end

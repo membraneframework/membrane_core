@@ -204,7 +204,7 @@ defmodule Membrane.Pipeline do
             ) :: {[Action.common_actions()], state()}
 
   @doc """
-  This callback is deprecated since v1.0.1.
+  This callback is deprecated since v1.1.0-rc0.
 
   Callback invoked when children of `Membrane.ChildrenSpec` are started.
 
@@ -461,9 +461,7 @@ defmodule Membrane.Pipeline do
       alias unquote(__MODULE__)
       require Membrane.Logger
       @behaviour unquote(__MODULE__)
-
-      require Membrane.Core.Parent
-      Membrane.Core.Parent.bring_after_compile_check()
+      @after_compile {Membrane.Core.Parent, :check_deprecated_callbacks}
 
       unquote(bring_spec)
       unquote(bring_pad)
