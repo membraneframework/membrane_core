@@ -142,6 +142,7 @@ defmodule Membrane.Mixfile do
   defp deps do
     [
       {:qex, "~> 0.3"},
+      {:heap, "~> 3.0"},
       {:telemetry, "~> 1.0"},
       {:bunch, "~> 1.6"},
       {:ratio, "~> 3.0"},
