@@ -10,7 +10,7 @@ defmodule Membrane.StreamFormat do
   """
 
   @typedoc """
-  Represents a pad's capabilities.
+  Represents a pad's capabilities. For more information, see: `Membrane.StreamFormat`.
   """
   @type t :: struct
 end
