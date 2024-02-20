@@ -5,6 +5,7 @@ defmodule Membrane.Core.Parent.CrashGroup do
   #   * name - name that identifies the group
   #   * type - responsible for restart policy of members of groups
   #   * members - list of members of group
+  #   * reason - reason of the crash
 
   use Bunch.Access
 
@@ -15,9 +16,11 @@ defmodule Membrane.Core.Parent.CrashGroup do
           mode: :temporary,
           members: [Membrane.Child.name()],
           detonating?: boolean(),
-          crash_initiator: Membrane.Child.name()
+          crash_initiator: Membrane.Child.name(),
+          crash_reason: :normal | :shutdown | {:shutdown, term()} | term()
         }
 
   @enforce_keys [:name, :mode]
-  defstruct @enforce_keys ++ [members: [], detonating?: false, crash_initiator: nil]
+  defstruct @enforce_keys ++
+              [members: [], detonating?: false, crash_initiator: nil, crash_reason: nil]
 end
