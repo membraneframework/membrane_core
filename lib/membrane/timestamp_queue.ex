@@ -35,10 +35,10 @@ defmodule Membrane.TimestampQueue do
             pad_queues: %{},
             pads_heap: Heap.min()
 
-  @type option ::
-          {:pause_demand_boundary, pos_integer() | :infinity}
-          | {:pause_demand_boundary_unit, :buffers | :bytes}
-  @type options :: [option]
+  @type options :: [
+          pause_demand_boundary: pos_integer() | :infinity,
+          pause_demand_boundary_unit: :buffers | :bytes
+        ]
 
   @spec new(options) :: t()
   def new(options \\ []) do
