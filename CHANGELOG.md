@@ -1,13 +1,16 @@
 # Changelog
 
+## 1.1.0-rc0
+ * Deprecate `handle_spec_started/3` callback in Bins and Pipelines. [#708](https://github.com/membraneframework/membrane_core/pull/708)
+ * Handle buffers from input pads having `flow_control: :auto` only if demand on all output pads having `flow_control: :auto` is positive. [#693](https://github.com/membraneframework/membrane_core/pull/693)
+
 ## 1.0.1
  * Specify the order in which state fields will be printed in the error logs. [#614](https://github.com/membraneframework/membrane_core/pull/614)
- * Fix clock selection. [#626](https://github.com/membraneframework/membrane_core/pull/626)
- * Log messages in the default handle_info implementation. [#680](https://github.com/membraneframework/membrane_core/pull/680)
- * Fix typespecs in Membrane.UtilitySupervisor. [#681](https://github.com/membraneframework/membrane_core/pull/681)
- * Improve callback return types and group actions types. [#702](https://github.com/membraneframework/membrane_core/pull/702)
- * Fix bug in the order of handling actions from callbacks. [#708](https://github.com/membraneframework/membrane_core/pull/708)
- * Deprecate `handle_spec_started/3` callback in Bins and Pipelines. [#708](https://github.com/membraneframework/membrane_core/pull/708)
+ * Fix clock selection [#626](https://github.com/membraneframework/membrane_core/pull/626)
+ * Log messages in the default handle_info implementation [#680](https://github.com/membraneframework/membrane_core/pull/680)
+ * Fix typespecs in Membrane.UtilitySupervisor [#681](https://github.com/membraneframework/membrane_core/pull/681)
+ * Improve callback return types and group actions types [#702](https://github.com/membraneframework/membrane_core/pull/702) 
+ * Add `crash_reason` to `handle_crash_group_down/3` callback context in bins and pipelines. [#720](https://github.com/membraneframework/membrane_core/pull/720)
 
 ## 1.0.0
  * Introduce `:remove_link` action in pipelines and bins.

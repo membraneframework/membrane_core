@@ -42,7 +42,6 @@ defmodule Membrane.Core.Child.PadModel do
           input_queue: Membrane.Core.Element.InputQueue.t() | nil,
           options: %{optional(atom) => any},
           auto_demand_size: pos_integer() | nil,
-          associated_pads: [Pad.ref()] | nil,
           sticky_events: [Membrane.Event.t()],
           stalker_metrics: %{atom => :atomics.atomics_ref()}
         }
