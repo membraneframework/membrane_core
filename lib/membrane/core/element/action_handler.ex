@@ -24,11 +24,11 @@ defmodule Membrane.Core.Element.ActionHandler do
   alias Membrane.Core.Element.{
     DemandController,
     DemandHandler,
-    PadController,
     State,
     StreamFormatController
   }
 
+  alias Membrane.Core.Element.DemandController.AutoFlowUtils
   alias Membrane.Core.{Events, TimerController}
   alias Membrane.Element.Action
 
@@ -176,7 +176,11 @@ defmodule Membrane.Core.Element.ActionHandler do
         _other -> :output
       end
 
-    pads = state |> PadModel.filter_data(%{direction: dir}) |> Map.keys()
+    pads =
+      Enum.flat_map(state.pads_data, fn
+        {pad_ref, %{direction: ^dir}} -> [pad_ref]
+        _pad_entry -> []
+      end)
 
     Enum.reduce(pads, state, fn pad, state ->
       action =
@@ -466,8 +470,9 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_outgoing_event(Pad.ref(), Event.t(), State.t()) :: State.t()
   defp handle_outgoing_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
-      state = PadController.remove_pad_associations(pad_ref, state)
-      PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
+      Map.update!(state, :satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
+      |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
+      |> AutoFlowUtils.pop_queues_and_bump_demand()
     else
       %{direction: :input} ->
         raise PadDirectionError, action: "end of stream", direction: :input, pad: pad_ref

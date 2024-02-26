@@ -280,9 +280,6 @@ defmodule Membrane.Integration.DemandsTest do
 
       assert_sink_playing(pipeline, :sink)
 
-      # time for pipeline to start playing
-      Process.sleep(1000)
-
       for i <- 1..10 do
         # during sleep below source should send around 100 buffers
         Process.sleep(100 * RedemandingSource.sleep_time())

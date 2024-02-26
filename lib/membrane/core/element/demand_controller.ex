@@ -23,13 +23,20 @@ defmodule Membrane.Core.Element.DemandController do
 
   @spec snapshot_atomic_demand(Pad.ref(), State.t()) :: State.t()
   def snapshot_atomic_demand(pad_ref, state) do
-    with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
+    with {:ok, pad_data} when not pad_data.end_of_stream? <- PadModel.get_data(state, pad_ref),
          %State{playback: :playing} <- state do
       if pad_data.direction == :input,
         do: raise("cannot snapshot atomic counter in input pad")
 
       do_snapshot_atomic_demand(pad_data, state)
     else
+      {:ok, %{end_of_stream?: true}} ->
+        Membrane.Logger.debug_verbose(
+          "Skipping snapshot of pad #{inspect(pad_ref)}, because it has flag :end_of_stream? set to true"
+        )
+
+        state
+
       {:error, :unknown_pad} ->
         # We've got a :atomic_demand_increased message on already unlinked pad
         state
@@ -43,13 +50,10 @@ defmodule Membrane.Core.Element.DemandController do
          %{flow_control: :auto} = pad_data,
          %{effective_flow_control: :pull} = state
        ) do
-    %{
-      atomic_demand: atomic_demand,
-      associated_pads: associated_pads
-    } = pad_data
-
-    if AtomicDemand.get(atomic_demand) > 0 do
-      AutoFlowUtils.auto_adjust_atomic_demand(associated_pads, state)
+    if AtomicDemand.get(pad_data.atomic_demand) > 0 do
+      state
+      |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_data.ref))
+      |> AutoFlowUtils.pop_queues_and_bump_demand()
     else
       state
     end
@@ -91,9 +95,15 @@ defmodule Membrane.Core.Element.DemandController do
     buffers_size = Buffer.Metric.from_unit(pad_data.demand_unit).buffers_size(buffers)
 
     demand = pad_data.demand - buffers_size
-    atomic_demand = AtomicDemand.decrease(pad_data.atomic_demand, buffers_size)
+    {decrease_result, atomic_demand} = AtomicDemand.decrease(pad_data.atomic_demand, buffers_size)
 
-    PadModel.set_data!(state, pad_ref, %{
+    with {:decreased, new_value} when new_value <= 0 <- decrease_result,
+         %{flow_control: :auto} <- pad_data do
+      Map.update!(state, :satisfied_auto_output_pads, &MapSet.put(&1, pad_ref))
+    else
+      _other -> state
+    end
+    |> PadModel.set_data!(pad_ref, %{
       pad_data
       | demand: demand,
         atomic_demand: atomic_demand

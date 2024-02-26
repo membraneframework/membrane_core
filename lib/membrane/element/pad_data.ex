@@ -40,6 +40,7 @@ defmodule Membrane.Element.PadData do
           pid: private_field,
           other_ref: private_field,
           input_queue: private_field,
+          auto_flow_queue: private_field,
           incoming_demand: integer() | nil,
           demand_unit: private_field,
           other_demand_unit: private_field,
@@ -59,7 +60,6 @@ defmodule Membrane.Element.PadData do
           # Contains amount of data (:buffers/:bytes), that has been demanded from the element on the other side of link, but
           # hasn't arrived yet. Unused for output pads.
           manual_demand_size: private_field,
-          associated_pads: private_field,
           sticky_events: private_field,
           other_effective_flow_control: private_field,
           stalker_metrics: private_field
@@ -80,6 +80,7 @@ defmodule Membrane.Element.PadData do
   defstruct @enforce_keys ++
               [
                 input_queue: nil,
+                auto_flow_queue: Qex.new(),
                 demand: 0,
                 incoming_demand: nil,
                 demand_unit: nil,
@@ -89,7 +90,6 @@ defmodule Membrane.Element.PadData do
                 sticky_messages: [],
                 atomic_demand: nil,
                 manual_demand_size: 0,
-                associated_pads: [],
                 sticky_events: [],
                 stream_format_validation_params: [],
                 other_demand_unit: nil,
