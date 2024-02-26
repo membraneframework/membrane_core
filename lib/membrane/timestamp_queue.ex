@@ -6,6 +6,8 @@ defmodule Membrane.TimestampQueue do
   alias Membrane.Buffer.Metric
   alias Membrane.Element.Action
 
+  use Bunch.Access
+
   @type buffer_entry :: {:buffer, Buffer.t(), buffer_time :: Membrane.Time.t()}
   @type stream_format_entry :: {:stream_format, StreamFormat.t()}
   @type event_entry :: {:event, Event.t()}
@@ -42,16 +44,28 @@ defmodule Membrane.TimestampQueue do
 
   @spec new(options) :: t()
   def new(options \\ []) do
-    {unit, options} = Keyword.pop(options, :pause_demand_boundary_unit, :buffers)
-    options = [metric: Metric.from_unit(unit)] ++ options
+    metric =
+      options
+      |> Keyword.get(:pause_demand_boundary_unit, :buffers)
+      |> Metric.from_unit()
 
-    struct!(__MODULE__, options)
+    %__MODULE__{
+      metric: metric,
+      pause_demand_boundary: Keyword.pop(options, :pause_demand_boundary, :infinity)
+    }
   end
 
   @type suggested_action :: Action.pause_auto_demand() | Action.resume_auto_demand()
   @type suggested_actions :: [suggested_action()]
 
   @spec push_buffer(t(), Pad.ref(), Buffer.t()) :: {suggested_actions(), t()}
+  def push_buffer(_timestamp_queue, pad_ref, %Buffer{dts: nil} = buffer) do
+    raise """
+    #{inspect(__MODULE__)} accepts only buffers whose dts is not nil, but it received\n#{inspect(buffer, pretty: true)}
+    from pad #{inspect(pad_ref)}
+    """
+  end
+
   def push_buffer(%__MODULE__{} = timestamp_queue, pad_ref, buffer) do
     buffer_size = timestamp_queue.metric.buffers_size([buffer])
 
