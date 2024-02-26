@@ -40,9 +40,11 @@ defmodule Membrane.Core.Element.EventController do
           playback: %State{playback: :playing} <- state do
       Telemetry.report_metric(:event, 1, inspect(pad_ref))
 
+      async? = Event.async?(event)
+
       cond do
         # events goes to the manual flow control input queue
-        not Event.async?(event) and buffers_before_event_present?(data) ->
+        not async? and buffers_before_event_present?(data) ->
           PadModel.update_data!(
             state,
             pad_ref,
@@ -51,7 +53,7 @@ defmodule Membrane.Core.Element.EventController do
           )
 
         # event goes to the auto flow control queue
-        pad_ref in state.awaiting_auto_input_pads ->
+        not async? and MapSet.member?(state.awaiting_auto_input_pads, pad_ref) ->
           AutoFlowUtils.store_event_in_queue(pad_ref, event, state)
 
         true ->
