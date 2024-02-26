@@ -208,9 +208,11 @@ defmodule Membrane.Pipeline do
             ) :: {[Action.common_actions()], state()}
 
   @doc """
+  This callback is deprecated since v1.1.0-rc0.
+
   Callback invoked when children of `Membrane.ChildrenSpec` are started.
 
-  By default, it does nothing.
+  It is invoked, only if pipeline module contains its definition. Otherwise, nothing happens.
   """
   @callback handle_spec_started(
               children :: [Child.name()],
@@ -469,6 +471,7 @@ defmodule Membrane.Pipeline do
       alias unquote(__MODULE__)
       require Membrane.Logger
       @behaviour unquote(__MODULE__)
+      @after_compile {Membrane.Core.Parent, :check_deprecated_callbacks}
 
       unquote(bring_spec)
       unquote(bring_pad)
@@ -513,9 +516,6 @@ defmodule Membrane.Pipeline do
       end
 
       @impl true
-      def handle_spec_started(new_children, _ctx, state), do: {[], state}
-
-      @impl true
       def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {[], state}
 
       @impl true
@@ -538,7 +538,6 @@ defmodule Membrane.Pipeline do
                      handle_setup: 2,
                      handle_playing: 2,
                      handle_info: 3,
-                     handle_spec_started: 3,
                      handle_element_start_of_stream: 4,
                      handle_element_end_of_stream: 4,
                      handle_child_notification: 4,

@@ -110,12 +110,6 @@ defmodule Membrane.Integration.LinkingTest do
     def handle_info(_msg, _ctx, state) do
       {[], state}
     end
-
-    @impl true
-    def handle_spec_started(_children, _ctx, state) do
-      send(state.testing_pid, :spec_started)
-      {[], state}
-    end
   end
 
   setup do
@@ -139,12 +133,13 @@ defmodule Membrane.Integration.LinkingTest do
       ]
 
       send(pipeline, {:start_spec, %{spec: spec}})
-      assert_receive(:spec_started)
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: ~c"a"})
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: ~c"b"})
       assert_sink_buffer(pipeline, :sink, %Buffer{payload: ~c"c"})
       send(pipeline, {:remove_children, :sink})
       assert_pipeline_notified(pipeline, :bin, :handle_pad_removed)
+
+      Membrane.Pipeline.terminate(pipeline)
     end
 
     test "and element crashes, bin forwards the unlink message to child", %{pipeline: pipeline} do
@@ -166,10 +161,7 @@ defmodule Membrane.Integration.LinkingTest do
       ]
 
       send(pipeline, {:start_spec, %{spec: bin_spec}})
-      assert_receive(:spec_started)
-
       send(pipeline, {:start_spec, %{spec: sink_spec}})
-      assert_receive(:spec_started)
 
       sink_pid = get_child_pid(:sink, pipeline)
       bin_pid = get_child_pid(:bin, pipeline)
@@ -188,6 +180,8 @@ defmodule Membrane.Integration.LinkingTest do
                match?(%Membrane.PadError{}, error)
 
       assert error.message =~ ~r/static.*pad.*unlink/u
+
+      Membrane.Pipeline.terminate(pipeline)
     end
   end
 
@@ -208,13 +202,12 @@ defmodule Membrane.Integration.LinkingTest do
     ]
 
     send(pipeline, {:start_spec, %{spec: spec}})
-
     send(pipeline, {:kill, [:sink]})
-
-    assert_receive(:spec_started)
 
     assert_pipeline_crash_group_down(pipeline, :group_1)
     assert_pipeline_crash_group_down(pipeline, :group_2)
+
+    Membrane.Pipeline.terminate(pipeline)
   end
 
   test "element shouldn't crash when its neighbor connected via dynamic pad crashes", %{
@@ -237,12 +230,12 @@ defmodule Membrane.Integration.LinkingTest do
     spec = [spec_1, spec_2, links_spec]
 
     send(pipeline, {:start_spec, %{spec: spec}})
-    assert_receive(:spec_started)
-
     send(pipeline, {:kill, [:sink]})
 
     refute_pipeline_crash_group_down(pipeline, :group_1)
     assert_pipeline_crash_group_down(pipeline, :group_2)
+
+    Membrane.Pipeline.terminate(pipeline)
   end
 
   test "element shouldn't crash when its neighbor connected via dynamic pad crashes and the crash groups are set within nested spec",
@@ -264,31 +257,12 @@ defmodule Membrane.Integration.LinkingTest do
       |> get_child(:sink)
 
     send(pipeline, {:start_spec, %{spec: [spec, links_spec]}})
-    assert_receive(:spec_started)
-
     send(pipeline, {:kill, [:sink]})
 
     refute_pipeline_crash_group_down(pipeline, :group_1)
     assert_pipeline_crash_group_down(pipeline, :group_2)
-  end
 
-  test "pipeline playback should change successfully after spec with links has been returned",
-       %{pipeline: pipeline} do
-    bin_spec = {
-      child(:bin, %Bin{child: %Testing.Source{output: [~c"a", ~c"b", ~c"c"]}}),
-      group: :group_1, crash_group_mode: :temporary
-    }
-
-    sink_spec = {
-      child(:sink, Testing.Sink),
-      group: :group_1, crash_group_mode: :temporary
-    }
-
-    links_spec = get_child(:bin) |> get_child(:sink)
-
-    spec = [bin_spec, sink_spec, links_spec]
-    send(pipeline, {:start_spec, %{spec: spec}})
-    assert_receive(:spec_started)
+    Membrane.Pipeline.terminate(pipeline)
   end
 
   defmodule SlowSetupSink do
@@ -349,6 +323,8 @@ defmodule Membrane.Integration.LinkingTest do
 
                {element, pad}
              end)
+
+    Membrane.Pipeline.terminate(pipeline)
   end
 
   test "Elements and bins can be spawned, linked and removed" do
@@ -507,6 +483,8 @@ defmodule Membrane.Integration.LinkingTest do
         refute_link_removed(pipeline, i)
       end
     end
+
+    Membrane.Pipeline.terminate(pipeline)
   end
 
   describe "Spec shouldn't wait on links with" do

@@ -104,15 +104,20 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
 
   @spec exec_handle_spec_started([Membrane.Child.name()], Parent.state()) :: Parent.state()
   def exec_handle_spec_started(children_names, state) do
-    action_handler = Component.action_handler(state)
+    # handle_spec_started/3 callback is deprecated, so we don't require its implementation
+    if function_exported?(state.module, :handle_spec_started, 3) do
+      action_handler = Component.action_handler(state)
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_spec_started,
-      action_handler,
-      %{context: &Component.context_from_state/1},
-      [children_names],
+      CallbackHandler.exec_and_handle_callback(
+        :handle_spec_started,
+        action_handler,
+        %{context: &Component.context_from_state/1},
+        [children_names],
+        state
+      )
+    else
       state
-    )
+    end
   end
 
   @spec check_if_children_names_and_children_groups_ids_are_unique(

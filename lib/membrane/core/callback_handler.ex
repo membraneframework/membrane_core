@@ -8,6 +8,7 @@ defmodule Membrane.Core.CallbackHandler do
   use Bunch
 
   alias Membrane.CallbackError
+  alias Membrane.Core.Component
 
   require Membrane.Logger
 
@@ -191,6 +192,13 @@ defmodule Membrane.Core.CallbackHandler do
     was_handling_action? = state.handling_action?
     state = %{state | handling_action?: true}
 
+    # Updating :supplying_demand? flag value here is a temporal fix.
+    # Setting it to `true` while handling actions causes postponing calls
+    # of handle_redemand/2 and supply_demand/2 until a moment, when all
+    # actions returned from the callback are handled
+    was_supplying_demand? = Map.get(state, :supplying_demand?, false)
+    state = if Component.is_element?(state), do: %{state | supplying_demand?: true}, else: state
+
     state =
       Enum.reduce(actions, state, fn action, state ->
         try do
@@ -209,6 +217,11 @@ defmodule Membrane.Core.CallbackHandler do
       if was_handling_action?,
         do: state,
         else: %{state | handling_action?: false}
+
+    state =
+      if Component.is_element?(state) and not was_supplying_demand?,
+        do: %{state | supplying_demand?: false},
+        else: state
 
     handler_module.handle_end_of_actions(state)
   end
