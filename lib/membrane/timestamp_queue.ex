@@ -35,7 +35,7 @@ defmodule Membrane.TimestampQueue do
             pause_demand_boundary: :infinity,
             metric: Metric.Count,
             pad_queues: %{},
-            pads_heap: Heap.min()
+            pads_heap: Heap.max()
 
   @type options :: [
           pause_demand_boundary: pos_integer() | :infinity,
@@ -51,7 +51,7 @@ defmodule Membrane.TimestampQueue do
 
     %__MODULE__{
       metric: metric,
-      pause_demand_boundary: Keyword.pop(options, :pause_demand_boundary, :infinity)
+      pause_demand_boundary: Keyword.get(options, :pause_demand_boundary, :infinity)
     }
   end
 
@@ -95,13 +95,14 @@ defmodule Membrane.TimestampQueue do
   @spec push_end_of_stream(t(), Pad.ref()) :: t()
   def push_end_of_stream(%__MODULE__{} = timestamp_queue, pad_ref) do
     push_item(timestamp_queue, pad_ref, :end_of_stream)
+    |> put_in([:pad_queues, pad_ref, :end_of_stream?], true)
   end
 
   defp push_item(%__MODULE__{} = timestamp_queue, pad_ref, item) do
     timestamp_queue
     |> maybe_handle_item_from_new_pad(item, pad_ref)
     |> update_in(
-      [:pads_queue, pad_ref, :qex],
+      [:pad_queues, pad_ref, :qex],
       &Qex.push(&1, item)
     )
   end
@@ -255,16 +256,15 @@ defmodule Membrane.TimestampQueue do
          %__MODULE__{pause_demand_boundary: boundary} = timestamp_queue,
          pad_ref
        ) do
-    pad_queue = get_in(timestamp_queue, [:pad_queues, pad_ref])
-
-    if pad_queue.demand_paused? and pad_queue.buffers_size < boundary do
+    with %{demand_paused?: true, buffers_size: size} when size < boundary <-
+           get_in(timestamp_queue, [:pad_queues, pad_ref]) do
       timestamp_queue =
         timestamp_queue
         |> put_in([:pad_queues, pad_ref, :demand_paused?], false)
 
       {[resume_auto_demand: pad_ref], timestamp_queue}
     else
-      {[], timestamp_queue}
+      _other -> {[], timestamp_queue}
     end
   end
 end
