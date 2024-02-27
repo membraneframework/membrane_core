@@ -146,6 +146,15 @@ defmodule Membrane.Core.Element.DemandHandler do
     end
   end
 
+  @spec remove_pad_from_delayed_demands(Pad.ref(), State.t()) :: State.t()
+  def remove_pad_from_delayed_demands(pad_ref, state) do
+    Map.update!(state, :delayed_demands, fn delayed_demands_set ->
+      delayed_demands_set
+      |> MapSet.delete({pad_ref, :supply})
+      |> MapSet.delete({pad_ref, :redemand})
+    end)
+  end
+
   @spec handle_input_queue_output(
           Pad.ref(),
           [InputQueue.output_value()],

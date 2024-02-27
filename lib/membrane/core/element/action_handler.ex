@@ -38,22 +38,47 @@ defmodule Membrane.Core.Element.ActionHandler do
   require Membrane.Logger
 
   @impl CallbackHandler
-  def transform_actions(actions, callback, _handler_params, state) do
+  def transform_actions(actions, _callback, _handler_params, state) do
     actions = join_buffers(actions)
-    ensure_nothing_after_redemand(actions, callback, state)
     {actions, state}
   end
 
   defguardp is_demand_size(size) when is_integer(size) or is_function(size)
 
   @impl CallbackHandler
-  def handle_end_of_actions(state) when not state.handling_action? do
-    Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
-    |> Map.put(:pads_to_snapshot, MapSet.new())
+  def handle_end_of_actions(state) do
+    # Fixed order of handling demand of manual and auto pads would lead to
+    # favoring manual pads over auto pads (or vice versa), especially after
+    # introducting auto flow queues.
+    manual_demands_first? = Enum.random([1, 2]) == 1
+
+    state =
+      if manual_demands_first?,
+        do: maybe_handle_delayed_demands(state),
+        else: state
+
+    state = maybe_handle_pads_to_snapshot(state)
+
+    state =
+      if manual_demands_first?,
+        do: state,
+        else: maybe_handle_delayed_demands(state)
+
+    state
   end
 
-  @impl CallbackHandler
-  def handle_end_of_actions(state), do: state
+  defp maybe_handle_delayed_demands(state) do
+    with %{supplying_demand?: false} <- state do
+      DemandHandler.handle_delayed_demands(state)
+    end
+  end
+
+  defp maybe_handle_pads_to_snapshot(state) do
+    with %{handling_action?: false} <- state do
+      Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
+      |> Map.put(:pads_to_snapshot, MapSet.new())
+    end
+  end
 
   @impl CallbackHandler
   def handle_action({action, _}, :handle_init, _params, _state)
@@ -284,30 +309,6 @@ defmodule Membrane.Core.Element.ActionHandler do
     )
   end
 
-  defp ensure_nothing_after_redemand(actions, callback, state) do
-    {redemands, actions_after_redemands} =
-      actions
-      |> Enum.drop_while(fn
-        {:redemand, _args} -> false
-        _other_action -> true
-      end)
-      |> Enum.split_while(fn
-        {:redemand, _args} -> true
-        _other_action -> false
-      end)
-
-    case {redemands, actions_after_redemands} do
-      {_redemands, []} ->
-        :ok
-
-      {[redemand | _redemands], _actions_after_redemands} ->
-        raise ActionError,
-          reason: :actions_after_redemand,
-          action: redemand,
-          callback: {state.module, callback}
-    end
-  end
-
   @spec send_buffer(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
   defp send_buffer(_pad_ref, [], state) do
     state
@@ -470,7 +471,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_outgoing_event(Pad.ref(), Event.t(), State.t()) :: State.t()
   defp handle_outgoing_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
-      Map.update!(state, :satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
+      DemandHandler.remove_pad_from_delayed_demands(pad_ref, state)
+      |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
       |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
       |> AutoFlowUtils.pop_queues_and_bump_demand()
     else
