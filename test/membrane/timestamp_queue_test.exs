@@ -13,7 +13,6 @@ defmodule Membrane.TimestampQueueTest do
     end)
   end
 
-  @tag :xd
   test "queue sorts buffers some buffers from different pads based on buffer dts" do
     input_order = [9, 4, 7, 3, 1, 8, 5, 6, 2, 10]
 
