@@ -119,7 +119,7 @@ defmodule Membrane.TimestampQueue do
   defp maybe_handle_item_from_new_pad(%__MODULE__{} = timestamp_queue, first_item, pad_ref) do
     priority =
       case first_item do
-        {:buffer, %Buffer{dts: dts}} -> -get_buffer_time(dts, timestamp_queue.current_queue_time)
+        {:buffer, _buffer} -> -timestamp_queue.current_queue_time
         _other -> :infinity
       end
 
@@ -188,7 +188,7 @@ defmodule Membrane.TimestampQueue do
         buffer_size = timestamp_queue.metric.buffers_size([buffer])
 
         cond do
-          buffer_time != -pad_priority ->
+          pad_priority != -buffer_time ->
             timestamp_queue
             |> Map.update!(:pads_heap, &(&1 |> Heap.pop() |> Heap.push({-buffer_time, pad_ref})))
             |> do_pop()
@@ -206,7 +206,10 @@ defmodule Membrane.TimestampQueue do
                 buffers_size: pad_queue.buffers_size - buffer_size
             }
 
-            timestamp_queue = timestamp_queue |> put_in([:pad_queues, pad_ref], pad_queue)
+            timestamp_queue =
+              timestamp_queue
+              |> Map.put(:current_queue_time, buffer_time)
+              |> put_in([:pad_queues, pad_ref], pad_queue)
 
             {{pad_ref, {:buffer, buffer}}, timestamp_queue}
         end
