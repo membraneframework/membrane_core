@@ -259,11 +259,11 @@ defmodule Membrane.TimestampQueue do
          %__MODULE__{pause_demand_boundary: boundary} = timestamp_queue,
          pad_ref
        ) do
-    with %{demand_paused?: true, buffers_size: size} when size < boundary <-
+    with %{paused_demand?: true, buffers_size: size} when size < boundary <-
            get_in(timestamp_queue, [:pad_queues, pad_ref]) do
       timestamp_queue =
         timestamp_queue
-        |> put_in([:pad_queues, pad_ref, :demand_paused?], false)
+        |> put_in([:pad_queues, pad_ref, :paused_demand?], false)
 
       {[resume_auto_demand: pad_ref], timestamp_queue}
     else
