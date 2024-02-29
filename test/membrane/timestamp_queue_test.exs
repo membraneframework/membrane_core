@@ -142,7 +142,7 @@ defmodule Membrane.TimestampQueueTest do
         TimestampQueue.push_end_of_stream(queue, Pad.ref(:input, i))
       end)
 
-    # sanity check, if the test is written correctly
+    # sanity check, that test is written correctly
     assert %{} = pads_items
 
     assert {[], batch, _queue} = TimestampQueue.pop_batch(queue)
@@ -247,6 +247,4 @@ defmodule Membrane.TimestampQueueTest do
       assert {[], :none, _queue} = TimestampQueue.pop(queue)
     end
   end)
-
-  # todo: suggested actions test
 end
