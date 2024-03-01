@@ -11,11 +11,11 @@ defmodule Membrane.TimestampQueue do
   from each pad currently stored in the queue.
   """
 
+  use Bunch.Access
+
   alias Membrane.{Buffer, Event, Pad, StreamFormat}
   alias Membrane.Buffer.Metric
   alias Membrane.Element.Action
-
-  use Bunch.Access
 
   @type buffer_entry :: {:buffer, Buffer.t(), buffer_time :: Membrane.Time.t()}
   @type stream_format_entry :: {:stream_format, StreamFormat.t()}

@@ -1,10 +1,10 @@
 defmodule Membrane.TimestampQueueTest do
-  alias Membrane.TimestampQueue
+  use ExUnit.Case, async: true
+
   alias Membrane.Buffer
+  alias Membrane.TimestampQueue
 
   require Membrane.Pad, as: Pad
-
-  use ExUnit.Case, async: true
 
   test "queue raises on buffer with nil dts" do
     assert_raise(RuntimeError, fn ->
