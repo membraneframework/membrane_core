@@ -86,7 +86,7 @@ defmodule Membrane.TimestampQueue do
   `pause_demand_boundary`, the suggested actions list contains `t:Action.pause_auto_demand()`
   action, otherwise it is equal an empty list.
 
-  Buffers pushed to the queue must have non-`nil` `pts`.
+  Buffers pushed to the queue must have non-`nil` `dts`.
   """
   @spec push_buffer(t(), Pad.ref(), Buffer.t()) :: {[Action.pause_auto_demand()], t()}
   def push_buffer(_timestamp_queue, pad_ref, %Buffer{dts: nil} = buffer) do
