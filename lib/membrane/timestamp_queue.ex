@@ -1,10 +1,14 @@
 defmodule Membrane.TimestampQueue do
   @moduledoc """
-  A queue, that accepts buffers, stream formats and events from various pads and sorts them basing on the
-  timestamps. This queue is able to manage demand of a pad, basing on the amount of buffers from the
-  specific pad currently stored in the queue.
+  Implementation of a queue, that accepts:
+   - Membrane buffers
+   - events
+   - stream formats
+   - end of streams
+  from various pads. Items in queue are sorted according to their timestamps.
 
-  Queue accepts following options:
+  Moreover, #{inspect(__MODULE__)} is able to manage demand of pads, based on the amount of buffers
+  from each pad currently stored in the queue.
   """
 
   alias Membrane.{Buffer, Event, Pad, StreamFormat}
@@ -19,6 +23,10 @@ defmodule Membrane.TimestampQueue do
 
   @type queue_entry :: buffer_entry() | stream_format_entry() | event_entry()
 
+  @typedoc """
+  A queue, that accepts buffers, stream formats and events from various pads and sorts them based on
+  their timestamps.
+  """
   @type pad_queue :: %{
           pad_ref: Pad.ref(),
           dts_offset: integer(),
@@ -47,7 +55,7 @@ defmodule Membrane.TimestampQueue do
 
   Following options are allowed:
     - `:pause_demand_boundary` - positive integer or `:infinity` (default to `:infinity`). Tells, what
-      amount of buffers from a specific pad must be stored in the queue, to pause auto demand.
+      amount of buffers associated with specific pad must be stored in the queue, to pause auto demand.
     - `:pause_demand_boundary_unit` - `:buffers` or `:bytes` (deafult to `:buffers`). Tells, in which metric
       `:pause_demand_boundary` is specified.
   """
@@ -70,12 +78,13 @@ defmodule Membrane.TimestampQueue do
   end
 
   @doc """
-  Pushes buffer from the specified pad to the queue.
+  Pushes a buffer associated with a specified pad to the queue.
 
-  Returns suggested actions list and updated queue.
+  Returns a suggested actions list and the updated queue.
 
-  If amount of buffers from the specified pad stored just exceded `pause_demand_boundary`, suggested
-  actions list contains `t:Action.pause_auto_demand()` action, or equals empty list otherwise.
+  If amount of buffers associated with specified pad in the queue just exceded
+  `pause_demand_boundary`, the suggested actions list contains `t:Action.pause_auto_demand()`
+  action, otherwise it is equal an empty list.
 
   Buffers pushed to the queue must have non-`nil` `pts`.
   """
@@ -103,22 +112,20 @@ defmodule Membrane.TimestampQueue do
     end)
   end
 
-
   @doc """
-  Pushes stream format from the specified pad to the queue.
+  Pushes stream format associated with a specified pad to the queue.
 
-  Returns updated queue.
+  Returns the updated queue.
   """
   @spec push_stream_format(t(), Pad.ref(), StreamFormat.t()) :: t()
   def push_stream_format(%__MODULE__{} = timestamp_queue, pad_ref, stream_format) do
     push_item(timestamp_queue, pad_ref, {:stream_format, stream_format})
   end
 
-
   @doc """
-  Pushes event from the specified pad to the queue.
+  Pushes event associated with a specified pad to the queue.
 
-  Returns updated queue.
+  Returns the updated queue.
   """
   @spec push_event(t(), Pad.ref(), Event.t()) :: t()
   def push_event(%__MODULE__{} = timestamp_queue, pad_ref, event) do
@@ -128,7 +135,7 @@ defmodule Membrane.TimestampQueue do
   @doc """
   Pushes end of stream of the specified pad to the queue.
 
-  Returns updated queue.
+  Returns the updated queue.
   """
   @spec push_end_of_stream(t(), Pad.ref()) :: t()
   def push_end_of_stream(%__MODULE__{} = timestamp_queue, pad_ref) do
@@ -195,18 +202,18 @@ defmodule Membrane.TimestampQueue do
 
   @type popped_value :: {Pad.ref(), item()}
 
-  @doc"""
+  @doc """
   Pops up to 1 buffer from the queue.
 
-  Returns suggested actions list, popped buffer and the updated queue.
+  Returns a suggested actions list, popped buffer and the updated queue.
 
-  If amount of buffers from pad related to popped buffer just felt below `pause_demand_boundary`,
-  suggested actions list contains `t:Action.resume_auto_demand()` action, or equals empty list
-  otherwise.
+  If amount of buffers from pad associated with popped buffer just dropped below
+  `pause_demand_boundary`, the suggested actions list contains `t:Action.resume_auto_demand()`
+  action, otherwise it is an empty list.
 
-  If queue cannot return any buffer, returns `:none` in it's place instead (note, that queue doesn't
-  have to be empty, to not be able to return buffer - sometimes queue has to hold up to 1 buffer for
-  each pad, to be able to work correctly).
+  If the queue cannot return any buffer, returns `:none` in it's place instead. Note, that
+  the queue doesn't have to be empty to be unable to return a buffer - sometimes queue has to
+  keep up to 1 buffer for each pad, to be able to work correctly.
   """
   @spec pop(t()) :: {[Action.resume_auto_demand()], popped_value() | :none, t()}
   def pop(%__MODULE__{} = timestamp_queue) do
@@ -281,17 +288,17 @@ defmodule Membrane.TimestampQueue do
   end
 
   @doc """
-  Pops as many buffer from the queue, as it is possible.
+  Pops as many buffers from the queue, as it is possible.
 
-  Returns suggested actions list, list of popped buffer and the updated queue.
+  Returns suggested actions list, list of popped buffers and the updated queue.
 
-  If amount of buffers related to any of pad in queue just felt below `pause_demand_boundary`,
-  suggested actions list contains `t:Action.resume_auto_demand()` actions , or equals empty list
-  otherwise.
+  If the amount of buffers associated with any pad in the queue falls below the
+  `pause_demand_boundary`, the suggested actions list contains `t:Action.resume_auto_demand()`
+  actions, otherwise it is an empty list.
 
-  If queue cannot return any buffer, returns an empty list (note, that queue doesn't have to be
-  empty, to not be able to return buffer - sometimes queue has to hold up to 1 buffer for each pad,
-  to be able to work correctly).
+  If the queue cannot return any buffer, empty list is returned. Note, that queue doesn't have to be
+  empty to be unable to return a buffer - sometimes queue must keep up to 1 buffer for each pad,
+  to be able to work correctly.
   """
   @spec pop_batch(t()) :: {[Action.resume_auto_demand()], [popped_value() | :none], t()}
   def pop_batch(%__MODULE__{} = timestamp_queue) do
