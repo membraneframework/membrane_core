@@ -12,11 +12,13 @@ defmodule Membrane.Core.Element.EventController do
   alias Membrane.Core.Element.{
     ActionHandler,
     CallbackContext,
+    DemandHandler,
     InputQueue,
-    PadController,
     PlaybackQueue,
     State
   }
+
+  alias Membrane.Core.Element.DemandController.AutoFlowUtils
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
@@ -39,15 +41,24 @@ defmodule Membrane.Core.Element.EventController do
           playback: %State{playback: :playing} <- state do
       Telemetry.report_metric(:event, 1, inspect(pad_ref))
 
-      if not Event.async?(event) and buffers_before_event_present?(data) do
-        PadModel.update_data!(
-          state,
-          pad_ref,
-          :input_queue,
-          &InputQueue.store(&1, :event, event)
-        )
-      else
-        exec_handle_event(pad_ref, event, state)
+      async? = Event.async?(event)
+
+      cond do
+        # events goes to the manual flow control input queue
+        not async? and buffers_before_event_present?(data) ->
+          PadModel.update_data!(
+            state,
+            pad_ref,
+            :input_queue,
+            &InputQueue.store(&1, :event, event)
+          )
+
+        # event goes to the auto flow control queue
+        not async? and MapSet.member?(state.awaiting_auto_input_pads, pad_ref) ->
+          AutoFlowUtils.store_event_in_queue(pad_ref, event, state)
+
+        true ->
+          exec_handle_event(pad_ref, event, state)
       end
     else
       pad: {:error, :unknown_pad} ->
@@ -97,8 +108,11 @@ defmodule Membrane.Core.Element.EventController do
     else
       Membrane.Logger.debug("Received end of stream on pad #{inspect(pad_ref)}")
 
-      state = PadModel.set_data!(state, pad_ref, :end_of_stream?, true)
-      state = PadController.remove_pad_associations(pad_ref, state)
+      state =
+        DemandHandler.remove_pad_from_delayed_demands(pad_ref, state)
+        |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
+        |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
+        |> Map.update!(:auto_input_pads, &List.delete(&1, pad_ref))
 
       %{
         start_of_stream?: start_of_stream?,

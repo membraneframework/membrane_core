@@ -18,7 +18,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
   defp demand_test_filter(_context) do
     state =
-      struct(State,
+      struct!(State,
         module: Filter,
         name: :test_name,
         type: :filter,
@@ -47,7 +47,10 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         pads_info: %{
           input: %{flow_control: :manual},
           input_push: %{flow_control: :push}
-        }
+        },
+        satisfied_auto_output_pads: MapSet.new(),
+        awaiting_auto_input_pads: MapSet.new(),
+        popping_auto_flow_queue?: false
       )
 
     [state: state]
@@ -100,7 +103,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       })
 
     state =
-      struct(State,
+      struct!(State,
         module: TrivialFilter,
         name: :elem_name,
         type: :filter,
@@ -140,7 +143,10 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         pads_info: %{
           output: %{flow_control: :push},
           input: %{flow_control: :push}
-        }
+        },
+        satisfied_auto_output_pads: MapSet.new(),
+        awaiting_auto_input_pads: MapSet.new(),
+        popping_auto_flow_queue?: false
       )
 
     [state: state]
@@ -539,17 +545,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           assert {actions, state} == @module.transform_actions(actions, :handle_info, %{}, state)
         end
       )
-    end
-
-    test "when :redemand is not the last action", %{state: state} do
-      assert_raise ActionError, ~r/redemand.*last/i, fn ->
-        @module.transform_actions(
-          [redemand: :output, notify_parent: :a, notify_parent: :b],
-          :handle_other,
-          %{},
-          state
-        )
-      end
     end
   end
 end

@@ -234,7 +234,8 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     )
 
     for i <- 1..3000 do
-      assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: <<buff_idx::64>>})
+      assert_sink_buffer(pipeline, :sink, buffer)
+      assert %Membrane.Buffer{payload: <<buff_idx::64>>} = buffer
       assert buff_idx == i
     end
 

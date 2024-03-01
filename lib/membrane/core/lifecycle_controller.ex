@@ -14,12 +14,16 @@ defmodule Membrane.Core.LifecycleController do
   def handle_setup_operation(operation, state) do
     :ok = assert_operation_allowed!(operation, state.setup_incomplete?)
 
-    case operation do
-      :incomplete ->
+    cond do
+      operation == :incomplete ->
         Membrane.Logger.debug("Component deferred initialization")
         %{state | setup_incomplete?: true}
 
-      :complete ->
+      Component.is_pipeline?(state) ->
+        # complete_setup/1 will be called in Membrane.Core.Pipeline.ActionHandler.handle_end_of_actions/1
+        %{state | awaiting_setup_completition?: true}
+
+      Component.is_child?(state) ->
         complete_setup(state)
     end
   end
@@ -49,6 +53,14 @@ defmodule Membrane.Core.LifecycleController do
   defp assert_operation_allowed!(:complete, false) do
     raise SetupError, """
     Action {:setup, :complete} was returned, but setup is already completed
+    """
+  end
+
+  defp assert_operation_allowed!(operation, _status)
+       when operation not in [:incomplete, :complete] do
+    raise SetupError, """
+    Action {:setup, #{inspect(operation)}} was returned, but second element in the tuple must
+    be :complete or :incomplete
     """
   end
 

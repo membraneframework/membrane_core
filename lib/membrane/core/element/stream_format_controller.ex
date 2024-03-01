@@ -9,6 +9,7 @@ defmodule Membrane.Core.Element.StreamFormatController do
   alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.{ActionHandler, CallbackContext, InputQueue, PlaybackQueue, State}
+  alias Membrane.Core.Element.DemandController.AutoFlowUtils
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Telemetry
@@ -28,15 +29,22 @@ defmodule Membrane.Core.Element.StreamFormatController do
 
       queue = data.input_queue
 
-      if queue && not InputQueue.empty?(queue) do
-        PadModel.set_data!(
-          state,
-          pad_ref,
-          :input_queue,
-          InputQueue.store(queue, :stream_format, stream_format)
-        )
-      else
-        exec_handle_stream_format(pad_ref, stream_format, state)
+      cond do
+        # stream format goes to the manual flow control input queue
+        queue && not InputQueue.empty?(queue) ->
+          PadModel.set_data!(
+            state,
+            pad_ref,
+            :input_queue,
+            InputQueue.store(queue, :stream_format, stream_format)
+          )
+
+        # stream format goes to the auto flow control queue
+        pad_ref in state.awaiting_auto_input_pads ->
+          AutoFlowUtils.store_stream_format_in_queue(pad_ref, stream_format, state)
+
+        true ->
+          exec_handle_stream_format(pad_ref, stream_format, state)
       end
     else
       pad: {:error, :unknown_pad} ->

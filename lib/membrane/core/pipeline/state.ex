@@ -34,7 +34,8 @@ defmodule Membrane.Core.Pipeline.State do
           setup_incomplete?: boolean(),
           handling_action?: boolean(),
           stalker: Membrane.Core.Stalker.t(),
-          subprocess_supervisor: pid()
+          subprocess_supervisor: pid(),
+          awaiting_setup_completition?: boolean()
         }
 
   # READ THIS BEFORE ADDING NEW FIELD!!!
@@ -58,5 +59,6 @@ defmodule Membrane.Core.Pipeline.State do
             handling_action?: false,
             stalker: nil,
             resource_guard: nil,
-            subprocess_supervisor: nil
+            subprocess_supervisor: nil,
+            awaiting_setup_completition?: false
 end

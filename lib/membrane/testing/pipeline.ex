@@ -522,7 +522,12 @@ defmodule Membrane.Testing.Pipeline do
     do: {[], nil}
 
   defp eval_injected_module_callback(callback, args, state) do
-    apply(state.module, callback, args ++ [state.custom_pipeline_state])
+    if callback != :handle_spec_started or
+         function_exported?(state.module, :handle_spec_started, 3) do
+      apply(state.module, callback, args ++ [state.custom_pipeline_state])
+    else
+      {[], state.custom_pipeline_state}
+    end
   end
 
   defp notify_test_process(test_process, message) do

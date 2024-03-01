@@ -15,7 +15,8 @@ defmodule Membrane.Integration.DemandsTest do
 
   defp assert_buffers_received(range, pid) do
     Enum.each(range, fn i ->
-      assert_sink_buffer(pid, :sink, %Buffer{payload: <<^i::16>> <> <<255>>})
+      assert_sink_buffer(pid, :sink, buffer)
+      assert %Buffer{payload: <<^i::16>> <> <<255>>} = buffer
     end)
   end
 
@@ -279,9 +280,6 @@ defmodule Membrane.Integration.DemandsTest do
         )
 
       assert_sink_playing(pipeline, :sink)
-
-      # time for pipeline to start playing
-      Process.sleep(1000)
 
       for i <- 1..10 do
         # during sleep below source should send around 100 buffers

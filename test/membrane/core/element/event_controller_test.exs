@@ -43,7 +43,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
       })
 
     state =
-      struct(State,
+      struct!(State,
         module: MockEventHandlingElement,
         name: :test_name,
         type: :filter,
@@ -51,7 +51,10 @@ defmodule Membrane.Core.Element.EventControllerTest do
         parent_pid: self(),
         synchronization: %{clock: nil, parent_clock: nil, stream_sync: nil},
         handling_action?: false,
+        supplying_demand?: false,
         pads_to_snapshot: MapSet.new(),
+        delayed_demands: MapSet.new(),
+        handle_demand_loop_counter: 0,
         pads_data: %{
           input:
             struct(Membrane.Element.PadData,
@@ -64,7 +67,10 @@ defmodule Membrane.Core.Element.EventControllerTest do
               input_queue: input_queue,
               demand: 0
             )
-        }
+        },
+        satisfied_auto_output_pads: MapSet.new(),
+        awaiting_auto_input_pads: MapSet.new(),
+        auto_input_pads: []
       )
 
     assert AtomicDemand.get(atomic_demand) > 0
