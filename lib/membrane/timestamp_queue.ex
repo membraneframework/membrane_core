@@ -17,16 +17,6 @@ defmodule Membrane.TimestampQueue do
   alias Membrane.Buffer.Metric
   alias Membrane.Element.Action
 
-  @type buffer_entry :: {:buffer, Buffer.t(), buffer_time :: Membrane.Time.t()}
-  @type stream_format_entry :: {:stream_format, StreamFormat.t()}
-  @type event_entry :: {:event, Event.t()}
-
-  @type queue_entry :: buffer_entry() | stream_format_entry() | event_entry()
-
-  @typedoc """
-  A queue, that accepts buffers, stream formats and events from various pads and sorts them based on
-  their timestamps.
-  """
   @type pad_queue :: %{
           pad_ref: Pad.ref(),
           dts_offset: integer(),
@@ -36,6 +26,10 @@ defmodule Membrane.TimestampQueue do
           end_of_stream?: boolean()
         }
 
+  @typedoc """
+  A queue, that accepts buffers, stream formats and events from various pads and sorts them based on
+  their timestamps.
+  """
   @type t :: %__MODULE__{
           current_queue_time: Membrane.Time.t(),
           pause_demand_boundary: pos_integer() | :infinity,
