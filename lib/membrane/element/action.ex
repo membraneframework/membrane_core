@@ -82,11 +82,12 @@ defmodule Membrane.Element.Action do
   guaranteed not to receive more data than demanded.
 
   Demand size can be either a non-negative integer, that overrides existing demand,
-  or a function that is passed current demand, and is to return the new demand.
+  or a function that is passed current demand, and is to return the new demand. In case only pad
+  is specified, the demand size defaults to a value of 1.
 
   Allowed only when playback is playing.
   """
-  @type demand :: {:demand, {Pad.ref(), demand_size}}
+  @type demand :: {:demand, {Pad.ref(), demand_size} | Pad.ref()}
   @type demand_size :: pos_integer | (pos_integer() -> non_neg_integer())
 
   @typedoc """
