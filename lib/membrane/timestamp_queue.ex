@@ -240,6 +240,8 @@ defmodule Membrane.TimestampQueue do
         buffer_size = timestamp_queue.metric.buffers_size([buffer])
 
         cond do
+          # todo 1: consider updating heap just after popping a buffer
+          # todo 2: holding buffers counter in pad_queue would help with a problem with buffer with payload: <<>> and metric: Bytes
           pad_priority != -buffer_time ->
             timestamp_queue
             |> Map.update!(:pads_heap, &(&1 |> Heap.pop() |> Heap.push({-buffer_time, pad_ref})))
