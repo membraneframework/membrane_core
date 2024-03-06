@@ -38,14 +38,16 @@ defmodule Membrane.TimestampQueue do
           pause_demand_boundary: pos_integer() | :infinity,
           metric: Metric.ByteSize | Metric.Count,
           pad_queues: %{optional(Pad.ref()) => pad_queue()},
-          pads_heap: Heap.t()
+          pads_heap: Heap.t(),
+          waiting_on_buffer_from: MapSet.t()
         }
 
   defstruct current_queue_time: Membrane.Time.seconds(0),
             pause_demand_boundary: :infinity,
             metric: Metric.Count,
             pad_queues: %{},
-            pads_heap: Heap.max()
+            pads_heap: Heap.max(),
+            waiting_on_buffer_from: MapSet.new()
 
   @typedoc """
   Options passed to #{inspect(__MODULE__)}.new/1.
@@ -74,6 +76,12 @@ defmodule Membrane.TimestampQueue do
     }
   end
 
+  @spec register_pad(t(), Pad.ref()) :: t()
+  def register_pad(%__MODULE__{} = timestamp_queue, pad_ref) do
+    timestamp_queue
+    |> Map.update!(:waiting_on_buffer_from, &MapSet.put(&1, pad_ref))
+  end
+
   @doc """
   Pushes a buffer associated with a specified pad to the queue.
 
@@ -97,6 +105,7 @@ defmodule Membrane.TimestampQueue do
     buffer_size = timestamp_queue.metric.buffers_size([buffer])
 
     timestamp_queue
+    |> Map.update!(:waiting_on_buffer_from, &MapSet.delete(&1, pad_ref))
     |> push_item(pad_ref, {:buffer, buffer})
     |> get_and_update_in([:pad_queues, pad_ref], fn pad_queue ->
       pad_queue
@@ -167,7 +176,9 @@ defmodule Membrane.TimestampQueue do
   """
   @spec push_end_of_stream(t(), Pad.ref()) :: t()
   def push_end_of_stream(%__MODULE__{} = timestamp_queue, pad_ref) do
-    push_item(timestamp_queue, pad_ref, :end_of_stream)
+    timestamp_queue
+    |> Map.update!(:waiting_on_buffer_from, &MapSet.delete(&1, pad_ref))
+    |> push_item(pad_ref, :end_of_stream)
     |> put_in([:pad_queues, pad_ref, :end_of_stream?], true)
   end
 
@@ -207,7 +218,7 @@ defmodule Membrane.TimestampQueue do
       qex: Qex.new(),
       buffers_size: 0,
       buffers_number: 0,
-      update_heap_on_buffer?: false,
+      update_heap_on_buffer?: true,
       paused_demand?: false,
       end_of_stream?: false,
       use_pts?: nil,
@@ -266,9 +277,17 @@ defmodule Membrane.TimestampQueue do
 
   @spec do_pop(t()) :: {popped_value() | :none, t()}
   defp do_pop(timestamp_queue) do
-    case Heap.root(timestamp_queue.pads_heap) do
-      {_priority, pad_ref} -> do_pop(timestamp_queue, pad_ref)
-      nil -> {:none, timestamp_queue}
+    if MapSet.size(timestamp_queue.waiting_on_buffer_from) == 0 do
+      case Heap.root(timestamp_queue.pads_heap) do
+        {_priority, pad_ref} -> do_pop(timestamp_queue, pad_ref)
+        nil -> {:none, timestamp_queue}
+      end
+    else
+      case Heap.root(timestamp_queue.pads_heap) do
+        # priority :infinity cannot be associated with a buffer
+        {:infinity, pad_ref} -> do_pop(timestamp_queue, pad_ref)
+        _other -> {:none, timestamp_queue}
+      end
     end
   end
 

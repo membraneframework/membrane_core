@@ -255,7 +255,6 @@ defmodule Membrane.TimestampQueueTest do
     1..iterations
     |> Enum.reduce(TimestampQueue.new(), fn pads_in_iteration, queue ->
       pads = for i <- 1..pads_in_iteration, do: Pad.ref(:input, i)
-
       new_pad = Pad.ref(:input, pads_in_iteration)
 
       queue =
@@ -300,5 +299,56 @@ defmodule Membrane.TimestampQueueTest do
 
       queue
     end)
+  end
+
+  # todo: unify tests naming convention
+  test "registering pads" do
+    queue =
+      TimestampQueue.new()
+      |> TimestampQueue.register_pad(:a)
+      |> TimestampQueue.register_pad(:b)
+
+    events = for i <- 1..1000, do: %Event{dts: i}
+    buffers = for i <- 1..1000, do: %Buffer{dts: i, payload: <<>>}
+
+    queue =
+      events
+      |> Enum.reduce(queue, fn event, queue ->
+        queue
+        |> TimestampQueue.push_event(:a, event)
+        |> TimestampQueue.push_event(:b, event)
+      end)
+
+    queue =
+      buffers
+      |> Enum.reduce(queue, fn buffer, queue ->
+        {[], queue} = TimestampQueue.push_buffer(queue, :a, buffer)
+        queue
+      end)
+
+    {[], batch, queue} = TimestampQueue.pop_batch(queue)
+
+    grouped_batch = Enum.group_by(batch, &elem(&1, 0), &(elem(&1, 1) |> elem(1)))
+    assert grouped_batch == %{a: events, b: events}
+
+    assert {[], [], queue} = TimestampQueue.pop_batch(queue)
+
+    queue =
+      buffers
+      |> Enum.reduce(queue, fn buffer, queue ->
+        {[], queue} = TimestampQueue.push_buffer(queue, :b, buffer)
+        queue
+      end)
+
+    {[], batch, _queue} = TimestampQueue.pop_batch(queue)
+
+    sorted_batch = Enum.sort_by(batch, fn {_pad_ref, {:buffer, buffer}} -> buffer.dts end)
+    assert batch == sorted_batch
+
+    grouped_batch = Enum.group_by(batch, &elem(&1, 0), &(elem(&1, 1) |> elem(1)))
+    assert grouped_batch == %{
+      a: List.delete_at(buffers, 999),
+      b: List.delete_at(buffers, 999)
+    }
   end
 end
