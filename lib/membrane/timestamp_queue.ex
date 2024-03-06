@@ -18,13 +18,15 @@ defmodule Membrane.TimestampQueue do
   alias Membrane.Element.Action
 
   @type pad_queue :: %{
-          pad_ref: Pad.ref(),
-          dts_offset: integer(),
+          timestamp_offset: integer(),
           qex: Qex.t(),
           buffers_size: non_neg_integer(),
           buffers_number: non_neg_integer(),
+          update_heap_on_buffer?: boolean(),
           paused_demand?: boolean(),
-          end_of_stream?: boolean()
+          end_of_stream?: boolean(),
+          use_pts?: boolean() | nil,
+          last_buffer_timestamp: Membrane.Time.t() | nil
         }
 
   @typedoc """
@@ -81,12 +83,12 @@ defmodule Membrane.TimestampQueue do
   `pause_demand_boundary`, the suggested actions list contains `t:Action.pause_auto_demand()`
   action, otherwise it is equal an empty list.
 
-  Buffers pushed to the queue must have non-`nil` `dts`.
+  Buffers pushed to the queue must have a non-`nil` `dts` or `pts`.
   """
   @spec push_buffer(t(), Pad.ref(), Buffer.t()) :: {[Action.pause_auto_demand()], t()}
-  def push_buffer(_timestamp_queue, pad_ref, %Buffer{dts: nil} = buffer) do
+  def push_buffer(_timestamp_queue, pad_ref, %Buffer{dts: nil, pts: nil} = buffer) do
     raise """
-    #{inspect(__MODULE__)} accepts only buffers whose dts is not nil, but it received\n#{inspect(buffer, pretty: true)}
+    #{inspect(__MODULE__)} accepts only buffers whose dts or pts is not nil, but it received\n#{inspect(buffer, pretty: true)}
     from pad #{inspect(pad_ref)}
     """
   end
@@ -98,16 +100,44 @@ defmodule Membrane.TimestampQueue do
     |> push_item(pad_ref, {:buffer, buffer})
     |> get_and_update_in([:pad_queues, pad_ref], fn pad_queue ->
       pad_queue
-      |> Map.update!(:dts_offset, fn
-        nil -> timestamp_queue.current_queue_time - buffer.dts
-        valid_offset -> valid_offset
-      end)
       |> Map.merge(%{
         buffers_size: pad_queue.buffers_size + buffer_size,
         buffers_number: pad_queue.buffers_number + 1
       })
-      |> actions_after_pushing_buffer(timestamp_queue.pause_demand_boundary)
+      |> Map.update!(:timestamp_offset, fn
+        nil -> timestamp_queue.current_queue_time - (buffer.dts || buffer.pts)
+        valid_offset -> valid_offset
+      end)
+      |> Map.update!(:use_pts?, fn
+        nil -> buffer.dts == nil
+        valid_boolean -> valid_boolean
+      end)
+      |> check_timestamps_consistency!(buffer, pad_ref)
+      |> actions_after_pushing_buffer(pad_ref, timestamp_queue.pause_demand_boundary)
     end)
+  end
+
+  defp check_timestamps_consistency!(pad_queue, buffer, pad_ref) do
+    if not pad_queue.use_pts? and buffer.dts == nil do
+      raise """
+      Buffer #{inspect(buffer, pretty: true)} from pad #{inspect(pad_ref)} has nil dts, while \
+      the first buffer from this pad had valid integer there. If the first buffer from a pad has \
+      dts different from nil, all later buffers from this pad must meet this property.
+      """
+    end
+
+    buffer_timestamp = if pad_queue.use_pts?, do: buffer.pts, else: buffer.dts
+    last_timestamp = pad_queue.last_buffer_timestamp
+
+    if is_integer(last_timestamp) and last_timestamp > buffer_timestamp do
+      raise """
+      Buffer #{inspect(buffer, pretty: true)} from pad #{inspect(pad_ref)} has timestamp equal \
+      #{inspect(buffer_timestamp)}, but previous buffer from this pad had timestamp equal #{inspect(last_timestamp)}. \
+      Buffers from a single pad must have non-decreasing timestamps.
+      """
+    end
+
+    %{pad_queue | last_buffer_timestamp: buffer_timestamp}
   end
 
   @doc """
@@ -167,31 +197,37 @@ defmodule Membrane.TimestampQueue do
       end
 
     timestamp_queue
-    |> put_in([:pad_queues, pad_ref], new_pad_queue(pad_ref))
+    |> put_in([:pad_queues, pad_ref], new_pad_queue())
     |> Map.update!(:pads_heap, &Heap.push(&1, {priority, pad_ref}))
   end
 
-  defp new_pad_queue(pad_ref) do
+  defp new_pad_queue() do
     %{
-      pad_ref: pad_ref,
-      dts_offset: nil,
+      timestamp_offset: nil,
       qex: Qex.new(),
       buffers_size: 0,
       buffers_number: 0,
+      update_heap_on_buffer?: false,
       paused_demand?: false,
-      end_of_stream?: false
+      end_of_stream?: false,
+      use_pts?: nil,
+      last_buffer_timestamp: nil
     }
   end
 
-  defp actions_after_pushing_buffer(pad_queue, pause_demand_boundary) do
+  defp actions_after_pushing_buffer(pad_queue, pad_ref, pause_demand_boundary) do
     if not pad_queue.paused_demand? and pad_queue.buffers_size >= pause_demand_boundary do
-      {[pause_auto_demand: pad_queue.pad_ref], %{pad_queue | paused_demand?: true}}
+      {[pause_auto_demand: pad_ref], %{pad_queue | paused_demand?: true}}
     else
       {[], pad_queue}
     end
   end
 
-  defp get_buffer_time(buffer_dts, dts_offset), do: buffer_dts + dts_offset
+  defp buffer_time(%Buffer{dts: dts}, %{use_pts?: false, timestamp_offset: timestamp_offset}),
+    do: dts + timestamp_offset
+
+  defp buffer_time(%Buffer{pts: pts}, %{use_pts?: true, timestamp_offset: timestamp_offset}),
+    do: pts + timestamp_offset
 
   @type item ::
           {:stream_format, StreamFormat.t()}
@@ -231,38 +267,38 @@ defmodule Membrane.TimestampQueue do
   @spec do_pop(t()) :: {popped_value() | :none, t()}
   defp do_pop(timestamp_queue) do
     case Heap.root(timestamp_queue.pads_heap) do
-      {priority, pad_ref} -> do_pop(timestamp_queue, pad_ref, priority)
+      {_priority, pad_ref} -> do_pop(timestamp_queue, pad_ref)
       nil -> {:none, timestamp_queue}
     end
   end
 
-  # todo 1: consider updating heap just after popping a buffer
-  defp do_pop(timestamp_queue, pad_ref, pad_priority) do
+  defp do_pop(timestamp_queue, pad_ref) do
     pad_queue = Map.get(timestamp_queue.pad_queues, pad_ref)
 
     case Qex.pop(pad_queue.qex) do
       {{:value, {:buffer, buffer}}, qex} ->
-        buffer_time = get_buffer_time(buffer.dts, pad_queue.dts_offset)
-        buffer_size = timestamp_queue.metric.buffers_size([buffer])
+        buffer_time = buffer_time(buffer, pad_queue)
 
-        cond do
-          pad_priority != -buffer_time ->
+        case pad_queue do
+          %{update_heap_on_buffer?: true} ->
             timestamp_queue
             |> Map.update!(:pads_heap, &(&1 |> Heap.pop() |> Heap.push({-buffer_time, pad_ref})))
+            |> put_in([:pad_queues, pad_ref, :update_heap_on_buffer?], false)
             |> do_pop()
 
-          pad_queue.buffers_number == 1 and not pad_queue.end_of_stream? ->
+          %{buffers_number: 1, end_of_stream?: false} ->
             # last buffer on pad queue without end of stream
             {:none, timestamp_queue}
 
-          true ->
-            # this must be recursive call of pop()
+          pad_queue ->
+            buffer_size = timestamp_queue.metric.buffers_size([buffer])
 
             pad_queue = %{
               pad_queue
               | qex: qex,
                 buffers_size: pad_queue.buffers_size - buffer_size,
-                buffers_number: pad_queue.buffers_number - 1
+                buffers_number: pad_queue.buffers_number - 1,
+                update_heap_on_buffer?: true
             }
 
             timestamp_queue =

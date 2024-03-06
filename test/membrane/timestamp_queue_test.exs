@@ -259,8 +259,13 @@ defmodule Membrane.TimestampQueueTest do
       new_pad = Pad.ref(:input, pads_in_iteration)
 
       queue =
-        Enum.reduce([0, 1], queue, fn dts, queue ->
-          buffer = %Buffer{dts: dts, payload: <<>>}
+        Enum.reduce([0, 1], queue, fn timestamp, queue ->
+          timestamp_field = if div(pads_in_iteration, 2) == 1, do: :dts, else: :pts
+
+          buffer =
+            %Buffer{payload: <<>>}
+            |> Map.put(timestamp_field, timestamp)
+
           {[], queue} = TimestampQueue.push_buffer(queue, new_pad, buffer)
           queue
         end)
@@ -270,10 +275,14 @@ defmodule Membrane.TimestampQueueTest do
         |> Enum.reduce(queue, fn pad_ref, queue ->
           Pad.ref(:input, pad_idx) = pad_ref
           pad_offset = iteration_size * (pads_in_iteration - pad_idx) + 2
+          timestamp_field = if div(pad_idx, 2) == 1, do: :dts, else: :pts
 
           pad_offset..(pad_offset + iteration_size - 1)
-          |> Enum.reduce(queue, fn dts, queue ->
-            buffer = %Buffer{dts: dts, payload: <<>>}
+          |> Enum.reduce(queue, fn timestamp, queue ->
+            buffer =
+              %Buffer{payload: <<>>}
+              |> Map.put(timestamp_field, timestamp)
+
             {[], queue} = TimestampQueue.push_buffer(queue, pad_ref, buffer)
             queue
           end)
@@ -284,7 +293,7 @@ defmodule Membrane.TimestampQueueTest do
       sorted_batch =
         batch
         |> Enum.sort_by(fn {Pad.ref(:input, pad_idx), {:buffer, buffer}} ->
-          buffer.dts + pad_idx * iteration_size
+          (buffer.dts || buffer.pts) + pad_idx * iteration_size
         end)
 
       assert batch == sorted_batch
