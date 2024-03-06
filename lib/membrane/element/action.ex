@@ -83,7 +83,7 @@ defmodule Membrane.Element.Action do
 
   Demand size can be either a non-negative integer, that overrides existing demand,
   or a function that is passed current demand, and is to return the new demand. In case only pad
-  is specified, the demand size defaults to a value of 1.
+  is specified, the demand size defaults to 1.
 
   Allowed only when playback is playing.
   """
