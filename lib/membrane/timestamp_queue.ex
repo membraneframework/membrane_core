@@ -63,6 +63,11 @@ defmodule Membrane.TimestampQueue do
           pause_demand_boundary_unit: :buffers | :bytes
         ]
 
+  @doc """
+  Creates and returnes new #{inspect(__MODULE__)}.
+
+  Accepts `t:options()`.
+  """
   @spec new(options) :: t()
   def new(options \\ []) do
     metric =
@@ -76,8 +81,12 @@ defmodule Membrane.TimestampQueue do
     }
   end
 
-  @spec register_pad(t(), Pad.ref()) :: t()
-  def register_pad(%__MODULE__{} = timestamp_queue, pad_ref) do
+  @doc """
+  Makes the queue not return any buffer in `pop_batch/3`, until a buffer or end of stream arrival
+  from `pad_ref`.
+  """
+  @spec wait_on_pad(t(), Pad.ref()) :: t()
+  def wait_on_pad(%__MODULE__{} = timestamp_queue, pad_ref) do
     timestamp_queue
     |> Map.update!(:waiting_on_buffer_from, &MapSet.put(&1, pad_ref))
   end

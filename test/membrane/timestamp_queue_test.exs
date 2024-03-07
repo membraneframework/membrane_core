@@ -305,8 +305,8 @@ defmodule Membrane.TimestampQueueTest do
   test "registering pads" do
     queue =
       TimestampQueue.new()
-      |> TimestampQueue.register_pad(:a)
-      |> TimestampQueue.register_pad(:b)
+      |> TimestampQueue.wait_on_pad(:a)
+      |> TimestampQueue.wait_on_pad(:b)
 
     events = for i <- 1..1000, do: %Event{dts: i}
     buffers = for i <- 1..1000, do: %Buffer{dts: i, payload: <<>>}
@@ -346,9 +346,10 @@ defmodule Membrane.TimestampQueueTest do
     assert batch == sorted_batch
 
     grouped_batch = Enum.group_by(batch, &elem(&1, 0), &(elem(&1, 1) |> elem(1)))
+
     assert grouped_batch == %{
-      a: List.delete_at(buffers, 999),
-      b: List.delete_at(buffers, 999)
-    }
+             a: List.delete_at(buffers, 999),
+             b: List.delete_at(buffers, 999)
+           }
   end
 end
