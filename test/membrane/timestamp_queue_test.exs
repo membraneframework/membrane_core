@@ -282,7 +282,7 @@ defmodule Membrane.TimestampQueueTest do
   end
 
   # todo: unify tests naming convention
-  test "registering pads" do
+  test "waiting on pads" do
     queue =
       TimestampQueue.new()
       |> TimestampQueue.wait_on_pad(:a)

@@ -26,7 +26,7 @@ defmodule Membrane.TimestampQueue do
           paused_demand?: boolean(),
           end_of_stream?: boolean(),
           use_pts?: boolean() | nil,
-          last_buffer_timestamp: Membrane.Time.t() | nil
+          max_timestamp_on_qex: Membrane.Time.t() | nil
         }
 
   @typedoc """
@@ -145,17 +145,17 @@ defmodule Membrane.TimestampQueue do
     end
 
     buffer_timestamp = if pad_queue.use_pts?, do: buffer.pts, else: buffer.dts
-    last_timestamp = pad_queue.last_buffer_timestamp
+    max_timestamp = pad_queue.max_timestamp_on_qex
 
-    if is_integer(last_timestamp) and last_timestamp > buffer_timestamp do
+    if is_integer(max_timestamp) and max_timestamp > buffer_timestamp do
       raise """
       Buffer #{inspect(buffer, pretty: true)} from pad #{inspect(pad_ref)} has timestamp equal \
-      #{inspect(buffer_timestamp)}, but previous buffer from this pad had timestamp equal #{inspect(last_timestamp)}. \
-      Buffers from a single pad must have non-decreasing timestamps.
+      #{inspect(buffer_timestamp)}, but previous buffer pushed on queue from this pad had timestamp \
+      equal #{inspect(max_timestamp)}. Buffers from a single pad must have non-decreasing timestamps.
       """
     end
 
-    %{pad_queue | last_buffer_timestamp: buffer_timestamp}
+    %{pad_queue | max_timestamp_on_qex: buffer_timestamp}
   end
 
   @doc """
@@ -231,7 +231,8 @@ defmodule Membrane.TimestampQueue do
       paused_demand?: false,
       end_of_stream?: false,
       use_pts?: nil,
-      last_buffer_timestamp: nil
+      max_timestamp_on_qex: nil,
+      recently_returned_timestamp: nil
     }
   end
 
@@ -380,4 +381,14 @@ defmodule Membrane.TimestampQueue do
       _other -> {[], timestamp_queue}
     end
   end
+
+  # TODO:
+  #  1) specify average chunk size, expresesed in time duration
+  #    - sorted queue
+  #    - change in pause/resume demand mechanism
+  #    -
+  #  2) specify pause demand boundary in time duration
+  #    - hold last returned buffer timestamp and last buffer on queue timestamp to pad_queue
+  #    -
+  #  3) write benchmarks and optimize the queue
 end
