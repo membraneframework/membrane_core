@@ -162,10 +162,11 @@ defmodule Membrane.TimestampQueueTest do
 
     {[], queue} = TimestampQueue.push_buffer(queue, :a, %Buffer{dts: 1, payload: <<>>})
     {[], queue} = TimestampQueue.push_buffer(queue, :a, %Buffer{dts: 2, payload: <<>>})
+
+    assert {[], [a: {:buffer, %Buffer{dts: 1}}], queue} = TimestampQueue.pop_batch(queue)
+
     {[], queue} = TimestampQueue.push_buffer(queue, :a, %Buffer{dts: 3, payload: <<>>})
     queue = TimestampQueue.push_end_of_stream(queue, :a)
-
-    assert {[], {:a, {:buffer, %Buffer{dts: 1}}}, queue} = TimestampQueue.pop(queue)
 
     queue = TimestampQueue.push_stream_format(queue, :b, %StreamFormat{})
     queue = TimestampQueue.push_event(queue, :b, %Event{})
@@ -180,7 +181,7 @@ defmodule Membrane.TimestampQueueTest do
              a: :end_of_stream
            ]
 
-    assert {[], :none, ^queue} = TimestampQueue.pop(queue)
+    assert {[], [], ^queue} = TimestampQueue.pop_batch(queue)
   end
 
   [
@@ -220,31 +221,10 @@ defmodule Membrane.TimestampQueueTest do
 
       pop_item = {:input, {:buffer, buffer}}
 
-      # testing pop_batch/1
       expected_batch = for _i <- 1..(2 * boundary_in_buff_no - 2), do: pop_item
 
-      # note, that variable _queue is ignored
       assert {[resume_auto_demand: :input], ^expected_batch, _queue} =
                TimestampQueue.pop_batch(queue)
-
-      # testing pop/1
-      queue =
-        1..(boundary_in_buff_no - 1)
-        |> Enum.reduce(queue, fn _i, queue ->
-          assert {[], ^pop_item, queue} = TimestampQueue.pop(queue)
-          queue
-        end)
-
-      assert {[resume_auto_demand: :input], ^pop_item, queue} = TimestampQueue.pop(queue)
-
-      queue =
-        1..(boundary_in_buff_no - 2)
-        |> Enum.reduce(queue, fn _i, queue ->
-          assert {[], ^pop_item, queue} = TimestampQueue.pop(queue)
-          queue
-        end)
-
-      assert {[], :none, _queue} = TimestampQueue.pop(queue)
     end
   end)
 

@@ -258,29 +258,41 @@ defmodule Membrane.TimestampQueue do
   @type popped_value :: {Pad.ref(), item()}
 
   @doc """
-  Pops up to 1 buffer from the queue.
+  Pops as many buffers from the queue, as it is possible.
 
-  Returns a suggested actions list, popped buffer and the updated queue.
+  Returns suggested actions list, list of popped buffers and the updated queue.
 
-  If amount of buffers from pad associated with popped buffer just dropped below
+  If the amount of buffers associated with any pad in the queue falls below the
   `pause_demand_boundary`, the suggested actions list contains `t:Action.resume_auto_demand()`
-  action, otherwise it is an empty list.
+  actions, otherwise it is an empty list.
 
-  If the queue cannot return any buffer, returns `:none` in it's place instead. Note, that
-  the queue doesn't have to be empty to be unable to return a buffer - sometimes queue has to
-  keep up to 1 buffer for each pad, to be able to work correctly.
+  If the queue cannot return any buffer, empty list is returned. Note, that queue doesn't have to be
+  empty to be unable to return a buffer - sometimes queue must keep up to 1 buffer for each pad,
+  to be able to work correctly.
   """
-  @spec pop(t()) :: {[Action.resume_auto_demand()], popped_value() | :none, t()}
-  def pop(%__MODULE__{} = timestamp_queue) do
-    {value, timestamp_queue} = do_pop(timestamp_queue)
+  @spec pop_batch(t()) :: {[Action.resume_auto_demand()], [popped_value() | :none], t()}
+  def pop_batch(%__MODULE__{} = timestamp_queue) do
+    {batch, timestamp_queue} = do_pop_batch(timestamp_queue)
 
-    case value do
-      {pad_ref, {:buffer, _buffer}} ->
+    {actions, timestamp_queue} =
+      batch
+      |> Enum.reduce(MapSet.new(), fn
+        {pad_ref, {:buffer, _buffer}}, map_set -> MapSet.put(map_set, pad_ref)
+        _other, map_set -> map_set
+      end)
+      |> Enum.reduce({[], timestamp_queue}, fn pad_ref, {actions_acc, timestamp_queue} ->
         {actions, timestamp_queue} = actions_after_popping_buffer(timestamp_queue, pad_ref)
-        {actions, value, timestamp_queue}
+        {actions ++ actions_acc, timestamp_queue}
+      end)
 
-      value ->
-        {[], value, timestamp_queue}
+    {actions, batch, timestamp_queue}
+  end
+
+  @spec do_pop_batch(t(), [popped_value()]) :: {[popped_value() | :none], t()}
+  defp do_pop_batch(timestamp_queue, acc \\ []) do
+    case do_pop(timestamp_queue) do
+      {:none, timestamp_queue} -> {Enum.reverse(acc), timestamp_queue}
+      {value, timestamp_queue} -> do_pop_batch(timestamp_queue, [value | acc])
     end
   end
 
@@ -300,6 +312,7 @@ defmodule Membrane.TimestampQueue do
     end
   end
 
+  @spec do_pop(t(), Pad.ref()) :: {popped_value() | :none, t()}
   defp do_pop(timestamp_queue, pad_ref) do
     pad_queue = Map.get(timestamp_queue.pad_queues, pad_ref)
 
@@ -349,45 +362,6 @@ defmodule Membrane.TimestampQueue do
         |> Map.update!(:pad_queues, &Map.delete(&1, pad_ref))
         |> Map.update!(:pads_heap, &Heap.pop/1)
         |> do_pop()
-    end
-  end
-
-  @doc """
-  Pops as many buffers from the queue, as it is possible.
-
-  Returns suggested actions list, list of popped buffers and the updated queue.
-
-  If the amount of buffers associated with any pad in the queue falls below the
-  `pause_demand_boundary`, the suggested actions list contains `t:Action.resume_auto_demand()`
-  actions, otherwise it is an empty list.
-
-  If the queue cannot return any buffer, empty list is returned. Note, that queue doesn't have to be
-  empty to be unable to return a buffer - sometimes queue must keep up to 1 buffer for each pad,
-  to be able to work correctly.
-  """
-  @spec pop_batch(t()) :: {[Action.resume_auto_demand()], [popped_value() | :none], t()}
-  def pop_batch(%__MODULE__{} = timestamp_queue) do
-    {batch, timestamp_queue} = do_pop_batch(timestamp_queue)
-
-    {actions, timestamp_queue} =
-      batch
-      |> Enum.reduce(MapSet.new(), fn
-        {pad_ref, {:buffer, _buffer}}, map_set -> MapSet.put(map_set, pad_ref)
-        _other, map_set -> map_set
-      end)
-      |> Enum.reduce({[], timestamp_queue}, fn pad_ref, {actions_acc, timestamp_queue} ->
-        {actions, timestamp_queue} = actions_after_popping_buffer(timestamp_queue, pad_ref)
-        {actions ++ actions_acc, timestamp_queue}
-      end)
-
-    {actions, batch, timestamp_queue}
-  end
-
-  @spec do_pop_batch(t(), [popped_value()]) :: {[popped_value() | :none], t()}
-  defp do_pop_batch(timestamp_queue, acc \\ []) do
-    case do_pop(timestamp_queue) do
-      {:none, timestamp_queue} -> {Enum.reverse(acc), timestamp_queue}
-      {value, timestamp_queue} -> do_pop_batch(timestamp_queue, [value | acc])
     end
   end
 
