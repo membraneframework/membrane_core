@@ -50,6 +50,13 @@ defmodule Membrane.Core.Element.ActionHandler do
     # Fixed order of handling demand of manual and auto pads would lead to
     # favoring manual pads over auto pads (or vice versa), especially after
     # introducting auto flow queues.
+
+
+    # IO.inspect({state.delay_consuming_queues?, state.handling_action?}, label: "TT FF TF")
+    with %{delay_consuming_queues?: false, handling_action?: true} <- state do
+      raise "dupppppaaaaaaa"
+    end
+
     manual_demands_first? = Enum.random([1, 2]) == 1
 
     state =
@@ -68,13 +75,13 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp maybe_handle_delayed_demands(state) do
-    with %{supplying_demand?: false} <- state do
+    with %{delay_consuming_queues?: false} <- state do
       DemandHandler.handle_delayed_demands(state)
     end
   end
 
   defp maybe_handle_pads_to_snapshot(state) do
-    with %{handling_action?: false} <- state do
+    with %{delay_consuming_queues?: false} <- state do
       Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
       |> Map.put(:pads_to_snapshot, MapSet.new())
     end

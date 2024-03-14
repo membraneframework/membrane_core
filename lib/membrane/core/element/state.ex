@@ -23,7 +23,7 @@ defmodule Membrane.Core.Element.State do
           pads_info: PadModel.pads_info() | nil,
           pads_data: PadModel.pads_data() | nil,
           parent_pid: pid,
-          supplying_demand?: boolean(),
+          delay_consuming_queues?: boolean(),
           delayed_demands: MapSet.t({Pad.ref(), :supply | :redemand}),
           handle_demand_loop_counter: non_neg_integer(),
           synchronization: %{
@@ -74,7 +74,7 @@ defmodule Membrane.Core.Element.State do
     :initialized?,
     :terminating?,
     :setup_incomplete?,
-    :supplying_demand?,
+    :delay_consuming_queues?,
     :handling_action?,
     :popping_auto_flow_queue?,
     :stalker,

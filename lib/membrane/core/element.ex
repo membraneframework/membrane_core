@@ -139,7 +139,7 @@ defmodule Membrane.Core.Element do
         name: options.name,
         internal_state: nil,
         parent_pid: options.parent,
-        supplying_demand?: false,
+        delay_consuming_queues?: false,
         delayed_demands: MapSet.new(),
         handle_demand_loop_counter: 0,
         synchronization: %{
@@ -157,7 +157,7 @@ defmodule Membrane.Core.Element do
         terminating?: false,
         setup_incomplete?: false,
         effective_flow_control: :push,
-        handling_action?: false,
+        # handling_action?: false,
         popping_auto_flow_queue?: false,
         pads_to_snapshot: MapSet.new(),
         stalker: options.stalker,
@@ -233,7 +233,7 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:buffer, buffers, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
-    state = BufferController.handle_buffer(pad_ref, buffers, state)
+    state = BufferController.handle_ingoing_buffer(pad_ref, buffers, state)
     {:noreply, state}
   end
 

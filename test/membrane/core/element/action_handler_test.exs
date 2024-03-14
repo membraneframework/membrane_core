@@ -60,7 +60,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     setup :demand_test_filter
 
     test "delaying demand", %{state: state} do
-      state = %{state | playback: :playing, supplying_demand?: true}
+      state = %{state | playback: :playing, delay_consuming_queues?: true}
       state = @module.handle_action({:demand, {:input, 10}}, :handle_info, %{}, state)
       assert state.pads_data.input.manual_demand_size == 10
       assert MapSet.new([{:input, :supply}]) == state.delayed_demands
@@ -489,7 +489,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
     test "when pad works in auto or manual flow control mode", %{state: state} do
       state =
-        %{state | supplying_demand?: true, playback: :playing}
+        %{state | delay_consuming_queues?: true, playback: :playing}
         |> PadModel.set_data!(:output, :flow_control, :manual)
 
       new_state =
