@@ -21,6 +21,34 @@ defmodule Membrane.Core.Element.DemandController do
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Logger
 
+  # problem potencjalnie jest taki, ze np handlujac redemand robimy snapshot auto demandow, co moze powodowac faworyzacje auto > manual
+  # wiec zrobilem zawsze zaczynanie od manual, potem auto
+  # 1) nie wiem czy jest to problem, bo:
+  #  - resume demand loop counter
+  #  - zawsze ogranicza nas bedac w petli to co jest w kolejkach
+
+  @spec consume_queues(State.t()) :: State.t()
+  def consume_queues(state) do
+    # if Enum.random([1, 2]) == 1 do
+    #   state
+    #   |> snapshot_pads_to_snapshot()
+    #   |> DemandHandler.handle_delayed_demands()
+    # else
+    #   state
+    #   |> DemandHandler.handle_delayed_demands()
+    #   |> snapshot_pads_to_snapshot()
+    # end
+    state
+    |> DemandHandler.handle_delayed_demands()
+    |> snapshot_pads_to_snapshot()
+  end
+
+  @spec snapshot_pads_to_snapshot(State.t()) :: State.t()
+  def snapshot_pads_to_snapshot(state) do
+    Enum.reduce(state.pads_to_snapshot, state, &snapshot_atomic_demand/2)
+    |> Map.put(:pads_to_snapshot, MapSet.new())
+  end
+
   @spec snapshot_atomic_demand(Pad.ref(), State.t()) :: State.t()
   def snapshot_atomic_demand(pad_ref, state) do
     with {:ok, pad_data} when not pad_data.end_of_stream? <- PadModel.get_data(state, pad_ref),

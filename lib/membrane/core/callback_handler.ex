@@ -190,7 +190,9 @@ defmodule Membrane.Core.CallbackHandler do
       end
 
     was_delay_consuming_queues? = Map.get(state, :delay_consuming_queues?, false)
-    state = if Component.is_element?(state), do: %{state | delay_consuming_queues?: true}, else: state
+
+    state =
+      if Component.is_element?(state), do: %{state | delay_consuming_queues?: true}, else: state
 
     state =
       Enum.reduce(actions, state, fn action, state ->

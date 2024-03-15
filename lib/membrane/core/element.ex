@@ -157,7 +157,6 @@ defmodule Membrane.Core.Element do
         terminating?: false,
         setup_incomplete?: false,
         effective_flow_control: :push,
-        # handling_action?: false,
         popping_auto_flow_queue?: false,
         pads_to_snapshot: MapSet.new(),
         stalker: options.stalker,
@@ -227,6 +226,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:resume_handle_demand_loop), state) do
+    # pytanie: consume queues czy handle delayed demands?
     state = DemandHandler.handle_delayed_demands(state)
     {:noreply, state}
   end

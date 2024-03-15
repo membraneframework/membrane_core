@@ -60,7 +60,12 @@ defmodule Membrane.Core.Element.BufferController do
     end
   end
 
-  @spec do_handle_ingoing_buffer(Pad.ref(), PadModel.pad_data(), [Buffer.t()] | Buffer.t(), State.t()) ::
+  @spec do_handle_ingoing_buffer(
+          Pad.ref(),
+          PadModel.pad_data(),
+          [Buffer.t()] | Buffer.t(),
+          State.t()
+        ) ::
           State.t()
   defp do_handle_ingoing_buffer(pad_ref, %{flow_control: :auto} = data, buffers, state) do
     %{demand: demand, demand_unit: demand_unit, stalker_metrics: stalker_metrics} = data

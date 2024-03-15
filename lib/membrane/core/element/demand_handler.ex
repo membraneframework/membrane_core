@@ -3,6 +3,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   # Module handling demands requested on output pads.
 
+  alias Membrane.Core.Element.DemandController
   alias Membrane.Core.CallbackHandler
 
   alias Membrane.Core.Element.{
@@ -38,7 +39,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   def handle_redemand(pad_ref, %State{} = state) do
     do_handle_redemand(pad_ref, state)
-    |> handle_delayed_demands()
+    |> DemandController.consume_queues()
   end
 
   defp do_handle_redemand(pad_ref, state) do
@@ -80,7 +81,8 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   def supply_demand(pad_ref, state) do
     do_supply_demand(pad_ref, state)
-    |> handle_delayed_demands()
+    # |> handle_delayed_demands()
+    |> DemandController.consume_queues()
   end
 
   defp do_supply_demand(pad_ref, state) do
@@ -120,7 +122,7 @@ defmodule Membrane.Core.Element.DemandHandler do
     # one pad are supplied right away while another one is waiting for buffers
     # potentially for a long time.
 
-    state =
+    # state =
     cond do
       state.delay_consuming_queues? ->
         raise "Cannot handle delayed demands while already supplying demand"
@@ -146,9 +148,8 @@ defmodule Membrane.Core.Element.DemandHandler do
         end
     end
 
-    Enum.reduce(state.pads_to_snapshot, state, &Membrane.Core.Element.DemandController.snapshot_atomic_demand/2)
-    |> Map.put(:pads_to_snapshot, MapSet.new())
-
+    # Enum.reduce(state.pads_to_snapshot, state, &Membrane.Core.Element.DemandController.snapshot_atomic_demand/2)
+    # |> Map.put(:pads_to_snapshot, MapSet.new())
   end
 
   @spec remove_pad_from_delayed_demands(Pad.ref(), State.t()) :: State.t()
