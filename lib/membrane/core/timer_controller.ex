@@ -59,6 +59,13 @@ defmodule Membrane.Core.TimerController do
   @spec handle_tick(Timer.id(), Component.state()) :: Component.state()
   def handle_tick(timer_id, state) when is_timer_present(timer_id, state) do
     state =
+      update_in(
+        state,
+        [:synchronization, :timers, timer_id],
+        &Timer.handle_message_arrived/1
+      )
+
+    state =
       CallbackHandler.exec_and_handle_callback(
         :handle_tick,
         Component.action_handler(state),

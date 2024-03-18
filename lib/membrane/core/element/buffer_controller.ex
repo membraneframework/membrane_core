@@ -69,8 +69,12 @@ defmodule Membrane.Core.Element.BufferController do
     state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
     :atomics.put(stalker_metrics.demand, 1, demand - buf_size)
 
-    state = AutoFlowUtils.auto_adjust_atomic_demand(pad_ref, state)
-    exec_buffer_callback(pad_ref, buffers, state)
+    if state.effective_flow_control == :pull and MapSet.size(state.satisfied_auto_output_pads) > 0 do
+      AutoFlowUtils.store_buffers_in_queue(pad_ref, buffers, state)
+    else
+      state = exec_buffer_callback(pad_ref, buffers, state)
+      AutoFlowUtils.auto_adjust_atomic_demand(pad_ref, state)
+    end
   end
 
   defp do_handle_buffer(pad_ref, %{flow_control: :manual} = data, buffers, state) do
@@ -93,11 +97,7 @@ defmodule Membrane.Core.Element.BufferController do
   @doc """
   Executes `handle_buffer` callback.
   """
-  @spec exec_buffer_callback(
-          Pad.ref(),
-          [Buffer.t()] | Buffer.t(),
-          State.t()
-        ) :: State.t()
+  @spec exec_buffer_callback(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
   def exec_buffer_callback(pad_ref, buffers, %State{type: :filter} = state) do
     Telemetry.report_metric("buffer", 1, inspect(pad_ref))
 

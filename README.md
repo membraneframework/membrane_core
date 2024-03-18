@@ -53,10 +53,6 @@ Membrane.Pipeline.start_link(MyPipeline, mp3_url)
 ```
 
 This is an [Elixir](elixir-lang.org) snippet, that streams an mp3 via HTTP and plays it on your speaker. Here's how to run it:
-- Install [libmad](https://github.com/markjeee/libmad) and [portaudio](https://github.com/PortAudio/portaudio). Membrane uses these libs to decode the mp3 and to access your speaker, respectively. You can use these commands:
-  - On Mac OS: `brew install libmad portaudio pkg-config`
-  - On Debian: `apt install libmad0-dev portaudio19-dev`
-
 - Option 1: Click the button below:
 
   [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fmembraneframework%2Fmembrane_core%2Fblob%2Fmaster%2Fexample.livemd)
@@ -96,7 +92,7 @@ Apart from plugins, Membrane has stream formats, which live in `membrane_X_forma
 The API for creating pipelines (and custom elements too) is provided by [membrane_core](https://github.com/membraneframework/membrane_core). To install it, add the following line to your `deps` in `mix.exs` and run `mix deps.get`
 
 ```elixir
-{:membrane_core, "~> 1.0.0"}
+{:membrane_core, "~> 1.0"}
 ```
 
 **Standalone libraries**

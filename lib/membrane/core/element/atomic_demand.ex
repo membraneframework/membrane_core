@@ -139,14 +139,14 @@ defmodule Membrane.Core.Element.AtomicDemand do
     :ok
   end
 
-  @spec decrease(t, non_neg_integer()) :: t
+  @spec decrease(t, non_neg_integer()) :: {{:decreased, integer()}, t} | {:unchanged, t}
   def decrease(%__MODULE__{} = atomic_demand, value) do
     atomic_demand = Map.update!(atomic_demand, :buffered_decrementation, &(&1 + value))
 
     if atomic_demand.buffered_decrementation >= atomic_demand.throttling_factor do
       flush_buffered_decrementation(atomic_demand)
     else
-      atomic_demand
+      {:unchanged, atomic_demand}
     end
   end
 
@@ -164,14 +164,17 @@ defmodule Membrane.Core.Element.AtomicDemand do
 
     atomic_demand = %{atomic_demand | buffered_decrementation: 0}
 
-    if not atomic_demand.toilet_overflowed? and
-         get_receiver_status(atomic_demand) == {:resolved, :pull} and
-         get_sender_status(atomic_demand) == {:resolved, :push} and
-         -1 * atomic_demand_value > atomic_demand.toilet_capacity do
-      overflow(atomic_demand, atomic_demand_value)
-    else
-      atomic_demand
-    end
+    atomic_demand =
+      if not atomic_demand.toilet_overflowed? and
+           get_receiver_status(atomic_demand) == {:resolved, :pull} and
+           get_sender_status(atomic_demand) == {:resolved, :push} and
+           -1 * atomic_demand_value > atomic_demand.toilet_capacity do
+        overflow(atomic_demand, atomic_demand_value)
+      else
+        atomic_demand
+      end
+
+    {{:decreased, atomic_demand_value}, atomic_demand}
   end
 
   defp overflow(atomic_demand, atomic_demand_value) do

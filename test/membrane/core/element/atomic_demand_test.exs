@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.AtomicDemandTest do
 
     assert get_atomic_value(atomic_demand) == 10
 
-    atomic_demand = AtomicDemand.decrease(atomic_demand, 15)
+    assert {{:decreased, -5}, atomic_demand} = AtomicDemand.decrease(atomic_demand, 15)
 
     assert atomic_demand.buffered_decrementation == 0
     assert get_atomic_value(atomic_demand) == -5
@@ -74,7 +74,7 @@ defmodule Membrane.Core.Element.AtomicDemandTest do
     atomic_demand = new_atomic_demand(:pull, sleeping_process, self())
 
     :ok = AtomicDemand.set_sender_status(atomic_demand, {:resolved, :push})
-    atomic_demand = AtomicDemand.decrease(atomic_demand, 100)
+    {{:decreased, -100}, atomic_demand} = AtomicDemand.decrease(atomic_demand, 100)
 
     refute_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
 
@@ -88,8 +88,9 @@ defmodule Membrane.Core.Element.AtomicDemandTest do
       |> Enum.reduce(atomic_demand, fn {sender_status, receiver_status}, atomic_demand ->
         :ok = AtomicDemand.set_sender_status(atomic_demand, sender_status)
         :ok = AtomicDemand.set_receiver_status(atomic_demand, receiver_status)
-        atomic_demand = AtomicDemand.decrease(atomic_demand, 1000)
+        {_status_update, atomic_demand} = AtomicDemand.decrease(atomic_demand, 1000)
 
+        refute atomic_demand.toilet_overflowed?
         refute_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
 
         atomic_demand
@@ -97,8 +98,9 @@ defmodule Membrane.Core.Element.AtomicDemandTest do
 
     :ok = AtomicDemand.set_sender_status(atomic_demand, {:resolved, :push})
     :ok = AtomicDemand.set_receiver_status(atomic_demand, {:resolved, :pull})
-    _atomic_demand = AtomicDemand.decrease(atomic_demand, 1000)
+    {{:decreased, _atomic_value}, atomic_demand} = AtomicDemand.decrease(atomic_demand, 1000)
 
+    assert atomic_demand.toilet_overflowed?
     assert_receive {:DOWN, ^monitor_ref, :process, _pid, _reason}
   end
 
@@ -109,19 +111,19 @@ defmodule Membrane.Core.Element.AtomicDemandTest do
 
     assert %AtomicDemand{throttling_factor: 150} = atomic_demand
 
-    atomic_demand = AtomicDemand.decrease(atomic_demand, 100)
+    assert {:unchanged, %AtomicDemand{buffered_decrementation: 100} = atomic_demand} =
+             AtomicDemand.decrease(atomic_demand, 100)
 
-    assert %AtomicDemand{buffered_decrementation: 100} = atomic_demand
     assert get_atomic_value(atomic_demand) == 0
 
-    atomic_demand = AtomicDemand.decrease(atomic_demand, 49)
+    assert {:unchanged, %AtomicDemand{buffered_decrementation: 149} = atomic_demand} =
+             AtomicDemand.decrease(atomic_demand, 49)
 
-    assert %AtomicDemand{buffered_decrementation: 149} = atomic_demand
     assert get_atomic_value(atomic_demand) == 0
 
-    atomic_demand = AtomicDemand.decrease(atomic_demand, 51)
+    assert {{:decreased, -200}, %AtomicDemand{buffered_decrementation: 0} = atomic_demand} =
+             AtomicDemand.decrease(atomic_demand, 51)
 
-    assert %AtomicDemand{buffered_decrementation: 0} = atomic_demand
     assert get_atomic_value(atomic_demand) == -200
   end
 

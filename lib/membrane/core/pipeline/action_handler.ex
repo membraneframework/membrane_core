@@ -8,6 +8,8 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   alias Membrane.Core.Parent.LifecycleController
   alias Membrane.Core.Pipeline.State
 
+  require Membrane.Logger
+
   @impl CallbackHandler
   def handle_action({:spec, args}, _cb, _params, %State{terminating?: true}) do
     raise Membrane.ParentError,
@@ -102,5 +104,13 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   @impl CallbackHandler
   def handle_action(action, _callback, _params, _state) do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Pipeline.Action}
+  end
+
+  @impl CallbackHandler
+  def handle_end_of_actions(state) do
+    with %{awaiting_setup_completition?: true} <- state do
+      %{state | awaiting_setup_completition?: false}
+      |> Membrane.Core.LifecycleController.complete_setup()
+    end
   end
 end
