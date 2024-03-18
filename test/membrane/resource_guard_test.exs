@@ -14,11 +14,8 @@ defmodule Membrane.ResourceGuardTest do
 
       @impl true
       def handle_setup(ctx, state) do
-        {:ok, pid} = Task.start(fn -> Process.sleep(:infinity) end)
-        Process.register(pid, :membrane_resource_guard_test_element_resource)
-
         ResourceGuard.register(ctx.resource_guard, fn ->
-          Process.exit(pid, :shutdown)
+          send(:membrane_resource_guard_test_process, :element_guard_triggered)
         end)
 
         {[notify_parent: :ready], state}
@@ -32,11 +29,8 @@ defmodule Membrane.ResourceGuardTest do
 
       @impl true
       def handle_setup(ctx, state) do
-        {:ok, pid} = Task.start(fn -> Process.sleep(:infinity) end)
-        Process.register(pid, :membrane_resource_guard_test_bin_resource)
-
         ResourceGuard.register(ctx.resource_guard, fn ->
-          Process.exit(pid, :shutdown)
+          send(:membrane_resource_guard_test_process, :bin_guard_triggered)
         end)
 
         {[notify_parent: :ready], state}
@@ -50,16 +44,15 @@ defmodule Membrane.ResourceGuardTest do
 
       @impl true
       def handle_call(:setup_guard, ctx, state) do
-        {:ok, pid} = Task.start(fn -> Process.sleep(:infinity) end)
-        Process.register(pid, :membrane_resource_guard_test_pipeline_resource)
-
         ResourceGuard.register(ctx.resource_guard, fn ->
-          Process.exit(pid, :shutdown)
+          send(:membrane_resource_guard_test_process, :pipeline_guard_triggered)
         end)
 
         {[reply: :ready], state}
       end
     end
+
+    Process.register(self(), :membrane_resource_guard_test_process)
 
     pipeline = Testing.Pipeline.start_link_supervised!(module: Pipeline)
 
@@ -68,19 +61,22 @@ defmodule Membrane.ResourceGuardTest do
     )
 
     assert_pipeline_notified(pipeline, :element, :ready)
-    monitor_ref = Process.monitor(:membrane_resource_guard_test_element_resource)
     Testing.Pipeline.execute_actions(pipeline, remove_children: :element)
-    assert_receive {:DOWN, ^monitor_ref, :process, _pid, :shutdown}
+    assert_receive :element_guard_triggered
 
     assert_pipeline_notified(pipeline, :bin, :ready)
-    monitor_ref = Process.monitor(:membrane_resource_guard_test_bin_resource)
     Testing.Pipeline.execute_actions(pipeline, remove_children: :bin)
-    assert_receive {:DOWN, ^monitor_ref, :process, _pid, :shutdown}
+    assert_receive :bin_guard_triggered
+
+    Testing.Pipeline.execute_actions(pipeline,
+      spec: [child(:element, Element), child(:bin, Bin)]
+    )
 
     assert :ready = Membrane.Pipeline.call(pipeline, :setup_guard)
-    monitor_ref = Process.monitor(:membrane_resource_guard_test_pipeline_resource)
     Membrane.Pipeline.terminate(pipeline)
-    assert_receive {:DOWN, ^monitor_ref, :process, _pid, :shutdown}
+    assert_receive :element_guard_triggered
+    assert_receive :bin_guard_triggered
+    assert_receive :pipeline_guard_triggered
   end
 
   test "Resources can be cleaned up manually and automatically when the owner process dies" do
