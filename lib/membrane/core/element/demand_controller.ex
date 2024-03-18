@@ -45,8 +45,15 @@ defmodule Membrane.Core.Element.DemandController do
 
   @spec snapshot_pads_to_snapshot(State.t()) :: State.t()
   def snapshot_pads_to_snapshot(state) do
-    Enum.reduce(state.pads_to_snapshot, state, &snapshot_atomic_demand/2)
-    |> Map.put(:pads_to_snapshot, MapSet.new())
+    Enum.reduce(state.pads_to_snapshot, state, fn pad_ref, state ->
+      if MapSet.member?(state.pads_to_snapshot, pad_ref) do
+        state = Map.update!(state, :pads_to_snapshot, &MapSet.delete(&1, pad_ref))
+        snapshot_atomic_demand(pad_ref, state)
+      else
+        IO.inspect("DUPA")
+        state
+      end
+    end)
   end
 
   @spec snapshot_atomic_demand(Pad.ref(), State.t()) :: State.t()
@@ -104,6 +111,10 @@ defmodule Membrane.Core.Element.DemandController do
           }
         )
 
+      false = state.delay_consuming_queues?
+
+      # jesli w handle_redemand robimy consume_queues, to bedziemy mieli rekurencje tutaj bardzo niefajna
+      # plus, czy to czasem nie popsuje pętli z counterem?
       DemandHandler.handle_redemand(pad_data.ref, state)
     else
       _other -> state
