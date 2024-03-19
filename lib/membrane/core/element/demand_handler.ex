@@ -113,8 +113,8 @@ defmodule Membrane.Core.Element.DemandHandler do
     PadModel.set_data!(state, pad_ref, :manual_demand_size, new_manual_demand_size)
   end
 
-  @spec handle_resume_delayed_demands_loop(State.t()) :: State.t()
-  def handle_resume_delayed_demands_loop(%State{} = state) do
+  @spec resume_delayed_demands_loop(State.t()) :: State.t()
+  def resume_delayed_demands_loop(%State{} = state) do
     %{state | resume_delayed_demands_loop_in_mailbox?: false}
     |> handle_delayed_demands()
   end

@@ -211,7 +211,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:resume_delayed_demands_loop), state) do
-    state = DemandHandler.handle_resume_delayed_demands_loop(state)
+    state = DemandHandler.resume_delayed_demands_loop(state)
     {:noreply, state}
   end
 
