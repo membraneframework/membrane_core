@@ -47,7 +47,8 @@ defmodule Membrane.Core.Element.State do
           pads_to_snapshot: MapSet.t(),
           stalker: Membrane.Core.Stalker.t(),
           satisfied_auto_output_pads: MapSet.t(),
-          awaiting_auto_input_pads: MapSet.t()
+          awaiting_auto_input_pads: MapSet.t(),
+          resume_delayed_demands_loop_in_mailbox?: boolean()
         }
 
   # READ THIS BEFORE ADDING NEW FIELD!!!
@@ -87,6 +88,7 @@ defmodule Membrane.Core.Element.State do
     :pads_data,
     :satisfied_auto_output_pads,
     :awaiting_auto_input_pads,
-    :auto_input_pads
+    :auto_input_pads,
+    resume_delayed_demands_loop_in_mailbox?: false
   ]
 end
