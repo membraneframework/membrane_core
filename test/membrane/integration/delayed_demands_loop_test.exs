@@ -54,20 +54,21 @@ defmodule Membrane.Test.DelayedDemandsLoopTest do
   end
 
   defp do_test(sinks_number) do
-    auto_demand_size = 20
+    auto_demand_size = 15
 
     spec =
-      Stream.repeatedly(fn ->
-        get_child(:source)
-        |> via_in(:input, auto_demand_size: auto_demand_size)
-        |> child(Debug.Sink)
-      end)
-      |> Stream.take(sinks_number)
-      |> Enum.concat([child(:source, Source)])
+      [child(:source, Source)] ++
+        for i <- 1..sinks_number do
+          get_child(:source)
+          |> via_in(:input, auto_demand_size: auto_demand_size)
+          |> child({:sink, i}, Debug.Sink)
+        end
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
-    Process.sleep(1_000)
+    for i <- 1..sinks_number do
+      assert_start_of_stream(pipeline, {:sink, ^i})
+    end
 
     for _i <- 1..(auto_demand_size + 5) do
       Testing.Pipeline.notify_child(pipeline, :source, :request)
