@@ -49,7 +49,7 @@ defmodule Membrane.Test.DelayedDemandsLoopTest do
     end
   end
 
-  describe "atomic demand busy wait loop doesn't occur when source has" do
+  describe "delayed demands loop pauses from time to time, when source has" do
     test "1 pad", do: do_test(1)
     test "2 pads", do: do_test(2)
     test "10 pads", do: do_test(10)
