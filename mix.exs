@@ -144,7 +144,7 @@ defmodule Membrane.Mixfile do
       {:qex, "~> 0.3"},
       {:telemetry, "~> 1.0"},
       {:bunch, "~> 1.6"},
-      {:ratio, "~> 3.0"},
+      {:ratio, ">= 4.0.1 and < 5.0.0"},
       # Development
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
