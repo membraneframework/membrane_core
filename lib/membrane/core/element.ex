@@ -137,11 +137,7 @@ defmodule Membrane.Core.Element do
         module: options.module,
         type: options.module.membrane_element_type(),
         name: options.name,
-        internal_state: nil,
         parent_pid: options.parent,
-        delay_consuming_queues?: false,
-        delayed_demands: MapSet.new(),
-        handle_demand_loop_counter: 0,
         synchronization: %{
           parent_clock: options.parent_clock,
           timers: %{},
@@ -149,20 +145,9 @@ defmodule Membrane.Core.Element do
           stream_sync: options.sync,
           latency: 0
         },
-        initialized?: false,
-        playback: :stopped,
-        playback_queue: [],
         resource_guard: resource_guard,
         subprocess_supervisor: options.subprocess_supervisor,
-        terminating?: false,
-        setup_incomplete?: false,
-        effective_flow_control: :push,
-        popping_auto_flow_queue?: false,
-        pads_to_snapshot: MapSet.new(),
-        stalker: options.stalker,
-        satisfied_auto_output_pads: MapSet.new(),
-        awaiting_auto_input_pads: MapSet.new(),
-        auto_input_pads: []
+        stalker: options.stalker
       }
       |> PadSpecHandler.init_pads()
 
@@ -225,9 +210,8 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(:resume_handle_demand_loop), state) do
-    # pytanie: consume queues czy handle delayed demands?
-    state = DemandHandler.handle_delayed_demands(state)
+  defp do_handle_info(Message.new(:resume_delayed_demands_loop), state) do
+    state = DemandHandler.resume_delayed_demands_loop(state)
     {:noreply, state}
   end
 

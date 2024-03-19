@@ -176,7 +176,7 @@ defmodule Membrane.Integration.ActionsHandlingOrderTest do
     # time for pipeline to play
     Process.sleep(100)
 
-    Testing.Pipeline.message_child(pipeline, :sink, :start_timer)
+    Testing.Pipeline.notify_child(pipeline, :sink, :start_timer)
 
     assert_pipeline_notified(pipeline, :sink, :second_tick)
 

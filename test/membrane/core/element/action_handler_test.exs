@@ -25,7 +25,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         playback: :stopped,
         synchronization: %{clock: nil, parent_clock: nil},
         delayed_demands: MapSet.new(),
-        handling_action?: false,
         pads_to_snapshot: MapSet.new(),
         pads_data: %{
           input:
@@ -110,7 +109,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         synchronization: %{clock: nil, parent_clock: nil},
         delayed_demands: MapSet.new(),
         playback: :stopped,
-        handling_action?: false,
         pads_to_snapshot: MapSet.new(),
         pads_data: %{
           output: %{
@@ -512,7 +510,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         name: :elem_name,
         synchronization: %{clock: nil, parent_clock: nil},
         type: :source,
-        handling_action?: false,
         pads_to_snapshot: MapSet.new(),
         pads_data: %{
           output: %{
