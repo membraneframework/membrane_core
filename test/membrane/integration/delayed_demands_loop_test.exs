@@ -16,8 +16,6 @@ defmodule Membrane.Test.DelayedDemandsLoopTest do
     end
 
     @sleep_time 5
-    @spec sleep_time() :: integer()
-    def sleep_time(), do: @sleep_time
 
     def_output_pad :output,
       accepted_format: _any,
