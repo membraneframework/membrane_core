@@ -54,9 +54,8 @@ defmodule Membrane.Test.DelayedDemandsLoopTest do
   end
 
   defp do_test(sinks_number) do
-    # auto_demand_size is smaller than delayed_demands_loop_counter_limit to ensure, that counter
-    # doesn't reset after calling handle_demand caused by reading positive atomic demand value
-    # during the snaphsot
+    # auto_demand_size is smaller than delayed_demands_loop_counter_limit, to ensure that
+    # after a snapshot, the counter is not reset
     auto_demand_size = 15
     requests_number = 20
 
