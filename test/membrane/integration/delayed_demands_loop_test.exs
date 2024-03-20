@@ -54,7 +54,10 @@ defmodule Membrane.Test.DelayedDemandsLoopTest do
   end
 
   defp do_test(sinks_number) do
+    # auto_demand_size is smaller than delayed_demands_loop_counter_limit, to ensure that
+    # after a snapshot, the counter is not reset
     auto_demand_size = 15
+    requests_number = 20
 
     spec =
       [child(:source, Source)] ++
@@ -70,7 +73,7 @@ defmodule Membrane.Test.DelayedDemandsLoopTest do
       assert_start_of_stream(pipeline, {:sink, ^i})
     end
 
-    for _i <- 1..(auto_demand_size + 5) do
+    for _i <- 1..requests_number do
       Testing.Pipeline.notify_child(pipeline, :source, :request)
       assert_pipeline_notified(pipeline, :source, :response)
     end

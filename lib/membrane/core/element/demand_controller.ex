@@ -50,7 +50,6 @@ defmodule Membrane.Core.Element.DemandController do
         state = Map.update!(state, :pads_to_snapshot, &MapSet.delete(&1, pad_ref))
         snapshot_atomic_demand(pad_ref, state)
       else
-        IO.inspect("DUPA")
         state
       end
     end)
