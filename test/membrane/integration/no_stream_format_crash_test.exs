@@ -44,7 +44,7 @@ defmodule Membrane.FailWhenNoStreamFormatAreSent do
     ]
 
     pipeline = Pipeline.start_supervised!(options)
-    Pipeline.message_child(pipeline, :source, {:send_your_pid, self()})
+    Pipeline.notify_child(pipeline, :source, {:send_your_pid, self()})
 
     source_pid =
       receive do
@@ -53,7 +53,7 @@ defmodule Membrane.FailWhenNoStreamFormatAreSent do
 
     source_ref = Process.monitor(source_pid)
 
-    Pipeline.message_child(pipeline, :source, :send_buffer)
+    Pipeline.notify_child(pipeline, :source, :send_buffer)
     assert_receive {:DOWN, ^source_ref, :process, ^source_pid, {reason, _stack_trace}}
     assert %Membrane.ElementError{message: action_error_msg} = reason
     assert action_error_msg =~ ~r/buffer.*stream.*format.*not.*sent/

@@ -52,7 +52,7 @@ defmodule Membrane.Testing.Pipeline do
   ## Messaging children
 
   You can send messages to children using their names specified in the children
-  list. Please check `message_child/3` for more details.
+  list. Please check `notify_child/3` for more details.
 
   ## Example usage
 
@@ -202,6 +202,23 @@ defmodule Membrane.Testing.Pipeline do
   defdelegate terminate(pipeline, opts \\ []), to: Pipeline
 
   @doc """
+  Sends notification to a child by Element name.
+
+  ## Example
+
+  Knowing that `pipeline` has child named `sink`, notification can be sent as follows:
+
+      notify_child(pipeline, :sink, {:notification, "to handle"})
+  """
+  @spec notify_child(pid(), Element.name(), any()) :: :ok
+  def notify_child(pipeline, child, notification) do
+    send(pipeline, {:for_element, child, notification})
+    :ok
+  end
+
+  @doc """
+  Deprecated since `v1.1.0-rc0`, use `notify_child/3` instead.
+
   Sends message to a child by Element name.
 
   ## Example
@@ -210,10 +227,10 @@ defmodule Membrane.Testing.Pipeline do
 
       message_child(pipeline, :sink, {:message, "to handle"})
   """
+  @deprecated "Use #{inspect(__MODULE__)}.notify_child/3 instead"
   @spec message_child(pid(), Element.name(), any()) :: :ok
   def message_child(pipeline, child, message) do
-    send(pipeline, {:for_element, child, message})
-    :ok
+    notify_child(pipeline, child, message)
   end
 
   @doc """
