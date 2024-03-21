@@ -74,10 +74,10 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp maybe_handle_pads_to_snapshot(state) do
-    with %{handling_action?: false} <- state do
+    # with %{handling_action?: false} <- state do
       Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
       |> Map.put(:pads_to_snapshot, MapSet.new())
-    end
+    # end
   end
 
   @impl CallbackHandler

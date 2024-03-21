@@ -45,7 +45,7 @@ defmodule Membrane.Core.Bin.State do
           terminating?: boolean(),
           resource_guard: Membrane.ResourceGuard.t(),
           setup_incomplete?: boolean(),
-          handling_action?: boolean(),
+          # handling_action?: boolean(),
           stalker: Membrane.Core.Stalker.t()
         }
 
@@ -73,7 +73,7 @@ defmodule Membrane.Core.Bin.State do
             initialized?: false,
             terminating?: false,
             setup_incomplete?: false,
-            handling_action?: false,
+            # handling_action?: false,
             stalker: nil,
             resource_guard: nil,
             subprocess_supervisor: nil,

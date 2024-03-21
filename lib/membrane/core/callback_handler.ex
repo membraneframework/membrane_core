@@ -189,8 +189,8 @@ defmodule Membrane.Core.CallbackHandler do
           reraise e, __STACKTRACE__
       end
 
-    was_handling_action? = state.handling_action?
-    state = %{state | handling_action?: true}
+    # was_handling_action? = state.handling_action?
+    # state = %{state | handling_action?: true}
 
     # Updating :supplying_demand? flag value here is a temporal fix.
     # Setting it to `true` while handling actions causes postponing calls
@@ -213,10 +213,10 @@ defmodule Membrane.Core.CallbackHandler do
         end
       end)
 
-    state =
-      if was_handling_action?,
-        do: state,
-        else: %{state | handling_action?: false}
+    # state =
+    #   if was_handling_action?,
+    #     do: state,
+    #     else: %{state | handling_action?: false}
 
     state =
       if Component.is_element?(state) and not was_supplying_demand?,

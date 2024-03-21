@@ -32,7 +32,7 @@ defmodule Membrane.Core.Pipeline.State do
           terminating?: boolean(),
           resource_guard: Membrane.ResourceGuard.t(),
           setup_incomplete?: boolean(),
-          handling_action?: boolean(),
+          # handling_action?: boolean(),
           stalker: Membrane.Core.Stalker.t(),
           subprocess_supervisor: pid(),
           awaiting_setup_completition?: boolean()
@@ -56,7 +56,7 @@ defmodule Membrane.Core.Pipeline.State do
             initialized?: false,
             terminating?: false,
             setup_incomplete?: false,
-            handling_action?: false,
+            # handling_action?: false,
             stalker: nil,
             resource_guard: nil,
             subprocess_supervisor: nil,
