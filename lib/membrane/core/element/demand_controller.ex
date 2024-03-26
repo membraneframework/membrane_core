@@ -50,7 +50,10 @@ defmodule Membrane.Core.Element.DemandController do
          %{flow_control: :auto} = pad_data,
          %{effective_flow_control: :pull} = state
        ) do
-    if AtomicDemand.get(pad_data.atomic_demand) > 0 do
+    atomic_value = AtomicDemand.get(pad_data.atomic_demand)
+    state = PadModel.set_data!(state, pad_data.ref, :demand, atomic_value)
+
+    if atomic_value > 0 do
       state
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_data.ref))
       |> AutoFlowUtils.pop_queues_and_bump_demand()

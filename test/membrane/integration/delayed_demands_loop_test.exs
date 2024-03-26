@@ -80,4 +80,100 @@ defmodule Membrane.Test.DelayedDemandsLoopTest do
 
     Testing.Pipeline.terminate(pipeline)
   end
+
+  defmodule VariousFlowFilter do
+    use Membrane.Filter
+
+    def_input_pad :manual_input,
+      accepted_format: _any,
+      flow_control: :manual,
+      demand_unit: :buffers
+
+    def_input_pad :auto_input, accepted_format: _any, flow_control: :auto
+
+    def_output_pad :manual_output, accepted_format: _any, flow_control: :manual
+    def_output_pad :auto_output, accepted_format: _any, flow_control: :auto
+
+    defmodule StreamFormat do
+      defstruct []
+    end
+
+    @impl true
+    def handle_playing(_ctx, _state) do
+      actions =
+        [:manual_output, :auto_output]
+        |> Enum.map(&{:stream_format, {&1, %StreamFormat{}}})
+
+      {actions, %{}}
+    end
+
+    @impl true
+    def handle_demand(:manual_output, size, :buffers, _ctx, state) do
+      {[demand: {:manual_input, size}], state}
+    end
+
+    @impl true
+    def handle_buffer(_pad, buffer, _ctx, state) do
+      # Aim of this Process.sleep is to make VariousFlowFilter working slower than Testing.Sinks
+      Process.sleep(1)
+
+      actions =
+        [:manual_output, :auto_output]
+        |> Enum.map(&{:buffer, {&1, buffer}})
+
+      {actions, state}
+    end
+
+    @impl true
+    def handle_end_of_stream(_pad, _ctx, state) do
+      {[], state}
+    end
+  end
+
+  test "manual pad doesn't starve auto pad" do
+    buffers_per_source = 10_000
+    input_demand_size = 100
+
+    manual_source_buffers =
+      Stream.repeatedly(fn -> %Buffer{metadata: :manual, payload: <<>>} end)
+      |> Stream.take(buffers_per_source)
+
+    auto_source_buffers =
+      Stream.repeatedly(fn -> %Buffer{metadata: :auto, payload: <<>>} end)
+      |> Stream.take(buffers_per_source)
+
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(
+        spec: [
+          child(:manual_source, %Testing.Source{output: manual_source_buffers})
+          |> via_in(:manual_input, target_queue_size: input_demand_size)
+          |> child(:filter, VariousFlowFilter)
+          |> via_out(:manual_output)
+          |> child(:manual_sink, Testing.Sink),
+          child(:auto_source, %Testing.Source{output: auto_source_buffers})
+          |> via_in(:auto_input, auto_demand_size: input_demand_size)
+          |> get_child(:filter)
+          |> via_out(:auto_output)
+          |> child(:auto_sink, Testing.Sink)
+        ]
+      )
+
+    stats = %{manual: 0, auto: 0}
+
+    Enum.reduce(1..10_000, stats, fn _i, stats ->
+      assert_sink_buffer(pipeline, :auto_sink, buffer)
+      stats = Map.update!(stats, buffer.metadata, &(&1 + 1))
+
+      difference_upperbound =
+        max(stats.auto, stats.manual)
+        |> div(2)
+        |> max(5 * input_demand_size)
+
+      assert abs(stats.auto - stats.manual) <= difference_upperbound
+
+      stats
+    end)
+
+    Testing.Pipeline.terminate(pipeline)
+  end
 end

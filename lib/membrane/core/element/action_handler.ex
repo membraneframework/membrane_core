@@ -46,38 +46,39 @@ defmodule Membrane.Core.Element.ActionHandler do
   defguardp is_demand_size(size) when is_integer(size) or is_function(size)
 
   @impl CallbackHandler
-  def handle_end_of_actions(state) do
+  def handle_end_of_actions(callback, state) do
     # Fixed order of handling demand of manual and auto pads would lead to
     # favoring manual pads over auto pads (or vice versa), especially after
     # introducting auto flow queues.
-    manual_demands_first? = Enum.random([1, 2]) == 1
 
-    state =
-      if manual_demands_first?,
-        do: maybe_handle_delayed_demands(state),
-        else: state
-
-    state = maybe_handle_pads_to_snapshot(state)
-
-    state =
-      if manual_demands_first?,
-        do: state,
-        else: maybe_handle_delayed_demands(state)
-
-    state
+    if Enum.random([1, 2]) == 1 do
+      snapshot(callback, state)
+      |> hdd()
+    else
+      state
+      |> hdd()
+      |> then(&snapshot(callback, &1))
+    end
   end
 
-  defp maybe_handle_delayed_demands(state) do
+  defp hdd(state) do
     with %{supplying_demand?: false} <- state do
       DemandHandler.handle_delayed_demands(state)
     end
   end
 
-  defp maybe_handle_pads_to_snapshot(state) do
-    # with %{handling_action?: false} <- state do
-      Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
+  defp snapshot(callback, state) do
+    # Condition in if below is caused by a fact, that handle_spec_started is the only callback, that might
+    # be executed in between handling actions returned from other callbacks.
+    # This callback has been deprecated and should be removed in v2.0.0, along with the if statement below.
+    if callback != :handle_spec_started do
+      state.pads_to_snapshot
+      |> Enum.shuffle()
+      |> Enum.reduce(state, &DemandController.snapshot_atomic_demand/2)
       |> Map.put(:pads_to_snapshot, MapSet.new())
-    # end
+    else
+      state
+    end
   end
 
   @impl CallbackHandler
@@ -342,6 +343,7 @@ defmodule Membrane.Core.Element.ActionHandler do
            stalker_metrics: stalker_metrics
          }
          when stream_format != nil <- pad_data do
+      # todo: move this function to one of the controllers, to avoid redundant PadModet.get_data in the function below
       state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
       :atomics.add(stalker_metrics.total_buffers, 1, length(buffers))
       Message.send(pid, :buffer, buffers, for_pad: other_ref)

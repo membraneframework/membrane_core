@@ -31,7 +31,7 @@ defmodule Membrane.Core.CallbackHandler do
   @callback transform_actions(actions :: list, callback :: atom, handler_params, state) ::
               {actions :: list, state}
 
-  @callback handle_end_of_actions(state) :: state
+  @callback handle_end_of_actions(callback :: atom, state) :: state
 
   defmacro __using__(_args) do
     quote location: :keep do
@@ -44,7 +44,7 @@ defmodule Membrane.Core.CallbackHandler do
       end
 
       @impl unquote(__MODULE__)
-      def handle_end_of_actions(state) do
+      def handle_end_of_actions(_callback, state) do
         state
       end
 
@@ -133,7 +133,7 @@ defmodule Membrane.Core.CallbackHandler do
          %{context: context_fun},
          %{module: module, internal_state: internal_state} = state
        ) do
-    args = args ++ [context_fun.(state), internal_state]
+    args = args ++ [context_fun.(state) |> Map.put(:s, state), internal_state]
 
     callback_result =
       try do
@@ -223,6 +223,6 @@ defmodule Membrane.Core.CallbackHandler do
         do: %{state | supplying_demand?: false},
         else: state
 
-    handler_module.handle_end_of_actions(state)
+    handler_module.handle_end_of_actions(callback, state)
   end
 end

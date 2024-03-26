@@ -107,7 +107,7 @@ defmodule Membrane.Core.Pipeline.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_end_of_actions(state) do
+  def handle_end_of_actions(_callback, state) do
     with %{awaiting_setup_completition?: true} <- state do
       %{state | awaiting_setup_completition?: false}
       |> Membrane.Core.LifecycleController.complete_setup()
