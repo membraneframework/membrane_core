@@ -24,7 +24,6 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
-    DemandHandler,
     EffectiveFlowController,
     EventController,
     LifecycleController,
@@ -211,7 +210,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:resume_delayed_demands_loop), state) do
-    state = DemandHandler.resume_delayed_demands_loop(state)
+    state = DemandController.Manual.resume_delayed_demands_loop(state)
     {:noreply, state}
   end
 

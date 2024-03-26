@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.DemandHandler do
+defmodule Membrane.Core.Element.DemandController.Manual do
   @moduledoc false
 
   # Module handling demands requested on output pads.
@@ -24,6 +24,10 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   @handle_demand_loop_limit 20
 
+  def delay_redemand(pad_ref, state) do
+    Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
+  end
+
   @doc """
   Called when redemand action was returned.
     * If element is currently supplying demand, it means that after finishing `supply_demand` it will call
@@ -33,7 +37,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   """
   @spec handle_redemand(Pad.ref(), State.t()) :: State.t()
   def handle_redemand(pad_ref, %State{delay_demands?: true} = state) do
-    Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
+    delay_redemand(pad_ref, state)
   end
 
   def handle_redemand(pad_ref, %State{} = state) do
@@ -65,22 +69,21 @@ defmodule Membrane.Core.Element.DemandHandler do
   """
   @spec supply_demand(
           Pad.ref(),
-          size :: non_neg_integer | (non_neg_integer() -> non_neg_integer()),
           State.t()
         ) :: State.t()
-  def supply_demand(pad_ref, size, state) do
-    state = update_demand(pad_ref, size, state)
-    supply_demand(pad_ref, state)
-  end
 
   @spec supply_demand(Pad.ref(), State.t()) :: State.t()
   def supply_demand(pad_ref, %State{delay_demands?: true} = state) do
-    Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
+    delay_demand_supply(pad_ref, state)
   end
 
   def supply_demand(pad_ref, state) do
     do_supply_demand(pad_ref, state)
     |> handle_delayed_demands()
+  end
+
+  def delay_demand_supply(pad_ref, state) do
+    Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
   end
 
   defp do_supply_demand(pad_ref, state) do
@@ -97,11 +100,16 @@ defmodule Membrane.Core.Element.DemandHandler do
     %State{state | delay_demands?: false}
   end
 
-  defp update_demand(pad_ref, size, state) when is_integer(size) do
+  @spec update_demand(
+          Pad.ref(),
+          non_neg_integer() | (non_neg_integer() -> non_neg_integer()),
+          State.t()
+        ) :: State.t()
+  def update_demand(pad_ref, size, state) when is_integer(size) do
     PadModel.set_data!(state, pad_ref, :manual_demand_size, size)
   end
 
-  defp update_demand(pad_ref, size_fun, state) when is_function(size_fun) do
+  def update_demand(pad_ref, size_fun, state) when is_function(size_fun) do
     manual_demand_size = PadModel.get_data!(state, pad_ref, :manual_demand_size)
     new_manual_demand_size = size_fun.(manual_demand_size)
 

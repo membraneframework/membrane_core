@@ -23,12 +23,10 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   alias Membrane.Core.Element.{
     DemandController,
-    DemandHandler,
     State,
     StreamFormatController
   }
 
-  alias Membrane.Core.Element.DemandController.AutoFlowUtils
   alias Membrane.Core.{Events, TimerController}
   alias Membrane.Element.Action
 
@@ -51,26 +49,31 @@ defmodule Membrane.Core.Element.ActionHandler do
     # favoring manual pads over auto pads (or vice versa), especially after
     # introducting auto flow queues.
 
-    if Enum.random([1, 2]) == 1 do
-      snapshot(callback, state)
-      |> hdd()
+    # Condition in if below is caused by a fact, that handle_spec_started is the only callback, that might
+    # be executed in between handling actions returned from other callbacks.
+    # This callback has been deprecated and should be removed in v2.0.0, along with the if statement below.
+
+    if callback != :handle_spec_started do
+      if Enum.random([1, 2]) == 1 do
+        snapshot(callback, state)
+        |> hdd()
+      else
+        state
+        |> hdd()
+        |> then(&snapshot(callback, &1))
+      end
     else
       state
-      |> hdd()
-      |> then(&snapshot(callback, &1))
     end
   end
 
   defp hdd(state) do
     with %{delay_demands?: false} <- state do
-      DemandHandler.handle_delayed_demands(state)
+      DemandController.Manual.handle_delayed_demands(state)
     end
   end
 
   defp snapshot(callback, state) do
-    # Condition in if below is caused by a fact, that handle_spec_started is the only callback, that might
-    # be executed in between handling actions returned from other callbacks.
-    # This callback has been deprecated and should be removed in v2.0.0, along with the if statement below.
     if callback != :handle_spec_started do
       state.pads_to_snapshot
       |> Enum.shuffle()
@@ -179,13 +182,13 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def handle_action({:pause_auto_demand, in_ref}, _cb, _params, %State{type: type} = state)
       when type in [:sink, :filter, :endpoint] do
-    DemandController.AutoFlowUtils.pause_demands(in_ref, state)
+    DemandController.Auto.pause_demands(in_ref, state)
   end
 
   @impl CallbackHandler
   def handle_action({:resume_auto_demand, in_ref}, _cb, _params, %State{type: type} = state)
       when type in [:sink, :filter, :endpoint] do
-    DemandController.AutoFlowUtils.resume_demands(in_ref, state)
+    DemandController.Auto.resume_demands(in_ref, state)
   end
 
   @impl CallbackHandler
@@ -417,7 +420,9 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp supply_demand(pad_ref, size, state) do
     with %{direction: :input, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
-      DemandHandler.supply_demand(pad_ref, size, state)
+      # todo: get_data! above could be eradicated
+      state = DemandController.Manual.update_demand(pad_ref, size, state)
+      DemandController.Manual.delay_demand_supply(pad_ref, state)
     else
       %{direction: :output} ->
         raise PadDirectionError, action: :demand, direction: :output, pad: pad_ref
@@ -437,7 +442,8 @@ defmodule Membrane.Core.Element.ActionHandler do
        when type in [:source, :filter, :endpoint] do
     with %{direction: :output, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
-      DemandHandler.handle_redemand(pad_ref, state)
+      # todo: get_data! above could be eradicated
+      DemandController.Manual.delay_redemand(pad_ref, state)
     else
       %{direction: :input} ->
         raise ElementError, "Tried to make a redemand on input pad #{inspect(pad_ref)}"
@@ -473,10 +479,10 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_outgoing_event(Pad.ref(), Event.t(), State.t()) :: State.t()
   defp handle_outgoing_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
-      DemandHandler.remove_pad_from_delayed_demands(pad_ref, state)
+      DemandController.Manual.remove_pad_from_delayed_demands(pad_ref, state)
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
       |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
-      |> AutoFlowUtils.pop_queues_and_bump_demand()
+      |> DemandController.Auto.pop_queues_and_bump_demand()
     else
       %{direction: :input} ->
         raise PadDirectionError, action: "end of stream", direction: :input, pad: pad_ref

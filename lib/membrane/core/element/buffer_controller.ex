@@ -12,14 +12,13 @@ defmodule Membrane.Core.Element.BufferController do
   alias Membrane.Core.Element.{
     ActionHandler,
     CallbackContext,
-    DemandHandler,
+    DemandController,
     EventController,
     InputQueue,
     PlaybackQueue,
     State
   }
 
-  alias Membrane.Core.Element.DemandController.AutoFlowUtils
   alias Membrane.Core.Telemetry
 
   require Membrane.Core.Child.PadModel
@@ -27,7 +26,7 @@ defmodule Membrane.Core.Element.BufferController do
 
   @doc """
   Handles incoming buffer: either stores it in InputQueue, or executes element's
-  callback. Also calls `Membrane.Core.Element.DemandHandler.supply_demand/2`
+  callback. Also calls `Membrane.Core.Element.DemandController.Manual.supply_demand/2`
   to check if there are any unsupplied demands.
   """
   @spec handle_buffer(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
@@ -70,10 +69,10 @@ defmodule Membrane.Core.Element.BufferController do
     :atomics.put(stalker_metrics.demand, 1, demand - buf_size)
 
     if state.effective_flow_control == :pull and MapSet.size(state.satisfied_auto_output_pads) > 0 do
-      AutoFlowUtils.store_buffers_in_queue(pad_ref, buffers, state)
+      DemandController.Auto.store_buffers_in_queue(pad_ref, buffers, state)
     else
       state = exec_buffer_callback(pad_ref, buffers, state)
-      AutoFlowUtils.auto_adjust_atomic_demand(pad_ref, state)
+      DemandController.Auto.auto_adjust_atomic_demand(pad_ref, state)
     end
   end
 
@@ -84,7 +83,7 @@ defmodule Membrane.Core.Element.BufferController do
     state = PadModel.set_data!(state, pad_ref, :input_queue, input_queue)
 
     if old_input_queue |> InputQueue.empty?() do
-      DemandHandler.supply_demand(pad_ref, state)
+      DemandController.Manual.supply_demand(pad_ref, state)
     else
       state
     end

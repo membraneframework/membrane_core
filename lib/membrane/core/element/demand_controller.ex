@@ -5,13 +5,12 @@ defmodule Membrane.Core.Element.DemandController do
 
   use Bunch
 
-  alias __MODULE__.AutoFlowUtils
+  alias __MODULE__.{Auto, Manual}
 
   alias Membrane.Buffer
 
   alias Membrane.Core.Element.{
     AtomicDemand,
-    DemandHandler,
     PlaybackQueue,
     State
   }
@@ -56,7 +55,7 @@ defmodule Membrane.Core.Element.DemandController do
     if atomic_value > 0 do
       state
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_data.ref))
-      |> AutoFlowUtils.pop_queues_and_bump_demand()
+      |> Auto.pop_queues_and_bump_demand()
     else
       state
     end
@@ -79,7 +78,7 @@ defmodule Membrane.Core.Element.DemandController do
           }
         )
 
-      DemandHandler.handle_redemand(pad_data.ref, state)
+      Manual.handle_redemand(pad_data.ref, state)
     else
       _other -> state
     end

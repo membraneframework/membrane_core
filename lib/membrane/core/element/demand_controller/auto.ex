@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.DemandController.AutoFlowUtils do
+defmodule Membrane.Core.Element.DemandController.Auto do
   @moduledoc false
 
   alias Membrane.Buffer

@@ -8,7 +8,6 @@ defmodule Membrane.Core.CallbackHandler do
   use Bunch
 
   alias Membrane.CallbackError
-  alias Membrane.Core.Component
 
   require Membrane.Logger
 
@@ -189,15 +188,8 @@ defmodule Membrane.Core.CallbackHandler do
           reraise e, __STACKTRACE__
       end
 
-    # was_handling_action? = state.handling_action?
-    # state = %{state | handling_action?: true}
-
-    # Updating :delay_demands? flag value here is a temporal fix.
-    # Setting it to `true` while handling actions causes postponing calls
-    # of handle_redemand/2 and supply_demand/2 until a moment, when all
-    # actions returned from the callback are handled
-    was_delay_demands? = Map.get(state, :delay_demands?, false)
-    state = if Component.is_element?(state), do: %{state | delay_demands?: true}, else: state
+    # was_delay_demands? = Map.get(state, :delay_demands?, false)
+    # state = if Component.is_element?(state), do: %{state | delay_demands?: true}, else: state
 
     state =
       Enum.reduce(actions, state, fn action, state ->
@@ -214,14 +206,9 @@ defmodule Membrane.Core.CallbackHandler do
       end)
 
     # state =
-    #   if was_handling_action?,
-    #     do: state,
-    #     else: %{state | handling_action?: false}
-
-    state =
-      if Component.is_element?(state) and not was_delay_demands?,
-        do: %{state | delay_demands?: false},
-        else: state
+    #   if Component.is_element?(state) and not was_delay_demands?,
+    #     do: %{state | delay_demands?: false},
+    #     else: state
 
     handler_module.handle_end_of_actions(callback, state)
   end
