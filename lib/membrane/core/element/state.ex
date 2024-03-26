@@ -47,7 +47,8 @@ defmodule Membrane.Core.Element.State do
           pads_to_snapshot: MapSet.t(),
           stalker: Membrane.Core.Stalker.t(),
           satisfied_auto_output_pads: MapSet.t(),
-          awaiting_auto_input_pads: MapSet.t()
+          awaiting_auto_input_pads: MapSet.t(),
+          resume_delayed_demands_loop_in_mailbox?: boolean()
         }
 
   # READ THIS BEFORE ADDING NEW FIELD!!!
@@ -59,34 +60,32 @@ defmodule Membrane.Core.Element.State do
   # as the last item in the list, because sometimes it is so big, that everything after it
   # might be truncated during the inspection.
 
-  defstruct [
-    :module,
-    :name,
-    :parent_pid,
-    :playback,
-    :type,
-    :internal_state,
-    :pad_refs,
-    :pads_info,
-    :synchronization,
-    :delayed_demands,
-    :effective_flow_control,
-    :initialized?,
-    :terminating?,
-    :setup_incomplete?,
-    :supplying_demand?,
-    :handling_action?,
-    :popping_auto_flow_queue?,
-    :stalker,
-    :resource_guard,
-    :subprocess_supervisor,
-    :handle_demand_loop_counter,
-    :demand_size,
-    :pads_to_snapshot,
-    :playback_queue,
-    :pads_data,
-    :satisfied_auto_output_pads,
-    :awaiting_auto_input_pads,
-    :auto_input_pads
-  ]
+  defstruct module: nil,
+            name: nil,
+            parent_pid: nil,
+            playback: :stopped,
+            type: nil,
+            internal_state: nil,
+            pad_refs: [],
+            pads_info: %{},
+            synchronization: nil,
+            delayed_demands: MapSet.new(),
+            effective_flow_control: :push,
+            initialized?: false,
+            terminating?: false,
+            setup_incomplete?: false,
+            supplying_demand?: false,
+            handling_action?: false,
+            popping_auto_flow_queue?: false,
+            stalker: nil,
+            resource_guard: nil,
+            subprocess_supervisor: nil,
+            handle_demand_loop_counter: 0,
+            pads_to_snapshot: MapSet.new(),
+            playback_queue: [],
+            pads_data: %{},
+            satisfied_auto_output_pads: MapSet.new(),
+            awaiting_auto_input_pads: MapSet.new(),
+            auto_input_pads: [],
+            resume_delayed_demands_loop_in_mailbox?: false
 end

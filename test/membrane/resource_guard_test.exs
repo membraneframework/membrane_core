@@ -69,9 +69,11 @@ defmodule Membrane.ResourceGuardTest do
     assert_receive :bin_guard_triggered
 
     Testing.Pipeline.execute_actions(pipeline,
-      spec: [child(:element, Element), child(:bin, Bin)]
+      spec: [child(:element2, Element), child(:bin2, Bin)]
     )
 
+    assert_pipeline_notified(pipeline, :element2, :ready)
+    assert_pipeline_notified(pipeline, :bin2, :ready)
     assert :ready = Membrane.Pipeline.call(pipeline, :setup_guard)
     Membrane.Pipeline.terminate(pipeline)
     assert_receive :element_guard_triggered

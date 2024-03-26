@@ -113,6 +113,12 @@ defmodule Membrane.Core.Element.DemandHandler do
     PadModel.set_data!(state, pad_ref, :manual_demand_size, new_manual_demand_size)
   end
 
+  @spec resume_delayed_demands_loop(State.t()) :: State.t()
+  def resume_delayed_demands_loop(%State{} = state) do
+    %{state | resume_delayed_demands_loop_in_mailbox?: false}
+    |> handle_delayed_demands()
+  end
+
   @spec handle_delayed_demands(State.t()) :: State.t()
   def handle_delayed_demands(%State{} = state) do
     # Taking random element of `:delayed_demands` is done to keep data flow
@@ -125,10 +131,15 @@ defmodule Membrane.Core.Element.DemandHandler do
         raise "Cannot handle delayed demands while already supplying demand"
 
       state.handle_demand_loop_counter >= @handle_demand_loop_limit ->
-        Message.self(:resume_handle_demand_loop)
+        state =
+          with %{resume_delayed_demands_loop_in_mailbox?: false} <- state do
+            Message.self(:resume_delayed_demands_loop)
+            %{state | resume_delayed_demands_loop_in_mailbox?: true}
+          end
+
         %{state | handle_demand_loop_counter: 0}
 
-      Enum.empty?(state.delayed_demands) ->
+      MapSet.size(state.delayed_demands) == 0 ->
         %{state | handle_demand_loop_counter: 0}
 
       true ->

@@ -24,14 +24,14 @@ defmodule Membrane.Integration.DemandsTest do
     assert_sink_playing(pid, :sink)
 
     demand = 500
-    Pipeline.message_child(pid, :sink, {:make_demand, demand})
+    Pipeline.notify_child(pid, :sink, {:make_demand, demand})
 
     0..(demand - 1)
     |> assert_buffers_received(pid)
 
     pattern = %Buffer{payload: <<demand::16>> <> <<255>>}
     refute_sink_buffer(pid, :sink, ^pattern, 0)
-    Pipeline.message_child(pid, :sink, {:make_demand, demand})
+    Pipeline.notify_child(pid, :sink, {:make_demand, demand})
 
     demand..(2 * demand - 1)
     |> assert_buffers_received(pid)

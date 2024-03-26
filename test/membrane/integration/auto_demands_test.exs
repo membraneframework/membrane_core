@@ -129,7 +129,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     assert_sink_playing(pipeline, :right_sink)
 
-    Pipeline.message_child(pipeline, :right_sink, {:make_demand, 1000})
+    Pipeline.notify_child(pipeline, :right_sink, {:make_demand, 1000})
 
     Enum.each(1..1000, fn payload ->
       assert_sink_buffer(pipeline, :right_sink, buffer)
@@ -246,7 +246,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     assert_pipeline_notified(pipeline, :source, :playing)
 
     buffers = Enum.map(1..10, &%Membrane.Buffer{payload: &1})
-    Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
+    Pipeline.notify_child(pipeline, :source, buffer: {:output, buffers})
 
     Enum.each(1..100_010, fn i ->
       assert_sink_buffer(pipeline, :sink, buffer)
@@ -254,7 +254,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
       if i <= 100_000 do
         buffer = %Membrane.Buffer{payload: i + 10}
-        Pipeline.message_child(pipeline, :source, buffer: {:output, buffer})
+        Pipeline.notify_child(pipeline, :source, buffer: {:output, buffer})
       end
     end)
 
@@ -276,7 +276,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     assert_pipeline_notified(pipeline, :source, :playing)
 
     buffers = Enum.map(1..100_000, &%Membrane.Buffer{payload: &1})
-    Pipeline.message_child(pipeline, :source, buffer: {:output, buffers})
+    Pipeline.notify_child(pipeline, :source, buffer: {:output, buffers})
 
     assert_receive(
       {:DOWN, _ref, :process, ^pipeline, {:membrane_child_crash, :sink, _sink_reason}}
@@ -347,7 +347,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       assert length(buffers) == manual_flow_queue_size
 
       demand = 10_000
-      Pipeline.message_child(pipeline, :sink, {:make_demand, demand})
+      Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
 
       buffers = receive_processed_buffers(pipeline, 2 * demand)
       buffers_number = length(buffers)
@@ -379,7 +379,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
       assert_pipeline_notified(pipeline, :filter, :playing)
 
-      Pipeline.message_child(pipeline, :filter, pause_auto_demand: Pad.ref(:input, 0))
+      Pipeline.notify_child(pipeline, :filter, pause_auto_demand: Pad.ref(:input, 0))
 
       # time for :filter to pause demand on Pad.ref(:input, 0)
       Process.sleep(500)
@@ -388,7 +388,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
       assert length(buffers) == manual_flow_queue_size
 
       demand = 10_000
-      Pipeline.message_child(pipeline, :sink, {:make_demand, demand})
+      Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
 
       # fliter paused auto demand on Pad.ref(:input, 0), so it should receive
       # at most auto_flow_demand_size buffers from there and rest of the buffers
@@ -410,12 +410,12 @@ defmodule Membrane.Integration.AutoDemandsTest do
       # rest of them came from {:source, 1}
       assert demand - auto_flow_demand_size <= counter_1
 
-      Pipeline.message_child(pipeline, :filter, resume_auto_demand: Pad.ref(:input, 0))
+      Pipeline.notify_child(pipeline, :filter, resume_auto_demand: Pad.ref(:input, 0))
 
       # time for :filter to resume demand on Pad.ref(:input, 0)
       Process.sleep(500)
 
-      Pipeline.message_child(pipeline, :sink, {:make_demand, demand})
+      Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
 
       buffers = receive_processed_buffers(pipeline, 2 * demand)
       buffers_number = length(buffers)
