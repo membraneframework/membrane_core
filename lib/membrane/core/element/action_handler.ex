@@ -62,7 +62,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp hdd(state) do
-    with %{supplying_demand?: false} <- state do
+    with %{delay_demands?: false} <- state do
       DemandHandler.handle_delayed_demands(state)
     end
   end

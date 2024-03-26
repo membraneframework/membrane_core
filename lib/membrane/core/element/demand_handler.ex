@@ -32,7 +32,7 @@ defmodule Membrane.Core.Element.DemandHandler do
       output, `handle_demand` is invoked right away, so that the demand can be synchronously supplied.
   """
   @spec handle_redemand(Pad.ref(), State.t()) :: State.t()
-  def handle_redemand(pad_ref, %State{supplying_demand?: true} = state) do
+  def handle_redemand(pad_ref, %State{delay_demands?: true} = state) do
     Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
   end
 
@@ -42,9 +42,9 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   defp do_handle_redemand(pad_ref, state) do
-    state = %{state | supplying_demand?: true}
+    state = %{state | delay_demands?: true}
     state = exec_handle_demand(pad_ref, state)
-    %{state | supplying_demand?: false}
+    %{state | delay_demands?: false}
   end
 
   @doc """
@@ -74,7 +74,7 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   @spec supply_demand(Pad.ref(), State.t()) :: State.t()
-  def supply_demand(pad_ref, %State{supplying_demand?: true} = state) do
+  def supply_demand(pad_ref, %State{delay_demands?: true} = state) do
     Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
   end
 
@@ -85,7 +85,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   defp do_supply_demand(pad_ref, state) do
     # marking is state that actual demand supply has been started (note changing back to false when finished)
-    state = %State{state | supplying_demand?: true}
+    state = %State{state | delay_demands?: true}
 
     pad_data = state |> PadModel.get_data!(pad_ref)
 
@@ -94,7 +94,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
     state = PadModel.set_data!(state, pad_ref, :input_queue, new_input_queue)
     state = handle_input_queue_output(pad_ref, popped_data, state)
-    %State{state | supplying_demand?: false}
+    %State{state | delay_demands?: false}
   end
 
   defp update_demand(pad_ref, size, state) when is_integer(size) do
@@ -127,8 +127,8 @@ defmodule Membrane.Core.Element.DemandHandler do
     # potentially for a long time.
 
     cond do
-      state.supplying_demand? ->
-        raise "Cannot handle delayed demands while already supplying demand"
+      state.delay_demands? ->
+        raise "Cannot handle delayed demands when delay_demands? flag is set to true"
 
       state.handle_demand_loop_counter >= @handle_demand_loop_limit ->
         state =
