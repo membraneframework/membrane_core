@@ -13,8 +13,6 @@ defmodule Membrane.Core.Element.BufferController do
     ActionHandler,
     AutoFlowController,
     CallbackContext,
-    DemandController,
-    AutoFlowController,
     EventController,
     ManualFlowController,
     PlaybackQueue,

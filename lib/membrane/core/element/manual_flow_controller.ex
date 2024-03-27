@@ -3,14 +3,9 @@ defmodule Membrane.Core.Element.ManualFlowController do
 
   # Module handling demands requested on output pads.
 
-  alias Membrane.Core.CallbackHandler
-
   alias Membrane.Core.Element.{
-    ActionHandler,
     BufferController,
-    CallbackContext,
     DemandController,
-    AutoFlowController,
     EventController,
     State,
     StreamFormatController
@@ -18,7 +13,6 @@ defmodule Membrane.Core.Element.ManualFlowController do
 
   alias __MODULE__.InputQueue
 
-  alias Membrane.Element.PadData
   alias Membrane.Pad
 
   require Membrane.Core.Child.PadModel, as: PadModel
@@ -27,6 +21,7 @@ defmodule Membrane.Core.Element.ManualFlowController do
 
   @handle_demand_loop_limit 20
 
+  @spec delay_redemand(Pad.ref(), State.t()) :: State.t()
   def delay_redemand(pad_ref, state) do
     Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
   end

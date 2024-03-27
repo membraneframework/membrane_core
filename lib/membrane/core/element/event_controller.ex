@@ -11,11 +11,9 @@ defmodule Membrane.Core.Element.EventController do
 
   alias Membrane.Core.Element.{
     ActionHandler,
+    AutoFlowController,
     CallbackContext,
-    DemandController,
-    AutoFlowController,
     ManualFlowController,
-    AutoFlowController,
     PlaybackQueue,
     State
   }

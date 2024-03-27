@@ -14,8 +14,8 @@ defmodule Membrane.Core.Element.DemandController do
   alias Membrane.Core.Element.{
     ActionHandler,
     AtomicDemand,
-    ManualFlowController,
     AutoFlowController,
+    ManualFlowController,
     PlaybackQueue,
     State
   }

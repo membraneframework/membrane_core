@@ -11,8 +11,6 @@ defmodule Membrane.Core.Element.PadController do
     AtomicDemand,
     AutoFlowController,
     CallbackContext,
-    DemandController,
-    AutoFlowController,
     EffectiveFlowController,
     EventController,
     State,

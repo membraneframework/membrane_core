@@ -11,9 +11,8 @@ defmodule Membrane.Core.Element.StreamFormatController do
 
   alias Membrane.Core.Element.{
     ActionHandler,
-    CallbackContext,
-    DemandController,
     AutoFlowController,
+    CallbackContext,
     PlaybackQueue,
     State
   }

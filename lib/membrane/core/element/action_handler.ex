@@ -24,9 +24,9 @@ defmodule Membrane.Core.Element.ActionHandler do
   alias Membrane.Core.Element.{
     AutoFlowController,
     DemandController,
+    ManualFlowController,
     State,
-    StreamFormatController,
-    ManualFlowController
+    StreamFormatController
   }
 
   alias Membrane.Core.{Events, TimerController}

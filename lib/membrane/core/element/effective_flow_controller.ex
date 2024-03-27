@@ -18,9 +18,8 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
   # Effective flow control of a single element can switch between :push and :pull many times during the element's lifetime.
 
-  alias Membrane.Core.Element.DemandController
-  alias Membrane.Core.Element.AutoFlowController
-  alias Membrane.Core.Element.{AtomicDemand, State}
+  alias Membrane.Core.Element.{AtomicDemand, AutoFlowController, DemandController, State}
+
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message

@@ -24,11 +24,10 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
-    AutoFlowController,
     EffectiveFlowController,
     EventController,
-    ManualFlowController,
     LifecycleController,
+    ManualFlowController,
     PadController,
     State,
     StreamFormatController
