@@ -2,7 +2,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
   use ExUnit.Case, async: true
 
   alias Membrane.Buffer
-  alias Membrane.Core.Element.{AtomicDemand, InputQueue}
+  alias Membrane.Core.Element.AtomicDemand
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
   alias Membrane.Core.Message
   alias Membrane.Core.SubprocessSupervisor
   alias Membrane.Testing.Event

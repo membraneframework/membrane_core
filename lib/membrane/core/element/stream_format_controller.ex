@@ -14,10 +14,11 @@ defmodule Membrane.Core.Element.StreamFormatController do
     CallbackContext,
     DemandController,
     AutoFlowController,
-    InputQueue,
     PlaybackQueue,
     State
   }
+
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Telemetry

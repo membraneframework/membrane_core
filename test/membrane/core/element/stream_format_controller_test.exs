@@ -3,7 +3,8 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
 
   alias Membrane.Buffer
   alias Membrane.Core.Message
-  alias Membrane.Core.Element.{AtomicDemand, InputQueue, State}
+  alias Membrane.Core.Element.{AtomicDemand, State}
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
   alias Membrane.Core.SubprocessSupervisor
   alias Membrane.StreamFormat.Mock, as: MockStreamFormat
   alias Membrane.Support.DemandsTest.Filter

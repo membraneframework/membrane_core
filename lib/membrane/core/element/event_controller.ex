@@ -14,12 +14,13 @@ defmodule Membrane.Core.Element.EventController do
     CallbackContext,
     DemandController,
     AutoFlowController,
-    InputQueue,
     ManualFlowController,
     AutoFlowController,
     PlaybackQueue,
     State
   }
+
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message

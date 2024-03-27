@@ -6,6 +6,7 @@ defmodule Membrane.Core.Element.DemandController do
   use Bunch
 
   alias Membrane.Buffer
+  alias Membrane.Element.PadData
 
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Element.CallbackContext
@@ -28,8 +29,9 @@ defmodule Membrane.Core.Element.DemandController do
   def snapshot_atomic_demand(pad_ref, state) do
     with {:ok, pad_data} when not pad_data.end_of_stream? <- PadModel.get_data(state, pad_ref),
          %State{playback: :playing} <- state do
-      if pad_data.direction == :input,
-        do: raise("cannot snapshot atomic counter in input pad")
+      if pad_data.direction == :input do
+        raise("cannot snapshot atomic counter in input pad")
+      end
 
       do_snapshot_atomic_demand(pad_data, state)
     else

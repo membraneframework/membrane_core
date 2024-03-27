@@ -15,10 +15,11 @@ defmodule Membrane.Core.Element.PadController do
     AutoFlowController,
     EffectiveFlowController,
     EventController,
-    InputQueue,
     State,
     StreamFormatController
   }
+
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
 
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError

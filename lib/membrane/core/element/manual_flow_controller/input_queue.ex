@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.InputQueue do
+defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
   @moduledoc false
   # Queue that is attached to the `:input` pad when working in a `:manual` flow control mode.
 
@@ -105,7 +105,8 @@ defmodule Membrane.Core.Element.InputQueue do
     |> maybe_increase_atomic_demand()
   end
 
-  @spec store(t(), atom(), queue_item() | [queue_item()]) :: t()
+  @spec store(t(), :buffer | :buffers | :event | :stream_format, queue_item() | [queue_item()]) ::
+          t()
   def store(input_queue, type \\ :buffers, v)
 
   def store(input_queue, :buffers, v) when is_list(v) do

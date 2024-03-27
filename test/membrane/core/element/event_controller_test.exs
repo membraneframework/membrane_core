@@ -1,7 +1,8 @@
 defmodule Membrane.Core.Element.EventControllerTest do
   use ExUnit.Case, async: true
 
-  alias Membrane.Core.Element.{AtomicDemand, EventController, InputQueue, State}
+  alias Membrane.Core.Element.{AtomicDemand, EventController, State}
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
   alias Membrane.Core.Events
   alias Membrane.Core.SubprocessSupervisor
   alias Membrane.Event

@@ -12,10 +12,11 @@ defmodule Membrane.Core.Element.ManualFlowController do
     DemandController,
     AutoFlowController,
     EventController,
-    InputQueue,
     State,
     StreamFormatController
   }
+
+  alias __MODULE__.InputQueue
 
   alias Membrane.Element.PadData
   alias Membrane.Pad
