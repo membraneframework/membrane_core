@@ -376,7 +376,7 @@ defmodule Membrane.Core.Element.PadController do
     } = pad_data
 
     input_queue =
-      InputQueue.init(%{
+      InputQueue.new(%{
         inbound_demand_unit: other_pad_info[:demand_unit] || this_demand_unit,
         outbound_demand_unit: this_demand_unit,
         atomic_demand: atomic_demand,

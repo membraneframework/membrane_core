@@ -54,12 +54,12 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   defstruct @enforce_keys ++ [size: 0, demand: 0]
 
-  @default_target_size_factor 40
+  @default_target_size_factor 100
 
   @spec default_min_demand_factor() :: number()
   def default_min_demand_factor, do: 0.25
 
-  @spec init(%{
+  @spec new(%{
           inbound_demand_unit: Buffer.Metric.unit(),
           outbound_demand_unit: Buffer.Metric.unit(),
           atomic_demand: AtomicDemand.t(),
@@ -67,7 +67,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
           log_tag: String.t(),
           target_size: pos_integer() | nil
         }) :: t()
-  def init(config) do
+  def new(config) do
     %{
       inbound_demand_unit: inbound_demand_unit,
       outbound_demand_unit: outbound_demand_unit,

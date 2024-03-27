@@ -33,7 +33,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
       })
 
     input_queue =
-      InputQueue.init(%{
+      InputQueue.new(%{
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :buffers,
         pad_ref: :some_pad,

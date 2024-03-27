@@ -77,16 +77,12 @@ defmodule Membrane.Core.Element.ManualFlowController do
 
   @spec supply_demand(Pad.ref(), State.t()) :: State.t()
   def supply_demand(pad_ref, %State{delay_demands?: true} = state) do
-    delay_demand_supply(pad_ref, state)
+    delay_supplying_demand(pad_ref, state)
   end
 
   def supply_demand(pad_ref, state) do
     do_supply_demand(pad_ref, state)
     |> handle_delayed_demands()
-  end
-
-  def delay_demand_supply(pad_ref, state) do
-    Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
   end
 
   defp do_supply_demand(pad_ref, state) do
@@ -101,6 +97,11 @@ defmodule Membrane.Core.Element.ManualFlowController do
     state = PadModel.set_data!(state, pad_ref, :input_queue, new_input_queue)
     state = handle_input_queue_output(pad_ref, popped_data, state)
     %State{state | delay_demands?: false}
+  end
+
+  @spec delay_supplying_demand(Pad.ref(), State.t()) :: State.t()
+  def delay_supplying_demand(pad_ref, state) do
+    Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
   end
 
   @spec update_demand(

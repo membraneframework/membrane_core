@@ -25,7 +25,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     end
 
     test "return InputQueue struct and send demand message", context do
-      assert InputQueue.init(%{
+      assert InputQueue.new(%{
                inbound_demand_unit: context.inbound_demand_unit,
                outbound_demand_unit: context.outbound_demand_unit,
                pad_ref: context.pad_ref,
@@ -187,7 +187,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
   describe ".take/2 should" do
     setup do
       input_queue =
-        InputQueue.init(%{
+        InputQueue.new(%{
           inbound_demand_unit: :buffers,
           outbound_demand_unit: :buffers,
           pad_ref: :output_pad_ref,
@@ -302,7 +302,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     atomic_demand = new_atomic_demand()
 
     queue =
-      InputQueue.init(%{
+      InputQueue.new(%{
         inbound_demand_unit: :bytes,
         outbound_demand_unit: :buffers,
         atomic_demand: atomic_demand,
@@ -339,7 +339,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     atomic_demand = new_atomic_demand()
 
     queue =
-      InputQueue.init(%{
+      InputQueue.new(%{
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :bytes,
         atomic_demand: atomic_demand,

@@ -26,7 +26,7 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
       })
 
     input_queue =
-      InputQueue.init(%{
+      InputQueue.new(%{
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :buffers,
         atomic_demand: atomic_demand,

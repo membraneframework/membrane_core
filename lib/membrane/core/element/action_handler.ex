@@ -245,7 +245,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         %State{type: type} = state
       )
       when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter, :endpoint] do
-    supply_demand(pad_ref, size, state)
+        delay_supplying_demand(pad_ref, size, state)
   end
 
   @impl CallbackHandler
@@ -403,28 +403,28 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec supply_demand(
+  @spec delay_supplying_demand(
           Pad.ref(),
           Action.demand_size(),
           State.t()
         ) :: State.t()
-  defp supply_demand(pad_ref, 0, state) do
+  defp delay_supplying_demand(pad_ref, 0, state) do
     Membrane.Logger.debug_verbose("Ignoring demand of size of 0 on pad #{inspect(pad_ref)}")
     state
   end
 
-  defp supply_demand(pad_ref, size, _state)
+  defp delay_supplying_demand(pad_ref, size, _state)
        when is_integer(size) and size < 0 do
     raise ElementError,
           "Tried to request a negative demand of size #{inspect(size)} on pad #{inspect(pad_ref)}"
   end
 
-  defp supply_demand(pad_ref, size, state) do
+  defp delay_supplying_demand(pad_ref, size, state) do
     with %{direction: :input, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
       # todo: get_data! above could be eradicated
       state = ManualFlowController.update_demand(pad_ref, size, state)
-      ManualFlowController.delay_demand_supply(pad_ref, state)
+      ManualFlowController.delay_supplying_demand(pad_ref, state)
     else
       %{direction: :output} ->
         raise PadDirectionError, action: :demand, direction: :output, pad: pad_ref
