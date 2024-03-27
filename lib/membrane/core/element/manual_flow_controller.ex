@@ -9,7 +9,7 @@ defmodule Membrane.Core.Element.ManualFlowController do
     ActionHandler,
     BufferController,
     CallbackContext,
-    DemandController,
+    DemandController, AutoFlowController,
     EventController,
     InputQueue,
     State,

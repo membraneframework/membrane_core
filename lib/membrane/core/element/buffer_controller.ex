@@ -11,8 +11,9 @@ defmodule Membrane.Core.Element.BufferController do
 
   alias Membrane.Core.Element.{
     ActionHandler,
+    AutoFlowController,
     CallbackContext,
-    DemandController,
+    DemandController, AutoFlowController,
     EventController,
     InputQueue,
     ManualFlowController,
@@ -70,10 +71,10 @@ defmodule Membrane.Core.Element.BufferController do
     :atomics.put(stalker_metrics.demand, 1, demand - buf_size)
 
     if state.effective_flow_control == :pull and MapSet.size(state.satisfied_auto_output_pads) > 0 do
-      DemandController.Auto.store_buffers_in_queue(pad_ref, buffers, state)
+      AutoFlowController.store_buffers_in_queue(pad_ref, buffers, state)
     else
       state = exec_buffer_callback(pad_ref, buffers, state)
-      DemandController.Auto.auto_adjust_atomic_demand(pad_ref, state)
+      AutoFlowController.auto_adjust_atomic_demand(pad_ref, state)
     end
   end
 

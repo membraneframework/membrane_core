@@ -22,7 +22,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   }
 
   alias Membrane.Core.Element.{
-    DemandController,
+    AutoFlowController,
+    DemandController, AutoFlowController,
     State,
     StreamFormatController,
     ManualFlowController
@@ -183,13 +184,13 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def handle_action({:pause_auto_demand, in_ref}, _cb, _params, %State{type: type} = state)
       when type in [:sink, :filter, :endpoint] do
-    DemandController.Auto.pause_demands(in_ref, state)
+    AutoFlowController.pause_demands(in_ref, state)
   end
 
   @impl CallbackHandler
   def handle_action({:resume_auto_demand, in_ref}, _cb, _params, %State{type: type} = state)
       when type in [:sink, :filter, :endpoint] do
-    DemandController.Auto.resume_demands(in_ref, state)
+    AutoFlowController.resume_demands(in_ref, state)
   end
 
   @impl CallbackHandler
@@ -483,7 +484,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       ManualFlowController.remove_pad_from_delayed_demands(pad_ref, state)
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
       |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
-      |> DemandController.Auto.pop_queues_and_bump_demand()
+      |> AutoFlowController.pop_queues_and_bump_demand()
     else
       %{direction: :input} ->
         raise PadDirectionError, action: "end of stream", direction: :input, pad: pad_ref

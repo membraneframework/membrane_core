@@ -56,7 +56,7 @@ defmodule Membrane.Element.PadData do
           # with input pad, but hasn't been sent yet by the element with output pad. Detects toilet overflow as well.
           atomic_demand: private_field,
 
-          # Field used in DemandController.Auto and InputQueue, to caluclate, how much AtomicDemand should be increased.
+          # Field used in AutoFlowController and InputQueue, to caluclate, how much AtomicDemand should be increased.
           # Contains amount of data (:buffers/:bytes), that has been demanded from the element on the other side of link, but
           # hasn't arrived yet. Unused for output pads.
           manual_demand_size: private_field,

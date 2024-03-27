@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.StreamFormatController do
   alias Membrane.Core.Element.{
     ActionHandler,
     CallbackContext,
-    DemandController,
+    DemandController, AutoFlowController,
     InputQueue,
     PlaybackQueue,
     State
@@ -48,7 +48,7 @@ defmodule Membrane.Core.Element.StreamFormatController do
 
         # stream format goes to the auto flow control queue
         pad_ref in state.awaiting_auto_input_pads ->
-          DemandController.Auto.store_stream_format_in_queue(pad_ref, stream_format, state)
+          AutoFlowController.store_stream_format_in_queue(pad_ref, stream_format, state)
 
         true ->
           exec_handle_stream_format(pad_ref, stream_format, state)

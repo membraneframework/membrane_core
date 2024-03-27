@@ -5,9 +5,6 @@ defmodule Membrane.Core.Element.DemandController do
 
   use Bunch
 
-  alias Membrane.Core.Element.ManualFlowController
-  alias __MODULE__.{Auto, Manual}
-
   alias Membrane.Buffer
 
   alias Membrane.Core.CallbackHandler
@@ -63,7 +60,7 @@ defmodule Membrane.Core.Element.DemandController do
     if atomic_value > 0 do
       state
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_data.ref))
-      |> Auto.pop_queues_and_bump_demand()
+      |> AutoFlowController.pop_queues_and_bump_demand()
     else
       state
     end

@@ -9,8 +9,9 @@ defmodule Membrane.Core.Element.PadController do
   alias Membrane.Core.Element.{
     ActionHandler,
     AtomicDemand,
+    AutoFlowController,
     CallbackContext,
-    DemandController,
+    DemandController, AutoFlowController,
     EffectiveFlowController,
     EventController,
     InputQueue,
@@ -241,7 +242,7 @@ defmodule Membrane.Core.Element.PadController do
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
       |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
       |> Map.update!(:auto_input_pads, &List.delete(&1, pad_ref))
-      |> DemandController.Auto.pop_queues_and_bump_demand()
+      |> AutoFlowController.pop_queues_and_bump_demand()
     else
       {:ok, %{availability: :always}} when state.terminating? ->
         state
@@ -335,7 +336,7 @@ defmodule Membrane.Core.Element.PadController do
         Map.update!(state, :satisfied_auto_output_pads, &MapSet.put(&1, pad_data.ref))
 
       %{direction: :input, flow_control: :auto} ->
-        DemandController.Auto.auto_adjust_atomic_demand(endpoint.pad_ref, state)
+        AutoFlowController.auto_adjust_atomic_demand(endpoint.pad_ref, state)
         |> Map.update!(:auto_input_pads, &[endpoint.pad_ref | &1])
 
       _pad_data ->

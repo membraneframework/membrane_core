@@ -19,6 +19,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
   # Effective flow control of a single element can switch between :push and :pull many times during the element's lifetime.
 
   alias Membrane.Core.Element.DemandController
+  alias Membrane.Core.Element.AutoFlowController
   alias Membrane.Core.Element.{AtomicDemand, State}
 
   require Membrane.Core.Child.PadModel, as: PadModel
@@ -140,6 +141,6 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
           state
       end)
     end
-    |> DemandController.Auto.pop_queues_and_bump_demand()
+    |> AutoFlowController.pop_queues_and_bump_demand()
   end
 end

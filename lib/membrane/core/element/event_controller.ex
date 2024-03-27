@@ -12,7 +12,7 @@ defmodule Membrane.Core.Element.EventController do
   alias Membrane.Core.Element.{
     ActionHandler,
     CallbackContext,
-    DemandController,
+    DemandController, AutoFlowController,
     InputQueue,
     ManualFlowController,
     AutoFlowController,
@@ -55,7 +55,7 @@ defmodule Membrane.Core.Element.EventController do
 
         # event goes to the auto flow control queue
         not async? and MapSet.member?(state.awaiting_auto_input_pads, pad_ref) ->
-          DemandController.Auto.store_event_in_queue(pad_ref, event, state)
+          AutoFlowController.store_event_in_queue(pad_ref, event, state)
 
         true ->
           exec_handle_event(pad_ref, event, state)
