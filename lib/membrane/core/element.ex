@@ -26,6 +26,7 @@ defmodule Membrane.Core.Element do
     DemandController,
     EffectiveFlowController,
     EventController,
+    ManualFlowController,
     LifecycleController,
     PadController,
     State,
@@ -210,7 +211,7 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:resume_delayed_demands_loop), state) do
-    state = DemandController.Manual.resume_delayed_demands_loop(state)
+    state = ManualFlowController.resume_delayed_demands_loop(state)
     {:noreply, state}
   end
 

@@ -15,6 +15,7 @@ defmodule Membrane.Core.Element.BufferController do
     DemandController,
     EventController,
     InputQueue,
+    ManualFlowController,
     PlaybackQueue,
     State
   }
@@ -26,7 +27,7 @@ defmodule Membrane.Core.Element.BufferController do
 
   @doc """
   Handles incoming buffer: either stores it in InputQueue, or executes element's
-  callback. Also calls `Membrane.Core.Element.DemandController.Manual.supply_demand/2`
+  callback. Also calls `Membrane.Core.Element.ManualFlowController.supply_demand/2`
   to check if there are any unsupplied demands.
   """
   @spec handle_buffer(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
@@ -83,7 +84,7 @@ defmodule Membrane.Core.Element.BufferController do
     state = PadModel.set_data!(state, pad_ref, :input_queue, input_queue)
 
     if old_input_queue |> InputQueue.empty?() do
-      DemandController.Manual.supply_demand(pad_ref, state)
+      ManualFlowController.supply_demand(pad_ref, state)
     else
       state
     end

@@ -14,6 +14,8 @@ defmodule Membrane.Core.Element.EventController do
     CallbackContext,
     DemandController,
     InputQueue,
+    ManualFlowController,
+    AutoFlowController,
     PlaybackQueue,
     State
   }
@@ -107,7 +109,7 @@ defmodule Membrane.Core.Element.EventController do
       Membrane.Logger.debug("Received end of stream on pad #{inspect(pad_ref)}")
 
       state =
-        DemandController.Manual.remove_pad_from_delayed_demands(pad_ref, state)
+        ManualFlowController.remove_pad_from_delayed_demands(pad_ref, state)
         |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
         |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
         |> Map.update!(:auto_input_pads, &List.delete(&1, pad_ref))

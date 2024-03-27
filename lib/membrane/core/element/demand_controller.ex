@@ -5,12 +5,20 @@ defmodule Membrane.Core.Element.DemandController do
 
   use Bunch
 
+  alias Membrane.Core.Element.ManualFlowController
   alias __MODULE__.{Auto, Manual}
 
   alias Membrane.Buffer
 
+  alias Membrane.Core.CallbackHandler
+  alias Membrane.Core.Element.CallbackContext
+
+
   alias Membrane.Core.Element.{
+    ActionHandler,
     AtomicDemand,
+    ManualFlowController,
+    AutoFlowController,
     PlaybackQueue,
     State
   }
@@ -78,7 +86,7 @@ defmodule Membrane.Core.Element.DemandController do
           }
         )
 
-      Manual.handle_redemand(pad_data.ref, state)
+      ManualFlowController.handle_redemand(pad_data.ref, state)
     else
       _other -> state
     end
@@ -110,5 +118,53 @@ defmodule Membrane.Core.Element.DemandController do
       | demand: demand,
         atomic_demand: atomic_demand
     })
+  end
+
+
+  @spec exec_handle_demand(Pad.ref(), State.t()) :: State.t()
+  def exec_handle_demand(pad_ref, state) do
+    with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
+         true <- exec_handle_demand?(pad_data) do
+      do_exec_handle_demand(pad_data, state)
+    else
+      _other -> state
+    end
+  end
+
+  @spec do_exec_handle_demand(PadData.t(), State.t()) :: State.t()
+  defp do_exec_handle_demand(pad_data, state) do
+    context = &CallbackContext.from_state(&1, incoming_demand: pad_data.incoming_demand)
+
+    CallbackHandler.exec_and_handle_callback(
+      :handle_demand,
+      ActionHandler,
+      %{
+        split_continuation_arbiter: &exec_handle_demand?(PadModel.get_data!(&1, pad_data.ref)),
+        context: context
+      },
+      [pad_data.ref, pad_data.demand, pad_data.demand_unit],
+      state
+    )
+  end
+
+  defp exec_handle_demand?(%{end_of_stream?: true}) do
+    Membrane.Logger.debug_verbose("""
+    Demand controller: not executing handle_demand as :end_of_stream action has already been returned
+    """)
+
+    false
+  end
+
+  defp exec_handle_demand?(%{demand: demand}) when demand <= 0 do
+    Membrane.Logger.debug_verbose("""
+    Demand controller: not executing handle_demand as demand is not greater than 0,
+    demand: #{inspect(demand)}
+    """)
+
+    false
+  end
+
+  defp exec_handle_demand?(_pad_data) do
+    true
   end
 end

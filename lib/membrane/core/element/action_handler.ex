@@ -24,7 +24,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   alias Membrane.Core.Element.{
     DemandController,
     State,
-    StreamFormatController
+    StreamFormatController,
+    ManualFlowController
   }
 
   alias Membrane.Core.{Events, TimerController}
@@ -69,7 +70,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defp hdd(state) do
     with %{delay_demands?: false} <- state do
-      DemandController.Manual.handle_delayed_demands(state)
+      ManualFlowController.handle_delayed_demands(state)
     end
   end
 
@@ -421,8 +422,8 @@ defmodule Membrane.Core.Element.ActionHandler do
     with %{direction: :input, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
       # todo: get_data! above could be eradicated
-      state = DemandController.Manual.update_demand(pad_ref, size, state)
-      DemandController.Manual.delay_demand_supply(pad_ref, state)
+      state = ManualFlowController.update_demand(pad_ref, size, state)
+      ManualFlowController.delay_demand_supply(pad_ref, state)
     else
       %{direction: :output} ->
         raise PadDirectionError, action: :demand, direction: :output, pad: pad_ref
@@ -443,7 +444,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     with %{direction: :output, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
       # todo: get_data! above could be eradicated
-      DemandController.Manual.delay_redemand(pad_ref, state)
+      ManualFlowController.delay_redemand(pad_ref, state)
     else
       %{direction: :input} ->
         raise ElementError, "Tried to make a redemand on input pad #{inspect(pad_ref)}"
@@ -479,7 +480,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_outgoing_event(Pad.ref(), Event.t(), State.t()) :: State.t()
   defp handle_outgoing_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
-      DemandController.Manual.remove_pad_from_delayed_demands(pad_ref, state)
+      ManualFlowController.remove_pad_from_delayed_demands(pad_ref, state)
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
       |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
       |> DemandController.Auto.pop_queues_and_bump_demand()
