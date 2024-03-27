@@ -10,7 +10,6 @@ defmodule Membrane.Core.Element.DemandController do
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Element.CallbackContext
 
-
   alias Membrane.Core.Element.{
     ActionHandler,
     AtomicDemand,
@@ -116,7 +115,6 @@ defmodule Membrane.Core.Element.DemandController do
         atomic_demand: atomic_demand
     })
   end
-
 
   @spec exec_handle_demand(Pad.ref(), State.t()) :: State.t()
   def exec_handle_demand(pad_ref, state) do

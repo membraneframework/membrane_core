@@ -9,7 +9,8 @@ defmodule Membrane.Core.Element.ManualFlowController do
     ActionHandler,
     BufferController,
     CallbackContext,
-    DemandController, AutoFlowController,
+    DemandController,
+    AutoFlowController,
     EventController,
     InputQueue,
     State,
@@ -101,7 +102,11 @@ defmodule Membrane.Core.Element.ManualFlowController do
     %State{state | delay_demands?: false}
   end
 
-  @spec update_demand(Pad.ref(), non_neg_integer() | (non_neg_integer() -> non_neg_integer()), State.t()) :: State.t()
+  @spec update_demand(
+          Pad.ref(),
+          non_neg_integer() | (non_neg_integer() -> non_neg_integer()),
+          State.t()
+        ) :: State.t()
   def update_demand(pad_ref, size, state) when is_integer(size) do
     PadModel.set_data!(state, pad_ref, :manual_demand_size, size)
   end
