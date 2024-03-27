@@ -348,7 +348,6 @@ defmodule Membrane.Core.Element.ActionHandler do
            stalker_metrics: stalker_metrics
          }
          when stream_format != nil <- pad_data do
-      # todo: move this function to one of the controllers, to avoid redundant PadModet.get_data in the function below
       state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
       :atomics.add(stalker_metrics.total_buffers, 1, length(buffers))
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
@@ -422,7 +421,6 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp delay_supplying_demand(pad_ref, size, state) do
     with %{direction: :input, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
-      # todo: get_data! above could be eradicated
       state = ManualFlowController.update_demand(pad_ref, size, state)
       ManualFlowController.delay_supplying_demand(pad_ref, state)
     else
@@ -444,7 +442,6 @@ defmodule Membrane.Core.Element.ActionHandler do
        when type in [:source, :filter, :endpoint] do
     with %{direction: :output, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
-      # todo: get_data! above could be eradicated
       ManualFlowController.delay_redemand(pad_ref, state)
     else
       %{direction: :input} ->

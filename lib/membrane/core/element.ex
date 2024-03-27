@@ -86,8 +86,6 @@ defmodule Membrane.Core.Element do
     # rpc if necessary
     if node do
       result = :rpc.call(node, GenServer, :start, [__MODULE__, options])
-
-      # TODO: use an atomic way of linking once https://github.com/erlang/otp/issues/6375 is solved
       with {:start_link, {:ok, pid}} <- {method, result}, do: Process.link(pid)
       result
     else

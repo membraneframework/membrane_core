@@ -63,7 +63,6 @@ defmodule Membrane.Core.Element.BufferController do
     end
   end
 
-  # todo: move it to the flow controllers?
   @spec do_handle_ingoing_buffers(
           Pad.ref(),
           PadModel.pad_data(),
