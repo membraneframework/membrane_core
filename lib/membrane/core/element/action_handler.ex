@@ -45,45 +45,40 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defguardp is_demand_size(size) when is_integer(size) or is_function(size)
 
+  # Match in the function below is caused by a fact, that handle_spec_started is the only callback, that
+  # might be executed in between handling actions returned from other callbacks.
+  # This callback has been deprecated and should be removed in v2.0.0, along with the if statement below.
+
   @impl CallbackHandler
-  def handle_end_of_actions(callback, state) do
+  def handle_end_of_actions(:handle_spec_started, state), do: state
+
+  def handle_end_of_actions(_callback, state) do
     # Fixed order of handling demand of manual and auto pads would lead to
     # favoring manual pads over auto pads (or vice versa), especially after
     # introducting auto flow queues.
 
-    # Condition in if below is caused by a fact, that handle_spec_started is the only callback, that might
-    # be executed in between handling actions returned from other callbacks.
-    # This callback has been deprecated and should be removed in v2.0.0, along with the if statement below.
-
-    if callback != :handle_spec_started do
-      if Enum.random([1, 2]) == 1 do
-        snapshot(callback, state)
-        |> hdd()
-      else
-        state
-        |> hdd()
-        |> then(&snapshot(callback, &1))
-      end
+    if Enum.random([true, false]) do
+      state
+      |> handle_pads_to_snapshot()
+      |> maybe_handle_delayed_demands()
     else
       state
+      |> maybe_handle_delayed_demands()
+      |> handle_pads_to_snapshot()
     end
   end
 
-  defp hdd(state) do
+  defp maybe_handle_delayed_demands(state) do
     with %{delay_demands?: false} <- state do
       ManualFlowController.handle_delayed_demands(state)
     end
   end
 
-  defp snapshot(callback, state) do
-    if callback != :handle_spec_started do
-      state.pads_to_snapshot
-      |> Enum.shuffle()
-      |> Enum.reduce(state, &DemandController.snapshot_atomic_demand/2)
-      |> Map.put(:pads_to_snapshot, MapSet.new())
-    else
-      state
-    end
+  defp handle_pads_to_snapshot(state) do
+    state.pads_to_snapshot
+    |> Enum.shuffle()
+    |> Enum.reduce(state, &DemandController.snapshot_atomic_demand/2)
+    |> Map.put(:pads_to_snapshot, MapSet.new())
   end
 
   @impl CallbackHandler
@@ -245,7 +240,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         %State{type: type} = state
       )
       when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter, :endpoint] do
-        delay_supplying_demand(pad_ref, size, state)
+    delay_supplying_demand(pad_ref, size, state)
   end
 
   @impl CallbackHandler

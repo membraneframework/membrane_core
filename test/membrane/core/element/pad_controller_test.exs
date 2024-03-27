@@ -18,7 +18,6 @@ defmodule Membrane.Core.Element.PadControllerTest do
     struct!(State,
       name: name,
       module: elem_module,
-      # handling_action?: false,
       delay_demands?: false,
       pads_to_snapshot: MapSet.new(),
       delayed_demands: MapSet.new(),

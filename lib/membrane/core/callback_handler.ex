@@ -132,7 +132,7 @@ defmodule Membrane.Core.CallbackHandler do
          %{context: context_fun},
          %{module: module, internal_state: internal_state} = state
        ) do
-    args = args ++ [context_fun.(state) |> Map.put(:s, state), internal_state]
+    args = args ++ [context_fun.(state), internal_state]
 
     callback_result =
       try do
@@ -188,9 +188,6 @@ defmodule Membrane.Core.CallbackHandler do
           reraise e, __STACKTRACE__
       end
 
-    # was_delay_demands? = Map.get(state, :delay_demands?, false)
-    # state = if Component.is_element?(state), do: %{state | delay_demands?: true}, else: state
-
     state =
       Enum.reduce(actions, state, fn action, state ->
         try do
@@ -204,11 +201,6 @@ defmodule Membrane.Core.CallbackHandler do
             reraise e, __STACKTRACE__
         end
       end)
-
-    # state =
-    #   if Component.is_element?(state) and not was_delay_demands?,
-    #     do: %{state | delay_demands?: false},
-    #     else: state
 
     handler_module.handle_end_of_actions(callback, state)
   end

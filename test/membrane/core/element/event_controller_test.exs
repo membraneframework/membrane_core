@@ -51,7 +51,6 @@ defmodule Membrane.Core.Element.EventControllerTest do
         playback: :playing,
         parent_pid: self(),
         synchronization: %{clock: nil, parent_clock: nil, stream_sync: nil},
-        # handling_action?: false,
         delay_demands?: false,
         pads_to_snapshot: MapSet.new(),
         delayed_demands: MapSet.new(),
