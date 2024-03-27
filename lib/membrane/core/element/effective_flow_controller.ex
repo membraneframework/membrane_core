@@ -20,7 +20,6 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
 
   alias Membrane.Core.Element.{AtomicDemand, AutoFlowController, DemandController, State}
 
-
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
