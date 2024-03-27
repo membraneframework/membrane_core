@@ -8,7 +8,6 @@ defmodule Membrane.Core.CallbackHandler do
   use Bunch
 
   alias Membrane.CallbackError
-  alias Membrane.Core.Component
 
   require Membrane.Logger
 
@@ -31,7 +30,7 @@ defmodule Membrane.Core.CallbackHandler do
   @callback transform_actions(actions :: list, callback :: atom, handler_params, state) ::
               {actions :: list, state}
 
-  @callback handle_end_of_actions(state) :: state
+  @callback handle_end_of_actions(callback :: atom, state) :: state
 
   defmacro __using__(_args) do
     quote location: :keep do
@@ -44,7 +43,7 @@ defmodule Membrane.Core.CallbackHandler do
       end
 
       @impl unquote(__MODULE__)
-      def handle_end_of_actions(state) do
+      def handle_end_of_actions(_callback, state) do
         state
       end
 
@@ -189,16 +188,6 @@ defmodule Membrane.Core.CallbackHandler do
           reraise e, __STACKTRACE__
       end
 
-    was_handling_action? = state.handling_action?
-    state = %{state | handling_action?: true}
-
-    # Updating :supplying_demand? flag value here is a temporal fix.
-    # Setting it to `true` while handling actions causes postponing calls
-    # of handle_redemand/2 and supply_demand/2 until a moment, when all
-    # actions returned from the callback are handled
-    was_supplying_demand? = Map.get(state, :supplying_demand?, false)
-    state = if Component.is_element?(state), do: %{state | supplying_demand?: true}, else: state
-
     state =
       Enum.reduce(actions, state, fn action, state ->
         try do
@@ -213,16 +202,6 @@ defmodule Membrane.Core.CallbackHandler do
         end
       end)
 
-    state =
-      if was_handling_action?,
-        do: state,
-        else: %{state | handling_action?: false}
-
-    state =
-      if Component.is_element?(state) and not was_supplying_demand?,
-        do: %{state | supplying_demand?: false},
-        else: state
-
-    handler_module.handle_end_of_actions(state)
+    handler_module.handle_end_of_actions(callback, state)
   end
 end

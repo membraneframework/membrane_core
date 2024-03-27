@@ -1,21 +1,18 @@
-defmodule Membrane.Core.Element.DemandHandler do
+defmodule Membrane.Core.Element.ManualFlowController do
   @moduledoc false
 
   # Module handling demands requested on output pads.
 
-  alias Membrane.Core.CallbackHandler
-
   alias Membrane.Core.Element.{
-    ActionHandler,
     BufferController,
-    CallbackContext,
+    DemandController,
     EventController,
-    InputQueue,
     State,
     StreamFormatController
   }
 
-  alias Membrane.Element.PadData
+  alias __MODULE__.InputQueue
+
   alias Membrane.Pad
 
   require Membrane.Core.Child.PadModel, as: PadModel
@@ -23,6 +20,11 @@ defmodule Membrane.Core.Element.DemandHandler do
   require Membrane.Logger
 
   @handle_demand_loop_limit 20
+
+  @spec delay_redemand(Pad.ref(), State.t()) :: State.t()
+  def delay_redemand(pad_ref, state) do
+    Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
+  end
 
   @doc """
   Called when redemand action was returned.
@@ -32,8 +34,8 @@ defmodule Membrane.Core.Element.DemandHandler do
       output, `handle_demand` is invoked right away, so that the demand can be synchronously supplied.
   """
   @spec handle_redemand(Pad.ref(), State.t()) :: State.t()
-  def handle_redemand(pad_ref, %State{supplying_demand?: true} = state) do
-    Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :redemand}))
+  def handle_redemand(pad_ref, %State{delay_demands?: true} = state) do
+    delay_redemand(pad_ref, state)
   end
 
   def handle_redemand(pad_ref, %State{} = state) do
@@ -42,9 +44,9 @@ defmodule Membrane.Core.Element.DemandHandler do
   end
 
   defp do_handle_redemand(pad_ref, state) do
-    state = %{state | supplying_demand?: true}
-    state = exec_handle_demand(pad_ref, state)
-    %{state | supplying_demand?: false}
+    state = %{state | delay_demands?: true}
+    state = DemandController.exec_handle_demand(pad_ref, state)
+    %{state | delay_demands?: false}
   end
 
   @doc """
@@ -65,17 +67,12 @@ defmodule Membrane.Core.Element.DemandHandler do
   """
   @spec supply_demand(
           Pad.ref(),
-          size :: non_neg_integer | (non_neg_integer() -> non_neg_integer()),
           State.t()
         ) :: State.t()
-  def supply_demand(pad_ref, size, state) do
-    state = update_demand(pad_ref, size, state)
-    supply_demand(pad_ref, state)
-  end
 
   @spec supply_demand(Pad.ref(), State.t()) :: State.t()
-  def supply_demand(pad_ref, %State{supplying_demand?: true} = state) do
-    Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
+  def supply_demand(pad_ref, %State{delay_demands?: true} = state) do
+    delay_supplying_demand(pad_ref, state)
   end
 
   def supply_demand(pad_ref, state) do
@@ -85,7 +82,7 @@ defmodule Membrane.Core.Element.DemandHandler do
 
   defp do_supply_demand(pad_ref, state) do
     # marking is state that actual demand supply has been started (note changing back to false when finished)
-    state = %State{state | supplying_demand?: true}
+    state = %State{state | delay_demands?: true}
 
     pad_data = state |> PadModel.get_data!(pad_ref)
 
@@ -94,14 +91,24 @@ defmodule Membrane.Core.Element.DemandHandler do
 
     state = PadModel.set_data!(state, pad_ref, :input_queue, new_input_queue)
     state = handle_input_queue_output(pad_ref, popped_data, state)
-    %State{state | supplying_demand?: false}
+    %State{state | delay_demands?: false}
   end
 
-  defp update_demand(pad_ref, size, state) when is_integer(size) do
+  @spec delay_supplying_demand(Pad.ref(), State.t()) :: State.t()
+  def delay_supplying_demand(pad_ref, state) do
+    Map.update!(state, :delayed_demands, &MapSet.put(&1, {pad_ref, :supply}))
+  end
+
+  @spec update_demand(
+          Pad.ref(),
+          non_neg_integer() | (non_neg_integer() -> non_neg_integer()),
+          State.t()
+        ) :: State.t()
+  def update_demand(pad_ref, size, state) when is_integer(size) do
     PadModel.set_data!(state, pad_ref, :manual_demand_size, size)
   end
 
-  defp update_demand(pad_ref, size_fun, state) when is_function(size_fun) do
+  def update_demand(pad_ref, size_fun, state) when is_function(size_fun) do
     manual_demand_size = PadModel.get_data!(state, pad_ref, :manual_demand_size)
     new_manual_demand_size = size_fun.(manual_demand_size)
 
@@ -127,8 +134,8 @@ defmodule Membrane.Core.Element.DemandHandler do
     # potentially for a long time.
 
     cond do
-      state.supplying_demand? ->
-        raise "Cannot handle delayed demands while already supplying demand"
+      state.delay_demands? ->
+        raise "Cannot handle delayed demands when delay_demands? flag is set to true"
 
       state.handle_demand_loop_counter >= @handle_demand_loop_limit ->
         state =
@@ -197,52 +204,5 @@ defmodule Membrane.Core.Element.DemandHandler do
       PadModel.update_data!(state, pad_ref, :manual_demand_size, &(&1 - outbound_metric_buf_size))
 
     BufferController.exec_buffer_callback(pad_ref, buffers, state)
-  end
-
-  @spec exec_handle_demand(Pad.ref(), State.t()) :: State.t()
-  defp exec_handle_demand(pad_ref, state) do
-    with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
-         true <- exec_handle_demand?(pad_data) do
-      do_exec_handle_demand(pad_data, state)
-    else
-      _other -> state
-    end
-  end
-
-  @spec do_exec_handle_demand(PadData.t(), State.t()) :: State.t()
-  defp do_exec_handle_demand(pad_data, state) do
-    context = &CallbackContext.from_state(&1, incoming_demand: pad_data.incoming_demand)
-
-    CallbackHandler.exec_and_handle_callback(
-      :handle_demand,
-      ActionHandler,
-      %{
-        split_continuation_arbiter: &exec_handle_demand?(PadModel.get_data!(&1, pad_data.ref)),
-        context: context
-      },
-      [pad_data.ref, pad_data.demand, pad_data.demand_unit],
-      state
-    )
-  end
-
-  defp exec_handle_demand?(%{end_of_stream?: true}) do
-    Membrane.Logger.debug_verbose("""
-    Demand controller: not executing handle_demand as :end_of_stream action has already been returned
-    """)
-
-    false
-  end
-
-  defp exec_handle_demand?(%{demand: demand}) when demand <= 0 do
-    Membrane.Logger.debug_verbose("""
-    Demand controller: not executing handle_demand as demand is not greater than 0,
-    demand: #{inspect(demand)}
-    """)
-
-    false
-  end
-
-  defp exec_handle_demand?(_pad_data) do
-    true
   end
 end

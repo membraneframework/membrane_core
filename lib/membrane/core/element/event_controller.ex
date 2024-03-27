@@ -11,14 +11,14 @@ defmodule Membrane.Core.Element.EventController do
 
   alias Membrane.Core.Element.{
     ActionHandler,
+    AutoFlowController,
     CallbackContext,
-    DemandHandler,
-    InputQueue,
+    ManualFlowController,
     PlaybackQueue,
     State
   }
 
-  alias Membrane.Core.Element.DemandController.AutoFlowUtils
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message
@@ -55,7 +55,7 @@ defmodule Membrane.Core.Element.EventController do
 
         # event goes to the auto flow control queue
         not async? and MapSet.member?(state.awaiting_auto_input_pads, pad_ref) ->
-          AutoFlowUtils.store_event_in_queue(pad_ref, event, state)
+          AutoFlowController.store_event_in_queue(pad_ref, event, state)
 
         true ->
           exec_handle_event(pad_ref, event, state)
@@ -109,7 +109,7 @@ defmodule Membrane.Core.Element.EventController do
       Membrane.Logger.debug("Received end of stream on pad #{inspect(pad_ref)}")
 
       state =
-        DemandHandler.remove_pad_from_delayed_demands(pad_ref, state)
+        ManualFlowController.remove_pad_from_delayed_demands(pad_ref, state)
         |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
         |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
         |> Map.update!(:auto_input_pads, &List.delete(&1, pad_ref))

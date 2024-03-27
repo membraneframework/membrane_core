@@ -1,7 +1,8 @@
 defmodule Membrane.Core.Element.LifecycleControllerTest do
   use ExUnit.Case, async: true
 
-  alias Membrane.Core.Element.{AtomicDemand, InputQueue, LifecycleController, State}
+  alias Membrane.Core.Element.{AtomicDemand, LifecycleController, State}
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
 
   alias Membrane.Core.{
     Message,
@@ -32,7 +33,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
       })
 
     input_queue =
-      InputQueue.init(%{
+      InputQueue.new(%{
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :buffers,
         atomic_demand: atomic_demand,
@@ -49,8 +50,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
         playback: :playing,
         parent_pid: self(),
         synchronization: %{clock: nil, parent_clock: nil},
-        handling_action?: false,
-        supplying_demand?: false,
+        delay_demands?: false,
         pads_to_snapshot: MapSet.new(),
         delayed_demands: MapSet.new(),
         pads_data: %{

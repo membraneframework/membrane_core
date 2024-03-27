@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Element.InputQueue do
+defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
   @moduledoc false
   # Queue that is attached to the `:input` pad when working in a `:manual` flow control mode.
 
@@ -54,12 +54,12 @@ defmodule Membrane.Core.Element.InputQueue do
 
   defstruct @enforce_keys ++ [size: 0, demand: 0]
 
-  @default_target_size_factor 40
+  @default_target_size_factor 100
 
   @spec default_min_demand_factor() :: number()
   def default_min_demand_factor, do: 0.25
 
-  @spec init(%{
+  @spec new(%{
           inbound_demand_unit: Buffer.Metric.unit(),
           outbound_demand_unit: Buffer.Metric.unit(),
           atomic_demand: AtomicDemand.t(),
@@ -67,7 +67,7 @@ defmodule Membrane.Core.Element.InputQueue do
           log_tag: String.t(),
           target_size: pos_integer() | nil
         }) :: t()
-  def init(config) do
+  def new(config) do
     %{
       inbound_demand_unit: inbound_demand_unit,
       outbound_demand_unit: outbound_demand_unit,
@@ -105,7 +105,8 @@ defmodule Membrane.Core.Element.InputQueue do
     |> maybe_increase_atomic_demand()
   end
 
-  @spec store(t(), atom(), queue_item() | [queue_item()]) :: t()
+  @spec store(t(), :buffer | :buffers | :event | :stream_format, queue_item() | [queue_item()]) ::
+          t()
   def store(input_queue, type \\ :buffers, v)
 
   def store(input_queue, :buffers, v) when is_list(v) do

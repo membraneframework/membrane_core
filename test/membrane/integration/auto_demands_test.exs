@@ -339,7 +339,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     end
 
     test "when there is no demand on the output pad", %{pipeline: pipeline} do
-      manual_flow_queue_size = 40
+      manual_flow_queue_size = 100
 
       assert_pipeline_notified(pipeline, :filter, :playing)
 
@@ -374,7 +374,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     test "when an element returns :pause_auto_demand and :resume_auto_demand action", %{
       pipeline: pipeline
     } do
-      manual_flow_queue_size = 40
+      manual_flow_queue_size = 100
       auto_flow_demand_size = 400
 
       assert_pipeline_notified(pipeline, :filter, :playing)

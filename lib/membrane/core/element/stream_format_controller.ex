@@ -8,8 +8,16 @@ defmodule Membrane.Core.Element.StreamFormatController do
   alias Membrane.{Pad, StreamFormat}
   alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{ActionHandler, CallbackContext, InputQueue, PlaybackQueue, State}
-  alias Membrane.Core.Element.DemandController.AutoFlowUtils
+
+  alias Membrane.Core.Element.{
+    ActionHandler,
+    AutoFlowController,
+    CallbackContext,
+    PlaybackQueue,
+    State
+  }
+
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Telemetry
@@ -41,7 +49,7 @@ defmodule Membrane.Core.Element.StreamFormatController do
 
         # stream format goes to the auto flow control queue
         pad_ref in state.awaiting_auto_input_pads ->
-          AutoFlowUtils.store_stream_format_in_queue(pad_ref, stream_format, state)
+          AutoFlowController.store_stream_format_in_queue(pad_ref, stream_format, state)
 
         true ->
           exec_handle_stream_format(pad_ref, stream_format, state)

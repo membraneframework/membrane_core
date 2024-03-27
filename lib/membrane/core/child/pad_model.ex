@@ -7,6 +7,7 @@ defmodule Membrane.Core.Child.PadModel do
 
   alias Membrane.Core.Child
   alias Membrane.Core.Element.EffectiveFlowController
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
   alias Membrane.{Pad, UnknownPadError}
 
   @type bin_pad_data :: %Membrane.Bin.PadData{
@@ -39,7 +40,7 @@ defmodule Membrane.Core.Child.PadModel do
           pid: pid,
           other_ref: Pad.ref(),
           sticky_messages: [Membrane.Event.t()],
-          input_queue: Membrane.Core.Element.InputQueue.t() | nil,
+          input_queue: InputQueue.t() | nil,
           options: %{optional(atom) => any},
           auto_demand_size: pos_integer() | nil,
           sticky_events: [Membrane.Event.t()],

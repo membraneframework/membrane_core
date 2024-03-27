@@ -514,7 +514,7 @@ defmodule Membrane.ChildrenSpec do
   Membrane won't send smaller demand than `minimal demand`, to reduce demands' overhead. However, the user will always receive
   as many buffers, as demanded, all excess buffers will be queued internally.
   Used only for pads working in `:manual` flow control mode. See `t:Membrane.Pad.flow_control/0`
-  for more info. Defaults to `#{Membrane.Core.Element.InputQueue.default_min_demand_factor()}` (the default may change in the future).
+  for more info. Defaults to `#{Membrane.Core.Element.ManualFlowController.InputQueue.default_min_demand_factor()}` (the default may change in the future).
   - `auto_demand_size` - Size of automatically generated demands. Used only for pads working in `:auto` flow control mode.
     See `t:Membrane.Pad.flow_control/0`  for more info.
   - `throttling_factor` - an integer specifying how frequently should a sender update the number of buffers in the `Toilet`. Defaults to 1,

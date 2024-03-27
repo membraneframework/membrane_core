@@ -9,15 +9,16 @@ defmodule Membrane.Core.Element.PadController do
   alias Membrane.Core.Element.{
     ActionHandler,
     AtomicDemand,
+    AutoFlowController,
     CallbackContext,
     EffectiveFlowController,
     EventController,
-    InputQueue,
     State,
     StreamFormatController
   }
 
-  alias Membrane.Core.Element.DemandController.AutoFlowUtils
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
+
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError
 
@@ -241,7 +242,7 @@ defmodule Membrane.Core.Element.PadController do
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
       |> Map.update!(:awaiting_auto_input_pads, &MapSet.delete(&1, pad_ref))
       |> Map.update!(:auto_input_pads, &List.delete(&1, pad_ref))
-      |> AutoFlowUtils.pop_queues_and_bump_demand()
+      |> AutoFlowController.pop_queues_and_bump_demand()
     else
       {:ok, %{availability: :always}} when state.terminating? ->
         state
@@ -335,7 +336,7 @@ defmodule Membrane.Core.Element.PadController do
         Map.update!(state, :satisfied_auto_output_pads, &MapSet.put(&1, pad_data.ref))
 
       %{direction: :input, flow_control: :auto} ->
-        AutoFlowUtils.auto_adjust_atomic_demand(endpoint.pad_ref, state)
+        AutoFlowController.auto_adjust_atomic_demand(endpoint.pad_ref, state)
         |> Map.update!(:auto_input_pads, &[endpoint.pad_ref | &1])
 
       _pad_data ->
@@ -373,7 +374,7 @@ defmodule Membrane.Core.Element.PadController do
     } = pad_data
 
     input_queue =
-      InputQueue.init(%{
+      InputQueue.new(%{
         inbound_demand_unit: other_pad_info[:demand_unit] || this_demand_unit,
         outbound_demand_unit: this_demand_unit,
         atomic_demand: atomic_demand,
