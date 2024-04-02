@@ -45,14 +45,8 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   defguardp is_demand_size(size) when is_integer(size) or is_function(size)
 
-  # Match in the function below is caused by a fact, that handle_spec_started is the only callback, that
-  # might be executed in between handling actions returned from other callbacks.
-  # This callback has been deprecated and should be removed in v2.0.0, along with the if statement below.
-
   @impl CallbackHandler
-  def handle_end_of_actions(:handle_spec_started, state), do: state
-
-  def handle_end_of_actions(_callback, state) do
+  def handle_end_of_actions(state) do
     # Fixed order of handling demand of manual and auto pads would lead to
     # favoring manual pads over auto pads (or vice versa), especially after
     # introducting auto flow queues.

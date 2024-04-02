@@ -30,7 +30,7 @@ defmodule Membrane.Core.Element.DemandController do
     with {:ok, pad_data} when not pad_data.end_of_stream? <- PadModel.get_data(state, pad_ref),
          %State{playback: :playing} <- state do
       if pad_data.direction == :input do
-        raise("cannot snapshot atomic counter in input pad")
+        raise("cannot snapshot atomic counter in input pad #{inspect(pad_ref)}")
       end
 
       do_snapshot_atomic_demand(pad_data, state)

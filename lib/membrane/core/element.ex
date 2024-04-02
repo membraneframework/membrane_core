@@ -215,7 +215,7 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:buffer, buffers, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
-    state = BufferController.handle_ingoing_buffers(pad_ref, buffers, state)
+    state = BufferController.handle_incoming_buffers(pad_ref, buffers, state)
     {:noreply, state}
   end
 

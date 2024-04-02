@@ -31,8 +31,8 @@ defmodule Membrane.Core.Element.BufferController do
   callback. Also calls `Membrane.Core.Element.ManualFlowController.supply_demand/2`
   to check if there are any unsupplied demands.
   """
-  @spec handle_ingoing_buffers(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
-  def handle_ingoing_buffers(pad_ref, buffers, state) do
+  @spec handle_incoming_buffers(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
+  def handle_incoming_buffers(pad_ref, buffers, state) do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
       %{
@@ -50,25 +50,25 @@ defmodule Membrane.Core.Element.BufferController do
           EventController.handle_start_of_stream(pad_ref, state)
         end
 
-      do_handle_ingoing_buffers(pad_ref, data, buffers, state)
+      do_handle_incoming_buffers(pad_ref, data, buffers, state)
     else
       pad: {:error, :unknown_pad} ->
         # We've got a buffer from already unlinked pad
         state
 
       playback: _playback ->
-        PlaybackQueue.store(&handle_ingoing_buffers(pad_ref, buffers, &1), state)
+        PlaybackQueue.store(&handle_incoming_buffers(pad_ref, buffers, &1), state)
     end
   end
 
-  @spec do_handle_ingoing_buffers(
+  @spec do_handle_incoming_buffers(
           Pad.ref(),
           PadModel.pad_data(),
           [Buffer.t()] | Buffer.t(),
           State.t()
         ) ::
           State.t()
-  defp do_handle_ingoing_buffers(pad_ref, %{flow_control: :auto} = data, buffers, state) do
+  defp do_handle_incoming_buffers(pad_ref, %{flow_control: :auto} = data, buffers, state) do
     %{demand: demand, demand_unit: demand_unit, stalker_metrics: stalker_metrics} = data
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
 
@@ -83,7 +83,7 @@ defmodule Membrane.Core.Element.BufferController do
     end
   end
 
-  defp do_handle_ingoing_buffers(pad_ref, %{flow_control: :manual} = data, buffers, state) do
+  defp do_handle_incoming_buffers(pad_ref, %{flow_control: :manual} = data, buffers, state) do
     %{input_queue: old_input_queue} = data
 
     input_queue = InputQueue.store(old_input_queue, buffers)
@@ -96,7 +96,7 @@ defmodule Membrane.Core.Element.BufferController do
     end
   end
 
-  defp do_handle_ingoing_buffers(pad_ref, %{flow_control: :push}, buffers, state) do
+  defp do_handle_incoming_buffers(pad_ref, %{flow_control: :push}, buffers, state) do
     exec_buffer_callback(pad_ref, buffers, state)
   end
 
