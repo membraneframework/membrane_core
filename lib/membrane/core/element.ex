@@ -24,10 +24,10 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
-    DemandHandler,
     EffectiveFlowController,
     EventController,
     LifecycleController,
+    ManualFlowController,
     PadController,
     State,
     StreamFormatController
@@ -85,8 +85,6 @@ defmodule Membrane.Core.Element do
     # rpc if necessary
     if node do
       result = :rpc.call(node, GenServer, :start, [__MODULE__, options])
-
-      # TODO: use an atomic way of linking once https://github.com/erlang/otp/issues/6375 is solved
       with {:start_link, {:ok, pid}} <- {method, result}, do: Process.link(pid)
       result
     else
@@ -211,13 +209,13 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:resume_delayed_demands_loop), state) do
-    state = DemandHandler.resume_delayed_demands_loop(state)
+    state = ManualFlowController.resume_delayed_demands_loop(state)
     {:noreply, state}
   end
 
   defp do_handle_info(Message.new(:buffer, buffers, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
-    state = BufferController.handle_buffer(pad_ref, buffers, state)
+    state = BufferController.handle_incoming_buffers(pad_ref, buffers, state)
     {:noreply, state}
   end
 

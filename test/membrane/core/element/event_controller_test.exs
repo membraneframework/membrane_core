@@ -1,7 +1,8 @@
 defmodule Membrane.Core.Element.EventControllerTest do
   use ExUnit.Case, async: true
 
-  alias Membrane.Core.Element.{AtomicDemand, EventController, InputQueue, State}
+  alias Membrane.Core.Element.{AtomicDemand, EventController, State}
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
   alias Membrane.Core.Events
   alias Membrane.Core.SubprocessSupervisor
   alias Membrane.Event
@@ -32,7 +33,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
       })
 
     input_queue =
-      InputQueue.init(%{
+      InputQueue.new(%{
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :buffers,
         pad_ref: :some_pad,
@@ -50,8 +51,7 @@ defmodule Membrane.Core.Element.EventControllerTest do
         playback: :playing,
         parent_pid: self(),
         synchronization: %{clock: nil, parent_clock: nil, stream_sync: nil},
-        handling_action?: false,
-        supplying_demand?: false,
+        delay_demands?: false,
         pads_to_snapshot: MapSet.new(),
         delayed_demands: MapSet.new(),
         handle_demand_loop_counter: 0,

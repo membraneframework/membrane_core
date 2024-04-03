@@ -11,15 +11,16 @@ defmodule Membrane.Core.Element.BufferController do
 
   alias Membrane.Core.Element.{
     ActionHandler,
+    AutoFlowController,
     CallbackContext,
-    DemandHandler,
     EventController,
-    InputQueue,
+    ManualFlowController,
     PlaybackQueue,
     State
   }
 
-  alias Membrane.Core.Element.DemandController.AutoFlowUtils
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
+
   alias Membrane.Core.Telemetry
 
   require Membrane.Core.Child.PadModel
@@ -27,11 +28,11 @@ defmodule Membrane.Core.Element.BufferController do
 
   @doc """
   Handles incoming buffer: either stores it in InputQueue, or executes element's
-  callback. Also calls `Membrane.Core.Element.DemandHandler.supply_demand/2`
+  callback. Also calls `Membrane.Core.Element.ManualFlowController.supply_demand/2`
   to check if there are any unsupplied demands.
   """
-  @spec handle_buffer(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
-  def handle_buffer(pad_ref, buffers, state) do
+  @spec handle_incoming_buffers(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
+  def handle_incoming_buffers(pad_ref, buffers, state) do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
       %{
@@ -49,20 +50,25 @@ defmodule Membrane.Core.Element.BufferController do
           EventController.handle_start_of_stream(pad_ref, state)
         end
 
-      do_handle_buffer(pad_ref, data, buffers, state)
+      do_handle_incoming_buffers(pad_ref, data, buffers, state)
     else
       pad: {:error, :unknown_pad} ->
         # We've got a buffer from already unlinked pad
         state
 
       playback: _playback ->
-        PlaybackQueue.store(&handle_buffer(pad_ref, buffers, &1), state)
+        PlaybackQueue.store(&handle_incoming_buffers(pad_ref, buffers, &1), state)
     end
   end
 
-  @spec do_handle_buffer(Pad.ref(), PadModel.pad_data(), [Buffer.t()] | Buffer.t(), State.t()) ::
+  @spec do_handle_incoming_buffers(
+          Pad.ref(),
+          PadModel.pad_data(),
+          [Buffer.t()] | Buffer.t(),
           State.t()
-  defp do_handle_buffer(pad_ref, %{flow_control: :auto} = data, buffers, state) do
+        ) ::
+          State.t()
+  defp do_handle_incoming_buffers(pad_ref, %{flow_control: :auto} = data, buffers, state) do
     %{demand: demand, demand_unit: demand_unit, stalker_metrics: stalker_metrics} = data
     buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
 
@@ -70,27 +76,27 @@ defmodule Membrane.Core.Element.BufferController do
     :atomics.put(stalker_metrics.demand, 1, demand - buf_size)
 
     if state.effective_flow_control == :pull and MapSet.size(state.satisfied_auto_output_pads) > 0 do
-      AutoFlowUtils.store_buffers_in_queue(pad_ref, buffers, state)
+      AutoFlowController.store_buffers_in_queue(pad_ref, buffers, state)
     else
       state = exec_buffer_callback(pad_ref, buffers, state)
-      AutoFlowUtils.auto_adjust_atomic_demand(pad_ref, state)
+      AutoFlowController.auto_adjust_atomic_demand(pad_ref, state)
     end
   end
 
-  defp do_handle_buffer(pad_ref, %{flow_control: :manual} = data, buffers, state) do
+  defp do_handle_incoming_buffers(pad_ref, %{flow_control: :manual} = data, buffers, state) do
     %{input_queue: old_input_queue} = data
 
     input_queue = InputQueue.store(old_input_queue, buffers)
     state = PadModel.set_data!(state, pad_ref, :input_queue, input_queue)
 
-    if old_input_queue |> InputQueue.empty?() do
-      DemandHandler.supply_demand(pad_ref, state)
+    if InputQueue.empty?(old_input_queue) do
+      ManualFlowController.supply_demand(pad_ref, state)
     else
       state
     end
   end
 
-  defp do_handle_buffer(pad_ref, %{flow_control: :push}, buffers, state) do
+  defp do_handle_incoming_buffers(pad_ref, %{flow_control: :push}, buffers, state) do
     exec_buffer_callback(pad_ref, buffers, state)
   end
 

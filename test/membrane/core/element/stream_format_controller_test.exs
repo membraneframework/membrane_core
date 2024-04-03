@@ -3,7 +3,8 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
 
   alias Membrane.Buffer
   alias Membrane.Core.Message
-  alias Membrane.Core.Element.{AtomicDemand, InputQueue, State}
+  alias Membrane.Core.Element.{AtomicDemand, State}
+  alias Membrane.Core.Element.ManualFlowController.InputQueue
   alias Membrane.Core.SubprocessSupervisor
   alias Membrane.StreamFormat.Mock, as: MockStreamFormat
   alias Membrane.Support.DemandsTest.Filter
@@ -25,7 +26,7 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
       })
 
     input_queue =
-      InputQueue.init(%{
+      InputQueue.new(%{
         inbound_demand_unit: :buffers,
         outbound_demand_unit: :buffers,
         atomic_demand: atomic_demand,
@@ -41,8 +42,7 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
         type: :filter,
         playback: :playing,
         synchronization: %{clock: nil, parent_clock: nil},
-        handling_action?: false,
-        supplying_demand?: false,
+        delay_demands?: false,
         pads_to_snapshot: MapSet.new(),
         delayed_demands: MapSet.new(),
         handle_demand_loop_counter: 0,

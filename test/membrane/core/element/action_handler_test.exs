@@ -25,7 +25,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         playback: :stopped,
         synchronization: %{clock: nil, parent_clock: nil},
         delayed_demands: MapSet.new(),
-        handling_action?: false,
         pads_to_snapshot: MapSet.new(),
         pads_data: %{
           input:
@@ -60,7 +59,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     setup :demand_test_filter
 
     test "delaying demand", %{state: state} do
-      state = %{state | playback: :playing, supplying_demand?: true}
+      state = %{state | playback: :playing, delay_demands?: true}
       state = @module.handle_action({:demand, {:input, 10}}, :handle_info, %{}, state)
       assert state.pads_data.input.manual_demand_size == 10
       assert MapSet.new([{:input, :supply}]) == state.delayed_demands
@@ -110,7 +109,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         synchronization: %{clock: nil, parent_clock: nil},
         delayed_demands: MapSet.new(),
         playback: :stopped,
-        handling_action?: false,
         pads_to_snapshot: MapSet.new(),
         pads_data: %{
           output: %{
@@ -489,7 +487,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
 
     test "when pad works in auto or manual flow control mode", %{state: state} do
       state =
-        %{state | supplying_demand?: true, playback: :playing}
+        %{state | delay_demands?: true, playback: :playing}
         |> PadModel.set_data!(:output, :flow_control, :manual)
 
       new_state =
@@ -512,7 +510,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         name: :elem_name,
         synchronization: %{clock: nil, parent_clock: nil},
         type: :source,
-        handling_action?: false,
         pads_to_snapshot: MapSet.new(),
         pads_data: %{
           output: %{

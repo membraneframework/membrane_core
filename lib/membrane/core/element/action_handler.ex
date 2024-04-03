@@ -22,13 +22,13 @@ defmodule Membrane.Core.Element.ActionHandler do
   }
 
   alias Membrane.Core.Element.{
+    AutoFlowController,
     DemandController,
-    DemandHandler,
+    ManualFlowController,
     State,
     StreamFormatController
   }
 
-  alias Membrane.Core.Element.DemandController.AutoFlowUtils
   alias Membrane.Core.{Events, TimerController}
   alias Membrane.Element.Action
 
@@ -50,34 +50,29 @@ defmodule Membrane.Core.Element.ActionHandler do
     # Fixed order of handling demand of manual and auto pads would lead to
     # favoring manual pads over auto pads (or vice versa), especially after
     # introducting auto flow queues.
-    manual_demands_first? = Enum.random([1, 2]) == 1
 
-    state =
-      if manual_demands_first?,
-        do: maybe_handle_delayed_demands(state),
-        else: state
-
-    state = maybe_handle_pads_to_snapshot(state)
-
-    state =
-      if manual_demands_first?,
-        do: state,
-        else: maybe_handle_delayed_demands(state)
-
-    state
+    if Enum.random([true, false]) do
+      state
+      |> handle_pads_to_snapshot()
+      |> maybe_handle_delayed_demands()
+    else
+      state
+      |> maybe_handle_delayed_demands()
+      |> handle_pads_to_snapshot()
+    end
   end
 
   defp maybe_handle_delayed_demands(state) do
-    with %{supplying_demand?: false} <- state do
-      DemandHandler.handle_delayed_demands(state)
+    with %{delay_demands?: false} <- state do
+      ManualFlowController.handle_delayed_demands(state)
     end
   end
 
-  defp maybe_handle_pads_to_snapshot(state) do
-    with %{handling_action?: false} <- state do
-      Enum.reduce(state.pads_to_snapshot, state, &DemandController.snapshot_atomic_demand/2)
-      |> Map.put(:pads_to_snapshot, MapSet.new())
-    end
+  defp handle_pads_to_snapshot(state) do
+    state.pads_to_snapshot
+    |> Enum.shuffle()
+    |> Enum.reduce(state, &DemandController.snapshot_atomic_demand/2)
+    |> Map.put(:pads_to_snapshot, MapSet.new())
   end
 
   @impl CallbackHandler
@@ -178,13 +173,13 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def handle_action({:pause_auto_demand, in_ref}, _cb, _params, %State{type: type} = state)
       when type in [:sink, :filter, :endpoint] do
-    DemandController.AutoFlowUtils.pause_demands(in_ref, state)
+    AutoFlowController.pause_demands(in_ref, state)
   end
 
   @impl CallbackHandler
   def handle_action({:resume_auto_demand, in_ref}, _cb, _params, %State{type: type} = state)
       when type in [:sink, :filter, :endpoint] do
-    DemandController.AutoFlowUtils.resume_demands(in_ref, state)
+    AutoFlowController.resume_demands(in_ref, state)
   end
 
   @impl CallbackHandler
@@ -239,7 +234,7 @@ defmodule Membrane.Core.Element.ActionHandler do
         %State{type: type} = state
       )
       when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter, :endpoint] do
-    supply_demand(pad_ref, size, state)
+    delay_supplying_demand(pad_ref, size, state)
   end
 
   @impl CallbackHandler
@@ -396,26 +391,27 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  @spec supply_demand(
+  @spec delay_supplying_demand(
           Pad.ref(),
           Action.demand_size(),
           State.t()
         ) :: State.t()
-  defp supply_demand(pad_ref, 0, state) do
+  defp delay_supplying_demand(pad_ref, 0, state) do
     Membrane.Logger.debug_verbose("Ignoring demand of size of 0 on pad #{inspect(pad_ref)}")
     state
   end
 
-  defp supply_demand(pad_ref, size, _state)
+  defp delay_supplying_demand(pad_ref, size, _state)
        when is_integer(size) and size < 0 do
     raise ElementError,
           "Tried to request a negative demand of size #{inspect(size)} on pad #{inspect(pad_ref)}"
   end
 
-  defp supply_demand(pad_ref, size, state) do
+  defp delay_supplying_demand(pad_ref, size, state) do
     with %{direction: :input, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
-      DemandHandler.supply_demand(pad_ref, size, state)
+      state = ManualFlowController.update_demand(pad_ref, size, state)
+      ManualFlowController.delay_supplying_demand(pad_ref, state)
     else
       %{direction: :output} ->
         raise PadDirectionError, action: :demand, direction: :output, pad: pad_ref
@@ -435,7 +431,7 @@ defmodule Membrane.Core.Element.ActionHandler do
        when type in [:source, :filter, :endpoint] do
     with %{direction: :output, flow_control: :manual} <-
            PadModel.get_data!(state, pad_ref) do
-      DemandHandler.handle_redemand(pad_ref, state)
+      ManualFlowController.delay_redemand(pad_ref, state)
     else
       %{direction: :input} ->
         raise ElementError, "Tried to make a redemand on input pad #{inspect(pad_ref)}"
@@ -471,10 +467,10 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_outgoing_event(Pad.ref(), Event.t(), State.t()) :: State.t()
   defp handle_outgoing_event(pad_ref, %Events.EndOfStream{}, state) do
     with %{direction: :output, end_of_stream?: false} <- PadModel.get_data!(state, pad_ref) do
-      DemandHandler.remove_pad_from_delayed_demands(pad_ref, state)
+      ManualFlowController.remove_pad_from_delayed_demands(pad_ref, state)
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_ref))
       |> PadModel.set_data!(pad_ref, :end_of_stream?, true)
-      |> AutoFlowUtils.pop_queues_and_bump_demand()
+      |> AutoFlowController.pop_queues_and_bump_demand()
     else
       %{direction: :input} ->
         raise PadDirectionError, action: "end of stream", direction: :input, pad: pad_ref
