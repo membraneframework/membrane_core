@@ -148,7 +148,7 @@ repos =
     |> Stream.map(fn page ->
       Process.sleep(gh_req_timeout)
       url = "https://api.github.com/orgs/#{org}/repos?per_page=100&page=#{page}"
-      IO.puts("Fetching #{url}")
+      Logger.debug("Fetching #{url}")
       Req.get!(url, decode_json: [keys: :atoms]).body
     end)
     |> Enum.take_while(&(&1 != []))
@@ -185,10 +185,10 @@ lacking_repos =
   end)
 
 unless Enum.empty?(lacking_repos) do
-  Logger.warning("""
+  raise """
   The following repositories aren't mentioned in the package list:
   #{Enum.map_join(lacking_repos, ",\n", & &1.name)}
-  """)
+  """
 end
 
 # equip packages with the data from GH and Hex
@@ -203,7 +203,7 @@ packages =
           owner != nil ->
             Process.sleep(gh_req_timeout)
             url = "https://api.github.com/repos/#{owner}/#{name}"
-            IO.puts("Fetching #{url}")
+            Logger.debug("Fetching #{url}")
             Req.get!(url, decode_json: [keys: :atoms]).body
 
           Map.has_key?(repos, name) ->
@@ -291,3 +291,5 @@ File.read!(readme_path)
   packages_md
 )
 |> then(&File.write!(readme_path, &1))
+
+IO.puts("Packages updated successfully.")

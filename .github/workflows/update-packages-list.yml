@@ -18,11 +18,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
-          elixir scripts/elixir/update_packages_list.exs
+          echo "Run script"
+          elixir scripts/elixir/update_packages_list.exs > output.txt 2> output.txt || ERROR=$? || true
+          cat output.txt
+          echo "Set status"
+          STATUS=$(if [ -n "$ERROR" ]; then echo "[Failed]"; else echo "[Passed]"; fi)
+          echo "Status: ${STATUS}"
+          echo "Configure git"
           git config user.name 'Membrane Bot'
           git config user.email 'bot@membrane.stream'
+          echo "Checkout"
           git checkout -B auto-update-packages-list
+          echo "Commit"
           git add README.md
           git commit -m "auto update packages list in readme" --allow-empty
+          echo "Push"
           git push -f -u origin auto-update-packages-list
-          gh pr create -B master -H auto-update-packages-list --title 'Auto update packages list' --body ''
+          echo "Create PR"
+          gh pr create -B master -H auto-update-packages-list --label no-changelog --title "${STATUS} Auto update packages list" --body-file output.txt \
+           || gh pr edit auto-update-packages-list --title "${STATUS} Auto update packages list" --body-file output.txt
