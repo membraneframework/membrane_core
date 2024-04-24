@@ -58,8 +58,10 @@ packages =
     "membrane_wav_plugin",
     "membrane_g711_plugin",
     {:md, "#### Video codecs"},
-    "membrane_h264_plugin",
+    "membrane_h26x_plugin",
     "membrane_h264_ffmpeg_plugin",
+    "membrane_abr_transcoder_plugin",
+    "gBillal/membrane_h265_ffmpeg_plugin",
     "binarynoggin/elixir-turbojpeg",
     "kim-company/membrane_subtitle_mixer_plugin",
     {:md, "#### Raw audio & video"},
@@ -79,10 +81,12 @@ packages =
     "membrane_rpicam_plugin",
     "membrane_framerate_converter_plugin",
     "membrane_sdl_plugin",
+    "membrane_overlay_plugin",
     "membrane_ffmpeg_swscale_plugin",
     "membrane_ffmpeg_video_filter_plugin",
     "kim-company/membrane_video_mixer_plugin",
     {:md, "#### External APIs"},
+    "membrane_aws_plugin",
     "membrane_agora_plugin",
     "membrane_element_gcloud_speech_to_text",
     "membrane_element_ibm_speech_to_text",
@@ -118,6 +122,7 @@ packages =
     "bunch",
     "bunch_native",
     "shmex",
+    "membrane_timestamp_queue",
     "membrane_common_c",
     "membrane_telemetry_metrics",
     "membrane_opentelemetry",
@@ -148,7 +153,7 @@ repos =
     |> Stream.map(fn page ->
       Process.sleep(gh_req_timeout)
       url = "https://api.github.com/orgs/#{org}/repos?per_page=100&page=#{page}"
-      IO.puts("Fetching #{url}")
+      Logger.debug("Fetching #{url}")
       Req.get!(url, decode_json: [keys: :atoms]).body
     end)
     |> Enum.take_while(&(&1 != []))
@@ -185,10 +190,10 @@ lacking_repos =
   end)
 
 unless Enum.empty?(lacking_repos) do
-  Logger.warning("""
+  raise """
   The following repositories aren't mentioned in the package list:
   #{Enum.map_join(lacking_repos, ",\n", & &1.name)}
-  """)
+  """
 end
 
 # equip packages with the data from GH and Hex
@@ -203,7 +208,7 @@ packages =
           owner != nil ->
             Process.sleep(gh_req_timeout)
             url = "https://api.github.com/repos/#{owner}/#{name}"
-            IO.puts("Fetching #{url}")
+            Logger.debug("Fetching #{url}")
             Req.get!(url, decode_json: [keys: :atoms]).body
 
           Map.has_key?(repos, name) ->
@@ -291,3 +296,5 @@ File.read!(readme_path)
   packages_md
 )
 |> then(&File.write!(readme_path, &1))
+
+IO.puts("Packages updated successfully.")
