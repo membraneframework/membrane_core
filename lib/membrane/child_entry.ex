@@ -38,6 +38,7 @@ defmodule Membrane.ChildEntry do
     :group,
     initialized?: false,
     ready?: false,
-    terminating?: false
+    terminating?: false,
+    playback: :stopped
   ]
 end

@@ -319,6 +319,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     if Enum.all?(spec_data.children_names, &Map.fetch!(children, &1).initialized?) and
          Enum.empty?(spec_data.dependent_specs) do
       Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to initialized")
+      state = StartupUtils.exec_handle_spec_setup_completed(spec_data.children_names, state)
       do_proceed_spec_startup(spec_ref, %{spec_data | status: :initialized}, state)
     else
       {spec_data, state}
@@ -401,7 +402,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp do_proceed_spec_startup(_spec_ref, %{status: :ready} = spec_data, state) do
     state =
       Enum.reduce(spec_data.children_names, state, fn child, state ->
-        %{pid: pid, terminating?: terminating?} = get_in(state, [:children, child])
+        %{pid: pid, terminating?: terminating?} = child_entry = get_in(state, [:children, child])
 
         cond do
           terminating? -> Message.send(pid, :terminate)
@@ -409,8 +410,20 @@ defmodule Membrane.Core.Parent.ChildLifeController do
           true -> :ok
         end
 
-        put_in(state, [:children, child, :ready?], true)
+        child_entry =
+          if not terminating? and state.playback == :playing do
+            %{child_entry | ready?: true, playback: :playing}
+          else
+            %{child_entry | ready?: true}
+          end
+
+        put_in(state, [:children, child], child_entry)
       end)
+
+    state =
+      with %{playback: :playing} <- state do
+        StartupUtils.exec_handle_spec_playing(spec_data.children_names, state)
+      end
 
     {spec_data, state}
   end

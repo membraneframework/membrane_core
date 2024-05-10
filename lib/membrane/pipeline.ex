@@ -220,6 +220,17 @@ defmodule Membrane.Pipeline do
               state
             ) :: {[Action.common_actions()], state()}
 
+  @callback handle_spec_setup_completed(
+              children :: [Child.name()],
+              context :: CallbackContext.t(),
+              state
+            ) :: {[Action.common_actions()], state()}
+  @callback handle_spec_playing(
+              children :: [Child.name()],
+              context :: CallbackContext.t(),
+              state
+            ) :: {[Action.common_actions()], state()}
+
   @doc """
   Callback invoked upon each timer tick. A timer can be started with `Membrane.Pipeline.Action.start_timer`
   action.
@@ -260,6 +271,8 @@ defmodule Membrane.Pipeline do
                       handle_playing: 2,
                       handle_info: 3,
                       handle_spec_started: 3,
+                      handle_spec_setup_completed: 3,
+                      handle_spec_playing: 3,
                       handle_element_start_of_stream: 4,
                       handle_element_end_of_stream: 4,
                       handle_child_notification: 4,
@@ -514,6 +527,12 @@ defmodule Membrane.Pipeline do
 
         {[], state}
       end
+
+      @impl true
+      def handle_spec_setup_completed(_children_names, _ctx, state), do: {[], state}
+
+      @impl true
+      def handle_spec_playing(_children_names, _ctx, state), do: {[], state}
 
       @impl true
       def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {[], state}

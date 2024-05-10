@@ -2,6 +2,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @moduledoc false
   use Bunch
 
+  alias Membrane.Core.Parent.ChildLifeController.StartupUtils
   alias Membrane.{Child, ChildNotification, Core, Pad, Sync}
 
   alias Membrane.Core.{
@@ -43,19 +44,33 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     activate_syncs(state.children)
 
-    Enum.each(state.children, fn {_name, %{pid: pid, ready?: ready?}} ->
-      if ready?, do: Message.send(pid, :play)
-    end)
+    {pinged_children, state} =
+      Enum.flat_map_reduce(state.children, state, fn
+        {child, %{ready?: true, terminating?: false, playback: :stopped, pid: pid}}, state ->
+          Message.send(pid, :play)
+          state = put_in(state, [:children, child, :playback], :playing)
+          {[child], state}
+
+        _other_entry, state ->
+          {[], state}
+      end)
 
     state = %{state | playback: :playing}
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_playing,
-      Component.action_handler(state),
-      %{context: &Component.context_from_state/1},
-      [],
-      state
-    )
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_playing,
+        Component.action_handler(state),
+        %{context: &Component.context_from_state/1},
+        [],
+        state
+      )
+
+    pinged_children
+    |> Enum.group_by(&state.children[&1].spec_ref)
+    |> Enum.reduce(state, fn {_spec_ref, children}, state ->
+      StartupUtils.exec_handle_spec_playing(children, state)
+    end)
   end
 
   @spec handle_terminate_request(Parent.state()) :: Parent.state()
