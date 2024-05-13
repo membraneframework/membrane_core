@@ -220,11 +220,22 @@ defmodule Membrane.Pipeline do
               state
             ) :: {[Action.common_actions()], state()}
 
+  @doc """
+  Callback invoked when all children of `Membrane.ChildrenSpec` complete their setup.
+
+  By default, it does nothing.
+  """
   @callback handle_spec_setup_completed(
               children :: [Child.name()],
               context :: CallbackContext.t(),
               state
             ) :: {[Action.common_actions()], state()}
+
+  @doc """
+  Callback invoked when children of `Membrane.ChildrenSpec` enter `playing` playback.
+
+  By default, it does nothing.
+  """
   @callback handle_spec_playing(
               children :: [Child.name()],
               context :: CallbackContext.t(),
@@ -557,6 +568,8 @@ defmodule Membrane.Pipeline do
                      handle_setup: 2,
                      handle_playing: 2,
                      handle_info: 3,
+                     handle_spec_setup_completed: 3,
+                     handle_spec_playing: 3,
                      handle_element_start_of_stream: 4,
                      handle_element_end_of_stream: 4,
                      handle_child_notification: 4,

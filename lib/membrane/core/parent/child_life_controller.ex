@@ -319,7 +319,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     if Enum.all?(spec_data.children_names, &Map.fetch!(children, &1).initialized?) and
          Enum.empty?(spec_data.dependent_specs) do
       Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to initialized")
-      state = StartupUtils.exec_handle_spec_setup_completed(spec_data.children_names, state)
+
+      state =
+        MapSet.to_list(spec_data.children_names)
+        |> StartupUtils.exec_handle_spec_setup_completed(state)
+
       do_proceed_spec_startup(spec_ref, %{spec_data | status: :initialized}, state)
     else
       {spec_data, state}
@@ -402,27 +406,30 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp do_proceed_spec_startup(_spec_ref, %{status: :ready} = spec_data, state) do
     state =
       Enum.reduce(spec_data.children_names, state, fn child, state ->
-        %{pid: pid, terminating?: terminating?} = child_entry = get_in(state, [:children, child])
-
-        cond do
-          terminating? -> Message.send(pid, :terminate)
-          state.playback == :playing -> Message.send(pid, :play)
-          true -> :ok
-        end
+        child_entry = get_in(state, [:children, child])
 
         child_entry =
-          if not terminating? and state.playback == :playing do
-            %{child_entry | ready?: true, playback: :playing}
-          else
-            %{child_entry | ready?: true}
+          case child_entry do
+            %{terminating?: true} ->
+              Message.send(child_entry.pid, :terminate)
+              child_entry
+
+            %{terminating?: false} when state.playback == :playing ->
+              Message.send(child_entry.pid, :play)
+              %{child_entry | playback: :playing}
+
+            %{terminating?: false} ->
+              child_entry
           end
+          |> Map.put(:ready?, true)
 
         put_in(state, [:children, child], child_entry)
       end)
 
     state =
       with %{playback: :playing} <- state do
-        StartupUtils.exec_handle_spec_playing(spec_data.children_names, state)
+        MapSet.to_list(spec_data.children_names)
+        |> StartupUtils.exec_handle_spec_playing(state)
       end
 
     {spec_data, state}

@@ -396,17 +396,24 @@ defmodule Membrane.Testing.Pipeline do
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
-  @impl true
-  def handle_spec_started(children, ctx, %State{} = state) do
-    {custom_actions, custom_state} =
-      eval_injected_module_callback(
-        :handle_spec_started,
-        [children, ctx],
-        state
-      )
+  [
+    :handle_spec_started,
+    :handle_spec_setup_completed,
+    :handle_spec_playing
+  ]
+  |> Enum.map(fn callback ->
+    @impl true
+    def unquote(callback)(children, ctx, %State{} = state) do
+      {custom_actions, custom_state} =
+        eval_injected_module_callback(
+          unquote(callback),
+          [children, ctx],
+          state
+        )
 
-    {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
-  end
+      {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
+    end
+  end)
 
   @impl true
   def handle_info({__MODULE__, :__execute_actions__, actions}, _ctx, %State{} = state) do

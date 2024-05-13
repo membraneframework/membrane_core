@@ -5,8 +5,10 @@ defmodule Membrane.ChildEntry do
   The public fields are:
   - `name` - child name
   - `module` - child module
+  - `group` - child group name
   - `options` - options passed to the child
   - `component_type` - either `:element` or `:bin`
+  - `playback` - either `:stopped` or `:playing`
 
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
@@ -19,6 +21,7 @@ defmodule Membrane.ChildEntry do
           module: module,
           options: struct | nil,
           component_type: :element | :bin,
+          playback: Membrane.Playback.t(),
           pid: pid,
           clock: Membrane.Clock.t(),
           sync: Membrane.Sync.t(),
