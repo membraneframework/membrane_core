@@ -1,7 +1,7 @@
 # Changelog
 
 ## 1.1.0-rc1
- * Add new callbacks `handle_spec_setup_completed/3` and `handle_spec_playing/3` in Bins and Pipelines. [#801](github.com/membraneframework/membrane_core/pull/801)
+ * Add new callbacks `handle_spec_setup_completed/3` and `handle_spec_playing/3` in Bins and Pipelines. [#801](https://github.com/membraneframework/membrane_core/pull/801)
 
 ## 1.1.0-rc0
  * Deprecate `handle_spec_started/3` callback in Bins and Pipelines. [#708](https://github.com/membraneframework/membrane_core/pull/708)
