@@ -20,6 +20,9 @@ runs:
     - name: Maybe add PR to board and set ticket status
       run: | 
           # currently this may cause github action crash, more info here: https://github.com/membraneframework/membrane_core/issues/749
+          
+          # this debug varible is set only for troubleshooting, remove this later
+          export GH_DEBUG=api
 
           export PROJECT_NUMBER=19
           export PROJECT_ID=PVT_kwDOAYE_z84AWEIB
