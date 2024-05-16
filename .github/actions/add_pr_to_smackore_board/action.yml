@@ -1,5 +1,5 @@
 name: 'Add PR to Smackore board, if author is from community'
-description: '(disabled due to github-side bug) Adds PR to "New issues by community" column in Smackore project board, if PR author is from outside Membrane Team.'
+description: 'Adds PR to "New issues by community" column in Smackore project board, if PR author is from outside Membrane Team.'
 inputs:
   GITHUB_TOKEN:
     description: 'GitHub token'
