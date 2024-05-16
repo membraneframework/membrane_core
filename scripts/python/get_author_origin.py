@@ -15,6 +15,5 @@ try:
 
   print("COMMUNITY")
 except:
-    print("An exception occurred, provided JSON:")
-    print(membrane_team)
-    print("provided PR_AUTHOR:", pr_author)
+    print("An exception occurred in get_author_origin.py, provided JSON: ", membrane_team)
+    print("Provided PR_AUTHOR: ", pr_author)
