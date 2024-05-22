@@ -13,7 +13,8 @@ for item in project_items:
             break
 
 if item_id == None:
-    print("Error occurred in get_ticket.py: item_id == None, provided JSON[items]: ", project_items)
+    print("Error occurred in get_ticket.py: ID of ticket related to PR", pr_url, "not found in the provided JSON")
+    print("Provided JSON:", full_json)
     sys.exit(1)
 else:
     print(item_id)
