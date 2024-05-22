@@ -1,7 +1,6 @@
 import sys, json;
 
 full_json = json.load(sys.stdin)
-
 pr_url = sys.argv[1]
 
 project_items = full_json["items"]
