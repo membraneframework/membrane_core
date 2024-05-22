@@ -1,4 +1,4 @@
-defmodule Membrane.SpecCallbacksTest do
+defmodule Membrane.ChildLifeCallbacksTest do
   use ExUnit.Case, async: true
 
   import Membrane.ChildrenSpec
