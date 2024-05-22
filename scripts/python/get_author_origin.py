@@ -17,3 +17,4 @@ try:
 except:
     print("An exception occurred in get_author_origin.py, provided JSON: ", membrane_team)
     print("Provided PR_AUTHOR: ", pr_author)
+    sys.exit(1)
