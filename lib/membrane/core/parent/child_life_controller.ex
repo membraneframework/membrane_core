@@ -320,10 +320,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
          Enum.empty?(spec_data.dependent_specs) do
       Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to initialized")
 
-      state =
-        MapSet.to_list(spec_data.children_names)
-        |> StartupUtils.exec_handle_spec_setup_completed(state)
-
+      state = handle_children_setup_completed(spec_data.children_names, state)
       do_proceed_spec_startup(spec_ref, %{spec_data | status: :initialized}, state)
     else
       {spec_data, state}
@@ -428,8 +425,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state =
       with %{playback: :playing} <- state do
-        MapSet.to_list(spec_data.children_names)
-        |> StartupUtils.exec_handle_spec_playing(state)
+        handle_children_playing(spec_data.children_names, state)
       end
 
     {spec_data, state}
@@ -628,6 +624,32 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         links_ids: links_ids,
         awaiting_responses: awaiting_responses
     }
+  end
+
+  @spec handle_children_setup_completed(MapSet.t(Child.name()) | [Child.name()], Parent.state()) ::
+          Parent.state()
+  def handle_children_setup_completed(children_names, state) do
+    exec_child_playback_related_callbacks(:handle_child_setup_completed, children_names, state)
+  end
+
+  @spec handle_children_playing(MapSet.t(Child.name()) | [Child.name()], Parent.state()) ::
+          Parent.state()
+  def handle_children_playing(children_names, state) do
+    exec_child_playback_related_callbacks(:handle_child_playing, children_names, state)
+  end
+
+  defp exec_child_playback_related_callbacks(callback, children_names, state) do
+    action_handler = Component.action_handler(state)
+
+    Enum.reduce(children_names, state, fn child, state ->
+      CallbackHandler.exec_and_handle_callback(
+        callback,
+        action_handler,
+        %{context: &Component.context_from_state/1},
+        [child],
+        state
+      )
+    end)
   end
 
   @spec handle_child_pad_removed(Child.name(), Pad.ref(), Parent.state()) :: Parent.state()

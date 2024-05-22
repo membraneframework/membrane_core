@@ -180,23 +180,23 @@ defmodule Membrane.Bin do
             ) :: callback_return
 
   @doc """
-  Callback invoked when all children of `Membrane.ChildrenSpec` complete their setup.
+  Callback invoked when a child complete its setup.
 
   By default, it does nothing.
   """
-  @callback handle_spec_setup_completed(
-              children :: [Child.name()],
+  @callback handle_child_setup_completed(
+              child :: Child.name(),
               context :: CallbackContext.t(),
               state
             ) :: callback_return
 
   @doc """
-  Callback invoked when children of `Membrane.ChildrenSpec` enter `playing` playback.
+  Callback invoked when a child enters `playing` playback.
 
   By default, it does nothing.
   """
-  @callback handle_spec_playing(
-              children :: [Child.name()],
+  @callback handle_child_playing(
+              child :: Child.name(),
               context :: CallbackContext.t(),
               state
             ) :: callback_return
@@ -239,8 +239,8 @@ defmodule Membrane.Bin do
                       handle_playing: 2,
                       handle_info: 3,
                       handle_spec_started: 3,
-                      handle_spec_setup_completed: 3,
-                      handle_spec_playing: 3,
+                      handle_child_setup_completed: 3,
+                      handle_child_playing: 3,
                       handle_element_start_of_stream: 4,
                       handle_element_end_of_stream: 4,
                       handle_child_notification: 4,
@@ -382,10 +382,10 @@ defmodule Membrane.Bin do
       end
 
       @impl true
-      def handle_spec_setup_completed(_children_names, _ctx, state), do: {[], state}
+      def handle_child_setup_completed(_child, _ctx, state), do: {[], state}
 
       @impl true
-      def handle_spec_playing(_children_names, _ctx, state), do: {[], state}
+      def handle_child_playing(_child, _ctx, state), do: {[], state}
 
       @impl true
       def handle_element_start_of_stream(_element, _pad, _ctx, state), do: {[], state}
@@ -411,8 +411,8 @@ defmodule Membrane.Bin do
                      handle_setup: 2,
                      handle_playing: 2,
                      handle_info: 3,
-                     handle_spec_setup_completed: 3,
-                     handle_spec_playing: 3,
+                     handle_child_setup_completed: 3,
+                     handle_child_playing: 3,
                      handle_element_start_of_stream: 4,
                      handle_element_end_of_stream: 4,
                      handle_child_notification: 4,

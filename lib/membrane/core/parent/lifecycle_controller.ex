@@ -2,7 +2,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
   @moduledoc false
   use Bunch
 
-  alias Membrane.Core.Parent.ChildLifeController.StartupUtils
   alias Membrane.{Child, ChildNotification, Core, Pad, Sync}
 
   alias Membrane.Core.{
@@ -14,7 +13,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   }
 
   alias Membrane.Core.Events
-  alias Membrane.Core.Parent.{ChildLifeController}
+  alias Membrane.Core.Parent.ChildLifeController
 
   require Membrane.Core.Component
   require Membrane.Core.Message
@@ -66,11 +65,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
         state
       )
 
-    pinged_children
-    |> Enum.group_by(&state.children[&1].spec_ref)
-    |> Enum.reduce(state, fn {_spec_ref, children}, state ->
-      StartupUtils.exec_handle_spec_playing(children, state)
-    end)
+    ChildLifeController.handle_children_playing(pinged_children, state)
   end
 
   @spec handle_terminate_request(Parent.state()) :: Parent.state()

@@ -20,14 +20,14 @@ defmodule Membrane.SpecCallbacksTest do
     end
 
     @impl true
-    def handle_spec_setup_completed(children, _ctx, state) do
-      send(state.test_pid, {:setup_completed, children})
+    def handle_child_setup_completed(child, _ctx, state) do
+      send(state.test_pid, {:setup_completed, child})
       {[], state}
     end
 
     @impl true
-    def handle_spec_playing(children, _ctx, state) do
-      send(state.test_pid, {:playing, children})
+    def handle_child_playing(child, _ctx, state) do
+      send(state.test_pid, {:playing, child})
       {[], state}
     end
   end
@@ -62,7 +62,7 @@ defmodule Membrane.SpecCallbacksTest do
     ]
   end
 
-  test "handle_spec_setup_completed and handle_spec_playing when children complete setup after parent" do
+  test "handle_child_setup_completed and handle_child_playing when a child completes setup after parent" do
     pipeline =
       Testing.Pipeline.start_link_supervised!(
         module: Pipeline,
@@ -71,24 +71,24 @@ defmodule Membrane.SpecCallbacksTest do
 
     Testing.Pipeline.execute_actions(pipeline, pipeline_spec_actions())
 
-    assert_receive {:setup_completed, [:a]}
-    assert_receive {:playing, [:a]}
+    assert_receive {:setup_completed, :a}
+    assert_receive {:playing, :a}
     refute_receive {:setup_completed, _any}
     refute_receive {:playing, _any}
 
     Testing.Pipeline.notify_child(pipeline, :b, :complete_setup)
 
-    assert_receive {:setup_completed, [:b]}
-    assert_receive {:playing, [:b]}
+    assert_receive {:setup_completed, :b}
+    assert_receive {:playing, :b}
     refute_receive {:setup_completed, _any}
     refute_receive {:playing, _any}
 
     Testing.Pipeline.notify_child(pipeline, :d, :complete_setup)
 
-    assert_receive {:setup_completed, children}
-    assert Enum.sort(children) == [:c, :d]
-    assert_receive {:playing, children}
-    assert Enum.sort(children) == [:c, :d]
+    assert_receive {:setup_completed, :c}
+    assert_receive {:setup_completed, :d}
+    assert_receive {:playing, :c}
+    assert_receive {:playing, :d}
 
     refute_receive {:setup_completed, _any}
     refute_receive {:playing, _any}
@@ -96,7 +96,7 @@ defmodule Membrane.SpecCallbacksTest do
     :ok = Testing.Pipeline.terminate(pipeline)
   end
 
-  test "handle_spec_setup_completed and handle_spec_playing when children complete setup before parent" do
+  test "handle_child_setup_completed and handle_child_playing when a child completes setup before parent" do
     pipeline =
       Testing.Pipeline.start_link_supervised!(
         module: Pipeline,
@@ -105,29 +105,28 @@ defmodule Membrane.SpecCallbacksTest do
 
     Testing.Pipeline.execute_actions(pipeline, pipeline_spec_actions())
 
-    assert_receive {:setup_completed, [:a]}
+    assert_receive {:setup_completed, :a}
     refute_receive {:setup_completed, _any}
     refute_receive {:playing, _any}
 
     Testing.Pipeline.notify_child(pipeline, :b, :complete_setup)
 
-    assert_receive {:setup_completed, [:b]}
+    assert_receive {:setup_completed, :b}
     refute_receive {:setup_completed, _any}
     refute_receive {:playing, _any}
 
     Testing.Pipeline.notify_child(pipeline, :d, :complete_setup)
 
-    assert_receive {:setup_completed, children}
-    assert Enum.sort(children) == [:c, :d]
+    assert_receive {:setup_completed, :c}
+    assert_receive {:setup_completed, :d}
     refute_receive {:setup_completed, _any}
     refute_receive {:playing, _any}
 
     Testing.Pipeline.execute_actions(pipeline, setup: :complete)
 
-    assert_receive {:playing, [:a]}
-    assert_receive {:playing, [:b]}
-    assert_receive {:playing, children}
-    assert Enum.sort(children) == [:c, :d]
+    for child <- [:a, :b, :c, :d] do
+      assert_receive {:playing, ^child}
+    end
 
     refute_receive {:setup_completed, _any}
     refute_receive {:playing, _any}
