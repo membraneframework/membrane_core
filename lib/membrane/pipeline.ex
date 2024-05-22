@@ -221,7 +221,7 @@ defmodule Membrane.Pipeline do
             ) :: {[Action.common_actions()], state()}
 
   @doc """
-  Callback invoked when all children of `Membrane.ChildrenSpec` complete their setup.
+  Callback invoked when a child completes its setup.
 
   By default, it does nothing.
   """
@@ -232,7 +232,7 @@ defmodule Membrane.Pipeline do
             ) :: {[Action.common_actions()], state()}
 
   @doc """
-  Callback invoked when children of `Membrane.ChildrenSpec` enter `playing` playback.
+  Callback invoked when a child enters `playing` playback.
 
   By default, it does nothing.
   """
