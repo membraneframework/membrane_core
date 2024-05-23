@@ -44,7 +44,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     # and we will not want to have it in :crash_group_members in the callback context in handle_crash_group_down/3,
     # so this child is removed from :members in crash group struct
     members = List.delete(group.members, child_name)
-    state = put_in(state, [:crash_groups, group.name, :members], members)
+    state = put_in(state.crash_groups[group.name].members, members)
 
     if group.detonating? and Enum.all?(members, &(not Map.has_key?(state.children, &1))) do
       cleanup_crash_group(group.name, state)
