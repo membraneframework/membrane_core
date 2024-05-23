@@ -45,6 +45,7 @@ defmodule Membrane.Core.Bin.State do
           terminating?: boolean(),
           resource_guard: Membrane.ResourceGuard.t(),
           setup_incomplete?: boolean(),
+          initialized_internal_pads: MapSet.t(Pad.ref()),
           stalker: Membrane.Core.Stalker.t()
         }
 
@@ -76,5 +77,6 @@ defmodule Membrane.Core.Bin.State do
             resource_guard: nil,
             subprocess_supervisor: nil,
             children_log_metadata: [],
+            initialized_internal_pads: MapSet.new(),
             pads_data: nil
 end

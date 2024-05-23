@@ -27,7 +27,8 @@ defmodule Membrane.Bin.PadData do
           link_id: private_field,
           endpoint: private_field,
           linked?: private_field,
-          response_received?: private_field
+          response_received?: private_field,
+          linking_timeout_ref: private_field
         }
 
   @enforce_keys [
@@ -43,5 +44,5 @@ defmodule Membrane.Bin.PadData do
     :spec_ref
   ]
 
-  defstruct @enforce_keys
+  defstruct @enforce_keys ++ [:linking_timeout_ref]
 end

@@ -70,16 +70,22 @@ defmodule Membrane.Core.Bin.PadController do
       end
 
     state = PadModel.update_data!(state, pad_ref, &%{&1 | link_id: link_id, options: pad_options})
-    state = maybe_handle_pad_added(pad_ref, state)
 
-    unless PadModel.get_data!(state, pad_ref, :endpoint) do
-      # If there's no endpoint associated to the pad, no internal link to the pad
-      # has been requested in the bin yet
-      _ref = Process.send_after(self(), Message.new(:linking_timeout, pad_ref), 5000)
-      :ok
-    end
+    state =
+      if PadModel.get_data!(state, pad_ref, :endpoint) == nil do
+        # If there's no endpoint associated to the pad, no internal link to the pad
+        # has been requested in the bin yet
 
-    state
+        linking_timeout_ref = make_ref()
+        message = Message.new(:linking_timeout, [pad_ref, linking_timeout_ref])
+        Process.send_after(self(), message, 5000)
+
+        PadModel.set_data!(state, pad_ref, :linking_timeout_ref, linking_timeout_ref)
+      else
+        state
+      end
+
+    maybe_handle_pad_added(pad_ref, state)
   end
 
   @spec remove_pad(Pad.ref(), State.t()) :: State.t()
@@ -102,15 +108,15 @@ defmodule Membrane.Core.Bin.PadController do
     end
   end
 
-  @spec handle_linking_timeout(Pad.ref(), State.t()) :: :ok | no_return()
-  def handle_linking_timeout(pad_ref, state) do
-    case PadModel.get_data(state, pad_ref) do
-      {:ok, %{endpoint: nil} = pad_data} ->
-        raise Membrane.LinkError,
-              "Bin pad #{inspect(pad_ref)} wasn't linked internally within timeout. Pad data: #{inspect(pad_data, pretty: true)}"
+  @spec handle_linking_timeout(Pad.ref(), reference(), State.t()) :: :ok | no_return()
+  def handle_linking_timeout(pad_ref, timeout_ref, state) do
+    map_set_item = {pad_ref, timeout_ref}
 
-      _other ->
-        :ok
+    if MapSet.member?(state.initialized_internal_pads, map_set_item) do
+      Map.update!(state, :initialized_internal_pads, &MapSet.delete(&1, map_set_item))
+    else
+      raise Membrane.LinkError,
+            "Bin pad #{inspect(pad_ref)} wasn't linked internally within timeout. Pad data: #{PadModel.get_data(state, pad_ref) |> inspect(pretty: true)}"
     end
   end
 
@@ -316,8 +322,8 @@ defmodule Membrane.Core.Bin.PadController do
   end
 
   @spec maybe_handle_pad_added(Pad.ref(), Core.Bin.State.t()) :: Core.Bin.State.t()
-  defp maybe_handle_pad_added(ref, state) do
-    %{options: pad_opts, availability: availability} = PadModel.get_data!(state, ref)
+  defp maybe_handle_pad_added(pad_ref, state) do
+    %{options: pad_opts, availability: availability} = PadModel.get_data!(state, pad_ref)
 
     if Pad.availability_mode(availability) == :dynamic do
       context = &CallbackContext.from_state(&1, pad_options: pad_opts)
@@ -326,7 +332,7 @@ defmodule Membrane.Core.Bin.PadController do
         :handle_pad_added,
         ActionHandler,
         %{context: context},
-        [ref],
+        [pad_ref],
         state
       )
     else
