@@ -108,7 +108,7 @@ defmodule Membrane.Core.Bin.PadController do
     end
   end
 
-  @spec handle_linking_timeout(Pad.ref(), reference(), State.t()) :: :ok | no_return()
+  @spec handle_linking_timeout(Pad.ref(), reference(), State.t()) :: State.t()
   def handle_linking_timeout(pad_ref, timeout_ref, state) do
     map_set_item = {pad_ref, timeout_ref}
 

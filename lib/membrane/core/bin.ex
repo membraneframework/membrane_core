@@ -210,7 +210,7 @@ defmodule Membrane.Core.Bin do
   end
 
   defp do_handle_info(Message.new(:linking_timeout, [pad_ref, timeout_ref]), state) do
-    PadController.handle_linking_timeout(pad_ref, timeout_ref, state)
+    state = PadController.handle_linking_timeout(pad_ref, timeout_ref, state)
     {:noreply, state}
   end
 
