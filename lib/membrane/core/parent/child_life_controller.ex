@@ -17,7 +17,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias Membrane.Pad
   alias Membrane.ParentError
 
-  require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Component
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
@@ -313,22 +312,17 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp do_proceed_spec_startup(spec_ref, %{status: :created} = spec_data, state) do
     state =
       with %Bin.State{} <- state do
-        initialized_internal_pads =
+        linking_timeout_counters =
           spec_data.links_ids
           |> Enum.map(&Map.fetch!(state.links, &1))
           |> Enum.flat_map(&[&1.from, &1.to])
-          |> Enum.flat_map(fn %{child: child, pad_ref: pad_ref} ->
-            with {Membrane.Bin, :itself} <- child,
-                 {:ok, timeout_ref} when timeout_ref != nil <-
-                   PadModel.get_data(state, pad_ref, :linking_timeout_ref) do
-              [{pad_ref, timeout_ref}]
-            else
-              _other -> []
-            end
-          end)
-          |> Enum.reduce(state.initialized_internal_pads, &MapSet.put(&2, &1))
+          |> Enum.filter(&(&1.child == {Membrane.Bin, :itself}))
+          |> Enum.reduce(
+            state.linking_timeout_counters,
+            &Map.update(&2, &1.pad_ref, 1, fn i -> i + 1 end)
+          )
 
-        %{state | initialized_internal_pads: initialized_internal_pads}
+        %{state | linking_timeout_counters: linking_timeout_counters}
       end
 
     do_proceed_spec_startup(spec_ref, %{spec_data | status: :initializing}, state)

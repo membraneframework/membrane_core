@@ -71,19 +71,7 @@ defmodule Membrane.Core.Bin.PadController do
 
     state = PadModel.update_data!(state, pad_ref, &%{&1 | link_id: link_id, options: pad_options})
 
-    state =
-      if PadModel.get_data!(state, pad_ref, :endpoint) == nil do
-        # If there's no endpoint associated to the pad, no internal link to the pad
-        # has been requested in the bin yet
-
-        linking_timeout_ref = make_ref()
-        message = Message.new(:linking_timeout, [pad_ref, linking_timeout_ref])
-        Process.send_after(self(), message, 5000)
-
-        PadModel.set_data!(state, pad_ref, :linking_timeout_ref, linking_timeout_ref)
-      else
-        state
-      end
+    _ref = Process.send_after(self(), Message.new(:linking_timeout, pad_ref), 5000)
 
     maybe_handle_pad_added(pad_ref, state)
   end
@@ -108,15 +96,19 @@ defmodule Membrane.Core.Bin.PadController do
     end
   end
 
-  @spec handle_linking_timeout(Pad.ref(), reference(), State.t()) :: State.t()
-  def handle_linking_timeout(pad_ref, timeout_ref, state) do
-    map_set_item = {pad_ref, timeout_ref}
+  @spec handle_linking_timeout(Pad.ref(), State.t()) :: State.t() | no_return()
+  def handle_linking_timeout(pad_ref, state) do
+    case Map.fetch(state.linking_timeout_counters, pad_ref) do
+      {:ok, 1} ->
+        Map.update!(state, :linking_timeout_counters, &Map.delete(&1, pad_ref))
 
-    if MapSet.member?(state.initialized_internal_pads, map_set_item) do
-      Map.update!(state, :initialized_internal_pads, &MapSet.delete(&1, map_set_item))
-    else
-      raise Membrane.LinkError,
-            "Bin pad #{inspect(pad_ref)} wasn't linked internally within timeout. Pad data: #{PadModel.get_data(state, pad_ref) |> inspect(pretty: true)}"
+      {:ok, counter} when counter > 1 ->
+        put_in(state.linking_timeout_counters[pad_ref], counter - 1)
+
+      _else ->
+        raise Membrane.LinkError, """
+        Bin pad #{inspect(pad_ref)} wasn't linked internally within timeout. Pad data: #{PadModel.get_data(state, pad_ref) |> inspect(pretty: true)}
+        """
     end
   end
 
