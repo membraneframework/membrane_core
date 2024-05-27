@@ -74,7 +74,7 @@ defmodule Membrane.LinksValidationTest do
       ]
 
       {:error, {{%Membrane.LinkError{}, _stackstrace}, _meta}} =
-        Pipeline.start_supervised(spec: spec)
+        Pipeline.start_supervised(spec: [spec, spec])
     end
 
     test "dynamic pads" do
