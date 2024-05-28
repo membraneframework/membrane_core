@@ -209,6 +209,9 @@ defmodule Membrane.Core.CallbackHandler do
     handler_module.handle_end_of_actions(state)
   end
 
+  # We log it, because sometimes, for some reason, crashing process doesn't cause
+  # printing error logs on stderr, so this debug log allows us to get some info
+  # about what happened in case of process crash
   defp log_debug_orginal_error(action_or_actions, error, stacktrace) do
     action_or_actions =
       if(is_list(action_or_actions), do: "actions ", else: "action ") <>
