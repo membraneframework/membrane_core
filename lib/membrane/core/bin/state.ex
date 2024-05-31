@@ -8,7 +8,7 @@ defmodule Membrane.Core.Bin.State do
   use Bunch
   use Bunch.Access
 
-  alias Membrane.{Child, Clock, Pad, Sync}
+  alias Membrane.{Child, Clock, Sync}
   alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Parent.ChildLifeController
   alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
