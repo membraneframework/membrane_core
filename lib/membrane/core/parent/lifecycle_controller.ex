@@ -45,7 +45,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     {pinged_children, state} =
       Enum.flat_map_reduce(state.children, state, fn
-        {child, %{ready?: true, terminating?: false, playback: :stopped, pid: pid}}, state ->
+        {child, %{ready?: true, terminating?: false, pid: pid}}, state ->
           Message.send(pid, :play)
           state = put_in(state, [:children, child, :playback], :playing)
           {[child], state}

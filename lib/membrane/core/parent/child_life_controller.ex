@@ -403,24 +403,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   defp do_proceed_spec_startup(_spec_ref, %{status: :ready} = spec_data, state) do
     state =
       Enum.reduce(spec_data.children_names, state, fn child, state ->
-        child_entry = get_in(state, [:children, child])
+        %{pid: pid, terminating?: terminating?} = state.children[child]
 
-        child_entry =
-          case child_entry do
-            %{terminating?: true} ->
-              Message.send(child_entry.pid, :terminate)
-              child_entry
+        cond do
+          terminating? -> Message.send(pid, :terminate)
+          state.playback == :playing -> Message.send(pid, :play)
+          true -> :ok
+        end
 
-            %{terminating?: false} when state.playback == :playing ->
-              Message.send(child_entry.pid, :play)
-              %{child_entry | playback: :playing}
-
-            %{terminating?: false} ->
-              child_entry
-          end
-          |> Map.put(:ready?, true)
-
-        put_in(state, [:children, child], child_entry)
+        put_in(state.children[child].ready?, true)
       end)
 
     state =
