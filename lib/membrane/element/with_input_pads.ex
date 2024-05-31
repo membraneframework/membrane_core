@@ -32,7 +32,7 @@ defmodule Membrane.Element.WithInputPads do
                  | Membrane.Element.Action.forward()
                ], Element.state()}
   @doc """
-  Callback invoked when element receives `Membrane.Event.StartOfStream` event.
+  Callback invoked when element receives the first buffer from the specific pad, before `c:#{__MODULE__}.handle_buffer/4`. 
   """
   @callback handle_start_of_stream(
               pad :: Pad.ref(),
