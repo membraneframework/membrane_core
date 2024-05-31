@@ -16,8 +16,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
   def add_crash_group(group_name, mode, children, state)
       when not is_map_key(state.crash_groups, group_name) do
     put_in(
-      state,
-      [:crash_groups, group_name],
+      state.crash_groups[group_name],
       %CrashGroup{
         name: group_name,
         mode: mode,
@@ -28,7 +27,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
 
   @spec extend_crash_group(Child.group(), [Child.name()], Parent.state()) :: Parent.state()
   def extend_crash_group(group_name, children, state) do
-    update_in(state, [:crash_groups, group_name, :members], &(children ++ &1))
+    update_in(state.crash_groups[group_name].members, &(children ++ &1))
   end
 
   @spec get_child_crash_group(Child.name(), Parent.state()) :: {:ok, CrashGroup.t()} | :error
@@ -83,8 +82,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     end)
 
     update_in(
-      state,
-      [:crash_groups, group.name],
+      state.crash_groups[group.name],
       &%CrashGroup{
         &1
         | detonating?: true,
@@ -96,7 +94,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
 
   defp cleanup_crash_group(group_name, state) do
     state = exec_handle_crash_group_down(group_name, state)
-    {_group, state} = pop_in(state, [:crash_groups, group_name])
+    {_group, state} = pop_in(state.crash_groups[group_name])
     state
   end
 
@@ -104,7 +102,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
          group_name,
          state
        ) do
-    crash_group = get_in(state, [:crash_groups, group_name])
+    crash_group = state.crash_groups[group_name]
 
     context_generator =
       &Component.context_from_state(&1,
