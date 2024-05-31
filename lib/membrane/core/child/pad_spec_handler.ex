@@ -21,8 +21,7 @@ defmodule Membrane.Core.Child.PadSpecHandler do
       | pads_info:
           get_pads(state)
           |> Map.new(),
-        pads_data: %{},
-        pad_refs: []
+        pads_data: %{}
     }
   end
 

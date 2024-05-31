@@ -20,7 +20,6 @@ defmodule Membrane.Core.Bin.State do
           children: ChildrenModel.children(),
           subprocess_supervisor: pid(),
           name: Membrane.Bin.name() | nil,
-          pad_refs: [Pad.ref()],
           pads_info: PadModel.pads_info() | nil,
           pads_data: PadModel.pads_data() | nil,
           parent_pid: pid,
@@ -45,7 +44,6 @@ defmodule Membrane.Core.Bin.State do
           terminating?: boolean(),
           resource_guard: Membrane.ResourceGuard.t(),
           setup_incomplete?: boolean(),
-          linking_timeout_counters: %{optional(Pad.ref()) => integer()},
           stalker: Membrane.Core.Stalker.t()
         }
 
@@ -63,7 +61,6 @@ defmodule Membrane.Core.Bin.State do
             parent_pid: nil,
             playback: :stopped,
             internal_state: nil,
-            pad_refs: [],
             pads_info: nil,
             children: %{},
             links: %{},
@@ -77,6 +74,5 @@ defmodule Membrane.Core.Bin.State do
             resource_guard: nil,
             subprocess_supervisor: nil,
             children_log_metadata: [],
-            linking_timeout_counters: %{},
             pads_data: nil
 end

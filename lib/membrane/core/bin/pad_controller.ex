@@ -8,11 +8,10 @@ defmodule Membrane.Core.Bin.PadController do
   alias Membrane.{Core, LinkError, Pad}
   alias Membrane.Core.Bin.{ActionHandler, CallbackContext, State}
   alias Membrane.Core.{CallbackHandler, Child, Message}
-  alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.StreamFormatController
   alias Membrane.Core.Parent.{ChildLifeController, Link, SpecificationParser}
 
-  require Membrane.Core.Child.PadModel
+  require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message
   require Membrane.Logger
   require Membrane.Pad
@@ -50,8 +49,7 @@ defmodule Membrane.Core.Bin.PadController do
     state =
       case PadModel.get_data(state, pad_ref) do
         {:error, :unknown_pad} ->
-          init_pad_data(pad_ref, pad_info, state)
-          |> Map.update!(:pad_refs, &[pad_ref | &1])
+          init_pad_data(pad_ref, state)
 
         # This case is for pads that were instantiated before the external link request,
         # that is in the internal link request (see `handle_internal_link_request/4`).
@@ -69,9 +67,17 @@ defmodule Membrane.Core.Bin.PadController do
           state
       end
 
-    state = PadModel.update_data!(state, pad_ref, &%{&1 | link_id: link_id, options: pad_options})
+    linking_timeout_id = make_ref()
 
-    _ref = Process.send_after(self(), Message.new(:linking_timeout, pad_ref), 5000)
+    state =
+      PadModel.update_data!(
+        state,
+        pad_ref,
+        &%{&1 | link_id: link_id, linking_timeout_id: linking_timeout_id, options: pad_options}
+      )
+
+    message = Message.new(:linking_timeout, [pad_ref, linking_timeout_id])
+    _ref = Process.send_after(self(), message, 5000)
 
     maybe_handle_pad_added(pad_ref, state)
   end
@@ -96,20 +102,16 @@ defmodule Membrane.Core.Bin.PadController do
     end
   end
 
-  @spec handle_linking_timeout(Pad.ref(), State.t()) :: State.t() | no_return()
-  def handle_linking_timeout(pad_ref, state) do
-    case Map.fetch(state.linking_timeout_counters, pad_ref) do
-      {:ok, 1} ->
-        Map.update!(state, :linking_timeout_counters, &Map.delete(&1, pad_ref))
-
-      {:ok, counter} when counter > 1 ->
-        put_in(state.linking_timeout_counters[pad_ref], counter - 1)
-
-      _else ->
-        raise Membrane.LinkError, """
-        Bin pad #{inspect(pad_ref)} wasn't linked internally within timeout. Pad data: #{PadModel.get_data(state, pad_ref) |> inspect(pretty: true)}
-        """
+  @spec handle_linking_timeout(Pad.ref(), reference(), State.t()) :: :ok | no_return()
+  def handle_linking_timeout(pad_ref, linking_timeout_id, state) do
+    with {:ok, pad_data} <- PadModel.get_data(state, pad_ref),
+         %{linking_timeout_id: ^linking_timeout_id, linked_in_spec?: false} <- pad_data do
+      raise Membrane.LinkError, """
+      Bin pad #{inspect(pad_ref)} wasn't linked internally within timeout. Pad data: #{PadModel.get_data(state, pad_ref) |> inspect(pretty: true)}
+      """
     end
+
+    :ok
   end
 
   @doc """
@@ -137,7 +139,7 @@ defmodule Membrane.Core.Bin.PadController do
 
         # Static pads can be linked internally before the external link request
         pad_info.availability == :always ->
-          init_pad_data(pad_ref, pad_info, state)
+          init_pad_data(pad_ref, state)
 
         true ->
           raise LinkError, "Dynamic pads must be firstly linked externally, then internally"
@@ -282,7 +284,6 @@ defmodule Membrane.Core.Bin.PadController do
     with {:ok, %{availability: :on_request}} <- PadModel.get_data(state, pad_ref) do
       {pad_data, state} =
         maybe_handle_pad_removed(pad_ref, state)
-        |> Map.update!(:pad_refs, &List.delete(&1, pad_ref))
         |> PadModel.pop_data!(pad_ref)
 
       if pad_data.endpoint do
@@ -349,9 +350,15 @@ defmodule Membrane.Core.Bin.PadController do
     end
   end
 
-  defp init_pad_data(pad_ref, pad_info, state) do
+  @spec init_pad_data(Pad.ref(), State.t()) :: State.t()
+  def init_pad_data(pad_ref, state) do
+    if PadModel.assert_instance(state, pad_ref) == :ok do
+      raise "Cannot init pad data for pad #{inspect(pad_ref)}, because it already exists"
+    end
+
     pad_data =
-      pad_info
+      state.pads_info
+      |> Map.get(Pad.name_by_ref(pad_ref))
       |> Map.delete(:accepted_formats_str)
       |> Map.merge(%{
         ref: pad_ref,
@@ -360,10 +367,12 @@ defmodule Membrane.Core.Bin.PadController do
         linked?: false,
         response_received?: false,
         spec_ref: nil,
-        options: nil
+        options: nil,
+        linking_timeout_id: nil,
+        linked_in_spec?: false
       })
       |> then(&struct!(Membrane.Bin.PadData, &1))
 
-    put_in(state, [:pads_data, pad_ref], pad_data)
+    put_in(state.pads_data[pad_ref], pad_data)
   end
 end
