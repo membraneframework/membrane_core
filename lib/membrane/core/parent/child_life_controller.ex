@@ -327,7 +327,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         |> Enum.reduce(state, fn pad_ref, state ->
           with {:error, :unknown_pad} <- PadModel.assert_instance(state, pad_ref) do
             PadController.init_pad_data(pad_ref, state)
-            # |> Map.update!(:pad_refs, &[pad_ref | &1])
           else
             :ok -> state
           end
