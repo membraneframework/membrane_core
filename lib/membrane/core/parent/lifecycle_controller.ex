@@ -43,15 +43,15 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     activate_syncs(state.children)
 
-    {pinged_children, state} =
-      Enum.flat_map_reduce(state.children, state, fn
-        {child, %{ready?: true, terminating?: false, pid: pid}}, state ->
+    pinged_children =
+      state.children
+      |> Enum.flat_map(fn
+        {child_name, %{ready?: true, terminating?: false, pid: pid}} ->
           Message.send(pid, :play)
-          state = put_in(state, [:children, child, :playback], :playing)
-          {[child], state}
+          [child_name]
 
-        _other_entry, state ->
-          {[], state}
+        _other_entry ->
+          []
       end)
 
     state = %{state | playback: :playing}
