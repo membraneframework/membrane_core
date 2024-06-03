@@ -21,7 +21,6 @@ defmodule Membrane.ChildEntry do
           module: module,
           options: struct | nil,
           component_type: :element | :bin,
-          # playback: Membrane.Playback.t(),
           pid: pid,
           clock: Membrane.Clock.t(),
           sync: Membrane.Sync.t(),
@@ -42,6 +41,5 @@ defmodule Membrane.ChildEntry do
     initialized?: false,
     ready?: false,
     terminating?: false
-    # playback: :stopped
   ]
 end
