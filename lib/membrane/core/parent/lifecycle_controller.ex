@@ -13,7 +13,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
   }
 
   alias Membrane.Core.Events
-  alias Membrane.Core.Parent.{ChildLifeController}
+  alias Membrane.Core.Parent.ChildLifeController
 
   require Membrane.Core.Component
   require Membrane.Core.Message
@@ -43,19 +43,29 @@ defmodule Membrane.Core.Parent.LifecycleController do
 
     activate_syncs(state.children)
 
-    Enum.each(state.children, fn {_name, %{pid: pid, ready?: ready?}} ->
-      if ready?, do: Message.send(pid, :play)
-    end)
+    pinged_children =
+      state.children
+      |> Enum.flat_map(fn
+        {child_name, %{ready?: true, terminating?: false, pid: pid}} ->
+          Message.send(pid, :play)
+          [child_name]
+
+        _other_entry ->
+          []
+      end)
 
     state = %{state | playback: :playing}
 
-    CallbackHandler.exec_and_handle_callback(
-      :handle_playing,
-      Component.action_handler(state),
-      %{context: &Component.context_from_state/1},
-      [],
-      state
-    )
+    state =
+      CallbackHandler.exec_and_handle_callback(
+        :handle_playing,
+        Component.action_handler(state),
+        %{context: &Component.context_from_state/1},
+        [],
+        state
+      )
+
+    ChildLifeController.handle_children_playing(pinged_children, state)
   end
 
   @spec handle_terminate_request(Parent.state()) :: Parent.state()

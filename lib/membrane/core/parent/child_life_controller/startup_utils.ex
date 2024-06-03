@@ -104,12 +104,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
 
   @spec exec_handle_spec_started([Membrane.Child.name()], Parent.state()) :: Parent.state()
   def exec_handle_spec_started(children_names, state) do
+    callback_name = :handle_spec_started
+
     # handle_spec_started/3 callback is deprecated, so we don't require its implementation
-    if function_exported?(state.module, :handle_spec_started, 3) do
+    if function_exported?(state.module, callback_name, 3) do
       action_handler = Component.action_handler(state)
 
       CallbackHandler.exec_and_handle_callback(
-        :handle_spec_started,
+        callback_name,
         action_handler,
         %{context: &Component.context_from_state/1},
         [children_names],
