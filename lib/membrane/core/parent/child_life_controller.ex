@@ -5,6 +5,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias __MODULE__.{CrashGroupUtils, LinkUtils, StartupUtils}
   alias Membrane.{Child, ChildrenSpec}
   alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
+  alias Membrane.Core.Bin.PadController
 
   alias Membrane.Core.Parent.{
     ChildEntryParser,
@@ -17,6 +18,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias Membrane.Pad
   alias Membrane.ParentError
 
+  require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Component
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
@@ -154,7 +156,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state =
       put_in(state, [:pending_specs, spec_ref], %{
-        status: :initializing,
+        status: :created,
         children_names: MapSet.new(all_children_names),
         links_ids: Enum.map(links, & &1.id),
         dependent_specs: dependent_specs,
@@ -309,14 +311,37 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
+  defp do_proceed_spec_startup(spec_ref, %{status: :created} = spec_data, state) do
+    state =
+      with %Bin.State{} <- state do
+        bin_pads_linked_in_spec =
+          spec_data.links_ids
+          |> Enum.map(&Map.fetch!(state.links, &1))
+          |> Enum.flat_map(&[&1.from, &1.to])
+          |> Enum.flat_map(fn
+            %{child: {Membrane.Bin, :itself}, pad_ref: pad_ref} -> [pad_ref]
+            _other -> []
+          end)
+
+        bin_pads_linked_in_spec
+        |> Enum.reduce(state, fn pad_ref, state ->
+          case PadModel.assert_instance(state, pad_ref) do
+            :ok -> state
+            {:error, :unknown_pad} -> PadController.init_pad_data(pad_ref, state)
+          end
+          |> PadModel.set_data!(pad_ref, :linked_in_spec?, true)
+        end)
+      end
+
+    do_proceed_spec_startup(spec_ref, %{spec_data | status: :initializing}, state)
+  end
+
   defp do_proceed_spec_startup(spec_ref, %{status: :initializing} = spec_data, state) do
     Membrane.Logger.debug(
       "Proceeding spec #{inspect(spec_ref)} startup: initializing, dependent specs: #{inspect(MapSet.to_list(spec_data.dependent_specs))}"
     )
 
-    %{children: children} = state
-
-    if Enum.all?(spec_data.children_names, &Map.fetch!(children, &1).initialized?) and
+    if Enum.all?(spec_data.children_names, &Map.fetch!(state.children, &1).initialized?) and
          Enum.empty?(spec_data.dependent_specs) do
       Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to initialized")
 
@@ -353,7 +378,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   end
 
   defp do_proceed_spec_startup(spec_ref, %{status: :linking_internally} = spec_data, state) do
-    if Enum.empty?(spec_data.awaiting_responses) do
+    if MapSet.size(spec_data.awaiting_responses) == 0 do
       state =
         spec_data.links_ids
         |> Enum.map(&Map.fetch!(state.links, &1))
