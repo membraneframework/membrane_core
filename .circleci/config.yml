@@ -165,6 +165,8 @@ jobs:
           command: rm ~/results/*
           when: always
 
+orbs:
+  elixir: membraneframework/elixir@1
 
 workflows:
   version: 2
@@ -198,9 +200,9 @@ workflows:
             - request_performance_test
       - elixir/hex_publish:
           requires:
-            - elixir/build_test
-            - elixir/test
-            - elixir/lint
+            - build_test
+            - test
+            - lint
           context:
             - Deployment
           filters:
