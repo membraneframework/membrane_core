@@ -165,6 +165,8 @@ jobs:
           command: rm ~/results/*
           when: always
 
+orbs:
+  elixir: membraneframework/elixir@1
 
 workflows:
   version: 2
@@ -196,3 +198,15 @@ workflows:
           requires:
             - get_deps
             - request_performance_test
+      - elixir/hex_publish:
+          requires:
+            - build_test
+            - test
+            - lint
+          context:
+            - Deployment
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /v.*/
