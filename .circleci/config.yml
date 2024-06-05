@@ -196,3 +196,15 @@ workflows:
           requires:
             - get_deps
             - request_performance_test
+      - elixir/hex_publish:
+          requires:
+            - elixir/build_test
+            - elixir/test
+            - elixir/lint
+          context:
+            - Deployment
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /v.*/
