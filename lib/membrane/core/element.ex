@@ -180,10 +180,10 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_call(
-        Message.new(:handle_link, [direction, this, other, params]),
-        _from,
-        state
-      ) do
+         Message.new(:handle_link, [direction, this, other, params]),
+         _from,
+         state
+       ) do
     {reply, state} = PadController.handle_link(direction, this, other, params, state)
     {:reply, reply, state}
   end

@@ -95,9 +95,9 @@ defmodule Membrane.Core.Pipeline do
   end
 
   defp do_handle_info(
-        Message.new(:stream_management_event, [element_name, pad_ref, event, event_params]),
-        state
-      ) do
+         Message.new(:stream_management_event, [element_name, pad_ref, event, event_params]),
+         state
+       ) do
     state =
       LifecycleController.handle_stream_management_event(
         event,
