@@ -19,6 +19,7 @@ defmodule Membrane.Core.Bin do
 
   alias Membrane.ResourceGuard
 
+  require Membrane.Core.Macros, as: Macros
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
   require Membrane.Logger
@@ -79,6 +80,12 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def init(options) do
+    Macros.log_on_error do
+      do_init(options)
+    end
+  end
+
+  defp do_init(options) do
     Process.link(options.parent_supervisor)
     %{name: name, module: module} = options
 
@@ -144,13 +151,17 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def handle_continue(:setup, state) do
-    state = Parent.LifecycleController.handle_setup(state)
-    {:noreply, state}
+    Macros.log_on_error do
+      state = Parent.LifecycleController.handle_setup(state)
+      {:noreply, state}
+    end
   end
 
   @impl GenServer
   def handle_info(message, state) do
-    do_handle_info(message, state)
+    Macros.log_on_error do
+      do_handle_info(message, state)
+    end
   end
 
   @compile {:inline, do_handle_info: 2}
@@ -162,7 +173,6 @@ defmodule Membrane.Core.Bin do
 
   defp do_handle_info(Message.new(:parent_notification, notification), state) do
     state = Child.LifecycleController.handle_parent_notification(notification, state)
-
     {:noreply, state}
   end
 
@@ -251,7 +261,13 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
-  def handle_call(
+  def handle_call(request, from, state) do
+    Macros.log_on_error do
+      do_handle_call(request, from, state)
+    end
+  end
+
+  defp do_handle_call(
         Message.new(:handle_link, [direction, this, other, params]),
         _from,
         state
@@ -260,13 +276,11 @@ defmodule Membrane.Core.Bin do
     {:reply, reply, state}
   end
 
-  @impl GenServer
-  def handle_call(Message.new(:get_clock), _from, state) do
+  defp do_handle_call(Message.new(:get_clock), _from, state) do
     {:reply, state.synchronization.clock, state}
   end
 
-  @impl GenServer
-  def handle_call(Message.new(:get_child_pid, child_name), _from, state) do
+  defp do_handle_call(Message.new(:get_child_pid, child_name), _from, state) do
     reply =
       with %State{children: %{^child_name => %{pid: child_pid}}} <- state do
         {:ok, child_pid}

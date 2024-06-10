@@ -35,6 +35,7 @@ defmodule Membrane.Core.Element do
 
   alias Membrane.Core.{SubprocessSupervisor, TimerController}
 
+  require Membrane.Core.Macros, as: Macros
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Stalker, as: Stalker
   require Membrane.Core.Telemetry, as: Telemetry
@@ -94,6 +95,12 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
+    Macros.log_on_error do
+      do_init(options)
+    end
+  end
+
+  defp do_init(options) do
     Process.link(options.parent_supervisor)
 
     observability_config = %{
@@ -155,17 +162,24 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_continue(:setup, state) do
-    state = LifecycleController.handle_setup(state)
-    {:noreply, state}
+    Macros.log_on_error do
+      state = LifecycleController.handle_setup(state)
+      {:noreply, state}
+    end
   end
 
   @impl GenServer
-  def handle_call(Message.new(:get_clock), _from, state) do
+  def handle_call(request, from, state) do
+    Macros.log_on_error do
+      do_handle_call(request, from, state)
+    end
+  end
+
+  defp do_handle_call(Message.new(:get_clock), _from, state) do
     {:reply, state.synchronization.clock, state}
   end
 
-  @impl GenServer
-  def handle_call(
+  defp do_handle_call(
         Message.new(:handle_link, [direction, this, other, params]),
         _from,
         state
@@ -174,19 +188,16 @@ defmodule Membrane.Core.Element do
     {:reply, reply, state}
   end
 
-  @impl GenServer
-  def handle_call(Message.new(:set_stream_sync, sync), _from, state) do
+  defp do_handle_call(Message.new(:set_stream_sync, sync), _from, state) do
     state = put_in(state.synchronization.stream_sync, sync)
     {:reply, :ok, state}
   end
 
-  @impl GenServer
-  def handle_call(Message.new(:get_child_pid, _child_name), _from, state) do
+  defp do_handle_call(Message.new(:get_child_pid, _child_name), _from, state) do
     {:reply, {:error, :element_cannot_have_children}, state}
   end
 
-  @impl GenServer
-  def handle_call(message, {pid, _tag}, _state) do
+  defp do_handle_call(message, {pid, _tag}, _state) do
     raise Membrane.ElementError,
           "Received invalid message #{inspect(message)} from #{inspect(pid)}"
   end
@@ -198,7 +209,9 @@ defmodule Membrane.Core.Element do
       :erlang.process_info(self(), :message_queue_len) |> elem(1)
     )
 
-    do_handle_info(message, state)
+    Macros.log_on_error do
+      do_handle_info(message, state)
+    end
   end
 
   @compile {:inline, do_handle_info: 2}

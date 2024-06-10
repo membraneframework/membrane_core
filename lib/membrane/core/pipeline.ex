@@ -9,6 +9,7 @@ defmodule Membrane.Core.Pipeline do
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
 
+  require Membrane.Core.Macros, as: Macros
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Core.Component
@@ -23,6 +24,12 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def init(params) do
+    Macros.log_on_error do
+      do_init(params)
+    end
+  end
+
+  defp do_init(params) do
     observability_config = %{
       name: params.name,
       component_type: :pipeline,
@@ -74,12 +81,20 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_continue(:setup, state) do
-    state = LifecycleController.handle_setup(state)
-    {:noreply, state}
+    Macros.log_on_error do
+      state = LifecycleController.handle_setup(state)
+      {:noreply, state}
+    end
   end
 
   @impl GenServer
-  def handle_info(
+  def handle_info(msg, state) do
+    Macros.log_on_error do
+      do_handle_info(msg, state)
+    end
+  end
+
+  defp do_handle_info(
         Message.new(:stream_management_event, [element_name, pad_ref, event, event_params]),
         state
       ) do
@@ -95,74 +110,69 @@ defmodule Membrane.Core.Pipeline do
     {:noreply, state}
   end
 
-  @impl GenServer
-  def handle_info(Message.new(:child_pad_removed, [child, pad]), state) do
+  defp do_handle_info(Message.new(:child_pad_removed, [child, pad]), state) do
     state = ChildLifeController.handle_child_pad_removed(child, pad, state)
     {:noreply, state}
   end
 
-  @impl GenServer
-  def handle_info(Message.new(:child_notification, [from, notification]), state) do
+  defp do_handle_info(Message.new(:child_notification, [from, notification]), state) do
     state = LifecycleController.handle_child_notification(from, notification, state)
     {:noreply, state}
   end
 
-  @impl GenServer
-  def handle_info(Message.new(:timer_tick, timer_id), state) do
+  defp do_handle_info(Message.new(:timer_tick, timer_id), state) do
     state = TimerController.handle_tick(timer_id, state)
     {:noreply, state}
   end
 
-  @impl GenServer
-  def handle_info(Message.new(:link_response, [link_id, direction]), state) do
+  defp do_handle_info(Message.new(:link_response, [link_id, direction]), state) do
     state = ChildLifeController.handle_link_response(link_id, direction, state)
     {:noreply, state}
   end
 
-  @impl GenServer
-  def handle_info(Message.new(:initialized, child), state) do
+  defp do_handle_info(Message.new(:initialized, child), state) do
     state = ChildLifeController.handle_child_initialized(child, state)
     {:noreply, state}
   end
 
-  @impl GenServer
-  def handle_info(Message.new(:child_death, [name, reason]), state) do
+  defp do_handle_info(Message.new(:child_death, [name, reason]), state) do
     case ChildLifeController.handle_child_death(name, reason, state) do
       {:stop, reason, _state} -> ProcessHelper.notoelo(reason)
       {:continue, state} -> {:noreply, state}
     end
   end
 
-  @impl GenServer
-  def handle_info(Message.new(:terminate), state) do
+  defp do_handle_info(Message.new(:terminate), state) do
     state = LifecycleController.handle_terminate_request(state)
     {:noreply, state}
   end
 
-  @impl GenServer
-  def handle_info(Message.new(_type, _args, _opts) = message, _state) do
+  defp do_handle_info(Message.new(_type, _args, _opts) = message, _state) do
     raise Membrane.PipelineError, "Received invalid message #{inspect(message)}"
   end
 
-  @impl GenServer
-  def handle_info({:membrane_clock_ratio, clock, ratio}, state) do
+  defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
     state = TimerController.handle_clock_update(clock, ratio, state)
     {:noreply, state}
   end
 
-  @impl GenServer
-  def handle_info(message, state) do
+  defp do_handle_info(message, state) do
     state = LifecycleController.handle_info(message, state)
     {:noreply, state}
   end
 
   @impl GenServer
-  def handle_call(Message.new(:get_stalker), _from, state) do
+  def handle_call(msg, from, state) do
+    Macros.log_on_error do
+      do_handle_call(msg, from, state)
+    end
+  end
+
+  defp do_handle_call(Message.new(:get_stalker), _from, state) do
     {:reply, {:ok, state.stalker}, state}
   end
 
-  @impl GenServer
-  def handle_call(Message.new(:get_child_pid, child_name), _from, state) do
+  defp do_handle_call(Message.new(:get_child_pid, child_name), _from, state) do
     reply =
       with %State{children: %{^child_name => %{pid: child_pid}}} <- state do
         {:ok, child_pid}
@@ -173,8 +183,7 @@ defmodule Membrane.Core.Pipeline do
     {:reply, reply, state}
   end
 
-  @impl GenServer
-  def handle_call(message, from, state) do
+  defp do_handle_call(message, from, state) do
     context = &CallbackContext.from_state(&1, from: from)
 
     state =
