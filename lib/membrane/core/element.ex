@@ -204,12 +204,12 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_info(message, state) do
-    Telemetry.report_metric(
-      :queue_len,
-      :erlang.process_info(self(), :message_queue_len) |> elem(1)
-    )
-
     Macros.log_on_error do
+      Telemetry.report_metric(
+        :queue_len,
+        :erlang.process_info(self(), :message_queue_len) |> elem(1)
+      )
+
       do_handle_info(message, state)
     end
   end
