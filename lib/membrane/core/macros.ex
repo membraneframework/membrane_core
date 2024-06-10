@@ -1,6 +1,8 @@
 defmodule Membrane.Core.Macros do
   @moduledoc false
 
+  # For some reason GenServer processes sometimes don't print logs about crash, so
+  # we add this macro, to ensure that error logs wil be always logged
   defmacro log_on_error(do: code) do
     quote do
       try do
