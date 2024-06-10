@@ -185,7 +185,7 @@ defmodule Membrane.Core.CallbackHandler do
           Error handling actions returned by callback #{inspect(state.module)}.#{callback}
           """)
 
-          log_error_orginal_error(actions, e, __STACKTRACE__)
+          log_error_orginal_error(e, __STACKTRACE__)
 
           reraise e, __STACKTRACE__
       end
@@ -201,7 +201,7 @@ defmodule Membrane.Core.CallbackHandler do
             Action: #{inspect(action, pretty: true)}
             """)
 
-            log_error_orginal_error(action, e, __STACKTRACE__)
+            log_error_orginal_error(e, __STACKTRACE__)
 
             reraise e, __STACKTRACE__
         end
@@ -213,11 +213,7 @@ defmodule Membrane.Core.CallbackHandler do
   # We log it, because sometimes, for some reason, crashing process doesn't cause
   # printing error logs on stderr, so this debug log allows us to get some info
   # about what happened in case of process crash
-  defp log_error_orginal_error(action_or_actions, error, stacktrace) do
-    action_or_actions =
-      if(is_list(action_or_actions), do: "actions ", else: "action ") <>
-        inspect(action_or_actions, limit: :infinity)
-
+  defp log_error_orginal_error(error, stacktrace) do
     Membrane.Logger.error("""
     #{inspect(error, pretty: true, limit: :infinity)}
     #{Exception.format_stacktrace(stacktrace)}
