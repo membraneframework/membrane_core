@@ -5,8 +5,7 @@ locals_without_parens =
     def_options: 1,
     def_clock: 1,
     def_type_from_list: 1,
-    assert_receive_message: 3,
-    wrap_with_try: 1
+    assert_receive_message: 3
   ]
 
 [
