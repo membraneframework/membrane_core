@@ -12,6 +12,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
   alias Membrane.Core.Stalker
 
   require Membrane.Core.Message, as: Message
+  require Membrane.Core.Utils, as: Utils
   require Membrane.Logger
 
   @spec start_link!() :: pid()
@@ -93,18 +94,30 @@ defmodule Membrane.Core.SubprocessSupervisor do
 
   @impl true
   def init(parent_process) do
-    Process.flag(:trap_exit, true)
+    Utils.log_on_error do
+      Process.flag(:trap_exit, true)
 
-    {:ok,
-     %{
-       parent_component: nil,
-       parent_process: {:alive, parent_process},
-       children: %{}
-     }}
+      {:ok,
+       %{
+         parent_component: nil,
+         parent_process: {:alive, parent_process},
+         children: %{}
+       }}
+    end
   end
 
   @impl true
-  def handle_call(Message.new(:start_component, [name, component_module, options]), _from, state) do
+  def handle_call(request, from, state) do
+    Utils.log_on_error do
+      do_handle_call(request, from, state)
+    end
+  end
+
+  defp do_handle_call(
+         Message.new(:start_component, [name, component_module, options]),
+         _from,
+         state
+       ) do
     subprocess_supervisor = start_link_subprocess_supervisor!(options)
 
     options =
@@ -138,8 +151,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
     end
   end
 
-  @impl true
-  def handle_call(Message.new(:start_utility, child_spec), _from, state) do
+  defp do_handle_call(Message.new(:start_utility, child_spec), _from, state) do
     try do
       {m, f, a} = child_spec.start
       apply(m, f, a)
@@ -169,30 +181,33 @@ defmodule Membrane.Core.SubprocessSupervisor do
     end
   end
 
-  @impl true
-  def handle_call(:which_children, _from, state) do
+  defp do_handle_call(:which_children, _from, state) do
     reply = Enum.map(state.children, fn {pid, data} -> {data.name, pid, data.type, []} end)
     {:reply, reply, state}
   end
 
   @impl true
-  def handle_info(Message.new(:set_parent_component, [pid, observability_config]), state) do
+  def handle_info(msg, state) do
+    Utils.log_on_error do
+      do_handle_info(msg, state)
+    end
+  end
+
+  defp do_handle_info(Message.new(:set_parent_component, [pid, observability_config]), state) do
     Membrane.Core.Stalker.setup_component_utility(observability_config, "subprocess supervisor")
     {:noreply, %{state | parent_component: pid}}
   end
 
-  @impl true
-  def handle_info(
-        {:EXIT, pid, _reason},
-        %{parent_process: {:alive, pid}, children: children} = state
-      )
-      when children == %{} do
+  defp do_handle_info(
+         {:EXIT, pid, _reason},
+         %{parent_process: {:alive, pid}, children: children} = state
+       )
+       when children == %{} do
     Membrane.Logger.debug("exiting")
     {:stop, :normal, state}
   end
 
-  @impl true
-  def handle_info({:EXIT, pid, reason}, %{parent_process: {:alive, pid}} = state) do
+  defp do_handle_info({:EXIT, pid, reason}, %{parent_process: {:alive, pid}} = state) do
     Membrane.Logger.debug(
       "got exit request from parent, reason: #{inspect(reason)}, shutting down children"
     )
@@ -204,8 +219,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
     {:noreply, %{state | parent_process: :exit_requested}}
   end
 
-  @impl true
-  def handle_info({:EXIT, pid, reason}, state) do
+  defp do_handle_info({:EXIT, pid, reason}, state) do
     {data, state} = pop_in(state, [:children, pid])
     handle_exit(data, reason, state)
 

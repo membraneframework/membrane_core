@@ -17,6 +17,7 @@ defmodule Membrane.Testing.MockResourceGuard do
   use GenServer
 
   require Membrane.Core.Message, as: Message
+  require Membrane.Core.Utils, as: Utils
 
   @type options :: [test_process: pid]
 
@@ -40,24 +41,30 @@ defmodule Membrane.Testing.MockResourceGuard do
 
   @impl true
   def init(options) do
-    {:ok, Map.new(options)}
+    Utils.log_on_error do
+      {:ok, Map.new(options)}
+    end
   end
 
   @impl true
-  def handle_info(Message.new(:register, [function, options]), state) do
+  def handle_info(msg, state) do
+    Utils.log_on_error do
+      do_handle_info(msg, state)
+    end
+  end
+
+  defp do_handle_info(Message.new(:register, [function, options]), state) do
     tag = Keyword.fetch!(options, :tag)
     send_to_test_process(state, :register, {function, tag})
     {:noreply, state}
   end
 
-  @impl true
-  def handle_info(Message.new(:unregister, tag), state) do
+  defp do_handle_info(Message.new(:unregister, tag), state) do
     send_to_test_process(state, :unregister, tag)
     {:noreply, state}
   end
 
-  @impl true
-  def handle_info(Message.new(:cleanup, tag), state) do
+  defp do_handle_info(Message.new(:cleanup, tag), state) do
     send_to_test_process(state, :cleanup, tag)
     {:noreply, state}
   end

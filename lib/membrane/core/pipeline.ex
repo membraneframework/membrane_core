@@ -9,7 +9,7 @@ defmodule Membrane.Core.Pipeline do
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
   alias Membrane.Core.TimerController
 
-  require Membrane.Core.Macros, as: Macros
+  require Membrane.Core.Utils, as: Utils
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Core.Component
@@ -24,7 +24,7 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def init(params) do
-    Macros.log_on_error do
+    Utils.log_on_error do
       do_init(params)
     end
   end
@@ -81,7 +81,7 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_continue(:setup, state) do
-    Macros.log_on_error do
+    Utils.log_on_error do
       state = LifecycleController.handle_setup(state)
       {:noreply, state}
     end
@@ -89,7 +89,7 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_info(msg, state) do
-    Macros.log_on_error do
+    Utils.log_on_error do
       do_handle_info(msg, state)
     end
   end
@@ -163,7 +163,7 @@ defmodule Membrane.Core.Pipeline do
 
   @impl GenServer
   def handle_call(msg, from, state) do
-    Macros.log_on_error do
+    Utils.log_on_error do
       do_handle_call(msg, from, state)
     end
   end

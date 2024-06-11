@@ -19,7 +19,7 @@ defmodule Membrane.Core.Bin do
 
   alias Membrane.ResourceGuard
 
-  require Membrane.Core.Macros, as: Macros
+  require Membrane.Core.Utils, as: Utils
   require Membrane.Core.Message
   require Membrane.Core.Telemetry
   require Membrane.Logger
@@ -80,7 +80,7 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def init(options) do
-    Macros.log_on_error do
+    Utils.log_on_error do
       do_init(options)
     end
   end
@@ -151,7 +151,7 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def handle_continue(:setup, state) do
-    Macros.log_on_error do
+    Utils.log_on_error do
       state = Parent.LifecycleController.handle_setup(state)
       {:noreply, state}
     end
@@ -159,7 +159,7 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def handle_info(message, state) do
-    Macros.log_on_error do
+    Utils.log_on_error do
       do_handle_info(message, state)
     end
   end
@@ -262,7 +262,7 @@ defmodule Membrane.Core.Bin do
 
   @impl GenServer
   def handle_call(request, from, state) do
-    Macros.log_on_error do
+    Utils.log_on_error do
       do_handle_call(request, from, state)
     end
   end

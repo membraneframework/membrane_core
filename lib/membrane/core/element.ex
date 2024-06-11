@@ -35,7 +35,7 @@ defmodule Membrane.Core.Element do
 
   alias Membrane.Core.{SubprocessSupervisor, TimerController}
 
-  require Membrane.Core.Macros, as: Macros
+  require Membrane.Core.Utils, as: Utils
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Stalker, as: Stalker
   require Membrane.Core.Telemetry, as: Telemetry
@@ -95,7 +95,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def init(options) do
-    Macros.log_on_error do
+    Utils.log_on_error do
       do_init(options)
     end
   end
@@ -162,7 +162,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_continue(:setup, state) do
-    Macros.log_on_error do
+    Utils.log_on_error do
       state = LifecycleController.handle_setup(state)
       {:noreply, state}
     end
@@ -170,7 +170,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_call(request, from, state) do
-    Macros.log_on_error do
+    Utils.log_on_error do
       do_handle_call(request, from, state)
     end
   end
@@ -204,7 +204,7 @@ defmodule Membrane.Core.Element do
 
   @impl GenServer
   def handle_info(message, state) do
-    Macros.log_on_error do
+    Utils.log_on_error do
       Telemetry.report_metric(
         :queue_len,
         :erlang.process_info(self(), :message_queue_len) |> elem(1)

@@ -32,6 +32,8 @@ defmodule Membrane.Clock do
   alias Membrane.Core.Message
   alias Membrane.Time
 
+  require Membrane.Core.Utils, as: Utils
+
   @typedoc @moduledoc
   @type t :: pid
 
@@ -115,6 +117,12 @@ defmodule Membrane.Clock do
 
   @impl GenServer
   def init(options) do
+    Utils.log_on_error do
+      do_init(options)
+    end
+  end
+
+  defp do_init(options) do
     proxy_opts = get_proxy_options(options[:proxy], options[:proxy_for])
 
     state =
@@ -131,7 +139,13 @@ defmodule Membrane.Clock do
   end
 
   @impl GenServer
-  def handle_cast({:proxy_for, proxy_for}, %{proxy: true} = state) do
+  def handle_cast(request, state) do
+    Utils.log_on_error do
+      do_handle_cast(request, state)
+    end
+  end
+
+  defp do_handle_cast({:proxy_for, proxy_for}, %{proxy: true} = state) do
     if state.proxy_for, do: unsubscribe(state.proxy_for)
 
     state = %{state | proxy_for: proxy_for}
@@ -147,8 +161,7 @@ defmodule Membrane.Clock do
     {:noreply, state}
   end
 
-  @impl GenServer
-  def handle_cast({:clock_subscribe, pid}, state) do
+  defp do_handle_cast({:clock_subscribe, pid}, state) do
     state
     |> update_in([:subscribers, pid], fn
       nil ->
@@ -162,8 +175,7 @@ defmodule Membrane.Clock do
     ~> {:noreply, &1}
   end
 
-  @impl GenServer
-  def handle_cast({:clock_unsubscribe, pid}, state) do
+  defp do_handle_cast({:clock_unsubscribe, pid}, state) do
     if Map.has_key?(state.subscribers, pid) do
       {subs, state} =
         state |> Bunch.Access.get_updated_in([:subscribers, pid, :subscriptions], &(&1 - 1))
@@ -175,24 +187,27 @@ defmodule Membrane.Clock do
     ~> {:noreply, &1}
   end
 
-  @impl GenServer
-  def handle_info({:membrane_clock_update, till_next}, %{proxy: false} = state) do
+  @impl true
+  def handle_info(msg, state) do
+    Utils.log_on_error do
+      do_handle_info(msg, state)
+    end
+  end
+
+  defp do_handle_info({:membrane_clock_update, till_next}, %{proxy: false} = state) do
     {:noreply, handle_clock_update(till_next, state)}
   end
 
-  @impl GenServer
-  def handle_info({:membrane_clock_ratio, pid, ratio}, %{proxy: true, proxy_for: pid} = state) do
+  defp do_handle_info({:membrane_clock_ratio, pid, ratio}, %{proxy: true, proxy_for: pid} = state) do
     {:noreply, broadcast_and_update_ratio(ratio, state)}
   end
 
-  @impl GenServer
   # When ratio from previously proxied clock comes in after unsubscribing
-  def handle_info({:membrane_clock_ratio, _pid, _ratio}, %{proxy: true} = state) do
+  defp do_handle_info({:membrane_clock_ratio, _pid, _ratio}, %{proxy: true} = state) do
     {:noreply, state}
   end
 
-  @impl GenServer
-  def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
+  defp do_handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
     {:noreply, handle_unsubscribe(pid, state)}
   end
 
