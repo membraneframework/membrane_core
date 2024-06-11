@@ -31,6 +31,8 @@ defmodule Membrane.Sync do
 
   alias Membrane.Time
 
+  require Membrane.Core.Utils, as: Utils
+
   @no_sync :membrane_no_sync
 
   @typedoc """
@@ -92,28 +94,34 @@ defmodule Membrane.Sync do
 
   @impl true
   def init(opts) do
-    {:ok,
-     %{
-       processes: %{},
-       empty_exit?: opts |> Keyword.get(:empty_exit?, false),
-       active?: false
-     }}
+    Utils.log_on_error do
+      {:ok,
+       %{
+         processes: %{},
+         empty_exit?: opts |> Keyword.get(:empty_exit?, false),
+         active?: false
+       }}
+    end
   end
 
   @impl true
-  def handle_call({:sync_register, pid}, _from, %{active?: false} = state) do
+  def handle_call(request, from, state) do
+    Utils.log_on_error do
+      do_handle_call(request, from, state)
+    end
+  end
+
+  defp do_handle_call({:sync_register, pid}, _from, %{active?: false} = state) do
     Process.monitor(pid)
     state = state |> put_in([:processes, pid], %{status: :registered, latency: 0, reply_to: nil})
     {:reply, :ok, state}
   end
 
-  @impl true
-  def handle_call({:sync_register, _pid}, _from, state) do
+  defp do_handle_call({:sync_register, _pid}, _from, state) do
     {:reply, {:error, :bad_activity_request}, state}
   end
 
-  @impl true
-  def handle_call({:sync, options}, {pid, _ref} = from, %{active?: true} = state) do
+  defp do_handle_call({:sync, options}, {pid, _ref} = from, %{active?: true} = state) do
     latency = options |> Keyword.get(:latency, 0)
 
     case state.processes[pid] do
@@ -135,19 +143,16 @@ defmodule Membrane.Sync do
     end
   end
 
-  @impl true
-  def handle_call({:sync, _options}, _from, %{active?: false} = state) do
+  defp do_handle_call({:sync, _options}, _from, %{active?: false} = state) do
     {:reply, :ok, state}
   end
 
-  @impl true
-  def handle_call({:sync_toggle_active, new_active?}, _from, %{active?: active?} = state)
-      when new_active? == active? do
+  defp do_handle_call({:sync_toggle_active, new_active?}, _from, %{active?: active?} = state)
+       when new_active? == active? do
     {:reply, {:error, :bad_activity_request}, state}
   end
 
-  @impl true
-  def handle_call({:sync_toggle_active, active?}, _from, state) do
+  defp do_handle_call({:sync_toggle_active, active?}, _from, state) do
     state = %{state | active?: active?} |> check_and_handle_sync()
     {:reply, :ok, state}
   end

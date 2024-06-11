@@ -6,6 +6,7 @@ defmodule Membrane.Core.Pipeline.Supervisor do
   alias Membrane.Core.{ProcessHelper, SubprocessSupervisor}
 
   require Membrane.Core.Message, as: Message
+  require Membrane.Core.Utils, as: Utils
   require Membrane.Logger
 
   @spec run(
@@ -30,7 +31,13 @@ defmodule Membrane.Core.Pipeline.Supervisor do
   end
 
   @impl true
-  def init({start_fun, name, reply_to}) do
+  def init(params) do
+    Utils.log_on_error do
+      do_init(params)
+    end
+  end
+
+  defp do_init({start_fun, name, reply_to}) do
     Process.flag(:trap_exit, true)
     subprocess_supervisor = SubprocessSupervisor.start_link!()
 
@@ -52,18 +59,26 @@ defmodule Membrane.Core.Pipeline.Supervisor do
 
   @impl true
   def handle_call(:which_children, _from, state) do
-    reply =
-      [{SubprocessSupervisor, state.subprocess_supervisor, :supervisor, SubprocessSupervisor}] ++
-        case state.pipeline do
-          {:alive, pid} -> [{:pipeline, pid, :worker, []}]
-          {:exited, _reason} -> []
-        end
+    Utils.log_on_error do
+      reply =
+        [{SubprocessSupervisor, state.subprocess_supervisor, :supervisor, SubprocessSupervisor}] ++
+          case state.pipeline do
+            {:alive, pid} -> [{:pipeline, pid, :worker, []}]
+            {:exited, _reason} -> []
+          end
 
-    {:reply, reply, state}
+      {:reply, reply, state}
+    end
   end
 
   @impl true
-  def handle_info({:EXIT, pid, reason}, %{pipeline: {:alive, pid}} = state) do
+  def handle_info(msg, state) do
+    Utils.log_on_error do
+      do_handle_info(msg, state)
+    end
+  end
+
+  defp do_handle_info({:EXIT, pid, reason}, %{pipeline: {:alive, pid}} = state) do
     Membrane.Logger.debug(
       "got exit from pipeline with reason #{inspect(reason)}, stopping subprocess supervisor"
     )
@@ -72,32 +87,28 @@ defmodule Membrane.Core.Pipeline.Supervisor do
     {:noreply, %{state | pipeline: {:exited, reason}}}
   end
 
-  @impl true
-  def handle_info(
-        {:EXIT, pid, :normal},
-        %{subprocess_supervisor: pid, pipeline: {:exited, pipeline_exit_reason}}
-      ) do
+  defp do_handle_info(
+         {:EXIT, pid, :normal},
+         %{subprocess_supervisor: pid, pipeline: {:exited, pipeline_exit_reason}}
+       ) do
     Membrane.Logger.debug("got exit from subprocess supervisor, exiting")
     ProcessHelper.notoelo(pipeline_exit_reason, log?: false)
   end
 
-  @impl true
-  def handle_info({:EXIT, pid, reason}, %{
-        subprocess_supervisor: pid,
-        pipeline: {:alive, _pipeline_pid}
-      }) do
+  defp do_handle_info({:EXIT, pid, reason}, %{
+         subprocess_supervisor: pid,
+         pipeline: {:alive, _pipeline_pid}
+       }) do
     raise "Subprocess supervisor failure, reason: #{inspect(reason)}"
   end
 
-  @impl true
-  def handle_info({:EXIT, _pid, reason}, %{pipeline: {:alive, pipeline_pid}} = state) do
+  defp do_handle_info({:EXIT, _pid, reason}, %{pipeline: {:alive, pipeline_pid}} = state) do
     Membrane.Logger.debug("got exit from a linked process, stopping pipeline")
     Process.exit(pipeline_pid, reason)
     {:noreply, state}
   end
 
-  @impl true
-  def handle_info({:EXIT, _pid, _reason}, state) do
+  defp do_handle_info({:EXIT, _pid, _reason}, state) do
     Membrane.Logger.debug(
       "got exit from a linked process, pipeline already dead, waiting for subprocess supervisor to exit"
     )

@@ -3,6 +3,7 @@ defmodule Membrane.Core.Stalker do
 
   use GenServer
   alias Membrane.{ComponentPath, Pad, Time}
+  require Membrane.Core.Utils, as: Utils
 
   @unsafely_name_processes_for_observer Application.compile_env(
                                           :membrane_core,
@@ -336,7 +337,13 @@ defmodule Membrane.Core.Stalker do
   end
 
   @impl true
-  def init(%{pipeline: pipeline}) do
+  def init(options) do
+    Utils.log_on_error do
+      do_init(options)
+    end
+  end
+
+  defp do_init(%{pipeline: pipeline}) do
     Process.send_after(self(), :scrape_metrics, @scrape_interval)
     ets = create_ets()
     send(pipeline, {:ets, ets})
@@ -354,7 +361,13 @@ defmodule Membrane.Core.Stalker do
   end
 
   @impl true
-  def handle_info(:scrape_metrics, state) do
+  def handle_info(msg, state) do
+    Utils.log_on_error do
+      do_handle_info(msg, state)
+    end
+  end
+
+  defp do_handle_info(:scrape_metrics, state) do
     Process.send_after(self(), :scrape_metrics, @scrape_interval)
     metrics = scrape_metrics(state)
     timestamp = Time.milliseconds(System.monotonic_time(:millisecond) - state.init_time)
@@ -363,15 +376,13 @@ defmodule Membrane.Core.Stalker do
     {:noreply, %{state | metrics: Map.new(metrics), timestamp: timestamp}}
   end
 
-  @impl true
-  def handle_info({:graph, graph_update}, state) do
+  defp do_handle_info({:graph, graph_update}, state) do
     {action, graph_updates, state} = handle_graph_update(graph_update, state)
     send_to_subscribers(graph_updates, :graph, &{:graph, action, &1}, state)
     {:noreply, state}
   end
 
-  @impl true
-  def handle_info({:subscribe, pid, topics, opts}, state) do
+  defp do_handle_info({:subscribe, pid, topics, opts}, state) do
     _ref = unless Map.has_key?(state.subscribers, pid), do: Process.monitor(pid)
     opts = Keyword.validate!(opts, [:confirm])
     with {:ok, id} <- Keyword.fetch(opts, :confirm), do: send(pid, {:subscribed, id})
@@ -414,8 +425,7 @@ defmodule Membrane.Core.Stalker do
     {:noreply, state}
   end
 
-  @impl true
-  def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
+  defp do_handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
     cond do
       Map.has_key?(state.subscribers, pid) ->
         {:noreply, Bunch.Access.delete_in(state, [:subscribers, pid])}
