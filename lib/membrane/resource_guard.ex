@@ -21,6 +21,7 @@ defmodule Membrane.ResourceGuard do
   """
   use GenServer
 
+  require Membrane.Core.Utils, as: Utils
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
 
@@ -87,20 +88,27 @@ defmodule Membrane.ResourceGuard do
 
   @impl true
   def init(owner_pid) do
-    Process.flag(:trap_exit, true)
-    monitor = Process.monitor(owner_pid)
-    {:ok, %{guards: [], monitor: monitor}}
+    Utils.log_on_error do
+      Process.flag(:trap_exit, true)
+      monitor = Process.monitor(owner_pid)
+      {:ok, %{guards: [], monitor: monitor}}
+    end
   end
 
   @impl true
-  def handle_info(Message.new(:register, [function, opts]), state) do
+  def handle_info(msg, state) do
+    Utils.log_on_error do
+      do_handle_info(msg, state)
+    end
+  end
+
+  defp do_handle_info(Message.new(:register, [function, opts]), state) do
     tag = Keyword.fetch!(opts, :tag)
     timeout = Keyword.get(opts, :timeout, 5000)
     {:noreply, %{state | guards: [{function, tag, timeout} | state.guards]}}
   end
 
-  @impl true
-  def handle_info(Message.new(:unregister, tag), state) do
+  defp do_handle_info(Message.new(:unregister, tag), state) do
     guards =
       Enum.reject(state.guards, fn
         {_function, ^tag, _timeout} -> true
@@ -110,14 +118,12 @@ defmodule Membrane.ResourceGuard do
     {:noreply, %{state | guards: guards}}
   end
 
-  @impl true
-  def handle_info(Message.new(:cleanup_all), state) do
+  defp do_handle_info(Message.new(:cleanup_all), state) do
     do_cleanup_all(state.guards)
     {:noreply, %{state | guards: []}}
   end
 
-  @impl true
-  def handle_info(Message.new(:cleanup, tag), state) do
+  defp do_handle_info(Message.new(:cleanup, tag), state) do
     guards =
       Enum.reject(state.guards, fn
         {function, ^tag, timeout} ->
@@ -131,14 +137,12 @@ defmodule Membrane.ResourceGuard do
     {:noreply, %{state | guards: guards}}
   end
 
-  @impl true
-  def handle_info({:DOWN, monitor, :process, _pid, _reason}, %{monitor: monitor} = state) do
+  defp do_handle_info({:DOWN, monitor, :process, _pid, _reason}, %{monitor: monitor} = state) do
     do_cleanup_all(state.guards)
     {:stop, :normal, state}
   end
 
-  @impl true
-  def handle_info(_message, state) do
+  defp do_handle_info(_message, state) do
     {:noreply, state}
   end
 

@@ -6,6 +6,8 @@ defmodule Membrane.Core.Element.AtomicDemand.DistributedAtomic.Worker do
 
   use GenServer
 
+  require Membrane.Core.Utils, as: Utils
+
   @type t :: pid()
 
   @spec start_link(any()) :: {:ok, t}
@@ -18,25 +20,33 @@ defmodule Membrane.Core.Element.AtomicDemand.DistributedAtomic.Worker do
 
   @impl true
   def handle_call({:add_get, atomic_ref, value}, _from, _state) do
-    result = :atomics.add_get(atomic_ref, 1, value)
-    {:reply, result, nil}
+    Utils.log_on_error do
+      result = :atomics.add_get(atomic_ref, 1, value)
+      {:reply, result, nil}
+    end
   end
 
   @impl true
   def handle_call({:sub_get, atomic_ref, value}, _from, _state) do
-    result = :atomics.sub_get(atomic_ref, 1, value)
-    {:reply, result, nil}
+    Utils.log_on_error do
+      result = :atomics.sub_get(atomic_ref, 1, value)
+      {:reply, result, nil}
+    end
   end
 
   @impl true
   def handle_call({:get, atomic_ref}, _from, _state) do
-    result = :atomics.get(atomic_ref, 1)
-    {:reply, result, nil}
+    Utils.log_on_error do
+      result = :atomics.get(atomic_ref, 1)
+      {:reply, result, nil}
+    end
   end
 
   @impl true
   def handle_cast({:put, atomic_ref, value}, _state) do
-    :atomics.put(atomic_ref, 1, value)
-    {:noreply, nil}
+    Utils.log_on_error do
+      :atomics.put(atomic_ref, 1, value)
+      {:noreply, nil}
+    end
   end
 end
