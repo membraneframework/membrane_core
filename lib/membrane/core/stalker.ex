@@ -66,7 +66,7 @@ defmodule Membrane.Core.Stalker do
   @spec new(component_config(), pid()) :: t()
   def new(config, supervisor) do
     {:ok, pid} =
-      Membrane.Core.SubprocessSupervisor.start_link_utility(
+      Membrane.Core.SubprocessSupervisor.start_utility(
         supervisor,
         {__MODULE__, %{pipeline: self()}}
       )
@@ -280,35 +280,23 @@ defmodule Membrane.Core.Stalker do
 
   if @metrics_enabled do
     defmacro report_metric(metric, value, opts \\ []) do
-      quote do
-        ets = Process.get(:__membrane_stalker_ets__)
-
-        if ets do
-          :ets.insert(
-            ets,
-            {{unquote(metric), unquote(opts)[:component_path] || ComponentPath.get(),
-              unquote(opts)[:pad]}, unquote(value)}
-          )
-        end
-
-        :ok
-      end
+      try_insert(
+        quote do
+          {unquote(metric), unquote(opts)[:component_path] || ComponentPath.get(),
+           unquote(opts)[:pad]}
+        end,
+        value
+      )
     end
 
     defmacro register_metric_function(metric, function, opts \\ []) do
-      quote do
-        ets = Process.get(:__membrane_stalker_ets__)
-
-        if ets do
-          :ets.insert(
-            ets,
-            {{unquote(metric), unquote(opts)[:component_path] || ComponentPath.get(),
-              unquote(opts)[:pad]}, unquote({@function_metric, function})}
-          )
-        end
-
-        :ok
-      end
+      try_insert(
+        quote do
+          {unquote(metric), unquote(opts)[:component_path] || ComponentPath.get(),
+           unquote(opts)[:pad]}
+        end,
+        {@function_metric, function}
+      )
     end
   else
     defmacro report_metric(metric, value, opts \\ []) do
@@ -332,6 +320,27 @@ defmodule Membrane.Core.Stalker do
         end
 
         :ok
+      end
+    end
+  end
+
+  defp try_insert(key, value) do
+    quote do
+      ets = Process.get(:__membrane_stalker_ets__)
+
+      if ets do
+        try do
+          :ets.insert(ets, {unquote(key), unquote(value)})
+        rescue
+          error ->
+            require Logger
+            pretty_error = Exception.format(:error, error, __STACKTRACE__)
+
+            Logger.warning("""
+            Failed to insert a metric into the observability ETS.
+            Error: #{pretty_error}
+            """)
+        end
       end
     end
   end

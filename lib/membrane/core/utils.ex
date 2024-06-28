@@ -16,16 +16,15 @@ defmodule Membrane.Core.Utils do
       try do
         unquote(code)
       rescue
-        e ->
+        error ->
           require Membrane.Logger
 
           Membrane.Logger.error("""
           Error occured in #{unquote(error_source)}:
-          #{inspect(e, pretty: true, limit: :infinity)}
-          #{Exception.format_stacktrace(__STACKTRACE__)}
+          #{Exception.format(:error, error, __STACKTRACE__)}
           """)
 
-          reraise e, __STACKTRACE__
+          reraise error, __STACKTRACE__
       end
     end
   end

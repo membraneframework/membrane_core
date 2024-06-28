@@ -34,7 +34,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     sinks =
       children
       |> Enum.filter(
-        &(Membrane.Element.element?(&1.module) and &1.module.membrane_element_type == :sink)
+        &(Membrane.Element.element?(&1.module) and &1.module.membrane_element_type() == :sink)
       )
       |> Enum.map(& &1.name)
 
