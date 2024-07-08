@@ -270,6 +270,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 ### Standalone media libs
 | Package | Description | Links |
 | --- | --- | --- |
+| [ex_webrtc](https://github.com/elixir-webrtc/ex_webrtc) | [Maintainer: [elixir-webrtc](https://github.com/elixir-webrtc)] An Elixir implementation of the W3C WebRTC API | [![Hex.pm](https://img.shields.io/hexpm/v/ex_webrtc.svg)](https://hex.pm/api/packages/ex_webrtc) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/ex_webrtc/) |
 | [live_compositor](https://github.com/membraneframework/live_compositor) | Media server for real-time, low latency, programmable video and audio mixing. |   |
 | [ex_sdp](https://github.com/membraneframework/ex_sdp) | Parser and serializer for Session Description Protocol | [![Hex.pm](https://img.shields.io/hexpm/v/ex_sdp.svg)](https://hex.pm/api/packages/ex_sdp) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/ex_sdp/) |
 | [ex_libnice](https://github.com/membraneframework/ex_libnice) | Libnice-based Interactive Connectivity Establishment (ICE) protocol support for Elixir | [![Hex.pm](https://img.shields.io/hexpm/v/ex_libnice.svg)](https://hex.pm/api/packages/ex_libnice) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/ex_libnice/) |
