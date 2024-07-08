@@ -109,6 +109,7 @@ packages =
     "membrane_vp9_format",
     "membrane_g711_format",
     {:md, "### Standalone media libs"},
+    "elixir-webrtc/ex_webrtc",
     "live_compositor",
     "ex_sdp",
     "ex_libnice",
