@@ -148,7 +148,7 @@ gh_req_mock = false
 
 # fetch repos from the known organizations
 repos =
-  ["membraneframework", "membraneframework-labs", "jellyfish-dev"]
+  ["membraneframework", "membraneframework-labs", "fishjam-dev"]
   |> Enum.flat_map(fn org ->
     Stream.iterate(1, &(&1 + 1))
     |> Stream.map(fn page ->
@@ -185,7 +185,7 @@ lacking_repos =
   |> Map.values()
   |> Enum.filter(fn repo ->
     repo.name not in package_names and
-      repo.owner.login in ["membraneframework", "jellyfish-dev"] and
+      repo.owner.login in ["membraneframework", "fishjam-dev"] and
       (repo.owner.login == "membraneframework" or repo.name =~ ~r/^membrane_.*/) and
       not Enum.any?(packages_blacklist, fn name -> repo.name =~ name end)
   end)
