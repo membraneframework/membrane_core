@@ -32,6 +32,7 @@ packages =
     "membrane_http_adaptive_stream_plugin",
     "membrane_ice_plugin",
     "membrane_udp_plugin",
+    "membrane_tcp_plugin",
     "membrane_rtp_plugin",
     "membrane_rtp_h264_plugin",
     "membrane_rtp_vp8_plugin",
