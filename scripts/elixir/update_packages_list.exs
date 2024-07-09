@@ -32,6 +32,7 @@ packages =
     "membrane_http_adaptive_stream_plugin",
     "membrane_ice_plugin",
     "membrane_udp_plugin",
+    "membrane_tcp_plugin",
     "membrane_rtp_plugin",
     "membrane_rtp_h264_plugin",
     "membrane_rtp_vp8_plugin",
@@ -60,6 +61,7 @@ packages =
     {:md, "#### Video codecs"},
     "membrane_h26x_plugin",
     "membrane_h264_ffmpeg_plugin",
+    "membrane_vpx_plugin",
     "membrane_abr_transcoder_plugin",
     "gBillal/membrane_h265_ffmpeg_plugin",
     "binarynoggin/elixir-turbojpeg",
@@ -76,7 +78,7 @@ packages =
     {:md, "**Raw video**"},
     "membrane_raw_video_parser_plugin",
     "membrane_video_merger_plugin",
-    "membrane_video_compositor_plugin",
+    "membrane_live_compositor_plugin",
     "membrane_camera_capture_plugin",
     "membrane_rpicam_plugin",
     "membrane_framerate_converter_plugin",
@@ -108,7 +110,8 @@ packages =
     "membrane_vp9_format",
     "membrane_g711_format",
     {:md, "### Standalone media libs"},
-    "video_compositor",
+    "elixir-webrtc/ex_webrtc",
+    "live_compositor",
     "ex_sdp",
     "ex_libnice",
     "ex_libsrtp",
@@ -147,7 +150,7 @@ gh_req_mock = false
 
 # fetch repos from the known organizations
 repos =
-  ["membraneframework", "membraneframework-labs", "jellyfish-dev"]
+  ["membraneframework", "membraneframework-labs", "fishjam-dev"]
   |> Enum.flat_map(fn org ->
     Stream.iterate(1, &(&1 + 1))
     |> Stream.map(fn page ->
@@ -159,6 +162,7 @@ repos =
     |> Enum.take_while(&(&1 != []))
     |> Enum.flat_map(& &1)
   end)
+  |> Enum.reverse()
   |> Map.new(&{&1.name, &1})
 
 # find repos from the membraneframework organization that aren't in the list
@@ -184,7 +188,7 @@ lacking_repos =
   |> Map.values()
   |> Enum.filter(fn repo ->
     repo.name not in package_names and
-      repo.owner.login in ["membraneframework", "jellyfish-dev"] and
+      repo.owner.login in ["membraneframework", "fishjam-dev"] and
       (repo.owner.login == "membraneframework" or repo.name =~ ~r/^membrane_.*/) and
       not Enum.any?(packages_blacklist, fn name -> repo.name =~ name end)
   end)
