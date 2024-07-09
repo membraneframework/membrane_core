@@ -161,6 +161,7 @@ repos =
     |> Enum.take_while(&(&1 != []))
     |> Enum.flat_map(& &1)
   end)
+  |> Enum.reverse()
   |> Map.new(&{&1.name, &1})
 
 # find repos from the membraneframework organization that aren't in the list
