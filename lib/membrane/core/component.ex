@@ -38,21 +38,21 @@ defmodule Membrane.Core.Component do
     callback_context_module.from_state(state, args)
   end
 
-  @spec is_pipeline?(state) :: boolean()
-  def is_pipeline?(%Membrane.Core.Pipeline.State{}), do: true
-  def is_pipeline?(_state), do: false
+  @spec pipeline?(state) :: boolean()
+  def pipeline?(%Membrane.Core.Pipeline.State{}), do: true
+  def pipeline?(_state), do: false
 
-  @spec is_element?(state) :: boolean()
-  def is_element?(%Membrane.Core.Element.State{}), do: true
-  def is_element?(_state), do: false
+  @spec element?(state) :: boolean()
+  def element?(%Membrane.Core.Element.State{}), do: true
+  def element?(_state), do: false
 
-  @spec is_bin?(state) :: boolean()
-  def is_bin?(%Membrane.Core.Bin.State{}), do: true
-  def is_bin?(_state), do: false
+  @spec bin?(state) :: boolean()
+  def bin?(%Membrane.Core.Bin.State{}), do: true
+  def bin?(_state), do: false
 
-  @spec is_child?(state) :: boolean()
-  def is_child?(state), do: is_element?(state) or is_bin?(state)
+  @spec child?(state) :: boolean()
+  def child?(state), do: element?(state) or bin?(state)
 
-  @spec is_parent?(state) :: boolean()
-  def is_parent?(state), do: is_pipeline?(state) or is_bin?(state)
+  @spec parent?(state) :: boolean()
+  def parent?(state), do: pipeline?(state) or bin?(state)
 end

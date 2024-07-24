@@ -282,19 +282,19 @@ defmodule Membrane.Testing.Pipeline do
     child_pid
   end
 
-  defp do_get_child_pid(component_pid, child_name_path, is_pipeline? \\ true)
+  defp do_get_child_pid(component_pid, child_name_path, pipeline? \\ true)
 
-  defp do_get_child_pid(component_pid, [], _is_pipeline?) do
+  defp do_get_child_pid(component_pid, [], _pipeline?) do
     {:ok, component_pid}
   end
 
-  defp do_get_child_pid(component_pid, [child_name | child_name_path_tail], is_pipeline?) do
+  defp do_get_child_pid(component_pid, [child_name | child_name_path_tail], pipeline?) do
     case Message.call(component_pid, :get_child_pid, child_name) do
       {:ok, child_pid} ->
         do_get_child_pid(child_pid, child_name_path_tail, false)
 
       {:error, {:call_failure, {:noproc, _call_info}}} ->
-        if is_pipeline?,
+        if pipeline?,
           do: {:error, :pipeline_not_alive},
           else: {:error, :component_not_alive}
 

@@ -19,11 +19,11 @@ defmodule Membrane.Core.LifecycleController do
         Membrane.Logger.debug("Component deferred initialization")
         %{state | setup_incomplete?: true}
 
-      Component.is_pipeline?(state) ->
+      Component.pipeline?(state) ->
         # complete_setup/1 will be called in Membrane.Core.Pipeline.ActionHandler.handle_end_of_actions/1
         %{state | awaiting_setup_completition?: true}
 
-      Component.is_child?(state) ->
+      Component.child?(state) ->
         complete_setup(state)
     end
   end
@@ -34,10 +34,10 @@ defmodule Membrane.Core.LifecycleController do
     Membrane.Logger.debug("Component initialized")
 
     cond do
-      Component.is_pipeline?(state) ->
+      Component.pipeline?(state) ->
         Parent.LifecycleController.handle_playing(state)
 
-      Component.is_child?(state) ->
+      Component.child?(state) ->
         Message.send(state.parent_pid, :initialized, state.name)
         state
     end
