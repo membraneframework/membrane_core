@@ -86,7 +86,7 @@ defmodule Membrane.Core.Element do
     # rpc if necessary
     if node do
       result = :rpc.call(node, GenServer, :start, [__MODULE__, options])
-      with {:start_link, {:ok, pid}} <- {method, result}, do: Process.link(pid)
+      _ignored = with {:start_link, {:ok, pid}} <- {method, result}, do: Process.link(pid)
       result
     else
       apply(GenServer, method, [__MODULE__, options])

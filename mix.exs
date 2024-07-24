@@ -149,7 +149,7 @@ defmodule Membrane.Mixfile do
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
-      {:credo, "~> 1.6", only: :dev, runtime: false},
+      {:credo, "~> 1.7", only: :dev, runtime: false},
       # Testing
       {:mox, "~> 1.0", only: :test},
       {:junit_formatter, "~> 3.1", only: :test},
