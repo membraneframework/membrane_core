@@ -208,7 +208,7 @@ defmodule Membrane.Pipeline do
             ) :: {[Action.common_actions()], state()}
 
   @doc """
-  This callback is deprecated since v1.1.0-rc0.
+  This callback is deprecated since v1.1.0.
 
   Callback invoked when children of `Membrane.ChildrenSpec` are started.
 

@@ -217,7 +217,7 @@ defmodule Membrane.Testing.Pipeline do
   end
 
   @doc """
-  Deprecated since `v1.1.0-rc0`, use `notify_child/3` instead.
+  Deprecated since `v1.1.0`, use `notify_child/3` instead.
 
   Sends message to a child by Element name.
 
