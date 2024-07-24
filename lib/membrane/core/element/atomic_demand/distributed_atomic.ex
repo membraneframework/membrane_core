@@ -51,7 +51,7 @@ defmodule Membrane.Core.Element.AtomicDemand.DistributedAtomic do
   end
 
   def sub_get(%__MODULE__{} = distributed_atomic, value) do
-    GenServer.cast(distributed_atomic.worker, {:sub_get, distributed_atomic.atomic_ref, value})
+    GenServer.call(distributed_atomic.worker, {:sub_get, distributed_atomic.atomic_ref, value})
   end
 
   @spec set(t, integer()) :: :ok
