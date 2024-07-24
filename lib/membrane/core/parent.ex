@@ -11,7 +11,7 @@ defmodule Membrane.Core.Parent do
          Module.defines?(env.module, {:handle_spec_started, 3}, :def) do
       warn_message = """
       Callback handle_spec_started/3 has been deprecated since \
-      :membrane_core v1.1.0-rc0, but it is implemented in #{inspect(env.module)}
+      :membrane_core v1.1.0, but it is implemented in #{inspect(env.module)}
       """
 
       IO.warn(warn_message, [])

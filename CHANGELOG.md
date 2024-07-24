@@ -1,7 +1,8 @@
 # Changelog
 
 ## 1.1.1
-* Fix 'table identifier does not refer to an existing ETS table' error when inserting metrics into the observability ETS [#835](https://github.com/membraneframework/membrane_core/pull/835)
+ * Fix 'table identifier does not refer to an existing ETS table' error when inserting metrics into the observability ETS. [#835](https://github.com/membraneframework/membrane_core/pull/835)
+ * Fix bug occuring in distributed atomic implementation. [#837](https://github.com/membraneframework/membrane_core/pull/837)
 
 ## 1.1.0
  * Add new callbacks `handle_child_setup_completed/3` and `handle_child_playing/3` in Bins and Pipelines. [#801](https://github.com/membraneframework/membrane_core/pull/801)
