@@ -425,11 +425,11 @@ defmodule Membrane.Core.Stalker do
 
     state = put_in(state, [:subscribers, pid], topics)
 
-    with %{graph: filter} <- topics do
-      graph = state.graph |> Enum.reverse() |> Enum.filter(filter)
-      send(pid, {:graph, :add, graph})
-      :ok
-    end
+    _ignored =
+      with %{graph: filter} <- topics do
+        graph = state.graph |> Enum.reverse() |> Enum.filter(filter)
+        send(pid, {:graph, :add, graph})
+      end
 
     {:noreply, state}
   end

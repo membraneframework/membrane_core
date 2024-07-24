@@ -71,7 +71,7 @@ defmodule Membrane.Core.Bin do
 
     if node do
       result = :rpc.call(node, GenServer, :start, [__MODULE__, options])
-      with {:start_link, {:ok, pid}} <- {method, result}, do: Process.link(pid)
+      _ignored = with {:start_link, {:ok, pid}} <- {method, result}, do: Process.link(pid)
       result
     else
       apply(GenServer, method, [__MODULE__, options])
@@ -79,6 +79,21 @@ defmodule Membrane.Core.Bin do
   end
 
   @impl GenServer
+  @spec init(%{
+          :log_metadata => [{any(), any()}],
+          :module => atom(),
+          :name => atom() | tuple(),
+          :parent => pid(),
+          :parent_clock => pid(),
+          :parent_path => [binary()],
+          :parent_supervisor => pid() | port(),
+          :stalker => Membrane.Core.Stalker.t(),
+          :subprocess_supervisor => pid(),
+          :user_options => any(),
+          optional(any()) => any()
+        }) ::
+          {:ok, %{:internal_state => any(), :module => atom(), optional(atom()) => any()},
+           {:continue, :setup}}
   def init(options) do
     Utils.log_on_error do
       do_init(options)
