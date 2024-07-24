@@ -39,15 +39,15 @@ commands:
   save_plt_cache:
     steps:
       - save_cache:
-          key: v1-dialyzer-cache-{{ checksum ".runtime_version" }}-{{ checksum "mix.lock" }}
+          key: v2-dialyzer-cache-{{ checksum ".runtime_version" }}-{{ checksum "mix.lock" }}
           paths: "priv/plts"
   restore_plt_cache:
     steps:
       - restore_cache:
           keys:
-            - v1-dialyzer-cache-{{ checksum ".runtime_version" }}-{{ checksum "mix.lock" }}
-            - v1-dialyzer-cache-{{ checksum ".runtime_version" }}-
-            - v1-dialyzer-cache-
+            - v2-dialyzer-cache-{{ checksum ".runtime_version" }}-{{ checksum "mix.lock" }}
+            - v2-dialyzer-cache-{{ checksum ".runtime_version" }}-
+            - v2-dialyzer-cache-
   run_tests:
     parameters:
       glob:
