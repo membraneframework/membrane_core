@@ -83,6 +83,9 @@ defmodule Membrane.Core.Element.EventController do
         direction: PadModel.get_data!(state, pad_ref, :direction)
       })
 
+    require Membrane.Logger
+    Membrane.Logger.warning("StartOfStream123 #{inspect(pad_ref)}")
+
     state =
       CallbackHandler.exec_and_handle_callback(
         :handle_start_of_stream,
