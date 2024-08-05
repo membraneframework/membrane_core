@@ -336,12 +336,14 @@ defmodule Membrane.Core.Stalker do
             require Logger
             pretty_error = Exception.format(:error, error, __STACKTRACE__)
 
-            Logger.warning("""
+            Logger.debug("""
             Failed to insert a metric into the observability ETS.
             Error: #{pretty_error}
             """)
         end
       end
+
+      :ok
     end
   end
 
