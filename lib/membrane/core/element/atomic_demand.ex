@@ -127,6 +127,11 @@ defmodule Membrane.Core.Element.AtomicDemand do
   def increase(%__MODULE__{} = atomic_demand, value) do
     new_atomic_demand_value = DistributedAtomic.add_get(atomic_demand.counter, value)
     old_atomic_demand_value = new_atomic_demand_value - value
+    require Membrane.Logger, as: Logger
+
+    Logger.warning(
+      "Atomic demand increased123. OLD: #{inspect(old_atomic_demand_value)}, NEW: #{inspect(new_atomic_demand_value)}"
+    )
 
     if old_atomic_demand_value <= 0 do
       Message.send(
