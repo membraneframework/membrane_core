@@ -229,11 +229,12 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def handle_action(
         {:demand, {pad_ref, size}},
-        _cb,
+        cb,
         _params,
         %State{type: type} = state
       )
       when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter, :endpoint] do
+    :ok = maybe_warn_on_demand_action(pad_ref, size, cb, state)
     delay_supplying_demand(pad_ref, size, state)
   end
 
@@ -481,4 +482,17 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp handle_outgoing_event(_pad_ref, _event, state), do: state
+
+  defp maybe_warn_on_demand_action(pad_ref, demand_size, callback, state) do
+    if PadModel.get_data!(state, pad_ref, :end_of_stream?) do
+      Membrane.Logger.warning("""
+      Action :demand with value #{inspect(demand_size)} for pad #{inspect(pad_ref)} was returned \
+      from callback #{inspect(callback)}, but stream on this pad has already ended, callback \
+      c:handle_end_of_stream/3 for this pad has been called and no more buffers will arrive on \
+      this pad.
+      """)
+    end
+
+    :ok
+  end
 end
