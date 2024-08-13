@@ -134,6 +134,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 
 
 ### General
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_sdk](https://github.com/membraneframework/membrane_sdk) | Full power of Membrane in a single package | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_sdk.svg)](https://hex.pm/api/packages/membrane_sdk) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_sdk/) |
@@ -147,6 +148,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 ### Plugins
 
 #### General purpose
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_file_plugin](https://github.com/membraneframework/membrane_file_plugin) | Membrane plugin for reading and writing to files | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_file_plugin.svg)](https://hex.pm/api/packages/membrane_file_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_file_plugin/) |
@@ -162,11 +164,12 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_template_plugin](https://github.com/membraneframework/membrane_template_plugin) | Template for Membrane Elements |   |
 
 #### Streaming protocols
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_webrtc_plugin](https://github.com/membraneframework/membrane_webrtc_plugin) | Plugin for streaming via WebRTC | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_webrtc_plugin.svg)](https://hex.pm/api/packages/membrane_webrtc_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_webrtc_plugin/) |
 | [membrane_rtmp_plugin](https://github.com/membraneframework/membrane_rtmp_plugin) | RTMP server & client | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_rtmp_plugin.svg)](https://hex.pm/api/packages/membrane_rtmp_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_rtmp_plugin/) |
-| [membrane_http_adaptive_stream_plugin](https://github.com/membraneframework/membrane_http_adaptive_stream_plugin) | Plugin generating manifests for HLS (DASH support planned) | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_http_adaptive_stream_plugin.svg)](https://hex.pm/api/packages/membrane_http_adaptive_stream_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_http_adaptive_stream_plugin/) |
+| [membrane_http_adaptive_stream_plugin](https://github.com/membraneframework/membrane_http_adaptive_stream_plugin) | Plugin generating manifests for HLS | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_http_adaptive_stream_plugin.svg)](https://hex.pm/api/packages/membrane_http_adaptive_stream_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_http_adaptive_stream_plugin/) |
 | [membrane_ice_plugin](https://github.com/fishjam-dev/membrane_ice_plugin) | [Maintainer: [fishjam-dev](https://github.com/fishjam-dev)] Membrane plugin for ICE protocol | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_ice_plugin.svg)](https://hex.pm/api/packages/membrane_ice_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_ice_plugin/) |
 | [membrane_udp_plugin](https://github.com/membraneframework/membrane_udp_plugin) | Membrane plugin for sending and receiving UDP streams | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_udp_plugin.svg)](https://hex.pm/api/packages/membrane_udp_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_udp_plugin/) |
 | [membrane_tcp_plugin](https://github.com/membraneframework/membrane_tcp_plugin) | Membrane plugin for sending and receiving TCP streams | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_tcp_plugin.svg)](https://hex.pm/api/packages/membrane_tcp_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_tcp_plugin/) |
@@ -182,6 +185,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_hls_plugin](https://github.com/kim-company/membrane_hls_plugin) | [Maintainer: [kim-company](https://github.com/kim-company)] Plugin providing a `Membrane.HLS.Source` element for HTTP Live Streaming (HLS). |   |
 
 #### Containers
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_mp4_plugin](https://github.com/membraneframework/membrane_mp4_plugin) | Utilities for MP4 container parsing and serialization and elements for muxing the stream to CMAF | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_mp4_plugin.svg)](https://hex.pm/api/packages/membrane_mp4_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_mp4_plugin/) |
@@ -191,6 +195,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_ogg_plugin](https://github.com/membraneframework/membrane_ogg_plugin) | Plugin for depayloading an Ogg file into an Opus stream | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_ogg_plugin.svg)](https://hex.pm/api/packages/membrane_ogg_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_ogg_plugin/) |
 
 #### Audio codecs
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_aac_plugin](https://github.com/membraneframework/membrane_aac_plugin) | AAC parser and complementary elements for AAC codec | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_aac_plugin.svg)](https://hex.pm/api/packages/membrane_aac_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_aac_plugin/) |
@@ -203,6 +208,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_g711_plugin](https://github.com/fishjam-dev/membrane_g711_plugin) | [Maintainer: [fishjam-dev](https://github.com/fishjam-dev)] Membrane G.711 decoder, encoder and parser | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_g711_plugin.svg)](https://hex.pm/api/packages/membrane_g711_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_g711_plugin/) |
 
 #### Video codecs
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_h26x_plugin](https://github.com/membraneframework/membrane_h26x_plugin) | Membrane h264 and h265 parsers | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_h26x_plugin.svg)](https://hex.pm/api/packages/membrane_h26x_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_h26x_plugin/) |
@@ -214,6 +220,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_subtitle_mixer_plugin](https://github.com/kim-company/membrane_subtitle_mixer_plugin) | [Maintainer: [kim-company](https://github.com/kim-company)] Membrane.Filter that uses CEA708 to merge subtitles directly in H264 packets. |   |
 
 #### Raw audio & video
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_generator_plugin](https://github.com/membraneframework/membrane_generator_plugin) | Video and audio samples generator | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_generator_plugin.svg)](https://hex.pm/api/packages/membrane_generator_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_generator_plugin/) |
@@ -246,6 +253,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_video_mixer_plugin](https://github.com/kim-company/membrane_video_mixer_plugin) | [Maintainer: [kim-company](https://github.com/kim-company)] Membrane.Filter that mixes a variable number of input videos into one output using ffmpeg filters | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_video_mixer_plugin.svg)](https://hex.pm/api/packages/membrane_video_mixer_plugin)  |
 
 #### External APIs
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_aws_plugin](https://github.com/fishjam-dev/membrane_aws_plugin) | [Maintainer: [fishjam-dev](https://github.com/fishjam-dev)]  |   |
@@ -256,6 +264,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_transcription](https://github.com/lawik/membrane_transcription) | [Maintainer: [lawik](https://github.com/lawik)] Prototype transcription for Membrane |   |
 
 ### Formats
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_rtp_format](https://github.com/membraneframework/membrane_rtp_format) | Real-time Transport Protocol format for Membrane Framework | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_rtp_format.svg)](https://hex.pm/api/packages/membrane_rtp_format) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_rtp_format/) |
@@ -274,10 +283,10 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_g711_format](https://github.com/fishjam-dev/membrane_g711_format) | [Maintainer: [fishjam-dev](https://github.com/fishjam-dev)] Membrane Multimedia Framework: G711 audio format definition | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_g711_format.svg)](https://hex.pm/api/packages/membrane_g711_format) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_g711_format/) |
 
 ### Standalone media libs
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [ex_webrtc](https://github.com/elixir-webrtc/ex_webrtc) | [Maintainer: [elixir-webrtc](https://github.com/elixir-webrtc)] An Elixir implementation of the W3C WebRTC API | [![Hex.pm](https://img.shields.io/hexpm/v/ex_webrtc.svg)](https://hex.pm/api/packages/ex_webrtc) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/ex_webrtc/) |
-| [live_compositor](https://github.com/membraneframework/live_compositor) | Media server for real-time, low latency, programmable video and audio mixing. |   |
 | [ex_sdp](https://github.com/membraneframework/ex_sdp) | Parser and serializer for Session Description Protocol | [![Hex.pm](https://img.shields.io/hexpm/v/ex_sdp.svg)](https://hex.pm/api/packages/ex_sdp) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/ex_sdp/) |
 | [ex_libnice](https://github.com/membraneframework/ex_libnice) | Libnice-based Interactive Connectivity Establishment (ICE) protocol support for Elixir | [![Hex.pm](https://img.shields.io/hexpm/v/ex_libnice.svg)](https://hex.pm/api/packages/ex_libnice) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/ex_libnice/) |
 | [ex_libsrtp](https://github.com/membraneframework/ex_libsrtp) | Elixir bindings for libsrtp | [![Hex.pm](https://img.shields.io/hexpm/v/ex_libsrtp.svg)](https://hex.pm/api/packages/ex_libsrtp) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/ex_libsrtp/) |
@@ -286,6 +295,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_ffmpeg_generator](https://github.com/membraneframework-labs/membrane_ffmpeg_generator) | [Labs] FFmpeg video and audio generator for tests, benchmarks and demos. | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_ffmpeg_generator.svg)](https://hex.pm/api/packages/membrane_ffmpeg_generator) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_ffmpeg_generator/) |
 
 ### Utils
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [unifex](https://github.com/membraneframework/unifex) | Tool for generating interfaces between native C code and Elixir | [![Hex.pm](https://img.shields.io/hexpm/v/unifex.svg)](https://hex.pm/api/packages/unifex) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/unifex/) |
