@@ -216,6 +216,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_generator_plugin](https://github.com/membraneframework/membrane_generator_plugin) | Video and audio samples generator | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_generator_plugin.svg)](https://hex.pm/api/packages/membrane_generator_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_generator_plugin/) |
 
 **Raw audio**
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_raw_audio_parser_plugin](https://github.com/membraneframework/membrane_raw_audio_parser_plugin) | Membrane element for parsing raw audio | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_raw_audio_parser_plugin.svg)](https://hex.pm/api/packages/membrane_raw_audio_parser_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_raw_audio_parser_plugin/) |
@@ -226,6 +227,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_audiometer_plugin](https://github.com/membraneframework/membrane_audiometer_plugin) | Elements for measuring the level of the audio stream | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_audiometer_plugin.svg)](https://hex.pm/api/packages/membrane_audiometer_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_audiometer_plugin/) |
 
 **Raw video**
+
 | Package | Description | Links |
 | --- | --- | --- |
 | [membrane_raw_video_parser_plugin](https://github.com/membraneframework/membrane_raw_video_parser_plugin) | Membrane plugin for parsing raw video streams | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_raw_video_parser_plugin.svg)](https://hex.pm/api/packages/membrane_raw_video_parser_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_raw_video_parser_plugin/) |
