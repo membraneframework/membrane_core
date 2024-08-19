@@ -4,6 +4,11 @@
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_core/)
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_core.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_core)
 
+### []() Let's meet on 11-13th September at [RTC.ON](https://rtcon.live) - the conference about Membrane & multimedia!</span>
+### []() Learn more at [rtcon.live](https://rtcon.live)
+
+---
+
 Membrane is a versatile multimedia streaming & processing framework. You can use it to build a media server of your need, that can:
 - stream via WebRTC, RTSP, RTMP, HLS, HTTP and other protocols,
 - transcode, mix and apply custom processing of video & audio,
