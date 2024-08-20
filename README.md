@@ -19,8 +19,6 @@ Membrane is a versatile multimedia streaming & processing framework. You can use
 
 The abbreviations above don't ring any bells? Visit [membrane.stream/learn](https://membrane.stream/learn) and let Membrane introduce you to the multimedia world!
 
-Want a generic media server, instead of building a custom one? Try [Jellyfish](https://github.com/jellyfish-dev/jellyfish) - it's built on top of Membrane and provides many of its features via simple, WebSocket API. We'll soon [provide it as a SAAS](https://membrane.stream/cloud) too.
-
 If you have questions or need consulting, we're for you at our [Discord](https://discord.gg/nwnfVSY), [forum](https://elixirforum.com/c/elixir-framework-forums/membrane-forum/), [GitHub discussions](https://github.com/orgs/membraneframework/discussions), [X (Twitter)](https://twitter.com/ElixirMembrane) and via [e-mail](mailto:info@membraneframework.org).
 
 You can also [follow Membrane on X (Twitter)](https://twitter.com/ElixirMembrane) or [join our Discord](https://discord.gg/nwnfVSY) to be up to date and get involved in the community.
