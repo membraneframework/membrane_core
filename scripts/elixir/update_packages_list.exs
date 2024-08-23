@@ -111,7 +111,6 @@ packages =
     "membrane_g711_format",
     {:md, "### Standalone media libs"},
     "elixir-webrtc/ex_webrtc",
-    "live_compositor",
     "ex_sdp",
     "ex_libnice",
     "ex_libsrtp",
@@ -152,12 +151,18 @@ gh_req_mock = false
 repos =
   ["membraneframework", "membraneframework-labs", "fishjam-dev"]
   |> Enum.flat_map(fn org ->
-    Stream.iterate(1, &(&1 + 1))
+    Stream.from_index()
     |> Stream.map(fn page ->
       Process.sleep(gh_req_timeout)
       url = "https://api.github.com/orgs/#{org}/repos?per_page=100&page=#{page}"
       Logger.debug("Fetching #{url}")
-      Req.get!(url, decode_json: [keys: :atoms]).body
+      resp = Req.get!(url, decode_json: [keys: :atoms]).body
+
+      unless is_list(resp) do
+        raise "Received invalid response: #{inspect(resp)}"
+      end
+
+      resp
     end)
     |> Enum.take_while(&(&1 != []))
     |> Enum.flat_map(& &1)
@@ -240,6 +245,7 @@ packages =
 # generate packages list in markdown
 
 header = """
+
 | Package | Description | Links |
 | --- | --- | --- |
 """
