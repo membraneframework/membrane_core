@@ -4,11 +4,6 @@
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_core/)
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_core.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_core)
 
-### []() Let's meet on 11-13th September at [RTC.ON](https://rtcon.live) - the conference about Membrane & multimedia!</span>
-### []() Learn more at [rtcon.live](https://rtcon.live)
-
----
-
 Membrane is a versatile multimedia streaming & processing framework. You can use it to build a media server of your need, that can:
 - stream via WebRTC, RTSP, RTMP, HLS, HTTP and other protocols,
 - transcode, mix and apply custom processing of video & audio,
@@ -312,7 +307,11 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 
 <!-- packages-list-end -->
 
-## Copyright and License
+## Authors
+
+Membrane Framework is created by Software Mansion.
+
+Since 2012 [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane) is a software agency with experience in building web and mobile apps as well as complex multimedia solutions. We are Core React Native Contributors and experts in live streaming and broadcasting technologies. We can help you build your next dream product – [Hire us](https://swmansion.com/contact/projects).
 
 Copyright 2018, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane)
 
