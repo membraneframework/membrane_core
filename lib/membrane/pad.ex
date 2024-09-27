@@ -148,7 +148,8 @@ defmodule Membrane.Pad do
           :accepted_formats_str => [String.t()],
           optional(:demand_unit) => Buffer.Metric.unit() | nil,
           :direction => direction(),
-          :options => nil | Keyword.t()
+          :options => nil | Keyword.t(),
+          optional(:max_cardinality) => max_cardinality()
         }
 
   @doc """
