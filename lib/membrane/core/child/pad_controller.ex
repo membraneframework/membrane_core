@@ -2,7 +2,7 @@ defmodule Membrane.Core.Child.PadController do
   @moduledoc false
 
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
-  alias Membrane.{LinkError, Pad}
+  alias Membrane.{LinkError, Pad, PadError}
 
   require Membrane.Core.Child.PadModel
 
@@ -32,6 +32,26 @@ defmodule Membrane.Core.Child.PadController do
     if from_flow_control in [:auto, :manual] and to_flow_control == :push do
       raise LinkError,
             "Cannot connect #{inspect(from_flow_control)} output #{inspect(from)} to push input #{inspect(to)}"
+    end
+
+    :ok
+  end
+
+  @spec validate_pad_cardinality!(Pad.name(), state()) :: :ok
+  def validate_pad_cardinality!(pad_name, state) do
+    with %{max_cardinality: max_cardinality} when is_integer(max_cardinality) <-
+           state.pads_info[pad_name] do
+      current_number =
+        state.pads_data
+        |> Enum.count(fn {_ref, data} -> data.name == pad_name end)
+
+      if max_cardinality <= current_number do
+        raise PadError, """
+        Pad #{inspect(pad_name)} can occur only #{max_cardinality} times within a single component, while it \
+        attempted to occur #{current_number + 1} times. Set `:max_cardinality` option to a different value,
+        to change this boundary.
+        """
+      end
     end
 
     :ok

@@ -608,4 +608,48 @@ defmodule Membrane.Integration.LinkingTest do
     state = :sys.get_state(parent_pid)
     state.children[ref].pid
   end
+
+  describe "link fails when max_cardinality is exceeded in" do
+    defmodule MaxCardinalityElement do
+      use Membrane.Sink
+      def_input_pad :input, accepted_format: _any, availability: :on_request, max_cardinality: 1
+
+      @impl true
+      def handle_buffer(_pad, _buffer, _ctx, state), do: {[], state}
+    end
+
+    defmodule MaxCardinalityBin do
+      use Membrane.Bin
+      def_input_pad :input, accepted_format: _any, availability: :on_request, max_cardinality: 1
+
+      @impl true
+      def handle_pad_added(pad_ref, _ctx, state) do
+        spec = bin_input(pad_ref) |> child({:element, pad_ref}, Membrane.Testing.Sink)
+        {[spec: spec], state}
+      end
+    end
+
+    [{MaxCardinalityElement, "element"}, {MaxCardinalityBin, "bin"}]
+    |> Enum.map(fn {module, component_type} ->
+      test component_type do
+        pipeline =
+          Testing.Pipeline.start_supervised!(
+            spec: child(:source, Testing.Source) |> child(:sink, unquote(module))
+          )
+
+        ref = Process.monitor(pipeline)
+        refute_receive {:DOWN, ^ref, _process, _pid, _reason}, 500
+
+        Testing.Pipeline.execute_actions(pipeline,
+          spec: child(:second_source, Testing.Source) |> get_child(:sink)
+        )
+
+        assert_receive {:DOWN, ^ref, _process, _pid,
+                        {:membrane_child_crash, :sink,
+                         {%Membrane.PadError{message: message}, _stacktrace}}}
+
+        assert message =~ ~r/max_cardinality/
+      end
+    end)
+  end
 end
