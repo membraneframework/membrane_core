@@ -8,6 +8,7 @@ defmodule Membrane.Bin.PadData do
     - `:name` - see `t:Membrane.Pad.name/0`. Do not mistake with `:ref`
     - `:options` - options passed in `Membrane.ChildrenSpec` when linking pad
     - `:ref` - see `t:Membrane.Pad.ref/0`
+    - `max_cardinality` - specyfies maximal possible number of instances of a dynamic pads that can occur within single element. `nil` for pads with `availability: :always`.
 
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
@@ -23,6 +24,7 @@ defmodule Membrane.Bin.PadData do
           availability: Membrane.Pad.availability(),
           direction: Membrane.Pad.direction(),
           name: Membrane.Pad.name(),
+          max_cardinality: Membrane.Pad.max_cardinality() | nil,
           spec_ref: private_field,
           link_id: private_field,
           endpoint: private_field,
@@ -47,5 +49,5 @@ defmodule Membrane.Bin.PadData do
     :linked_in_spec?
   ]
 
-  defstruct @enforce_keys
+  defstruct @enforce_keys ++ [:max_cardinality]
 end

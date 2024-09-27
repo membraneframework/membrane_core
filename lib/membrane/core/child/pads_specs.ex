@@ -215,6 +215,16 @@ defmodule Membrane.Core.Child.PadsSpecs do
                     true ->
                       nil
                   end,
+                max_cardinality: fn config ->
+                  if config[:availability] == :on_request do
+                    [
+                      default: :infinity,
+                      validate: &(&1 == :infinity or (is_integer(&1) and &1 >= 0))
+                    ]
+                  else
+                    nil
+                  end
+                end,
                 options: [default: nil]
               ) do
       config
