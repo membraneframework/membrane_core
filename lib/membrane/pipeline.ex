@@ -513,6 +513,10 @@ defmodule Membrane.Pipeline do
       end
 
       @doc false
+      @spec membrane_component_type() :: :pipeline | :bin | :element
+      def membrane_component_type, do: :pipeline
+
+      @doc false
       @spec membrane_pipeline?() :: true
       def membrane_pipeline?, do: true
 
