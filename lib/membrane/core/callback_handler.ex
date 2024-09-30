@@ -138,8 +138,7 @@ defmodule Membrane.Core.CallbackHandler do
       try do
         telemetry_metadata = %{
           callback_args: args,
-          parent_pid: state[:parent_pid],
-          type: state.module.membrane_component_type()
+          component_state: state
         }
 
         :telemetry.execute([:membrane, callback, :start], %{}, telemetry_metadata)
