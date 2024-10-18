@@ -15,7 +15,8 @@ defmodule Membrane.Integration.CallbacksTest do
     alias Membrane.Integration.CallbacksTest.PadlessElement
 
     @impl true
-    def handle_child_terminated(child_name, _ctx, state) do
+    def handle_child_terminated(child_name, ctx, state) do
+      assert not is_map_key(ctx.children, child_name)
       {[spec: child(child_name, PadlessElement)], state}
     end
   end
