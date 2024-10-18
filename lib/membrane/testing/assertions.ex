@@ -557,7 +557,6 @@ defmodule Membrane.Testing.Assertions do
 
       quote do
         child_name_value = unquote(child)
-        # callback = unquote(callback)
 
         unquote(
           assert_receive_from_pipeline(
