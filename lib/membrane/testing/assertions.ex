@@ -541,4 +541,27 @@ defmodule Membrane.Testing.Assertions do
       timeout
     )
   end
+
+  [:child_setup_completed, :child_playing, :child_terminated]
+  |> Enum.map(fn action ->
+    callback = :"handle_#{action}"
+    assertion = :"assert_#{action}"
+    refution = :"refute_#{action}"
+
+    @doc """
+    Asserts `Membrane.Testing.Pipeline` executed callback `#{callback}/3` for a specific
+    child.
+    """
+    defmacro unquote(assertion)(pipeline, child, timeout \\ @default_timeout) do
+      assert_receive_from_pipeline(pipeline, {unquote(callback), child}, timeout)
+    end
+
+    @doc """
+    Refutes that `Membrane.Testing.Pipeline` won't execute callback `#{callback}/3` for
+    a specific child within the `timeout` period specified in milliseconds.
+    """
+    defmacro unquote(refution)(pipeline, child, timeout \\ @default_timeout) do
+      refute_receive_from_pipeline(pipeline, {unquote(callback), child}, timeout)
+    end
+  end)
 end

@@ -1,7 +1,8 @@
 # Changelog
 
 ## 1.1.2
- * Remove 'failed to insert a metric' stalker warning [#849](https://github.com/membraneframework/membrane_core/pull/849)
+ * Add new callback `handle_chiild_terminated/3`. [#894](https://github.com/membraneframework/membrane_core/pull/894)
+ * Remove 'failed to insert a metric' stalker warning. [#849](https://github.com/membraneframework/membrane_core/pull/849)
 
 ## 1.1.1
  * Fix 'table identifier does not refer to an existing ETS table' error when inserting metrics into the observability ETS. [#835](https://github.com/membraneframework/membrane_core/pull/835)
