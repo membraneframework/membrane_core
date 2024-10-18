@@ -205,7 +205,7 @@ defmodule Membrane.Bin do
   Callback invoked after a child terminates.
 
   Terminated child won't be present in the context of this callback. It is allowed to spawn a new
-  child with the same.
+  child with the same name.
 
   By default, it does nothing.
   """

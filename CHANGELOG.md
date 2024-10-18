@@ -1,7 +1,7 @@
 # Changelog
 
 ## 1.1.2
- * Add new callback `handle_chiild_terminated/3` along with new assertions. [#894](https://github.com/membraneframework/membrane_core/pull/894)
+ * Add new callback `handle_child_terminated/3` along with new assertions. [#894](https://github.com/membraneframework/membrane_core/pull/894)
  * Remove 'failed to insert a metric' stalker warning. [#849](https://github.com/membraneframework/membrane_core/pull/849)
 
 ## 1.1.1
