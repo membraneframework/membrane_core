@@ -143,7 +143,7 @@ defmodule Membrane.Testing.Assertions do
   end
 
   @doc """
-  Refutes that a crash group within pipeline won't be down within the `timeout` period specified in
+  Asserts that a crash group within pipeline won't be down within the `timeout` period specified in
   milliseconds.
 
   Usage example:
@@ -541,4 +541,57 @@ defmodule Membrane.Testing.Assertions do
       timeout
     )
   end
+
+  [:child_setup_completed, :child_playing, :child_terminated]
+  |> Enum.map(fn action ->
+    callback = :"handle_#{action}"
+    assertion = :"assert_#{action}"
+    refution = :"refute_#{action}"
+
+    @doc """
+    Asserts that `Membrane.Testing.Pipeline` executed or will execute callback `#{callback}/3`
+    for a specific child within the `timeout` period specified in milliseconds.
+    """
+    defmacro unquote(assertion)(pipeline, child, timeout \\ @default_timeout) do
+      callback = unquote(callback)
+
+      quote do
+        child_name_value = unquote(child)
+
+        unquote(
+          assert_receive_from_pipeline(
+            pipeline,
+            {callback,
+             quote do
+               ^child_name_value
+             end},
+            timeout
+          )
+        )
+      end
+    end
+
+    @doc """
+    Asserts that `Membrane.Testing.Pipeline` won't execute callback `#{callback}/3` for
+    a specific child within the `timeout` period specified in milliseconds.
+    """
+    defmacro unquote(refution)(pipeline, child, timeout \\ @default_timeout) do
+      callback = unquote(callback)
+
+      quote do
+        child_name_value = unquote(child)
+
+        unquote(
+          refute_receive_from_pipeline(
+            pipeline,
+            {callback,
+             quote do
+               ^child_name_value
+             end},
+            timeout
+          )
+        )
+      end
+    end
+  end)
 end

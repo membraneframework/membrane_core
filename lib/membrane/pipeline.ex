@@ -243,6 +243,20 @@ defmodule Membrane.Pipeline do
             ) :: {[Action.common_actions()], state()}
 
   @doc """
+  Callback invoked after a child terminates.
+
+  Terminated child won't be present in the context of this callback. It is allowed to spawn a new child
+  with the same name.
+
+  By default, it does nothing.
+  """
+  @callback handle_child_terminated(
+              child :: Child.name(),
+              context :: CallbackContext.t(),
+              state
+            ) :: callback_return
+
+  @doc """
   Callback invoked upon each timer tick. A timer can be started with `Membrane.Pipeline.Action.start_timer`
   action.
   """
@@ -291,7 +305,8 @@ defmodule Membrane.Pipeline do
                       handle_crash_group_down: 3,
                       handle_call: 3,
                       handle_terminate_request: 2,
-                      handle_child_pad_removed: 4
+                      handle_child_pad_removed: 4,
+                      handle_child_terminated: 3
 
   @doc """
   Starts the pipeline based on the given module and links it to the current process.
@@ -543,6 +558,9 @@ defmodule Membrane.Pipeline do
       def handle_child_setup_completed(_child, _ctx, state), do: {[], state}
 
       @impl true
+      def handle_child_terminated(_child, _ctx, state), do: {[], state}
+
+      @impl true
       def handle_child_playing(_child, _ctx, state), do: {[], state}
 
       @impl true
@@ -575,7 +593,8 @@ defmodule Membrane.Pipeline do
                      handle_child_notification: 4,
                      handle_crash_group_down: 3,
                      handle_call: 3,
-                     handle_terminate_request: 2
+                     handle_terminate_request: 2,
+                     handle_child_terminated: 3
     end
   end
 end
