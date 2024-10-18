@@ -10,7 +10,7 @@ defmodule Membrane.Integration.CallbacksTest do
     use Membrane.Endpoint
   end
 
-  defmodule PadlessElemeentPipeline do
+  defmodule PadlessElementPipeline do
     use Membrane.Pipeline
     alias Membrane.Integration.CallbacksTest.PadlessElement
 
@@ -22,7 +22,7 @@ defmodule Membrane.Integration.CallbacksTest do
   end
 
   test "handle_child_terminated" do
-    pipeline = Testing.Pipeline.start_link_supervised!(module: PadlessElemeentPipeline)
+    pipeline = Testing.Pipeline.start_link_supervised!(module: PadlessElementPipeline)
 
     Testing.Pipeline.execute_actions(pipeline, spec: child(:element, PadlessElement))
     first_pid = Testing.Pipeline.get_child_pid!(pipeline, :element)

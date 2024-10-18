@@ -204,8 +204,8 @@ defmodule Membrane.Bin do
   @doc """
   Callback invoked after a child terminates.
 
-  Terminated child won't occur in the callback context. It is allowed to spawn a new child with the same
-  name as the one that have just terminated.
+  Terminated child won't be present in the context of this callback. It is allowed to spawn a new
+  child with the same.
 
   By default, it does nothing.
   """

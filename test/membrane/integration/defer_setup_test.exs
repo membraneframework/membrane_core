@@ -112,7 +112,7 @@ defmodule Membrane.Integration.DeferSetupTest do
       assert_child_playing(pipeline, bin)
     end
 
-    assert_grandhild_playing(pipeline, :bin_1, :bin_a)
+    assert_grandchild_playing(pipeline, :bin_1, :bin_a)
 
     for bin <- [:bin_b, :bin_c] do
       refute_grandchild_playing(pipeline, :bin_1, bin)
@@ -127,7 +127,7 @@ defmodule Membrane.Integration.DeferSetupTest do
     complete_grandchild_setup(pipeline, :bin_1, :bin_c)
 
     for bin <- [:bin_b, :bin_c] do
-      assert_grandhild_playing(pipeline, :bin_1, bin)
+      assert_grandchild_playing(pipeline, :bin_1, bin)
     end
 
     monitor_ref = Process.monitor(pipeline)
@@ -145,7 +145,7 @@ defmodule Membrane.Integration.DeferSetupTest do
     Pipeline.execute_actions(pipeline, notify_child: {child, {:complete_setup, grandchild}})
   end
 
-  defp assert_grandhild_playing(pipeline, child, grandchild) do
+  defp assert_grandchild_playing(pipeline, child, grandchild) do
     assert_pipeline_notified(pipeline, child, {^grandchild, :handle_playing})
   end
 

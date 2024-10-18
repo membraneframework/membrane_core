@@ -143,7 +143,7 @@ defmodule Membrane.Testing.Assertions do
   end
 
   @doc """
-  Refutes that a crash group within pipeline won't be down within the `timeout` period specified in
+  Asserts that a crash group within pipeline won't be down within the `timeout` period specified in
   milliseconds.
 
   Usage example:
@@ -549,8 +549,8 @@ defmodule Membrane.Testing.Assertions do
     refution = :"refute_#{action}"
 
     @doc """
-    Asserts `Membrane.Testing.Pipeline` executed callback `#{callback}/3` for a specific
-    child.
+    Asserts that `Membrane.Testing.Pipeline` executed or will execute callback `#{callback}/3`
+    for a specific child within the `timeout` period specified in milliseconds.
     """
     defmacro unquote(assertion)(pipeline, child, timeout \\ @default_timeout) do
       callback = unquote(callback)
@@ -572,7 +572,7 @@ defmodule Membrane.Testing.Assertions do
     end
 
     @doc """
-    Refutes that `Membrane.Testing.Pipeline` won't execute callback `#{callback}/3` for
+    Asserts that `Membrane.Testing.Pipeline` won't execute callback `#{callback}/3` for
     a specific child within the `timeout` period specified in milliseconds.
     """
     defmacro unquote(refution)(pipeline, child, timeout \\ @default_timeout) do
