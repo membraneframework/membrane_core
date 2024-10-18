@@ -145,16 +145,8 @@ defmodule Membrane.Integration.DeferSetupTest do
     Pipeline.execute_actions(pipeline, notify_child: {child, {:complete_setup, grandchild}})
   end
 
-  defp assert_child_playing(pipeline, child) do
-    assert_pipeline_notified(pipeline, child, :handle_playing)
-  end
-
   defp assert_grandhild_playing(pipeline, child, grandchild) do
     assert_pipeline_notified(pipeline, child, {^grandchild, :handle_playing})
-  end
-
-  defp refute_child_playing(pipeline, child) do
-    refute_pipeline_notified(pipeline, child, :handle_playing)
   end
 
   defp refute_grandchild_playing(pipeline, child, grandchild) do

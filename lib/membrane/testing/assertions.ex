@@ -553,7 +553,23 @@ defmodule Membrane.Testing.Assertions do
     child.
     """
     defmacro unquote(assertion)(pipeline, child, timeout \\ @default_timeout) do
-      assert_receive_from_pipeline(pipeline, {unquote(callback), child}, timeout)
+      callback = unquote(callback)
+
+      quote do
+        child_name_value = unquote(child)
+        # callback = unquote(callback)
+
+        unquote(
+          assert_receive_from_pipeline(
+            pipeline,
+            {callback,
+             quote do
+               ^child_name_value
+             end},
+            timeout
+          )
+        )
+      end
     end
 
     @doc """
@@ -561,7 +577,22 @@ defmodule Membrane.Testing.Assertions do
     a specific child within the `timeout` period specified in milliseconds.
     """
     defmacro unquote(refution)(pipeline, child, timeout \\ @default_timeout) do
-      refute_receive_from_pipeline(pipeline, {unquote(callback), child}, timeout)
+      callback = unquote(callback)
+
+      quote do
+        child_name_value = unquote(child)
+
+        unquote(
+          refute_receive_from_pipeline(
+            pipeline,
+            {callback,
+             quote do
+               ^child_name_value
+             end},
+            timeout
+          )
+        )
+      end
     end
   end)
 end
