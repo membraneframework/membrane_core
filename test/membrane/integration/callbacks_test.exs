@@ -25,6 +25,7 @@ defmodule Membrane.Integration.CallbacksTest do
 
     Testing.Pipeline.execute_actions(pipeline, spec: child(:element, PadlessElement))
     first_pid = Testing.Pipeline.get_child_pid!(pipeline, :element)
+    refute_child_terminated(pipeline, :element, 500)
 
     Testing.Pipeline.execute_actions(pipeline, remove_children: :element)
     assert_child_terminated(pipeline, :element)
