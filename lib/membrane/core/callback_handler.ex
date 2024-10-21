@@ -136,7 +136,22 @@ defmodule Membrane.Core.CallbackHandler do
 
     callback_result =
       try do
-        apply(module, callback, args)
+        telemetry_metadata = %{
+          callback_args: args,
+          component_state: state
+        }
+
+        :telemetry.execute([:membrane, callback, :start], %{}, telemetry_metadata)
+
+        {duration, result} = :timer.tc(module, callback, args)
+
+        :telemetry.execute(
+          [:membrane, callback, :stop],
+          %{duration: duration},
+          telemetry_metadata
+        )
+
+        result
       rescue
         e in UndefinedFunctionError ->
           _ignored =
