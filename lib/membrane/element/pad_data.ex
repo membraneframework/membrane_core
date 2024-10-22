@@ -14,7 +14,7 @@ defmodule Membrane.Element.PadData do
     - `:ref` - see `t:Membrane.Pad.ref/0`
     - `:start_of_stream?` - flag determining whether the stream processing via the pad has been started
     - `auto_demand_paused?` - flag determining if auto-demanding on the pad is paused or no
-    - `max_cardinality` - specyfies maximal possible number of instances of a dynamic pads that can occur within single element. `nil` for pads with `availability: :always`.
+    - `max_instances` - specifies maximal possible number of instances of a dynamic pad that can exist within single element. Equals `nil` for pads with `availability: :always`.
 
   Other fields in the struct ARE NOT PART OF THE PUBLIC API and should not be
   accessed or relied on.
@@ -34,7 +34,7 @@ defmodule Membrane.Element.PadData do
           direction: Pad.direction(),
           flow_control: Pad.flow_control(),
           name: Pad.name(),
-          max_cardinality: Pad.max_cardinality() | nil,
+          max_instances: Pad.max_instances() | nil,
           ref: Pad.ref(),
           options: %{optional(atom) => any},
           auto_demand_paused?: boolean(),
@@ -81,7 +81,7 @@ defmodule Membrane.Element.PadData do
 
   defstruct @enforce_keys ++
               [
-                max_cardinality: nil,
+                max_instances: nil,
                 input_queue: nil,
                 auto_flow_queue: Qex.new(),
                 demand: 0,

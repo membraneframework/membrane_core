@@ -609,10 +609,10 @@ defmodule Membrane.Integration.LinkingTest do
     state.children[ref].pid
   end
 
-  describe "link fails when max_cardinality is exceeded in" do
+  describe "link fails when max_instances is exceeded in" do
     defmodule MaxCardinalityElement do
       use Membrane.Sink
-      def_input_pad :input, accepted_format: _any, availability: :on_request, max_cardinality: 1
+      def_input_pad :input, accepted_format: _any, availability: :on_request, max_instances: 1
 
       @impl true
       def handle_buffer(_pad, _buffer, _ctx, state), do: {[], state}
@@ -620,7 +620,7 @@ defmodule Membrane.Integration.LinkingTest do
 
     defmodule MaxCardinalityBin do
       use Membrane.Bin
-      def_input_pad :input, accepted_format: _any, availability: :on_request, max_cardinality: 1
+      def_input_pad :input, accepted_format: _any, availability: :on_request, max_instances: 1
 
       @impl true
       def handle_pad_added(pad_ref, _ctx, state) do
@@ -648,7 +648,7 @@ defmodule Membrane.Integration.LinkingTest do
                         {:membrane_child_crash, :sink,
                          {%Membrane.PadError{message: message}, _stacktrace}}}
 
-        assert message =~ ~r/max_cardinality/
+        assert message =~ ~r/max_instances/
       end
     end)
   end

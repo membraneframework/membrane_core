@@ -104,9 +104,11 @@ defmodule Membrane.Pad do
 
   @typedoc """
   Describes maximal number of instances of dynamic pad (`availability: :on_request`) that
-  can occur within single component.
+  can occur simultaneously within a single component.
+
+  Defaults to `:infinity`.
   """
-  @type max_cardinality :: non_neg_integer() | :infinity
+  @type max_instances :: non_neg_integer() | :infinity
 
   @typedoc """
   Describes how a pad should be declared in element or bin.
@@ -124,7 +126,7 @@ defmodule Membrane.Pad do
            availability: availability(),
            accepted_format: accepted_format(),
            options: Keyword.t(),
-           max_cardinality: max_cardinality()}
+           max_instances: max_instances()}
 
   @typedoc """
   Describes how a pad should be declared inside an element.
@@ -136,7 +138,7 @@ defmodule Membrane.Pad do
            flow_control: flow_control(),
            options: Keyword.t(),
            demand_unit: Buffer.Metric.unit(),
-           max_cardinality: max_cardinality()}
+           max_instances: max_instances()}
 
   @typedoc """
   Type describing a pad. Contains data parsed from `t:spec/0`
@@ -149,7 +151,7 @@ defmodule Membrane.Pad do
           optional(:demand_unit) => Buffer.Metric.unit() | nil,
           :direction => direction(),
           :options => nil | Keyword.t(),
-          optional(:max_cardinality) => max_cardinality()
+          optional(:max_instances) => max_instances()
         }
 
   @doc """

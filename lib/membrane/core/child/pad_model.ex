@@ -59,7 +59,7 @@ defmodule Membrane.Core.Child.PadModel do
           optional(:flow_control) => Pad.flow_control(),
           optional(:demand_unit) => Membrane.Buffer.Metric.unit(),
           optional(:other_demand_unit) => Membrane.Buffer.Metric.unit(),
-          optional(:max_cardinality) => Pad.max_cardinality()
+          optional(:max_instances) => Pad.max_instances()
         }
 
   @type pads_info :: %{Pad.name() => pad_info}

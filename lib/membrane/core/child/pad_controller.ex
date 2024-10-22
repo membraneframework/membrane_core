@@ -39,17 +39,17 @@ defmodule Membrane.Core.Child.PadController do
 
   @spec validate_pad_cardinality!(Pad.name(), state()) :: :ok
   def validate_pad_cardinality!(pad_name, state) do
-    with %{max_cardinality: max_cardinality} when is_integer(max_cardinality) <-
+    with %{max_instances: max_instances} when is_integer(max_instances) <-
            state.pads_info[pad_name] do
       current_number =
         state.pads_data
         |> Enum.count(fn {_ref, data} -> data.name == pad_name end)
 
-      if max_cardinality <= current_number do
+      if max_instances <= current_number do
         raise PadError, """
-        Pad #{inspect(pad_name)} can occur only #{max_cardinality} times within a single component, while it \
-        attempted to occur #{current_number + 1} times. Set `:max_cardinality` option to a different value,
-        to change this boundary.
+        Only #{max_instances} instances of pad #{inspect(pad_name)} can exist within this component, \
+        while  an attempt to create #{current_number + 1} instances was made. Set `:max_instances` option \
+        to a different value, to change this boundary.
         """
       end
     end
