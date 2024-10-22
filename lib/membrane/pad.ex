@@ -103,6 +103,14 @@ defmodule Membrane.Pad do
   @type accepted_format :: module() | (pattern :: term())
 
   @typedoc """
+  Describes maximal number of instances of dynamic pad (`availability: :on_request`) that
+  can occur simultaneously within a single component.
+
+  Defaults to `:infinity`.
+  """
+  @type max_instances :: non_neg_integer() | :infinity
+
+  @typedoc """
   Describes how a pad should be declared in element or bin.
   """
   @type spec :: element_spec | bin_spec
@@ -115,7 +123,10 @@ defmodule Membrane.Pad do
   """
   @type bin_spec ::
           {name(),
-           availability: availability(), accepted_format: accepted_format(), options: Keyword.t()}
+           availability: availability(),
+           accepted_format: accepted_format(),
+           options: Keyword.t(),
+           max_instances: max_instances()}
 
   @typedoc """
   Describes how a pad should be declared inside an element.
@@ -126,7 +137,8 @@ defmodule Membrane.Pad do
            accepted_format: accepted_format(),
            flow_control: flow_control(),
            options: Keyword.t(),
-           demand_unit: Buffer.Metric.unit()}
+           demand_unit: Buffer.Metric.unit(),
+           max_instances: max_instances()}
 
   @typedoc """
   Type describing a pad. Contains data parsed from `t:spec/0`
@@ -138,7 +150,8 @@ defmodule Membrane.Pad do
           :accepted_formats_str => [String.t()],
           optional(:demand_unit) => Buffer.Metric.unit() | nil,
           :direction => direction(),
-          :options => nil | Keyword.t()
+          :options => nil | Keyword.t(),
+          optional(:max_instances) => max_instances()
         }
 
   @doc """
