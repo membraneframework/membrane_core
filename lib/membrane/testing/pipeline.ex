@@ -408,7 +408,11 @@ defmodule Membrane.Testing.Pipeline do
     {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
   end
 
-  [:handle_child_setup_completed, :handle_child_playing]
+  [
+    :handle_child_setup_completed,
+    :handle_child_playing,
+    :handle_child_terminated
+  ]
   |> Enum.map(fn callback ->
     @impl true
     def unquote(callback)(child, ctx, %State{} = state) do
@@ -418,6 +422,8 @@ defmodule Membrane.Testing.Pipeline do
           [child, ctx],
           state
         )
+
+      :ok = notify_test_process(state.test_process, {unquote(callback), child})
 
       {custom_actions, Map.put(state, :custom_pipeline_state, custom_state)}
     end

@@ -724,10 +724,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         CrashGroupUtils.handle_crash_group_member_death(child_name, crash_group, reason, state)
         |> ChildrenModel.delete_child(child_name)
 
+      state = exec_handle_child_terminated(child_name, state)
+
       {:ok, state}
     else
       :error when reason == :normal ->
-        {:ok, ChildrenModel.delete_child(state, child_name)}
+        state = ChildrenModel.delete_child(state, child_name)
+        state = exec_handle_child_terminated(child_name, state)
+        {:ok, state}
 
       :error when reason == {:shutdown, :membrane_crash_group_kill} ->
         raise Membrane.PipelineError,
@@ -770,5 +774,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
     state = %{state | pending_specs: Map.merge(state.pending_specs, related_specs)}
     related_specs |> Map.keys() |> Enum.reduce(state, &proceed_spec_startup/2)
+  end
+
+  defp exec_handle_child_terminated(child_name, state) do
+    CallbackHandler.exec_and_handle_callback(
+      :handle_child_terminated,
+      Component.action_handler(state),
+      %{context: &Component.context_from_state/1},
+      [child_name],
+      state
+    )
   end
 end

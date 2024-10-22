@@ -202,6 +202,20 @@ defmodule Membrane.Bin do
             ) :: callback_return
 
   @doc """
+  Callback invoked after a child terminates.
+
+  Terminated child won't be present in the context of this callback. It is allowed to spawn a new
+  child with the same name.
+
+  By default, it does nothing.
+  """
+  @callback handle_child_terminated(
+              child :: Child.name(),
+              context :: CallbackContext.t(),
+              state
+            ) :: callback_return
+
+  @doc """
   Callback invoked upon each timer tick. A timer can be started with `t:Membrane.Bin.Action.start_timer/0`
   action.
   """
@@ -248,7 +262,8 @@ defmodule Membrane.Bin do
                       handle_tick: 3,
                       handle_crash_group_down: 3,
                       handle_terminate_request: 2,
-                      handle_child_pad_removed: 4
+                      handle_child_pad_removed: 4,
+                      handle_child_terminated: 3
 
   @doc PadsSpecs.def_pad_docs(:input, :bin)
   defmacro def_input_pad(name, spec) do
@@ -405,6 +420,9 @@ defmodule Membrane.Bin do
       @impl true
       def handle_terminate_request(_ctx, state), do: {[terminate: :normal], state}
 
+      @impl true
+      def handle_child_terminated(_child, _ctx, state), do: {[], state}
+
       defoverridable handle_init: 2,
                      handle_pad_added: 3,
                      handle_pad_removed: 3,
@@ -418,7 +436,8 @@ defmodule Membrane.Bin do
                      handle_child_notification: 4,
                      handle_parent_notification: 3,
                      handle_crash_group_down: 3,
-                     handle_terminate_request: 2
+                     handle_terminate_request: 2,
+                     handle_child_terminated: 3
     end
   end
 
