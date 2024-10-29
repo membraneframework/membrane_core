@@ -30,8 +30,6 @@ commands:
       - restore_cache:
           keys:
             - v3-build-cache-{{ arch }}-<< parameters.env >>-{{ checksum "mix.lock" }}
-            - v3-build-cache-{{ arch }}-<< parameters.env >>-
-            - v3-build-cache-{{ arch }}-
   gen_version_file:
     steps:
       - run: asdf current erlang > .runtime_version
