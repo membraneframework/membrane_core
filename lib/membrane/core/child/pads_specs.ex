@@ -128,7 +128,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   defmacro generate_membrane_pads(env) do
     pads = Module.get_attribute(env.module, :membrane_pads, []) |> Enum.reverse()
     :ok = validate_pads!(pads, env)
-    :ok = warn_on_auto_pads_on_input_and_output(pads, env)
+    :ok = warn_on_multiple_auto_input_and_output_pads(pads, env)
 
     alias Membrane.Pad
 
@@ -154,11 +154,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  @spec validate_pads!(
+  @spec warn_on_multiple_auto_input_and_output_pads(
           pads :: [{Pad.name(), Pad.description()}],
           env :: Macro.Env.t()
         ) :: :ok
-  defp warn_on_auto_pads_on_input_and_output(pads, env) do
+  defp warn_on_multiple_auto_input_and_output_pads(pads, env) do
     {auto_input_pads, auto_output_pads} =
       pads
       |> Enum.filter(fn {_pad, info} -> info[:flow_control] == :auto end)
