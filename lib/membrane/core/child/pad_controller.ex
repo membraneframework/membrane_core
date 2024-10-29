@@ -2,7 +2,7 @@ defmodule Membrane.Core.Child.PadController do
   @moduledoc false
 
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
-  alias Membrane.{LinkError, Pad}
+  alias Membrane.{LinkError, Pad, PadError}
 
   require Membrane.Core.Child.PadModel
 
@@ -32,6 +32,26 @@ defmodule Membrane.Core.Child.PadController do
     if from_flow_control in [:auto, :manual] and to_flow_control == :push do
       raise LinkError,
             "Cannot connect #{inspect(from_flow_control)} output #{inspect(from)} to push input #{inspect(to)}"
+    end
+
+    :ok
+  end
+
+  @spec validate_pad_instances!(Pad.name(), state()) :: :ok
+  def validate_pad_instances!(pad_name, state) do
+    with %{max_instances: max_instances} when is_integer(max_instances) <-
+           state.pads_info[pad_name] do
+      current_number =
+        state.pads_data
+        |> Enum.count(fn {_ref, data} -> data.name == pad_name end)
+
+      if max_instances <= current_number do
+        raise PadError, """
+        Only #{max_instances} instances of pad #{inspect(pad_name)} can exist within this component, \
+        while  an attempt to create #{current_number + 1} instances was made. Set `:max_instances` option \
+        to a different value, to change this boundary.
+        """
+      end
     end
 
     :ok
