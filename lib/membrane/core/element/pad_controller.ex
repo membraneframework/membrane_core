@@ -72,7 +72,7 @@ defmodule Membrane.Core.Element.PadController do
       end
 
     :ok = Child.PadController.validate_pad_direction!(direction, pad_info)
-    :ok = Child.PadController.validate_pad_cardinality!(pad_name, state)
+    :ok = Child.PadController.validate_pad_instances!(pad_name, state)
 
     do_handle_link(direction, endpoint, other_endpoint, pad_info, link_props, state)
   end

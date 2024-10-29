@@ -37,8 +37,8 @@ defmodule Membrane.Core.Child.PadController do
     :ok
   end
 
-  @spec validate_pad_cardinality!(Pad.name(), state()) :: :ok
-  def validate_pad_cardinality!(pad_name, state) do
+  @spec validate_pad_instances!(Pad.name(), state()) :: :ok
+  def validate_pad_instances!(pad_name, state) do
     with %{max_instances: max_instances} when is_integer(max_instances) <-
            state.pads_info[pad_name] do
       current_number =

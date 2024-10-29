@@ -44,7 +44,7 @@ defmodule Membrane.Core.Bin.PadController do
       end
 
     :ok = Child.PadController.validate_pad_direction!(direction, pad_info)
-    :ok = Child.PadController.validate_pad_cardinality!(pad_name, state)
+    :ok = Child.PadController.validate_pad_instances!(pad_name, state)
 
     pad_options = Child.PadController.parse_pad_options!(pad_name, pad_options, state)
 
