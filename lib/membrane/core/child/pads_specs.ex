@@ -128,6 +128,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   defmacro generate_membrane_pads(env) do
     pads = Module.get_attribute(env.module, :membrane_pads, []) |> Enum.reverse()
     :ok = validate_pads!(pads, env)
+    :ok = warn_on_auto_pads_on_input_and_output(pads, env)
 
     alias Membrane.Pad
 
@@ -151,6 +152,29 @@ defmodule Membrane.Core.Child.PadsSpecs do
       dups ->
         raise CompileError, file: env.file, description: "Duplicate pad names: #{inspect(dups)}"
     end
+  end
+
+  @spec validate_pads!(
+          pads :: [{Pad.name(), Pad.description()}],
+          env :: Macro.Env.t()
+        ) :: :ok
+  defp warn_on_auto_pads_on_input_and_output(pads, env) do
+    {auto_input_pads, auto_output_pads} =
+      pads
+      |> Enum.filter(fn {_pad, info} -> info[:flow_control] == :auto end)
+      |> Enum.split_with(fn {_pad, info} -> info.direction == :input end)
+
+    if length(auto_input_pads) >= 2 and length(auto_output_pads) >= 2 do
+      IO.warn("""
+      #{inspect(env.module)} defines multiple input pads with `flow_control: :auto` and multimmple output \
+      pads with `flow_control: :auto` at the same time. Notice, that lack of demand on any of output pads \
+      with `flow_control: :auto` will cause stoping demand on every input pad with `flow_control: :auto`.
+      Input pads with `flow_control: :auto`: #{auto_input_pads |> Keyword.keys() |> Enum.join(", ")}.
+      Output pads with `flow_control: :auto`: #{auto_output_pads |> Keyword.keys() |> Enum.join(", ")}.
+      """)
+    end
+
+    :ok
   end
 
   @spec parse_pad_specs!(
