@@ -210,9 +210,40 @@ defmodule Membrane.Core.Element.PadController do
       end
 
     state = maybe_handle_pad_added(input_endpoint.pad_ref, state)
+    :ok = generate_flow_control_related_warning(pad_info, state)
 
     {{:ok, {input_endpoint, pad_info, link_metadata}}, state}
   end
+
+  defp generate_flow_control_related_warning(%{flow_control: :auto} = _pad_info, state) do
+    {auto_input_pads, auto_output_pads} =
+      state.pads_data
+      |> Enum.filter(fn {_pad_ref, data} -> data.flow_control == :auto end)
+      |> Enum.split_with(fn {_pad_ref, data} -> data.direction == :input end)
+
+    if length(auto_input_pads) >= 2 and length(auto_output_pads) >= 2 do
+      [auto_input_pads, auto_output_pads] =
+        [auto_input_pads, auto_output_pads]
+        |> Enum.map(fn pads ->
+          pads
+          |> Enum.map(&(&1 |> elem(0) |> inspect()))
+          |> Enum.join(", ")
+        end)
+
+      Membrane.Logger.warning("""
+      This element has multiple input pads with `flow_control: :auto` and multiple output pads with \
+      `flow_control: :auto` at the same time. Notice, that lack of demand on any of output pads with \
+      `flow_control: :auto` will cause stoping demand on every input pad with `flow_control: :auto`.
+      Input pads with `flow_control: :auto`: #{auto_input_pads |> Enum.map(&elem(&1, 0)) |> Enum.join(", ")}.
+      Output pads with `flow_control: :auto`: #{auto_output_pads |> Enum.map(&elem(&1, 0)) |> Enum.join(", ")}.
+      """
+      )
+    end
+
+    :ok
+  end
+
+  defp generate_flow_control_related_warning(_pad_info, _state), do: :ok
 
   @doc """
   Handles situation where pad has been unlinked (e.g. when connected element has been removed from pipeline)
