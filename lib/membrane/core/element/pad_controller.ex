@@ -234,8 +234,8 @@ defmodule Membrane.Core.Element.PadController do
       This element has multiple input pads with `flow_control: :auto` and multiple output pads with \
       `flow_control: :auto` at the same time. Notice, that lack of demand on any of output pads with \
       `flow_control: :auto` will cause stoping demand on every input pad with `flow_control: :auto`.
-      Input pads with `flow_control: :auto`: #{auto_input_pads |> Enum.map(&elem(&1, 0)) |> Enum.join(", ")}.
-      Output pads with `flow_control: :auto`: #{auto_output_pads |> Enum.map(&elem(&1, 0)) |> Enum.join(", ")}.
+      Input pads with `flow_control: :auto`: #{auto_input_pads}.
+      Output pads with `flow_control: :auto`: #{auto_output_pads}.
       """)
     end
 
