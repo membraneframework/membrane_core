@@ -128,7 +128,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   defmacro generate_membrane_pads(env) do
     pads = Module.get_attribute(env.module, :membrane_pads, []) |> Enum.reverse()
     :ok = validate_pads!(pads, env)
-    :ok = warn_on_multiple_auto_input_and_output_pads(pads, env)
+    :ok = generate_flow_control_related_warnings(pads, env)
 
     alias Membrane.Pad
 
@@ -154,14 +154,29 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  @spec warn_on_multiple_auto_input_and_output_pads(
+  @spec generate_flow_control_related_warnings(
           pads :: [{Pad.name(), Pad.description()}],
           env :: Macro.Env.t()
         ) :: :ok
-  defp warn_on_multiple_auto_input_and_output_pads(pads, env) do
-    {auto_input_pads, auto_output_pads} =
+  defp generate_flow_control_related_warnings(pads, env) do
+    {auto_pads, push_pads} =
       pads
-      |> Enum.filter(fn {_pad, info} -> info[:flow_control] == :auto end)
+      |> Enum.filter(fn {_pad, info} -> info[:flow_control] in [:auto, :push] end)
+      |> Enum.split_with(fn {_pad, info} -> info.flow_control == :auto end)
+
+    if auto_pads != [] and push_pads != [] do
+      IO.warn("""
+      #{inspect(env.module)} defines pads with `flow_control: :auto` and pads with `flow_control: :push` \
+      at the same time. Please, consider if this what you want to do - flow control of these pads won't be \
+      integrated. Setting `flow_control` to `:auto` in the places where it has been set to `:push` might be \
+      a good idea.
+      Pads with `flow_control: :auto`: #{auto_pads |> Keyword.keys() |> Enum.join(", ")}.
+      Pads with `flow_control: :push`: #{push_pads |> Keyword.keys() |> Enum.join(", ")}.
+      """)
+    end
+
+    {auto_input_pads, auto_output_pads} =
+      auto_pads
       |> Enum.split_with(fn {_pad, info} -> info.direction == :input end)
 
     if length(auto_input_pads) >= 2 and length(auto_output_pads) >= 2 do
