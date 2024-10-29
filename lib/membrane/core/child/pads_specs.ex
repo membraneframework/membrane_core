@@ -166,7 +166,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
     if length(auto_input_pads) >= 2 and length(auto_output_pads) >= 2 do
       IO.warn("""
-      #{inspect(env.module)} defines multiple input pads with `flow_control: :auto` and multimmple output \
+      #{inspect(env.module)} defines multiple input pads with `flow_control: :auto` and multiple output \
       pads with `flow_control: :auto` at the same time. Notice, that lack of demand on any of output pads \
       with `flow_control: :auto` will cause stoping demand on every input pad with `flow_control: :auto`.
       Input pads with `flow_control: :auto`: #{auto_input_pads |> Keyword.keys() |> Enum.join(", ")}.
