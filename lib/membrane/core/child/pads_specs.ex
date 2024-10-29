@@ -62,11 +62,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
       end
     end
 
-    specs =
-      accepted_formats
-      |> Enum.map(&Macro.to_string/1)
-      |> then(&[accepted_formats_str: &1])
-      |> Enum.concat(specs)
+    accepted_formats_str = accepted_formats |> Enum.map(&Macro.to_string/1)
+    specs = [accepted_formats_str: accepted_formats_str] ++ specs
 
     case_statement_clauses =
       accepted_formats
