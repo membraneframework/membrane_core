@@ -13,7 +13,8 @@ defmodule Membrane.ForwardingFilter do
 
   def_options notify_on_stream_format?: [default: false], notify_on_event?: [default: false]
 
-  defguardp flowing?(ctx, state) when ctx.playback == :playing and state.input != nil and state.output != nil
+  defguardp flowing?(ctx, state)
+            when ctx.playback == :playing and state.input != nil and state.output != nil
 
   @impl true
   def handle_init(_ctx, opts) do
@@ -39,13 +40,15 @@ defmodule Membrane.ForwardingFilter do
     @impl true
     def unquote(callback)(pad, item, ctx, state) when flowing?(ctx, state) do
       actions = [{unquote(action), {opposite_pad(pad, state), item}}]
+      actions = actions ++ maybe_notify_parent(unquote(action), pad, item, state)
       {actions, state}
     end
 
     @impl true
     def unquote(callback)(pad, item, _ctx, state) do
       state = unquote(action) |> store_in_queue(pad, item, state)
-      {[], state}
+      actions = unquote(action) |> maybe_notify_parent(pad, item, state)
+      {actions, state}
     end
   end)
 
@@ -81,4 +84,12 @@ defmodule Membrane.ForwardingFilter do
 
   defp opposite_pad(Pad.ref(:input, _ref), state), do: state.output
   defp opposite_pad(Pad.ref(:output, _ref), state), do: state.input
+
+  defp maybe_notify_parent(:event, pad, event, %{notify_on_event?: true}),
+    do: [notiy_parent: {:event, pad, event}]
+
+  defp maybe_notify_parent(:stream_format, pad, format, %{notify_on_stream_format?: true}),
+    do: [notiy_parent: {:stream_format, pad, format}]
+
+  defp maybe_notify_parent(_type, _pad, _item, _state), do: []
 end
