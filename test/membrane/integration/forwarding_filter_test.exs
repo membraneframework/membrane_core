@@ -75,6 +75,39 @@ defmodule Membrane.Integration.ForwardingFilterTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  test "Membrane.ForwardingFilter pauses input demand if output pad is not linked" do
+    atomics_ref = :atomics.new(1, [])
+    :atomics.put(atomics_ref, 1, 0)
+
+    generator = fn _initial_state, _demand_size ->
+      :atomics.add(atomics_ref, 1, 1)
+      buffer = %Membrane.Buffer{payload: <<>>}
+      {[buffer: {:output, buffer}, redemand: :output], nil}
+    end
+
+    auto_demand_size = 20
+
+    spec =
+      child(:source, %Testing.Source{output: {nil, generator}})
+      |> via_in(:input, auto_demand_size: auto_demand_size)
+      |> child(:forwarding_filter, ForwardingFilter)
+
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+
+    Process.sleep(500)
+
+    assert :atomics.get(atomics_ref, 1) == auto_demand_size
+
+    spec = get_child(:forwarding_filter) |> child(:sink, Testing.Sink)
+    Testing.Pipeline.execute_actions(pipeline, spec: spec)
+
+    Process.sleep(500)
+
+    assert :atomics.get(atomics_ref, 1) > auto_demand_size + 100
+
+    Testing.Pipeline.terminate(pipeline)
+  end
+
   defp generate_data(number, types, pts_offset \\ 0) do
     data =
       1..(number - 1)
