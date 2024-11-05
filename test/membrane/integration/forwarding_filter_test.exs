@@ -4,11 +4,11 @@ defmodule Membrane.Integration.ForwardingFilterTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  require Membrane.Pad, as: Pad
-
   alias Membrane.Buffer
   alias Membrane.ForwardingFilter
   alias Membrane.Testing
+
+  require Membrane.Pad, as: Pad
 
   defmodule Format do
     defstruct [:field]
