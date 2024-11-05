@@ -11,7 +11,26 @@ defmodule Membrane.ForwardingFilter do
     availability: :on_request,
     max_instances: 1
 
-  def_options notify_on_stream_format?: [default: false], notify_on_event?: [default: false]
+  def_options notify_on_stream_format?: [
+                description: """
+                If `true`, #{inspect(__MODULE__)} will send `{:stream_format, pad_ref, stream_format}` \
+                notification to parent on every stream format arrival.
+
+                Defaults to `false`.
+                """,
+                spec: boolean(),
+                default: false
+              ],
+              notify_on_event?: [
+                description: """
+                If `true`, #{inspect(__MODULE__)} will send `{:event, pad_ref, event}` \
+                notification to parent on every event arrival.
+
+                Defaults to `false`.
+                """,
+                spec: boolean(),
+                default: false
+              ]
 
   defguardp flowing?(ctx, state)
             when ctx.playback == :playing and state.input != nil and state.output != nil
@@ -66,11 +85,7 @@ defmodule Membrane.ForwardingFilter do
     state |> Map.update!(:queue, &[{action, pad, item} | &1])
   end
 
-  defp flush_queue_if_flowing(ctx, state) do
-    if flowing?(ctx, state), do: flush_queue(ctx, state), else: {[], state}
-  end
-
-  defp flush_queue(ctx, state) when flowing?(ctx, state) do
+  defp flush_queue_if_flowing(ctx, state) when flowing?(ctx, state) do
     actions =
       state.queue
       |> Enum.reverse()
@@ -82,14 +97,16 @@ defmodule Membrane.ForwardingFilter do
     {actions, %{state | queue: nil}}
   end
 
+  defp flush_queue_if_flowing(_ctx, state), do: {[], state}
+
   defp opposite_pad(Pad.ref(:input, _ref), state), do: state.output
   defp opposite_pad(Pad.ref(:output, _ref), state), do: state.input
 
   defp maybe_notify_parent(:event, pad, event, %{notify_on_event?: true}),
-    do: [notiy_parent: {:event, pad, event}]
+    do: [notify_parent: {:event, pad, event}]
 
   defp maybe_notify_parent(:stream_format, pad, format, %{notify_on_stream_format?: true}),
-    do: [notiy_parent: {:stream_format, pad, format}]
+    do: [notify_parent: {:stream_format, pad, format}]
 
   defp maybe_notify_parent(_type, _pad, _item, _state), do: []
 end
