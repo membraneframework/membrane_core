@@ -92,7 +92,7 @@ defmodule Membrane.Integration.ForwardingFilterTest do
       |> via_in(:input, auto_demand_size: auto_demand_size)
       |> child(:forwarding_filter, ForwardingFilter)
 
-      pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
     Process.sleep(500)
 

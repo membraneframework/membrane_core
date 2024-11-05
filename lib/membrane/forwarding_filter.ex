@@ -101,7 +101,7 @@ defmodule Membrane.ForwardingFilter do
     {pause_or_resume_demand ++ flush_queue_actions, state}
   end
 
-    defp manage_input_demand(ctx, %{input_demand_paused?: true} = state)
+  defp manage_input_demand(ctx, %{input_demand_paused?: true} = state)
        when not input_demand_should_be_paused?(ctx, state) do
     {[resume_auto_demand: state.input], %{state | input_demand_paused?: false}}
   end
