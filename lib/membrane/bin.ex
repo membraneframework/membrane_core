@@ -346,11 +346,19 @@ defmodule Membrane.Bin do
         end
       end
 
+    Module.put_attribute(
+      __CALLER__.module,
+      :__membrane_flow_control_related_warnings__,
+      Keyword.get(options, :flow_control_related_warnings?, true)
+    )
+
     quote location: :keep do
       alias unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
       @after_compile {Membrane.Core.Parent, :check_deprecated_callbacks}
+
+      @membrane_component_type unquote(__MODULE__)
 
       unquote(bring_spec)
       unquote(bring_pad)

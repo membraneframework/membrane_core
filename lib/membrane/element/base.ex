@@ -247,6 +247,12 @@ defmodule Membrane.Element.Base do
         end
       end
 
+    Module.put_attribute(
+      __CALLER__.module,
+      :__membrane_flow_control_related_warnings__,
+      Keyword.get(options, :flow_control_related_warnings?, true)
+    )
+
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
