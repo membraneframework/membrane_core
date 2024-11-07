@@ -25,6 +25,9 @@ defmodule Membrane.Endpoint do
 
   Options:
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
+    - `:flow_control_related_warnings?` - if true (default) generates compile-time warnings \
+      if the number, direction, and type of flow control of pads are likely to cause unintended \
+      behaviours.
   """
   defmacro __using__(options) do
     Module.put_attribute(__CALLER__.module, :__membrane_element_type__, :endpoint)
