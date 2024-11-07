@@ -6,7 +6,7 @@ defmodule Membrane.Support.Element.DynamicFilter do
   """
 
   use Bunch
-  use Membrane.Filter
+  use Membrane.Filter, flow_control_related_warnings?: false
 
   def_input_pad :input, accepted_format: _any, availability: :on_request, flow_control: :auto
   def_output_pad :output, accepted_format: _any, availability: :on_request, flow_control: :auto

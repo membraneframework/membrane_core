@@ -207,11 +207,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
     if auto_input_pads_possible_number >= 2 and auto_output_pads_possible_number >= 2 do
       Membrane.Logger.warning("""
-      This element might have multiple input pads with `flow_control: :auto` and multiple output pads with \
-      `flow_control: :auto` at the same time. Notice, that lack of demand on any of output pads with \
+      #{inspect(env.module)}  might have multiple input pads with `flow_control: :auto` and multiple output \
+      pads with `flow_control: :auto` at the same time. Notice, that lack of demand on any of output pads with \
       `flow_control: :auto` will cause stoping demand on every input pad with `flow_control: :auto`.
-      Input pads with `flow_control: :auto`: #{auto_input_pads}.
-      Output pads with `flow_control: :auto`: #{auto_output_pads}.
+      Input pads with `flow_control: :auto`: #{auto_input_pads |> Keyword.keys() |> inspect()}.
+      Output pads with `flow_control: :auto`: #{auto_output_pads |> Keyword.keys() |> inspect()}.
 
       If you want get rid of this warning, pass `flow_control_related_warnings?: false` option to \
       `use #{inspect(used_module)}` or add upperbound on the number of possible instances of pads with \
