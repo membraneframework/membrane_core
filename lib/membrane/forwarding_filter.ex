@@ -1,4 +1,4 @@
-defmodule Membrane.ForwardingFilter do
+defmodule Membrane.Connector do
   @moduledoc """
   Membrane Filter with input and output dynamic pads, that forwards incoming data to the opposite
   side than the one from which it came.
