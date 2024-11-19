@@ -352,8 +352,6 @@ defmodule Membrane.Bin do
       @before_compile unquote(__MODULE__)
       @after_compile {Membrane.Core.Parent, :check_deprecated_callbacks}
 
-      @membrane_component_type unquote(__MODULE__)
-
       unquote(bring_spec)
       unquote(bring_pad)
 
