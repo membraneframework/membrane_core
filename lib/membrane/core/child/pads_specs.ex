@@ -126,8 +126,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
     pads = Module.get_attribute(env.module, :membrane_pads, []) |> Enum.reverse()
     :ok = validate_pads!(pads, env)
 
-    if Module.get_attribute(env.module, :__membrane_flow_control_related_warnings__) do
-      :ok = generate_flow_control_related_warnings(pads, env)
+    if Module.get_attribute(env.module, :__membrane_flow_control_hints__) do
+      :ok = generate_flow_control_hints(pads, env)
     end
 
     alias Membrane.Pad
@@ -154,16 +154,15 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  @spec generate_flow_control_related_warnings(
+  @spec generate_flow_control_hints(
           pads :: [{Pad.name(), Pad.description()}],
           env :: Macro.Env.t()
         ) :: :ok
-  defp generate_flow_control_related_warnings(pads, env) do
+  defp generate_flow_control_hints(pads, env) do
     used_module =
       env.module
-      |> Module.get_attribute(:__membrane_element_type__, :bin)
+      |> Module.get_attribute(:__membrane_element_type__)
       |> case do
-        :bin -> Membrane.Bin
         :source -> Membrane.Source
         :filter -> Membrane.Filter
         :sink -> Membrane.Sink
@@ -184,7 +183,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       Pads with `flow_control: :auto`: #{auto_pads |> Keyword.keys() |> Enum.join(", ")}.
       Pads with `flow_control: :push`: #{push_pads |> Keyword.keys() |> Enum.join(", ")}.
 
-      If you want get rid of this warning, pass `flow_control_related_warnings?: false` option to \
+      If you want get rid of this warning, pass `flow_control_hints?: false` option to \
       `use #{inspect(used_module)}`.
       """)
     end
@@ -213,7 +212,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       Input pads with `flow_control: :auto`: #{auto_input_pads |> Keyword.keys() |> inspect()}.
       Output pads with `flow_control: :auto`: #{auto_output_pads |> Keyword.keys() |> inspect()}.
 
-      If you want get rid of this warning, pass `flow_control_related_warnings?: false` option to \
+      If you want get rid of this warning, pass `flow_control_hints?: false` option to \
       `use #{inspect(used_module)}` or add upperbound on the number of possible instances of pads with \
       `availability: :on_request` using `max_instances: non_neg_number` option.
       """)

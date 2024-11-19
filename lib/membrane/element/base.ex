@@ -238,7 +238,7 @@ defmodule Membrane.Element.Base do
 
   Options:
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
-    - `:flow_control_related_warnings?` - if true (default) generates compile-time warnings \
+    - `:flow_control_hints?` - if true (default) generates compile-time warnings \
       if the number, direction, and type of flow control of pads are likely to cause unintended \
       behaviours.
   """
@@ -252,8 +252,8 @@ defmodule Membrane.Element.Base do
 
     Module.put_attribute(
       __CALLER__.module,
-      :__membrane_flow_control_related_warnings__,
-      Keyword.get(options, :flow_control_related_warnings?, true)
+      :__membrane_flow_control_hints__,
+      Keyword.get(options, :flow_control_hints?, true)
     )
 
     quote location: :keep do

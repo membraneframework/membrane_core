@@ -329,9 +329,6 @@ defmodule Membrane.Bin do
   Options:
     - `:bring_spec?` - if true (default) imports and aliases `Membrane.ChildrenSpec`
     - `:bring_pad?` - if true (default) requires and aliases `Membrane.Pad`
-    - `:flow_control_related_warnings?` - if true (default) generates compile-time warnings \
-      if the number, direction, and type of flow control of pads are likely to cause unintended \
-      behaviours.
   """
   defmacro __using__(options) do
     bring_spec =
@@ -348,12 +345,6 @@ defmodule Membrane.Bin do
           require Membrane.Pad, as: Pad
         end
       end
-
-    Module.put_attribute(
-      __CALLER__.module,
-      :__membrane_flow_control_related_warnings__,
-      Keyword.get(options, :flow_control_related_warnings?, true)
-    )
 
     quote location: :keep do
       alias unquote(__MODULE__)
