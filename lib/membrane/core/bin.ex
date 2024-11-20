@@ -261,6 +261,16 @@ defmodule Membrane.Core.Bin do
     {:noreply, state}
   end
 
+  defp do_handle_info(Message.new(:start_diamond_detection), state) do
+    :ok = Parent.DiamondDetectionController.start_diamond_detection(state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:trigger_diamond_detection), state) do
+    :ok = __MODULE__.DiamondDetectionController.trigger_diamond_detection(state)
+    {:noreply, state}
+  end
+
   defp do_handle_info(Message.new(_type, _args, _opts) = message, _state) do
     raise Membrane.BinError, "Received invalid message #{inspect(message)}"
   end

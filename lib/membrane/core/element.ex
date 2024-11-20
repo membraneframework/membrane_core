@@ -24,6 +24,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
+    DiamondDetectionController,
     EffectiveFlowController,
     EventController,
     LifecycleController,
@@ -283,6 +284,30 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:terminate), state) do
     state = LifecycleController.handle_terminate_request(state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:start_diamond_detection), state) do
+    :ok = DiamondDetectionController.start_diamond_detection(state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(
+         Message.new(:diamond_detection, [diamond_detection_ref, diamond_detection_path]),
+         state
+       ) do
+    state =
+      DiamondDetectionController.continue_diamond_detection(
+        diamond_detection_ref,
+        diamond_detection_path,
+        state
+      )
+
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:delete_diamond_detection_ref, diamond_detection_ref), state) do
+    state = DiamondDetectionController.delete_diamond_detection_ref(diamond_detection_ref, state)
     {:noreply, state}
   end
 
