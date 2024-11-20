@@ -41,11 +41,11 @@ defmodule Membrane.Integration.ConnectorTest do
       Testing.Pipeline.notify_child(pipeline, :source, {type, item})
 
       if type in [:stream_format, :event] do
-        assert_pipeline_notified(pipeline, :filter, {^type, Pad.ref(:input, _id), ^item})
+        assert_pipeline_notified(pipeline, :connector, {^type, Pad.ref(:input, _id), ^item})
       end
     end)
 
-    spec = get_child(:filter) |> child(:sink, Testing.Sink)
+    spec = get_child(:connector) |> child(:sink, Testing.Sink)
     Testing.Pipeline.execute_actions(pipeline, spec: spec)
 
     data
@@ -62,7 +62,7 @@ defmodule Membrane.Integration.ConnectorTest do
       Testing.Pipeline.notify_child(pipeline, :source, {type, item})
 
       if type in [:stream_format, :event] do
-        assert_pipeline_notified(pipeline, :filter, {^type, Pad.ref(:input, _id), ^item})
+        assert_pipeline_notified(pipeline, :connector, {^type, Pad.ref(:input, _id), ^item})
       end
 
       case type do
