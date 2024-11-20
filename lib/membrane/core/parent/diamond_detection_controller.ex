@@ -7,15 +7,9 @@ defmodule Membrane.Core.Parent.DiamondDetectionController do
 
   @spec start_diamond_detection(Parent.state()) :: :ok
   def start_diamond_detection(state) do
-    children_with_input_pads =
-      state.links
-      |> MapSet.new(& &1.to.child)
-
     state.children
-    |> Enum.each(fn {child, child_data} ->
-      if child_data.component_type == :bin or not MapSet.member?(children_with_input_pads, child) do
-        Message.send(child_data.pid, :start_diamond_detection)
-      end
+    |> Enum.each(fn {_child, %{pid: child_pid}} ->
+        Message.send(child_pid, :start_diamond_detection)
     end)
   end
 end
