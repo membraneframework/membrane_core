@@ -18,16 +18,12 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
 
   @spec continue_diamond_detection(reference(), diamond_detection_path(), State.t()) :: State.t()
   def continue_diamond_detection(diamond_detection_ref, diamond_detecton_path, state) do
-    delete_message = Message.new(:delete_diamond_detection_ref, diamond_detection_ref)
-    send_after_time = Membrane.Time.seconds(10) |> Membrane.Time.as_milliseconds(:round)
-    self() |> Process.send_after(delete_message, send_after_time)
+    cond do
+      not is_map_key(state.diamond_detection_ref_to_path, diamond_detection_ref) ->
+        delete_message = Message.new(:delete_diamond_detection_ref, diamond_detection_ref)
+        send_after_time = Membrane.Time.seconds(10) |> Membrane.Time.as_milliseconds(:round)
+        self() |> Process.send_after(delete_message, send_after_time)
 
-    case Map.fetch(state.diamond_detection_ref_to_path, diamond_detection_ref) do
-      {:ok, _old_path} ->
-        # todo: log diamond if not cycle
-        state
-
-      :error ->
         :ok = forward_diamond_detection(diamond_detection_ref, diamond_detecton_path, state)
 
         state
@@ -35,6 +31,13 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
           [:diamond_detection_ref_to_path, diamond_detection_ref],
           diamond_detecton_path
         )
+
+      has_cycle?(diamond_detecton_path) ->
+        state
+
+      true ->
+        # todo: log diamond
+        state
     end
   end
 
@@ -69,5 +72,10 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     pad_data.direction == :output and
       (pad_data.flow_control == :manual or
          (pad_data.flow_control == :auto and auto_pull_mode?))
+  end
+
+  defp has_cycle?(diamond_detection_path) do
+    uniq_length = diamond_detection_path |> Enum.uniq() |> length()
+    uniq_length < length(diamond_detection_path)
   end
 end

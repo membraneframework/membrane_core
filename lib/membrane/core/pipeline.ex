@@ -130,6 +130,16 @@ defmodule Membrane.Core.Pipeline do
     {:noreply, state}
   end
 
+  defp do_handle_info(Message.new(:start_diamond_detection), state) do
+    state = __MODULE__.DiamondDetectionController.start_diamond_detection(state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:trigger_diamond_detection), state) do
+    state = __MODULE__.DiamondDetectionController.trigger_diamond_detection(state)
+    {:noreply, state}
+  end
+
   defp do_handle_info(Message.new(:initialized, child), state) do
     state = ChildLifeController.handle_child_initialized(child, state)
     {:noreply, state}
@@ -144,16 +154,6 @@ defmodule Membrane.Core.Pipeline do
 
   defp do_handle_info(Message.new(:terminate), state) do
     state = LifecycleController.handle_terminate_request(state)
-    {:noreply, state}
-  end
-
-  defp do_handle_info(Message.new(:start_diamond_detection), state) do
-    state = __MODULE__.DiamondDetectionController.start_diamond_detection(state)
-    {:noreply, state}
-  end
-
-  defp do_handle_info(Message.new(:trigger_diamond_detection), state) do
-    state = __MODULE__.DiamondDetectionController.trigger_diamond_detection(state)
     {:noreply, state}
   end
 
