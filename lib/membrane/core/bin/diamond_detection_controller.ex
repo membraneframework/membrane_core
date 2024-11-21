@@ -7,6 +7,6 @@ defmodule Membrane.Core.Bin.DiamondDetectionController do
 
   @spec trigger_diamond_detection(State.t()) :: :ok
   def trigger_diamond_detection(state) do
-    Message.send(state.parent, :trigger_diamond_detection)
+    Message.send(state.parent_pid, :trigger_diamond_detection)
   end
 end
