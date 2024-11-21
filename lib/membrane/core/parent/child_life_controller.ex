@@ -317,6 +317,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     withl spec_data: {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref),
           do: {spec_data, state} = do_proceed_spec_startup(spec_ref, spec_data, state),
           status: :ready <- spec_data.status do
+
+
       cleanup_spec_startup(spec_ref, state)
     else
       spec_data: :error -> state

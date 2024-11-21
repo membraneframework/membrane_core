@@ -49,7 +49,9 @@ defmodule Membrane.Core.Element.State do
           resume_delayed_demands_loop_in_mailbox?: boolean(),
           diamond_detection_ref_to_path: %{
             optional(reference()) => DiamondDetectionController.diamond_detection_path()
-          }
+          },
+          diamond_detection_trigger_refs: MapSet.t(reference()),
+          diamond_detection_postponed?: boolean()
         }
 
   # READ THIS BEFORE ADDING NEW FIELD!!!
@@ -83,6 +85,8 @@ defmodule Membrane.Core.Element.State do
             pads_to_snapshot: MapSet.new(),
             playback_queue: [],
             diamond_detection_ref_to_path: %{},
+            diamond_detection_trigger_refs: MapSet.new(),
+            diamond_detection_postponed?: false,
             pads_data: %{},
             satisfied_auto_output_pads: MapSet.new(),
             awaiting_auto_input_pads: MapSet.new(),
