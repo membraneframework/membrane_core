@@ -103,9 +103,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   """
   @spec handle_spec(ChildrenSpec.t(), Parent.state()) :: Parent.state() | no_return()
   def handle_spec(spec, state) do
-
-
-
     spec_ref = make_ref()
     canonical_spec = make_canonical(spec)
 
@@ -165,22 +162,23 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         dependent_specs: dependent_specs,
         awaiting_responses: MapSet.new()
       })
-      |> trigger_diamond_detection()
+
+    # |> trigger_diamond_detection()
 
     state = StartupUtils.exec_handle_spec_started(all_children_names, state)
     proceed_spec_startup(spec_ref, state)
   end
 
-  defp trigger_diamond_detection(state) do
-    cond do
-      Component.bin?(state) ->
-        :ok = Bin.DiamondDetectionController.trigger_diamond_detection(state)
-        state
+  # defp trigger_diamond_detection(state) do
+  #   cond do
+  #     Component.bin?(state) ->
+  #       :ok = Bin.DiamondDetectionController.trigger_diamond_detection(state)
+  #       state
 
-      Component.pipeline?(state) ->
-        Pipeline.DiamondDetectionController.trigger_diamond_detection(state)
-    end
-  end
+  #     Component.pipeline?(state) ->
+  #       Pipeline.DiamondDetectionController.trigger_diamond_detection(state)
+  #   end
+  # end
 
   defp assert_all_static_pads_linked_in_spec!(children_definitions, links) do
     pads_to_link =

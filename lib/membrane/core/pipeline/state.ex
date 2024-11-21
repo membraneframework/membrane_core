@@ -34,8 +34,8 @@ defmodule Membrane.Core.Pipeline.State do
           setup_incomplete?: boolean(),
           stalker: Membrane.Core.Stalker.t(),
           subprocess_supervisor: pid(),
-          awaiting_setup_completition?: boolean(),
-          diamond_detection_triggered?: boolean()
+          awaiting_setup_completition?: boolean()
+          # diamond_detection_triggered?: boolean()
         }
 
   # READ THIS BEFORE ADDING NEW FIELD!!!
@@ -59,7 +59,7 @@ defmodule Membrane.Core.Pipeline.State do
             stalker: nil,
             resource_guard: nil,
             subprocess_supervisor: nil,
-            awaiting_setup_completition?: false,
-          diamond_detection_triggered?: false
+            awaiting_setup_completition?: false
 
+  # diamond_detection_triggered?: false
 end
