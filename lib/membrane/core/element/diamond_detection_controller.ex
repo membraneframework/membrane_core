@@ -59,7 +59,9 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     state.pads_data
     |> Enum.each(fn {pad_ref, pad_data} ->
       if is_output_pull_pad(pad_data, auto_pull_mode?) do
-        diamond_detection_path = [{self(), state.name, pad_ref} | diamond_detection_path]
+        name = state.name
+        # name = Membrane.ComponentPath.get()
+        diamond_detection_path = [{self(), name, pad_ref} | diamond_detection_path]
 
         Message.send(
           pad_data.pid,
