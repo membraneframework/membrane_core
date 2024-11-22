@@ -441,7 +441,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       end)
 
     spec_data.links_ids
-    |> Enum.map(&state.links[&1].from.name)
+    |> Enum.map(&state.links[&1].from.child)
     |> Enum.uniq()
     |> Enum.each(fn child_name ->
       DiamondDetectionController.start_diamond_detection_trigger(child_name, spec_ref, state)
