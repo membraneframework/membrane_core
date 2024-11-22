@@ -306,6 +306,21 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
+  defp do_handle_info(Message.new(:start_diamond_detection_trigger, trigger_ref), state) do
+    state = DiamondDetectionController.start_diamond_detection_trigger(trigger_ref, state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:diamond_detection_trigger, trigger_ref), state) do
+    state = DiamondDetectionController.handle_diamond_detection_trigger(trigger_ref, state)
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:delete_diamond_detection_trigger_ref, trigger_ref), state) do
+    state = DiamondDetectionController.delete_diamond_detection_trigger_ref(trigger_ref, state)
+    {:noreply, state}
+  end
+
   defp do_handle_info(Message.new(:terminate), state) do
     state = LifecycleController.handle_terminate_request(state)
     {:noreply, state}

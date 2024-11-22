@@ -11,6 +11,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     ChildEntryParser,
     ChildrenModel,
     ClockHandler,
+    DiamondDetectionController,
     Link,
     SpecificationParser
   }
@@ -163,22 +164,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         awaiting_responses: MapSet.new()
       })
 
-    # |> trigger_diamond_detection()
-
     state = StartupUtils.exec_handle_spec_started(all_children_names, state)
     proceed_spec_startup(spec_ref, state)
   end
-
-  # defp trigger_diamond_detection(state) do
-  #   cond do
-  #     Component.bin?(state) ->
-  #       :ok = Bin.DiamondDetectionController.trigger_diamond_detection(state)
-  #       state
-
-  #     Component.pipeline?(state) ->
-  #       Pipeline.DiamondDetectionController.trigger_diamond_detection(state)
-  #   end
-  # end
 
   defp assert_all_static_pads_linked_in_spec!(children_definitions, links) do
     pads_to_link =
@@ -317,8 +305,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     withl spec_data: {:ok, spec_data} <- Map.fetch(state.pending_specs, spec_ref),
           do: {spec_data, state} = do_proceed_spec_startup(spec_ref, spec_data, state),
           status: :ready <- spec_data.status do
-
-
       cleanup_spec_startup(spec_ref, state)
     else
       spec_data: :error -> state
@@ -440,7 +426,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  defp do_proceed_spec_startup(_spec_ref, %{status: :ready} = spec_data, state) do
+  defp do_proceed_spec_startup(spec_ref, %{status: :ready} = spec_data, state) do
     state =
       Enum.reduce(spec_data.children_names, state, fn child, state ->
         %{pid: pid, terminating?: terminating?} = state.children[child]
@@ -453,6 +439,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
         put_in(state.children[child].ready?, true)
       end)
+
+    spec_data.links_ids
+    |> Enum.map(&state.links[&1].from.name)
+    |> Enum.uniq()
+    |> Enum.each(fn child_name ->
+      DiamondDetectionController.start_diamond_detection_trigger(child_name, spec_ref, state)
+    end)
 
     state =
       with %{playback: :playing} <- state do

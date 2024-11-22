@@ -8,6 +8,8 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   alias Membrane.Core.Element.State
   alias Membrane.Element.PadData
 
+  # TODO: don't forward diamond detection and triggers in endpoints
+
   @type diamond_detection_path :: [{pid(), Child.name(), Pad.ref()}]
 
   @spec start_diamond_detection(State.t()) :: :ok
@@ -71,7 +73,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   defp forward_diamond_detection_trigger(trigger_ref, state) do
     state.pads_data
     |> Enum.each(fn {_pad_ref, %PadData{} = pad_data} ->
-      if pad_data.direction == :output and pad_data.flow_control != :push do
+      if pad_data.direction == :input and pad_data.flow_control != :push do
         Message.send(pad_data.pid, :diamond_detection_trigger, trigger_ref)
       end
     end)
@@ -88,16 +90,20 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     uniq_length < length(diamond_detection_path)
   end
 
-  def start_diamond_detection_trigger(spec_ref, state) when map_size(state.pads_data) >= 2 do
-    handle_diamond_detection_trigger(spec_ref, state)
+  def start_diamond_detection_trigger(spec_ref, state) do
+    if map_size(state.pads_data) < 2 or
+         MapSet.member?(state.diamond_detection_trigger_refs, spec_ref) do
+      state
+    else
+      do_handle_diamond_detection_trigger(spec_ref, state)
+    end
   end
 
-  def start_diamond_detection_trigger(_spec_ref, state), do: state
-
   def handle_diamond_detection_trigger(trigger_ref, %State{} = state) do
-    if MapSet.member?(state.diamond_detection_trigger_refs, trigger_ref),
-      do: state,
-      else: do_handle_diamond_detection_trigger(trigger_ref, state)
+    if state.type == :endpoint or
+         MapSet.member?(state.diamond_detection_trigger_refs, trigger_ref),
+       do: state,
+       else: do_handle_diamond_detection_trigger(trigger_ref, state)
   end
 
   defp do_handle_diamond_detection_trigger(trigger_ref, %State{} = state) do
