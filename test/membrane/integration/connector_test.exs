@@ -1,11 +1,11 @@
-defmodule Membrane.Integration.ForwardingFilterTest do
+defmodule Membrane.Integration.ConnectorTest do
   use ExUnit.Case, async: true
 
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
-  alias Membrane.ForwardingFilter
+  alias Membrane.Connector
   alias Membrane.Testing
 
   require Membrane.Pad, as: Pad
@@ -23,12 +23,12 @@ defmodule Membrane.Integration.ForwardingFilterTest do
       do: {[{action, {:output, item}}], state}
   end
 
-  test "Membrane.ForwardingFilter buffers data until output pad is linked" do
+  test "Membrane.Connector buffers data until output pad is linked" do
     pipeline =
       Testing.Pipeline.start_link_supervised!(
         spec:
           child(:source, Source)
-          |> child(:filter, %ForwardingFilter{
+          |> child(:connector, %Connector{
             notify_on_event?: true,
             notify_on_stream_format?: true
           })
@@ -41,11 +41,11 @@ defmodule Membrane.Integration.ForwardingFilterTest do
       Testing.Pipeline.notify_child(pipeline, :source, {type, item})
 
       if type in [:stream_format, :event] do
-        assert_pipeline_notified(pipeline, :filter, {^type, Pad.ref(:input, _id), ^item})
+        assert_pipeline_notified(pipeline, :connector, {^type, Pad.ref(:input, _id), ^item})
       end
     end)
 
-    spec = get_child(:filter) |> child(:sink, Testing.Sink)
+    spec = get_child(:connector) |> child(:sink, Testing.Sink)
     Testing.Pipeline.execute_actions(pipeline, spec: spec)
 
     data
@@ -62,7 +62,7 @@ defmodule Membrane.Integration.ForwardingFilterTest do
       Testing.Pipeline.notify_child(pipeline, :source, {type, item})
 
       if type in [:stream_format, :event] do
-        assert_pipeline_notified(pipeline, :filter, {^type, Pad.ref(:input, _id), ^item})
+        assert_pipeline_notified(pipeline, :connector, {^type, Pad.ref(:input, _id), ^item})
       end
 
       case type do
@@ -75,7 +75,7 @@ defmodule Membrane.Integration.ForwardingFilterTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
-  test "Membrane.ForwardingFilter pauses input demand if output pad is not linked" do
+  test "Membrane.Connector pauses input demand if output pad is not linked" do
     atomics_ref = :atomics.new(1, [])
     :atomics.put(atomics_ref, 1, 0)
 
@@ -90,7 +90,7 @@ defmodule Membrane.Integration.ForwardingFilterTest do
     spec =
       child(:source, %Testing.Source{output: {nil, generator}})
       |> via_in(:input, auto_demand_size: auto_demand_size)
-      |> child(:forwarding_filter, ForwardingFilter)
+      |> child(:connector, Connector)
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
@@ -98,7 +98,7 @@ defmodule Membrane.Integration.ForwardingFilterTest do
 
     assert :atomics.get(atomics_ref, 1) == auto_demand_size
 
-    spec = get_child(:forwarding_filter) |> child(:sink, Testing.Sink)
+    spec = get_child(:connector) |> child(:sink, Testing.Sink)
     Testing.Pipeline.execute_actions(pipeline, spec: spec)
 
     Process.sleep(500)
