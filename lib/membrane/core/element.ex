@@ -288,11 +288,16 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(
-         Message.new(:diamond_detection, [diamond_detection_ref, diamond_detection_path]),
+         Message.new(:diamond_detection, [
+           input_pad_ref,
+           diamond_detection_ref,
+           diamond_detection_path
+         ]),
          state
        ) do
     state =
       DiamondDetectionController.continue_diamond_detection(
+        input_pad_ref,
         diamond_detection_ref,
         diamond_detection_path,
         state
