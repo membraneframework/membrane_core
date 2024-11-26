@@ -6,10 +6,11 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   require Membrane.Pad, as: Pad
 
   alias __MODULE__.{DiamondLogger, PathInGraph}
+  alias __MODULE__.PathInGraph.Vertex
   alias Membrane.Core.Element.State
   alias Membrane.Element.PadData
 
-  @component_path_suffix "__membrane_component_path_64_byte_suffix________________________"
+  @component_path_prefix "__membrane_component_path_64_byte_prefix________________________"
 
   @spec start_diamond_detection(State.t()) :: :ok
   def start_diamond_detection(state) do
@@ -61,11 +62,14 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
         state
 
       true ->
+        old_diamond_detection_path =
+          state.diamond_detection_ref_to_path[diamond_detection_ref]
+          |> remove_component_path_prefix()
+
         :ok =
-          DiamondLogger.log_diamond(
-            diamond_detecton_path |> cut_suffixes_in_path(),
-            state.diamond_detection_ref_to_path[diamond_detection_ref] |> cut_suffixes_in_path()
-          )
+          diamond_detecton_path
+          |> remove_component_path_prefix()
+          |> DiamondLogger.log_diamond(old_diamond_detection_path)
 
         state
     end
@@ -186,18 +190,18 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   end
 
   defp get_component_path() do
-    # adding @component_path_suffix to component path will cause that component path will
+    # adding @component_path_prefix to component path will cause that component path will
     # always have more than 64 bytes, so it won't be copied during sending a message
-    (Membrane.ComponentPath.get() ++ [@component_path_suffix])
+    [@component_path_prefix | Membrane.ComponentPath.get()]
     |> Enum.join()
   end
 
   defp have_common_prefix?(path_a, path_b), do: List.last(path_a) == List.last(path_b)
 
-  defp cut_suffixes_in_path(path_in_graph) do
+  defp remove_component_path_prefix(path_in_graph) do
     path_in_graph
-    |> Enum.map(
-      &%{&1 | component_path: String.replace(&1.component_path, @component_path_suffix, "")}
-    )
+    |> Enum.map(fn %Vertex{component_path: @component_path_prefix <> component_path} = vertex ->
+      %{vertex | component_path: component_path}
+    end)
   end
 end

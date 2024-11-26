@@ -29,6 +29,7 @@ defmodule Membrane.Integration.DiamondDetectionTest do
     def handle_demand(_pad, _demand, _unit, _ctx, state), do: {[], state}
   end
 
+  @tag :xd
   test "logging a diamond" do
     with_mock DiamondLogger, log_diamond: fn _path_a, _path_b -> :ok end do
       # a -> b -> c and a -> c
@@ -112,7 +113,7 @@ defmodule Membrane.Integration.DiamondDetectionTest do
       Process.sleep(1500)
 
       assert [_old_entry | new_entries] = call_history(DiamondLogger)
-      assert new_entries != []
+      assert length(new_entries) in [1, 2]
 
       new_entries
       |> Enum.flat_map(fn {_element_pid, {DiamondLogger, :log_diamond, [path_a, path_b]}, :ok} ->
