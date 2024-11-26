@@ -1,7 +1,6 @@
 defmodule Membrane.Integration.DiamondDetectionTest do
   use ExUnit.Case, async: true
 
-  import ExUnit.Assertions
   import Membrane.ChildrenSpec
   import Mock
 
@@ -29,7 +28,6 @@ defmodule Membrane.Integration.DiamondDetectionTest do
     def handle_demand(_pad, _demand, _unit, _ctx, state), do: {[], state}
   end
 
-  @tag :xd
   test "logging a diamond" do
     with_mock DiamondLogger, log_diamond: fn _path_a, _path_b -> :ok end do
       # a -> b -> c and a -> c
