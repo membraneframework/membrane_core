@@ -5,51 +5,37 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   require Membrane.Logger
   require Membrane.Pad, as: Pad
 
+  alias __MODULE__.{DiamondLogger, PathInGraph}
   alias Membrane.Core.Element.State
   alias Membrane.Element.PadData
 
   @component_path_suffix "__membrane_component_path_64_byte_suffix________________________"
-  @not_a_pad :__membrane_not_a_pad__
-
-  @type diamond_detection_path_entry :: %{
-          pid: pid(),
-          component_path: String.t(),
-          input_pad_ref: Pad.ref(),
-          output_pad_ref: Pad.ref()
-        }
-
-  @type diamond_detection_path() :: [diamond_detection_path_entry()]
 
   @spec start_diamond_detection(State.t()) :: :ok
   def start_diamond_detection(state) do
     diamond_detection_path = [
-      %{
-        pid: self(),
-        component_path: get_component_path(),
-        input_pad_ref: @not_a_pad,
-        output_pad_ref: nil
-      }
+      %PathInGraph.Vertex{pid: self(), component_path: get_component_path()}
     ]
 
     make_ref()
     |> forward_diamond_detection(diamond_detection_path, state)
   end
 
-  @spec continue_diamond_detection(Pad.ref(), reference(), diamond_detection_path(), State.t()) :: State.t()
+  @spec continue_diamond_detection(Pad.ref(), reference(), PathInGraph.t(), State.t()) ::
+          State.t()
   def continue_diamond_detection(
         input_pad_ref,
         diamond_detection_ref,
         diamond_detecton_path,
         state
       ) do
-    new_path_entry = %{
+    new_path_vertex = %PathInGraph.Vertex{
       pid: self(),
       component_path: get_component_path(),
-      input_pad_ref: input_pad_ref,
-      output_pad_ref: @not_a_pad
+      input_pad_ref: input_pad_ref
     }
 
-    diamond_detecton_path = [new_path_entry | diamond_detecton_path]
+    diamond_detecton_path = [new_path_vertex | diamond_detecton_path]
 
     cond do
       not is_map_key(state.diamond_detection_ref_to_path, diamond_detection_ref) ->
@@ -68,11 +54,19 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
       has_cycle?(diamond_detecton_path) ->
         state
 
-      have_common_prefix?(diamond_detecton_path, state.diamond_detection_ref_to_path[diamond_detection_ref]) ->
+      have_common_prefix?(
+        diamond_detecton_path,
+        state.diamond_detection_ref_to_path[diamond_detection_ref]
+      ) ->
         state
 
       true ->
-        # todo: log diamond
+        :ok =
+          DiamondLogger.log_diamond(
+            diamond_detecton_path |> cut_suffixes_in_path(),
+            state.diamond_detection_ref_to_path[diamond_detection_ref] |> cut_suffixes_in_path()
+          )
+
         state
     end
   end
@@ -86,7 +80,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     )
   end
 
-  @spec forward_diamond_detection(reference(), diamond_detection_path(), State.t()) :: :ok
+  @spec forward_diamond_detection(reference(), PathInGraph.t(), State.t()) :: :ok
   defp forward_diamond_detection(diamond_detection_ref, diamond_detection_path, state) do
     auto_pull_mode? = state.effective_flow_control == :pull
     [current_entry | diamond_detection_path_tail] = diamond_detection_path
@@ -126,6 +120,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     uniq_length < length(diamond_detection_path)
   end
 
+  @spec start_diamond_detection_trigger(reference(), State.t()) :: State.t()
   def start_diamond_detection_trigger(spec_ref, state) do
     if map_size(state.pads_data) < 2 or
          MapSet.member?(state.diamond_detection_trigger_refs, spec_ref) do
@@ -135,6 +130,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     end
   end
 
+  @spec handle_diamond_detection_trigger(reference(), State.t()) :: State.t()
   def handle_diamond_detection_trigger(trigger_ref, %State{} = state) do
     if state.type == :endpoint or
          MapSet.member?(state.diamond_detection_trigger_refs, trigger_ref),
@@ -170,6 +166,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     %{state | diamond_detection_postponed?: true}
   end
 
+  @spec delete_diamond_detection_trigger_ref(reference(), State.t()) :: State.t()
   def delete_diamond_detection_trigger_ref(trigger_ref, state) do
     state
     |> Map.update!(:diamond_detection_trigger_refs, &MapSet.delete(&1, trigger_ref))
@@ -197,7 +194,10 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
 
   defp have_common_prefix?(path_a, path_b), do: List.last(path_a) == List.last(path_b)
 
-  defp log_diamond(path_a, path_b) do
-
+  defp cut_suffixes_in_path(path_in_graph) do
+    path_in_graph
+    |> Enum.map(
+      &%{&1 | component_path: String.replace(&1.component_path, @component_path_suffix, "")}
+    )
   end
 end
