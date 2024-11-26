@@ -1,5 +1,5 @@
 defmodule Membrane.Integration.DiamondDetectionTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   import ExUnit.Assertions
   import Membrane.ChildrenSpec
@@ -7,7 +7,7 @@ defmodule Membrane.Integration.DiamondDetectionTest do
 
   require Membrane.Pad, as: Pad
 
-  alias Membrane.Core.Element.DiamondDetectionController.{DiamondLoggerImpl, PathInGraph}
+  alias Membrane.Core.Element.DiamondDetectionController.DiamondLogger
   alias Membrane.Core.Element.DiamondDetectionController.PathInGraph.Vertex
   alias Membrane.Testing
 
@@ -29,59 +29,99 @@ defmodule Membrane.Integration.DiamondDetectionTest do
     def handle_demand(_pad, _demand, _unit, _ctx, state), do: {[], state}
   end
 
-  test "simple scenario" do
-    with_mock DiamondLoggerImpl, log_diamond: fn _path_a, _path_b -> :ok end do
+  test "logging a diamond" do
+    with_mock DiamondLogger, log_diamond: fn _path_a, _path_b -> :ok end do
+      # a -> b -> c and a -> c
       spec = [
-        child(:source, Node)
+        child(:a, Node)
         |> via_out(Pad.ref(:output, 1))
         |> via_in(Pad.ref(:input, 1))
-        |> child(:filter, Node)
+        |> child(:b, Node)
         |> via_out(Pad.ref(:output, 1))
         |> via_in(Pad.ref(:input, 1))
-        |> child(:sink, Node),
-        get_child(:source)
+        |> child(:c, Node),
+        get_child(:a)
         |> via_out(Pad.ref(:output, 2))
         |> via_in(Pad.ref(:input, 2))
-        |> get_child(:sink)
+        |> get_child(:c)
       ]
 
       pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
       Process.sleep(1500)
 
-      assert [{_element_pid, {DiamondLoggerImpl, :log_diamond, [path_a, path_b]}, :ok}] =
-               call_history(DiamondLoggerImpl)
+      assert [{_element_pid, {DiamondLogger, :log_diamond, [path_a, path_b]}, :ok}] =
+               call_history(DiamondLogger)
 
       "#PID" <> inspected_pipeline = inspect(pipeline)
 
       [shorter_path, longer_path] = Enum.sort_by([path_a, path_b], &length/1)
 
+      # assert a -> b -> c
       assert [
                %Vertex{
-                 component_path: ^inspected_pipeline <> "/:sink",
+                 component_path: ^inspected_pipeline <> "/:c",
                  input_pad_ref: {Membrane.Pad, :input, 1}
                },
                %Vertex{
-                 component_path: ^inspected_pipeline <> "/:filter",
+                 component_path: ^inspected_pipeline <> "/:b",
                  input_pad_ref: {Membrane.Pad, :input, 1},
                  output_pad_ref: {Membrane.Pad, :output, 1}
                },
                %Vertex{
-                 component_path: ^inspected_pipeline <> "/:source",
+                 component_path: ^inspected_pipeline <> "/:a",
                  output_pad_ref: {Membrane.Pad, :output, 1}
                }
              ] = longer_path
 
+      # assert a -> c
       assert [
                %Vertex{
-                 component_path: ^inspected_pipeline <> "/:sink",
+                 component_path: ^inspected_pipeline <> "/:c",
                  input_pad_ref: {Membrane.Pad, :input, 2}
                },
                %Vertex{
-                 component_path: ^inspected_pipeline <> "/:source",
+                 component_path: ^inspected_pipeline <> "/:a",
                  output_pad_ref: {Membrane.Pad, :output, 2}
                }
              ] = shorter_path
+
+      # d -> a -> b -> c and a -> c
+      spec =
+        child(:d, Node)
+        |> via_out(Pad.ref(:output, 3))
+        |> via_in(Pad.ref(:input, 3))
+        |> get_child(:a)
+
+      Testing.Pipeline.execute_actions(pipeline, spec: spec)
+
+      Process.sleep(1500)
+
+      # adding this link shouldn't trigger logging a diamond
+      assert call_history(DiamondLogger) |> length() == 1
+
+      # d -> a -> b -> c and a -> c and d -> c
+      spec =
+        get_child(:d)
+        |> via_out(Pad.ref(:output, 4))
+        |> via_in(Pad.ref(:input, 4))
+        |> get_child(:c)
+
+      Testing.Pipeline.execute_actions(pipeline, spec: spec)
+
+      Process.sleep(1500)
+
+      assert [_old_entry | new_entries] = call_history(DiamondLogger)
+      assert new_entries != []
+
+      new_entries
+      |> Enum.flat_map(fn {_element_pid, {DiamondLogger, :log_diamond, [path_a, path_b]}, :ok} ->
+        [path_a, path_b]
+      end)
+      |> Enum.each(fn path ->
+        assert %{component_path: ^inspected_pipeline <> "/:c"} = List.first(path)
+        assert %{component_path: ^inspected_pipeline <> "/:d"} = List.last(path)
+      end)
 
       Testing.Pipeline.terminate(pipeline)
     end
