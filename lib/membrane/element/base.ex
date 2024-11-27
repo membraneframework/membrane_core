@@ -273,6 +273,10 @@ defmodule Membrane.Element.Base do
       unquote(bring_pad)
 
       @doc false
+      @spec membrane_component_type() :: :pipeline | :bin | :element
+      def membrane_component_type, do: :element
+
+      @doc false
       @spec membrane_element?() :: true
       def membrane_element?, do: true
 
