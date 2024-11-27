@@ -1,6 +1,6 @@
 defmodule Membrane.Support.ChildRemovalTest.FilterToBeRemoved do
   @moduledoc false
-  use Membrane.Filter
+  use Membrane.Filter, flow_control_hints?: false
 
   def_input_pad :input, accepted_format: _any, flow_control: :auto, availability: :on_request
   def_output_pad :output, accepted_format: _any, flow_control: :auto, availability: :on_request
