@@ -1,14 +1,14 @@
 defmodule Membrane.Core.Element.DiamondDetectionController do
   @moduledoc false
 
-  require Membrane.Core.Message, as: Message
-  require Membrane.Logger
-  require Membrane.Pad, as: Pad
-
   alias __MODULE__.{DiamondLogger, PathInGraph}
   alias __MODULE__.PathInGraph.Vertex
   alias Membrane.Core.Element.State
   alias Membrane.Element.PadData
+
+  require Membrane.Core.Message, as: Message
+  require Membrane.Logger
+  require Membrane.Pad, as: Pad
 
   @component_path_prefix "__membrane_component_path_64_byte_prefix________________________"
 
@@ -91,7 +91,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
 
     state.pads_data
     |> Enum.each(fn {pad_ref, pad_data} ->
-      if is_output_pull_pad(pad_data, auto_pull_mode?) do
+      if output_pull_pad?(pad_data, auto_pull_mode?) do
         current_entry = %{current_entry | output_pad_ref: pad_ref}
         diamond_detection_path = [current_entry | diamond_detection_path_tail]
 
@@ -113,7 +113,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     end)
   end
 
-  defp is_output_pull_pad(%PadData{} = pad_data, auto_pull_mode?) do
+  defp output_pull_pad?(%PadData{} = pad_data, auto_pull_mode?) do
     pad_data.direction == :output and
       (pad_data.flow_control == :manual or
          (pad_data.flow_control == :auto and auto_pull_mode?))
@@ -180,7 +180,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     auto_pull_mode? = state.effective_flow_control == :pull
 
     state.pads_data
-    |> Enum.count(fn {_pad_ref, pad_data} -> is_output_pull_pad(pad_data, auto_pull_mode?) end)
+    |> Enum.count(fn {_pad_ref, pad_data} -> output_pull_pad?(pad_data, auto_pull_mode?) end)
   end
 
   defp send_after_to_self(message, seconds \\ 10) do

@@ -1,14 +1,14 @@
-defmodule Membrane.Integration.DiamondDetectionTest do
+defmodule Membrane.DiamondDetectionTest do
   use ExUnit.Case, async: true
 
   import Membrane.ChildrenSpec
   import Mock
 
-  require Membrane.Pad, as: Pad
-
   alias Membrane.Core.Element.DiamondDetectionController.DiamondLogger
   alias Membrane.Core.Element.DiamondDetectionController.PathInGraph.Vertex
   alias Membrane.Testing
+
+  require Membrane.Pad, as: Pad
 
   defmodule Node do
     use Membrane.Filter
@@ -28,7 +28,7 @@ defmodule Membrane.Integration.DiamondDetectionTest do
     def handle_demand(_pad, _demand, _unit, _ctx, state), do: {[], state}
   end
 
-  test "logging a diamond" do
+  test "diamond detection algorithm" do
     with_mock DiamondLogger, log_diamond: fn _path_a, _path_b -> :ok end do
       # a -> b -> c and a -> c
       spec = [
@@ -52,23 +52,23 @@ defmodule Membrane.Integration.DiamondDetectionTest do
       assert [{_element_pid, {DiamondLogger, :log_diamond, [path_a, path_b]}, :ok}] =
                call_history(DiamondLogger)
 
-      "#PID" <> inspected_pipeline = inspect(pipeline)
+      "#PID" <> pipeline_id = inspect(pipeline)
 
       [shorter_path, longer_path] = Enum.sort_by([path_a, path_b], &length/1)
 
       # assert a -> b -> c
       assert [
                %Vertex{
-                 component_path: ^inspected_pipeline <> "/:c",
+                 component_path: ^pipeline_id <> "/:c",
                  input_pad_ref: {Membrane.Pad, :input, 1}
                },
                %Vertex{
-                 component_path: ^inspected_pipeline <> "/:b",
+                 component_path: ^pipeline_id <> "/:b",
                  input_pad_ref: {Membrane.Pad, :input, 1},
                  output_pad_ref: {Membrane.Pad, :output, 1}
                },
                %Vertex{
-                 component_path: ^inspected_pipeline <> "/:a",
+                 component_path: ^pipeline_id <> "/:a",
                  output_pad_ref: {Membrane.Pad, :output, 1}
                }
              ] = longer_path
@@ -76,11 +76,11 @@ defmodule Membrane.Integration.DiamondDetectionTest do
       # assert a -> c
       assert [
                %Vertex{
-                 component_path: ^inspected_pipeline <> "/:c",
+                 component_path: ^pipeline_id <> "/:c",
                  input_pad_ref: {Membrane.Pad, :input, 2}
                },
                %Vertex{
-                 component_path: ^inspected_pipeline <> "/:a",
+                 component_path: ^pipeline_id <> "/:a",
                  output_pad_ref: {Membrane.Pad, :output, 2}
                }
              ] = shorter_path
@@ -110,6 +110,7 @@ defmodule Membrane.Integration.DiamondDetectionTest do
 
       Process.sleep(1500)
 
+      # there should be one or two new logged diamonds, depending on the race condition
       assert [_old_entry | new_entries] = call_history(DiamondLogger)
       assert length(new_entries) in [1, 2]
 
@@ -118,8 +119,8 @@ defmodule Membrane.Integration.DiamondDetectionTest do
         [path_a, path_b]
       end)
       |> Enum.each(fn path ->
-        assert %{component_path: ^inspected_pipeline <> "/:c"} = List.first(path)
-        assert %{component_path: ^inspected_pipeline <> "/:d"} = List.last(path)
+        assert %{component_path: ^pipeline_id <> "/:c"} = List.first(path)
+        assert %{component_path: ^pipeline_id <> "/:d"} = List.last(path)
       end)
 
       Testing.Pipeline.terminate(pipeline)

@@ -9,7 +9,8 @@ defmodule Membrane.Core.Element.State do
 
   alias Membrane.{Clock, Element, Pad, Sync}
   alias Membrane.Core.Child.PadModel
-  alias Membrane.Core.Element.{DiamondDetectionController, EffectiveFlowController}
+  alias Membrane.Core.Element.DiamondDetectionController.PathInGraph
+  alias Membrane.Core.Element.EffectiveFlowController
   alias Membrane.Core.Timer
 
   require Membrane.Pad
@@ -48,7 +49,7 @@ defmodule Membrane.Core.Element.State do
           awaiting_auto_input_pads: MapSet.t(),
           resume_delayed_demands_loop_in_mailbox?: boolean(),
           diamond_detection_ref_to_path: %{
-            optional(reference()) => DiamondDetectionController.diamond_detection_path()
+            optional(reference()) => PathInGraph.t()
           },
           diamond_detection_trigger_refs: MapSet.t(reference()),
           diamond_detection_postponed?: boolean()
