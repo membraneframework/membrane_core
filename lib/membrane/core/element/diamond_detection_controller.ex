@@ -190,8 +190,8 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   end
 
   defp get_component_path() do
-    # adding @component_path_prefix to component path will cause that component path will
-    # always have more than 64 bytes, so it won't be copied during sending a message
+    # adding @component_path_prefix to component path causes that component path
+    # always has more than 64 bytes, so it won't be copied during sending a message
     [@component_path_prefix | Membrane.ComponentPath.get()]
     |> Enum.join()
   end
