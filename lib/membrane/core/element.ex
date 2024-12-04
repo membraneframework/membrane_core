@@ -282,7 +282,7 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
-  defp do_handle_info(         Message.new(:diamond_detection, message),         state       ) do
+  defp do_handle_info(Message.new(:diamond_detection, message), state) do
     state = DiamondDetectionController.handle_diamond_detection_message(message, state)
     {:noreply, state}
   end

@@ -49,6 +49,7 @@ defmodule Membrane.Core.Element.State do
           awaiting_auto_input_pads: MapSet.t(),
           resume_delayed_demands_loop_in_mailbox?: boolean(),
           diamond_detection: %{
+            serialized_component_path: String.t() | nil,
             ref_to_path: %{optional(reference()) => PathInGraph.t()},
             trigger_refs: MapSet.t(reference()),
             postponed?: boolean()
@@ -86,6 +87,7 @@ defmodule Membrane.Core.Element.State do
             pads_to_snapshot: MapSet.new(),
             playback_queue: [],
             diamond_detection: %{
+              serialized_component_path: nil,
               ref_to_path: %{},
               trigger_refs: MapSet.new(),
               postponed?: false

@@ -29,8 +29,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   def handle_diamond_detection_message(%{type: type} = message, state) do
     case type do
       :start ->
-        :ok = start_diamond_detection(state)
-        state
+        start_diamond_detection(state)
 
       :start_trigger ->
         start_diamond_detection_trigger(message.ref, state)
@@ -49,27 +48,34 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     end
   end
 
-  @spec start_diamond_detection(State.t()) :: :ok
+  @spec start_diamond_detection(State.t()) :: State.t()
   defp start_diamond_detection(state) do
+    {component_path, state} = get_component_path(state)
+
     diamond_detection_path = [
-      %PathInGraph.Vertex{pid: self(), component_path: get_component_path()}
+      %PathInGraph.Vertex{pid: self(), component_path: component_path}
     ]
 
-    make_ref()
-    |> forward_diamond_detection(diamond_detection_path, state)
+    :ok =
+      make_ref()
+      |> forward_diamond_detection(diamond_detection_path, state)
+
+    state
   end
 
   @spec continue_diamond_detection(Pad.ref(), reference(), PathInGraph.t(), State.t()) ::
           State.t()
   defp continue_diamond_detection(
-        input_pad_ref,
-        diamond_detection_ref,
-        diamond_detecton_path,
-        state
-      ) do
+         input_pad_ref,
+         diamond_detection_ref,
+         diamond_detecton_path,
+         state
+       ) do
+    {component_path, state} = get_component_path(state)
+
     new_path_vertex = %PathInGraph.Vertex{
       pid: self(),
-      component_path: get_component_path(),
+      component_path: component_path,
       input_pad_ref: input_pad_ref
     }
 
@@ -236,11 +242,28 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     :ok
   end
 
-  defp get_component_path() do
-    # adding @component_path_prefix to component path causes that component path
-    # always has more than 64 bytes, so it won't be copied during sending a message
-    [@component_path_prefix | Membrane.ComponentPath.get()]
-    |> Enum.join()
+  defp get_component_path(state) do
+    case state.diamond_detection.serialized_component_path do
+      nil ->
+        # adding @component_path_prefix to component path causes that component path
+        # always has more than 64 bytes, so it won't be copied during sending a message
+
+        component_path =
+          [@component_path_prefix | Membrane.ComponentPath.get()]
+          |> Enum.join()
+
+        state =
+          state
+          |> put_in(
+            [:diamond_detection, :serialized_component_path],
+            component_path
+          )
+
+        {component_path, state}
+
+      component_path ->
+        {component_path, state}
+    end
   end
 
   defp have_common_prefix?(path_a, path_b), do: List.last(path_a) == List.last(path_b)
