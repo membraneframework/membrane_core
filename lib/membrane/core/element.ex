@@ -282,47 +282,8 @@ defmodule Membrane.Core.Element do
     {:noreply, state}
   end
 
-  defp do_handle_info(Message.new(:start_diamond_detection), state) do
-    :ok = DiamondDetectionController.start_diamond_detection(state)
-    {:noreply, state}
-  end
-
-  defp do_handle_info(
-         Message.new(:diamond_detection, [
-           input_pad_ref,
-           diamond_detection_ref,
-           diamond_detection_path
-         ]),
-         state
-       ) do
-    state =
-      DiamondDetectionController.continue_diamond_detection(
-        input_pad_ref,
-        diamond_detection_ref,
-        diamond_detection_path,
-        state
-      )
-
-    {:noreply, state}
-  end
-
-  defp do_handle_info(Message.new(:delete_diamond_detection_ref, diamond_detection_ref), state) do
-    state = DiamondDetectionController.delete_diamond_detection_ref(diamond_detection_ref, state)
-    {:noreply, state}
-  end
-
-  defp do_handle_info(Message.new(:start_diamond_detection_trigger, trigger_ref), state) do
-    state = DiamondDetectionController.start_diamond_detection_trigger(trigger_ref, state)
-    {:noreply, state}
-  end
-
-  defp do_handle_info(Message.new(:diamond_detection_trigger, trigger_ref), state) do
-    state = DiamondDetectionController.handle_diamond_detection_trigger(trigger_ref, state)
-    {:noreply, state}
-  end
-
-  defp do_handle_info(Message.new(:delete_diamond_detection_trigger_ref, trigger_ref), state) do
-    state = DiamondDetectionController.delete_diamond_detection_trigger_ref(trigger_ref, state)
+  defp do_handle_info(         Message.new(:diamond_detection, message),         state       ) do
+    state = DiamondDetectionController.handle_diamond_detection_message(message, state)
     {:noreply, state}
   end
 
