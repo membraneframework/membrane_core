@@ -39,7 +39,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     diamond_detecton_path = [new_path_vertex | diamond_detecton_path]
 
     cond do
-      not is_map_key(state.diamond_detection_ref_to_path, diamond_detection_ref) ->
+      not is_map_key(state.diamond_detection.ref_to_path, diamond_detection_ref) ->
         :ok = forward_diamond_detection(diamond_detection_ref, diamond_detecton_path, state)
 
         :ok =
@@ -48,7 +48,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
 
         state
         |> put_in(
-          [:diamond_detection_ref_to_path, diamond_detection_ref],
+          [:diamond_detection, :ref_to_path, diamond_detection_ref],
           diamond_detecton_path
         )
 
@@ -57,13 +57,13 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
 
       have_common_prefix?(
         diamond_detecton_path,
-        state.diamond_detection_ref_to_path[diamond_detection_ref]
+        state.diamond_detection.ref_to_path[diamond_detection_ref]
       ) ->
         state
 
       true ->
         old_diamond_detection_path =
-          state.diamond_detection_ref_to_path[diamond_detection_ref]
+          state.diamond_detection.ref_to_path[diamond_detection_ref]
           |> remove_component_path_prefix()
 
         :ok =
@@ -77,11 +77,11 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
 
   @spec delete_diamond_detection_ref(reference(), State.t()) :: State.t()
   def delete_diamond_detection_ref(diamond_detection_ref, state) do
+    {_path, %State{} = state} =
+      state
+      |> pop_in([:diamond_detection, :ref_to_path, diamond_detection_ref])
+
     state
-    |> Map.update!(
-      :diamond_detection_ref_to_path,
-      &Map.delete(&1, diamond_detection_ref)
-    )
   end
 
   @spec forward_diamond_detection(reference(), PathInGraph.t(), State.t()) :: :ok
@@ -127,7 +127,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   @spec start_diamond_detection_trigger(reference(), State.t()) :: State.t()
   def start_diamond_detection_trigger(spec_ref, state) do
     if map_size(state.pads_data) < 2 or
-         MapSet.member?(state.diamond_detection_trigger_refs, spec_ref) do
+         MapSet.member?(state.diamond_detection.trigger_refs, spec_ref) do
       state
     else
       do_handle_diamond_detection_trigger(spec_ref, state)
@@ -137,7 +137,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   @spec handle_diamond_detection_trigger(reference(), State.t()) :: State.t()
   def handle_diamond_detection_trigger(trigger_ref, %State{} = state) do
     if state.type == :endpoint or
-         MapSet.member?(state.diamond_detection_trigger_refs, trigger_ref),
+         MapSet.member?(state.diamond_detection.trigger_refs, trigger_ref),
        do: state,
        else: do_handle_diamond_detection_trigger(trigger_ref, state)
   end
@@ -145,7 +145,10 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   defp do_handle_diamond_detection_trigger(trigger_ref, %State{} = state) do
     state =
       state
-      |> Map.update!(:diamond_detection_trigger_refs, &MapSet.put(&1, trigger_ref))
+      |> update_in(
+        [:diamond_detection, :trigger_refs],
+        &MapSet.put(&1, trigger_ref)
+      )
 
     :ok =
       Message.new(:delete_diamond_detection_trigger_ref, trigger_ref)
@@ -158,7 +161,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
       else: state
   end
 
-  defp postpone_diamond_detection(%State{} = state) when state.diamond_detection_postponed? do
+  defp postpone_diamond_detection(%State{} = state) when state.diamond_detection.postponed? do
     state
   end
 
@@ -167,13 +170,17 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
       Message.new(:start_diamond_detection)
       |> send_after_to_self(1)
 
-    %{state | diamond_detection_postponed?: true}
+    state
+    |> put_in([:diamond_detection, :postponed?], true)
   end
 
   @spec delete_diamond_detection_trigger_ref(reference(), State.t()) :: State.t()
   def delete_diamond_detection_trigger_ref(trigger_ref, state) do
     state
-    |> Map.update!(:diamond_detection_trigger_refs, &MapSet.delete(&1, trigger_ref))
+    |> update_in(
+      [:diamond_detection, :trigger_refs],
+      &MapSet.delete(&1, trigger_ref)
+    )
   end
 
   defp output_pull_arity(state) do

@@ -48,11 +48,11 @@ defmodule Membrane.Core.Element.State do
           satisfied_auto_output_pads: MapSet.t(),
           awaiting_auto_input_pads: MapSet.t(),
           resume_delayed_demands_loop_in_mailbox?: boolean(),
-          diamond_detection_ref_to_path: %{
-            optional(reference()) => PathInGraph.t()
-          },
-          diamond_detection_trigger_refs: MapSet.t(reference()),
-          diamond_detection_postponed?: boolean()
+          diamond_detection: %{
+            ref_to_path: %{optional(reference()) => PathInGraph.t()},
+            trigger_refs: MapSet.t(reference()),
+            postponed?: boolean()
+          }
         }
 
   # READ THIS BEFORE ADDING NEW FIELD!!!
@@ -85,9 +85,11 @@ defmodule Membrane.Core.Element.State do
             handle_demand_loop_counter: 0,
             pads_to_snapshot: MapSet.new(),
             playback_queue: [],
-            diamond_detection_ref_to_path: %{},
-            diamond_detection_trigger_refs: MapSet.new(),
-            diamond_detection_postponed?: false,
+            diamond_detection: %{
+              ref_to_path: %{},
+              trigger_refs: MapSet.new(),
+              postponed?: false
+            },
             pads_data: %{},
             satisfied_auto_output_pads: MapSet.new(),
             awaiting_auto_input_pads: MapSet.new(),
