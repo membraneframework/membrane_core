@@ -16,29 +16,6 @@ defmodule Membrane.TelemetryTest do
     def_options target: [spec: pid()]
 
     @impl true
-    def handle_init(_ctx, opts), do: {[], opts}
-
-    @impl true
-    def handle_playing(_ctx, state) do
-      {[], state}
-    end
-
-    @impl true
-    def handle_start_of_stream(_pad, _context, state) do
-      {[], state}
-    end
-
-    @impl true
-    def handle_end_of_stream(_pad, _context, state) do
-      {[], state}
-    end
-
-    @impl true
-    def handle_event(_pad, _event, _context, state) do
-      {[], state}
-    end
-
-    @impl true
     def handle_demand(_pad, size, _unit, _context, state) do
       {[demand: {:input, size}], state}
     end
