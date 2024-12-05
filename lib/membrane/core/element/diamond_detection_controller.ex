@@ -25,6 +25,77 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
           optional(:pad_ref) => Pad.ref()
         }
 
+  # DESCRIPTION OF THE ALGORITHM OF FINDING DIAMONDS IN THE PIPELINE
+
+  # Definitions:
+
+  # diamond - directed graph, that has at least two distinct elements (sink and source) and
+  # has two vertex-disjoint paths from the source to the sink.
+
+  # This algotithm takes the directed graph made by all Elements within single Pipeline and
+  # finds some diamond-subgraphs having all the edges (links) working in the :pull mode,
+  # it means in :manual flow control or in :auto flow controll if the effective flow control
+  # is set to :pull.
+
+  # These diamonds can be dangerous when used with pull flow control, e.g. let's consider
+  # a pipeline, that contains:
+  #  * MP4 demuxer that has two output pads
+  #  * MKV muxer that is linked to both of them
+  # and let's assume, that MP4 container that is consumed by MP4 demuxer is unbalanced.
+  # If MKV muxer has pads working in pull mode, then demand on one pad will be satisified,
+  # but on the another won't, because the MP4 container is unbalanced. Then, if MP4 demuxer
+  # has pads in auto flow control and its effective flow control is set to :pull, it won't
+  # demand on the input, because one of the pads output with :auto flow control doesn't
+  # have positive demand, so the whole pipeline will get stuck and won't process more data.
+
+  # The algorithms is made of two phases: (1) triggering and (2) proper searching.
+
+  # (1) Triggering
+
+  # Let's notice, that:
+  #  * new diamond can be created only after linking new spec
+  #  * if the new spec caused some new diamond to occur, this diamond will contain some of
+  #    the links spawned in this spec
+
+  # If the diamond contains a link, it must also contain an element which output pad takes
+  # is the part of this link.
+
+  # After spec status is set to :done, parent component that returned the spec will trigger
+  # all elements, which output pads has been linked in this spec. Reference of the trigger
+  # is always set to the spec reference.
+
+  # If the element is triggered with a specific reference for the first time, it does two
+  # things:
+  #  * the element forwards the trigger with the same reference via all input pads working
+  #    in the pull mode
+  #  * if the element has at least two output pads working in the pull mode, it postpones
+  #    a proper searching that will be spawned from itself. Time between postponing and the
+  #    proper searching is one second. If in this time an element will be triggered once
+  #    again with a different reference, it won't cause another postponing a proper
+  #    searching, this means that at the time there is at most one proper searching
+  #    postponed in the single element
+
+  # (2) Proper searching:
+
+  # Proper searching is started only in the elements that have at lest two output pads
+  # working in the pull mode. When an elements starts proper searching, it assings
+  # a new reference to it, different from the reference of the related trigger.
+
+  # When a proper searching enters the element (no matter if it is the element that has
+  # hust started the proper searching, or maybe it was forwarded to it via link):
+  #  * if the element sees the proper searching reference for the first time, then:
+  #    - it forwards proper searching via all output pads working in the pull mode
+  #    - when the proper searching is forwarded, it remembers the path in grapth through
+  #      the elments that is has already passed
+  #  * if the element has already seen the reference of proper searching, but there is
+  #    a repeated element on the path, that proper searching traversed to this element,
+  #    the element does nothing
+  #  * if the element has already seen the reference of proper searching and the traversed
+  #    path doesn't contain any repeated elements, it means that the current traversed path
+  #    and the path that the proper searching traversed when it entered the element
+  #    previous time together make a diamond. Then, the element logs the found diamond
+  #    and doesn't forward proper searching fruther
+
   @spec handle_diamond_detection_message(diamond_detection_message(), State.t()) :: State.t()
   def handle_diamond_detection_message(%{type: type} = message, state) do
     case type do

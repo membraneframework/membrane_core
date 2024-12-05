@@ -35,8 +35,8 @@ defmodule Membrane.Core.Element.DiamondDetectionController.DiamondLogger do
     |> Enum.chunk_every(2, 1, :discard)
     |> Enum.map_join("\n", fn [%Vertex{} = from, %Vertex{} = to] ->
       """
-      From #{from.component_path} via output pad #{inspect(from.output_pad_ref)} \
-      to #{to.component_path} via input pad #{inspect(to.input_pad_ref)}.
+      * from #{from.component_path} via output pad #{inspect(from.output_pad_ref)} to \
+      #{to.component_path} via input pad #{inspect(to.input_pad_ref)}
       """
     end)
   end
