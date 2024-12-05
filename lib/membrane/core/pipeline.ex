@@ -45,8 +45,10 @@ defmodule Membrane.Core.Pipeline do
 
     Telemetry.report_init(:pipeline)
 
+    path = Membrane.ComponentPath.get_formatted()
+
     ResourceGuard.register(resource_guard, fn ->
-      Telemetry.report_terminate(:pipeline)
+      Telemetry.report_terminate(:pipeline, path)
     end)
 
     {:ok, clock_proxy} =

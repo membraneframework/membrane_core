@@ -119,8 +119,8 @@ defmodule Membrane.Core.Element do
       SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
 
     Telemetry.report_init(:element)
-
-    ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:element) end)
+      path = Membrane.ComponentPath.get_formatted()
+    ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:element, path) end)
 
     self_pid = self()
 
