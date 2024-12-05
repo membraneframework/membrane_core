@@ -1,30 +1,6 @@
 defmodule Membrane.Core.Element.DiamondDetectionController do
   @moduledoc false
 
-  alias __MODULE__.{DiamondLogger, PathInGraph}
-  alias __MODULE__.PathInGraph.Vertex
-  alias Membrane.Core.Element.State
-  alias Membrane.Element.PadData
-
-  require Membrane.Core.Message, as: Message
-  require Membrane.Logger
-  require Membrane.Pad, as: Pad
-
-  @component_path_prefix "__membrane_component_path_64_byte_prefix________________________"
-
-  @type diamond_detection_message() :: %{
-          :type =>
-            :start
-            | :start_trigger
-            | :diamond_detection
-            | :trigger
-            | :delete_ref
-            | :delete_trigger_ref,
-          optional(:ref) => reference(),
-          optional(:path) => PathInGraph.t(),
-          optional(:pad_ref) => Pad.ref()
-        }
-
   # DESCRIPTION OF THE ALGORITHM OF FINDING DIAMONDS IN THE PIPELINE
 
   # Definitions:
@@ -95,6 +71,31 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   #    and the path that the proper searching traversed when it entered the element
   #    previous time together make a diamond. Then, the element logs the found diamond
   #    and doesn't forward proper searching fruther
+
+  alias __MODULE__.{DiamondLogger, PathInGraph}
+  alias __MODULE__.PathInGraph.Vertex
+  alias Membrane.Core.Element.State
+  alias Membrane.Element.PadData
+
+  require Membrane.Core.Message, as: Message
+  require Membrane.Logger
+  require Membrane.Pad, as: Pad
+
+  @component_path_prefix "__membrane_component_path_64_byte_prefix________________________"
+
+  @type diamond_detection_message() :: %{
+          :type =>
+            :start
+            | :start_trigger
+            | :diamond_detection
+            | :trigger
+            | :delete_ref
+            | :delete_trigger_ref,
+          optional(:ref) => reference(),
+          optional(:path) => PathInGraph.t(),
+          optional(:pad_ref) => Pad.ref()
+        }
+
 
   @spec handle_diamond_detection_message(diamond_detection_message(), State.t()) :: State.t()
   def handle_diamond_detection_message(%{type: type} = message, state) do
