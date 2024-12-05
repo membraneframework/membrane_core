@@ -128,7 +128,8 @@ defmodule Membrane.Core.Bin do
       SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
 
     Telemetry.report_init(:bin)
-    ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:bin) end)
+    path = Membrane.ComponentPath.get_formatted()
+    ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:bin, path) end)
 
     state =
       %State{

@@ -103,10 +103,7 @@ defmodule Membrane.Core.Telemetry do
   Reports a pipeline/bin/element initialization.
   """
   defmacro report_init(type) when type in [:pipeline, :bin, :element] do
-    event =
-      quote do
-        [:membrane, unquote(type), :init]
-      end
+    event = [:membrane, type, :init]
 
     value =
       quote do
@@ -129,16 +126,9 @@ defmodule Membrane.Core.Telemetry do
   @doc """
   Reports a pipeline/bin/element termination.
   """
-  defmacro report_terminate(type) when type in [:pipeline, :bin, :element] do
-    event =
-      quote do
-        [:membrane, unquote(type), :terminate]
-      end
-
-    value =
-      quote do
-        %{path: ComponentPath.get_formatted()}
-      end
+  defmacro report_terminate(type, path) when type in [:pipeline, :bin, :element] do
+    event = [:membrane, type, :terminate]
+    value = quote do %{path: unquote(path)} end
 
     report_event(
       event,
