@@ -1,6 +1,5 @@
 defmodule Membrane.TelemetryTest do
   use ExUnit.Case, async: false
-
   import Membrane.ChildrenSpec
 
   require Logger
@@ -10,9 +9,7 @@ defmodule Membrane.TelemetryTest do
     use Membrane.Filter
 
     def_input_pad :input, flow_control: :manual, accepted_format: _any, demand_unit: :buffers
-
     def_output_pad :output, flow_control: :manual, accepted_format: _any
-
     def_options target: [spec: pid()]
 
     @impl true
@@ -42,63 +39,48 @@ defmodule Membrane.TelemetryTest do
     [links: links, ref: ref]
   end
 
-  describe "Telemetry attaching" do
-    test "handles init events", %{ref: ref, links: links} do
-      :ok =
-        [
-          [:membrane, :element, :init],
-          [:membrane, :pipeline, :init]
-        ]
-        |> attach_to_events(ref)
+  describe "Telemetry reports" do
+    @tag :telemetry
+
+    @paths ~w[:filter :sink :source]
+    @events [:init, :setup]
+    @steps [:start, :stop]
+
+    setup %{links: links} do
+      ref = make_ref()
+
+      events =
+        for event <- @events,
+            step <- @steps do
+          [:membrane, :element, event, step]
+        end
+
+      :telemetry.attach_many(ref, events, &TelemetryListener.handle_event/4, %{
+        dest: self(),
+        ref: ref
+      })
 
       Testing.Pipeline.start_link_supervised!(spec: links)
-
-      assert_receive({^ref, :telemetry_ack, {[:membrane, :pipeline, :init], _, _}}, 1000)
-      assert_receive({^ref, :telemetry_ack, {[:membrane, :element, :init], e1, _}}, 1000)
-      assert_receive({^ref, :telemetry_ack, {[:membrane, :element, :init], e2, _}}, 1000)
-      assert_receive({^ref, :telemetry_ack, {[:membrane, :element, :init], e3, _}}, 1000)
-
-      elements =
-        [e1, e2, e3]
-        |> Enum.map(&extract_type/1)
-        |> Enum.sort()
-
-      assert ^elements = ["filter", "sink", "source"]
+      [ref: ref]
     end
 
-    test "handles terminate events", %{ref: ref, links: links} do
-      :ok =
-        [
-          [:membrane, :element, :terminate],
-          [:membrane, :pipeline, :terminate]
-        ]
-        |> attach_to_events(ref)
+    # Test each lifecycle step for each element type
+    for path <- @paths,
+        event <- @events do
+      test "#{path}/#{event}", %{ref: ref} do
+        path = unquote(path)
+        event = unquote(event)
 
-      pid = Testing.Pipeline.start_link_supervised!(spec: links)
-      :ok = Testing.Pipeline.terminate(pid)
+        assert_receive {^ref, :telemetry_ack,
+                        {[:membrane, :element, ^event, :start], meta, %{path: [_, ^path]}}}
 
-      assert_receive({^ref, :telemetry_ack, {[:membrane, :pipeline, :terminate], _, _}}, 1000)
-      assert_receive({^ref, :telemetry_ack, {[:membrane, :element, :terminate], e1, _}}, 1000)
-      assert_receive({^ref, :telemetry_ack, {[:membrane, :element, :terminate], e2, _}}, 1000)
-      assert_receive({^ref, :telemetry_ack, {[:membrane, :element, :terminate], e3, _}}, 1000)
+        assert meta.system_time > 0
 
-      elements =
-        [e1, e2, e3]
-        |> Enum.map(&extract_type/1)
-        |> Enum.sort()
+        assert_receive {^ref, :telemetry_ack,
+                        {[:membrane, :element, ^event, :stop], meta, %{path: [_, ^path]}}}
 
-      assert ^elements = ["filter", "sink", "source"]
+        assert meta.duration > 0
+      end
     end
-  end
-
-  defp attach_to_events(events, ref) do
-    :telemetry.attach_many(ref, events, &TelemetryListener.handle_event/4, %{
-      dest: self(),
-      ref: ref
-    })
-  end
-
-  defp extract_type(%{path: pid_type}) do
-    String.split(pid_type, ":") |> List.last()
   end
 end

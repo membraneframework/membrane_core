@@ -96,7 +96,9 @@ defmodule Membrane.Core.Bin do
            {:continue, :setup}}
   def init(options) do
     Utils.log_on_error do
-      do_init(options)
+      Telemetry.report_span :bin, :init do
+        do_init(options)
+      end
     end
   end
 
@@ -127,7 +129,6 @@ defmodule Membrane.Core.Bin do
     {:ok, resource_guard} =
       SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
 
-    Telemetry.report_init(:bin)
     path = Membrane.ComponentPath.get_formatted()
     ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:bin, path) end)
 
