@@ -24,6 +24,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Element.{
     BufferController,
     DemandController,
+    DiamondDetectionController,
     EffectiveFlowController,
     EventController,
     LifecycleController,
@@ -278,6 +279,11 @@ defmodule Membrane.Core.Element do
         state
       )
 
+    {:noreply, state}
+  end
+
+  defp do_handle_info(Message.new(:diamond_detection, message), state) do
+    state = DiamondDetectionController.handle_diamond_detection_message(message, state)
     {:noreply, state}
   end
 
