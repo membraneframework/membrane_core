@@ -96,7 +96,9 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def init(options) do
     Utils.log_on_error do
-      do_init(options)
+      Telemetry.report_span :element, :init do
+        do_init(options)
+      end
     end
   end
 
@@ -118,7 +120,7 @@ defmodule Membrane.Core.Element do
       SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
 
     Telemetry.report_init(:element)
-      path = Membrane.ComponentPath.get_formatted()
+    path = Membrane.ComponentPath.get_formatted()
     ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:element, path) end)
 
     self_pid = self()
@@ -163,8 +165,10 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def handle_continue(:setup, state) do
     Utils.log_on_error do
-      state = LifecycleController.handle_setup(state)
-      {:noreply, state}
+      Telemetry.report_span :element, :setup do
+        state = LifecycleController.handle_setup(state)
+        {:noreply, state}
+      end
     end
   end
 

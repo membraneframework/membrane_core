@@ -1,6 +1,5 @@
 defmodule Membrane.TelemetryTest do
   use ExUnit.Case, async: false
-
   import Membrane.ChildrenSpec
 
   require Logger
@@ -10,9 +9,7 @@ defmodule Membrane.TelemetryTest do
     use Membrane.Filter
 
     def_input_pad :input, flow_control: :manual, accepted_format: _any, demand_unit: :buffers
-
     def_output_pad :output, flow_control: :manual, accepted_format: _any
-
     def_options target: [spec: pid()]
 
     @impl true
@@ -43,6 +40,8 @@ defmodule Membrane.TelemetryTest do
   end
 
   describe "Telemetry attaching" do
+    @tag :telemetry
+
     test "handles init events", %{ref: ref, links: links} do
       :ok =
         [
@@ -91,11 +90,45 @@ defmodule Membrane.TelemetryTest do
     end
   end
 
+  describe "Telemetry reports" do
+    @tag :telemetry
+
+    @paths ~w[:filter :sink :source]
+    @steps [:init, :setup]
+
+    setup %{links: links} do
+      ref = make_ref()
+
+      for step <- @steps do
+        [:membrane, :element, :span, step]
+      end
+      |> attach_to_events(ref)
+
+      Testing.Pipeline.start_link_supervised!(spec: links)
+      [ref: ref]
+    end
+
+    for path <- @paths, step <- @steps do
+      test "#{path}/#{step}", %{ref: ref} do
+        path = unquote(path)
+        step = unquote(step)
+
+        assert_receive(
+          {^ref, :telemetry_ack,
+           {[:membrane, :element, :span, ^step], %{path: [_, ^path], time: time}, _}}
+        )
+
+        assert time > 0
+      end
+    end
+  end
+
   defp attach_to_events(events, ref) do
-    :telemetry.attach_many(ref, events, &TelemetryListener.handle_event/4, %{
-      dest: self(),
-      ref: ref
-    })
+    :ok =
+      :telemetry.attach_many(ref, events, &TelemetryListener.handle_event/4, %{
+        dest: self(),
+        ref: ref
+      })
   end
 
   defp extract_type(%{path: pid_type}) do

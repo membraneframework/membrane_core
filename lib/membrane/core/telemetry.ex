@@ -28,7 +28,7 @@ defmodule Membrane.Core.Telemetry do
     report_event(
       event,
       value,
-      Keyword.get(@telemetry_flags, :metrics, []) |> Enum.find(&(&1 == metric)) != nil
+      Keyword.get(@telemetry_flags, :metrics, []) |> Enum.member?(metric)
     )
   end
 
@@ -60,7 +60,7 @@ defmodule Membrane.Core.Telemetry do
     report_event(
       event,
       value,
-      Keyword.get(@telemetry_flags, :metrics, []) |> Enum.find(&(&1 == :bitrate)) != nil
+      Keyword.get(@telemetry_flags, :metrics, []) |> Enum.member?(:bitrate)
     )
   end
 
@@ -96,7 +96,7 @@ defmodule Membrane.Core.Telemetry do
         }
       end
 
-    report_event(event, value, Enum.find(@telemetry_flags, &(&1 == :links)) != nil)
+    report_event(event, value, Enum.member?(@telemetry_flags, :links))
   end
 
   @doc """
@@ -115,12 +115,33 @@ defmodule Membrane.Core.Telemetry do
         %{log_metadata: Logger.metadata()}
       end
 
-    report_event(
-      event,
-      value,
-      Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil,
-      metadata
-    )
+    report_event(event, value, Enum.member?(@telemetry_flags, :inits_and_terminates), metadata)
+  end
+
+  defmacro report_span(type, subtype, do: block) do
+    enabled = Enum.member?(@telemetry_flags, :spans)
+
+    if enabled do
+      quote do
+        {time, val} =
+          :timer.tc(fn ->
+            unquote(block)
+          end)
+
+        path = ComponentPath.get()
+        log_metadata = Logger.metadata()
+
+        :telemetry.execute(
+          [:membrane, unquote(type), :span, unquote(subtype)],
+          %{time: time, time_unit: :microseconds, path: path},
+          %{log_metadata: Logger.metadata()}
+        )
+
+        val
+      end
+    else
+      block
+    end
   end
 
   @doc """
@@ -128,18 +149,18 @@ defmodule Membrane.Core.Telemetry do
   """
   defmacro report_terminate(type, path) when type in [:pipeline, :bin, :element] do
     event = [:membrane, type, :terminate]
-    value = quote do %{path: unquote(path)} end
 
-    report_event(
-      event,
-      value,
-      Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil
-    )
+    value =
+      quote do
+        %{path: unquote(path)}
+      end
+
+    report_event(event, value, Enum.member?(@telemetry_flags, :inits_and_terminates))
   end
 
   # Conditional event reporting of telemetry events
-  defp report_event(event_name, measurement, enable, metadata \\ nil) do
-    if enable do
+  defp report_event(event_name, measurement, enabled, metadata \\ nil) do
+    if enabled do
       quote do
         :telemetry.execute(
           unquote(event_name),
