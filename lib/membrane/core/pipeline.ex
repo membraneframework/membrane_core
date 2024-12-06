@@ -25,7 +25,9 @@ defmodule Membrane.Core.Pipeline do
   @impl GenServer
   def init(params) do
     Utils.log_on_error do
-      do_init(params)
+      Telemetry.report_span :pipeline, :init do
+        do_init(params)
+      end
     end
   end
 
@@ -42,8 +44,6 @@ defmodule Membrane.Core.Pipeline do
 
     {:ok, resource_guard} =
       SubprocessSupervisor.start_utility(subprocess_supervisor, {ResourceGuard, self()})
-
-    Telemetry.report_init(:pipeline)
 
     path = Membrane.ComponentPath.get_formatted()
 
