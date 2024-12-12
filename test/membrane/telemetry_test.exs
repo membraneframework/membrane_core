@@ -27,6 +27,10 @@ defmodule Membrane.TelemetryTest do
     end
   end
 
+  @paths ~w[:filter :sink :source]
+  @events [:init, :setup, :playing, :terminate]
+  @steps [:start, :stop]
+
   setup do
     ref = make_ref()
 
@@ -39,12 +43,8 @@ defmodule Membrane.TelemetryTest do
     [links: links, ref: ref]
   end
 
-  describe "Telemetry reports" do
+  describe "Telemetry reports elements" do
     @tag :telemetry
-
-    @paths ~w[:filter :sink :source]
-    @events [:init, :setup]
-    @steps [:start, :stop]
 
     setup %{links: links} do
       ref = make_ref()
@@ -60,27 +60,67 @@ defmodule Membrane.TelemetryTest do
         ref: ref
       })
 
-      Testing.Pipeline.start_link_supervised!(spec: links)
+      pid = Testing.Pipeline.start_link_supervised!(spec: links)
+      :ok = Testing.Pipeline.terminate(pid)
       [ref: ref]
     end
 
     # Test each lifecycle step for each element type
-    for path <- @paths,
+    for element_type <- @paths,
         event <- @events do
-      test "#{path}/#{event}", %{ref: ref} do
-        path = unquote(path)
+      test "#{element_type}/#{event}", %{ref: ref} do
+        element_type = unquote(element_type)
         event = unquote(event)
 
         assert_receive {^ref, :telemetry_ack,
-                        {[:membrane, :element, ^event, :start], meta, %{path: [_, ^path]}}}
+                        {[:membrane, :element, ^event, :start], meta, %{path: [_, ^element_type]}}}
 
         assert meta.system_time > 0
 
         assert_receive {^ref, :telemetry_ack,
-                        {[:membrane, :element, ^event, :stop], meta, %{path: [_, ^path]}}}
+                        {[:membrane, :element, ^event, :stop], meta, %{path: [_, ^element_type]}}}
 
         assert meta.duration > 0
       end
+    end
+  end
+
+  describe "Pipelines" do
+    setup %{links: links} do
+      ref = make_ref()
+
+      events =
+        for event <- @events,
+            step <- @steps do
+          [:membrane, :pipeline, event, step]
+        end
+
+      :telemetry.attach_many(ref, events, &TelemetryListener.handle_event/4, %{
+        dest: self(),
+        ref: ref
+      })
+
+      pid = Testing.Pipeline.start_link_supervised!(spec: links)
+      :ok = Testing.Pipeline.terminate(pid)
+      [ref: ref]
+    end
+
+    test "Pipeline lifecycle", %{ref: ref} do
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :start], meta, %{}}}
+
+      assert meta.system_time > 0
+
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :stop], meta, %{}}}
+
+      assert meta.duration > 0
+
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :start], meta, %{}}}
+
+      assert meta.system_time > 0
+
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :stop], meta, %{}}}
+
+      assert meta.duration > 0
     end
   end
 end

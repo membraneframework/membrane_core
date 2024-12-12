@@ -7,6 +7,8 @@ defmodule Membrane.Core.CallbackHandler do
 
   use Bunch
 
+  require Membrane.Core.Telemetry
+  alias Membrane.Core.Telemetry
   alias Membrane.CallbackError
 
   require Membrane.Logger
@@ -136,7 +138,9 @@ defmodule Membrane.Core.CallbackHandler do
 
     callback_result =
       try do
-        apply(module, callback, args)
+        Telemetry.report_span :element, :terminate do
+          apply(module, callback, args)
+        end
       rescue
         e in UndefinedFunctionError ->
           _ignored =

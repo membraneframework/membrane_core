@@ -6,11 +6,7 @@ defmodule Membrane.Core.Telemetry do
 
   require Membrane.Pad
 
-  defp warn(warning) do
-    IO.warn(warning, Macro.Env.stacktrace(__ENV__))
-  end
-
-  @possible_flags [:all, :metrics, :bitrate, :links, :inits_and_terminates, :spans]
+  @possible_flags [:init, :terminate, :setup, :playing]
   @telemetry_flags Application.compile_env(:membrane_core, :telemetry_flags, [])
   @invalid_config_warning "`config :membrane_core, :telemetry_flags` should contain either :all, [include:[]] or [exclude:[]]"
 
@@ -19,23 +15,19 @@ defmodule Membrane.Core.Telemetry do
   """
   defmacro report_metric(metric, value, meta \\ quote(do: %{})) do
     event =
-      quote do
-        [:membrane, :metric, :value]
-      end
+      [:membrane, :metric, :value]
 
-    value =
-      quote do
-        %{
-          component_path: ComponentPath.get(),
-          metric: Atom.to_string(unquote(metric)),
-          value: unquote(value),
-          meta: unquote(meta)
-        }
-      end
+    val =
+      Macro.escape(%{
+        component_path: ComponentPath.get(),
+        metric: Atom.to_string(metric),
+        value: value,
+        meta: meta
+      })
 
     report_event(
       event,
-      value,
+      val,
       Keyword.get(@telemetry_flags, :metrics, []) |> Enum.member?(metric)
     )
   end
@@ -107,13 +99,11 @@ defmodule Membrane.Core.Telemetry do
     report_event(event, value, Enum.member?(@telemetry_flags, :links))
   end
 
-  defmacro report_span(type, subtype, do: block) do
-    enabled = flag_enabled?(:inits_and_terminates)
-
-    if enabled do
+  defmacro report_span(element_type, event_type, do: block) do
+    if event_enabled?(event_type) do
       quote do
         :telemetry.span(
-          [:membrane, unquote(type), unquote(subtype)],
+          [:membrane, unquote(element_type), unquote(event_type)],
           %{
             log_metadata: Logger.metadata(),
             path: ComponentPath.get()
@@ -129,20 +119,6 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  @doc """
-  Reports a pipeline/bin/element termination.
-  """
-  defmacro report_terminate(type, path) when type in [:pipeline, :bin, :element] do
-    event = [:membrane, type, :terminate]
-
-    value =
-      quote do
-        %{path: unquote(path)}
-      end
-
-    report_event(event, value, Enum.member?(@telemetry_flags, :inits_and_terminates))
-  end
-
   # Conditional event reporting of telemetry events
   defp report_event(event_name, measurement, enabled, metadata \\ nil) do
     if enabled do
@@ -154,20 +130,11 @@ defmodule Membrane.Core.Telemetry do
         )
       end
     else
-      # A hack to suppress the 'unused variable' warnings
-      quote do
-        _fn = fn ->
-          _unused = unquote(event_name)
-          _unused = unquote(measurement)
-          _unused = unquote(metadata)
-        end
-
-        :ok
-      end
+      :ok
     end
   end
 
-  defp flag_enabled?(flag) do
+  defp event_enabled?(flag) do
     Enum.member?(get_flags(@telemetry_flags), flag)
   end
 
@@ -183,5 +150,11 @@ defmodule Membrane.Core.Telemetry do
       incorrect_flags ->
         warn("#{inspect(incorrect_flags)} are not correct Membrane telemetry flags")
     end
+  end
+
+  defp get_flags(_), do: []
+
+  defp warn(warning) do
+    IO.warn(warning, Macro.Env.stacktrace(__ENV__))
   end
 end

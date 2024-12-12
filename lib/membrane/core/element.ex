@@ -118,9 +118,6 @@ defmodule Membrane.Core.Element do
     {:ok, resource_guard} =
       SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
 
-    path = Membrane.ComponentPath.get()
-    ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:element, path) end)
-
     self_pid = self()
 
     Stalker.register_metric_function(:message_queue_length, fn ->

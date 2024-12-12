@@ -6,6 +6,8 @@ defmodule Membrane.Core.Element.LifecycleController do
 
   use Bunch
 
+  require Membrane.Core.Telemetry
+  alias Membrane.Core.Telemetry
   alias Membrane.{Clock, Element, Sync}
   alias Membrane.Core.{CallbackHandler, Element, Message, SubprocessSupervisor}
 
@@ -81,13 +83,15 @@ defmodule Membrane.Core.Element.LifecycleController do
       |> EffectiveFlowController.resolve_effective_flow_control()
 
     state =
-      CallbackHandler.exec_and_handle_callback(
-        :handle_playing,
-        ActionHandler,
-        %{context: &CallbackContext.from_state/1},
-        [],
-        state
-      )
+      Telemetry.report_span :element, :playing do
+        CallbackHandler.exec_and_handle_callback(
+          :handle_playing,
+          ActionHandler,
+          %{context: &CallbackContext.from_state/1},
+          [],
+          state
+        )
+      end
 
     PlaybackQueue.eval(state)
   end

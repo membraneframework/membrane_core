@@ -45,12 +45,6 @@ defmodule Membrane.Core.Pipeline do
     {:ok, resource_guard} =
       SubprocessSupervisor.start_utility(subprocess_supervisor, {ResourceGuard, self()})
 
-    path = Membrane.ComponentPath.get_formatted()
-
-    ResourceGuard.register(resource_guard, fn ->
-      Telemetry.report_terminate(:pipeline, path)
-    end)
-
     {:ok, clock_proxy} =
       SubprocessSupervisor.start_utility(
         params.subprocess_supervisor,
@@ -84,8 +78,10 @@ defmodule Membrane.Core.Pipeline do
   @impl GenServer
   def handle_continue(:setup, state) do
     Utils.log_on_error do
-      state = LifecycleController.handle_setup(state)
-      {:noreply, state}
+      Telemetry.report_span :pipeline, :setup do
+        state = LifecycleController.handle_setup(state)
+        {:noreply, state}
+      end
     end
   end
 
