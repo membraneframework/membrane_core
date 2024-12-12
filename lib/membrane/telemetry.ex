@@ -61,15 +61,16 @@ defmodule Membrane.Telemetry do
   * `:take_and_demand` - reports the current size of a input buffer when taking buffers and making a new demand
   """
 
-  @type event_name :: [atom(), ...]
-
+  @type instrument :: :element | :bin | :pipeline
+  @type event :: :init | :terminate | :setup | :playback_change
+  @type event_name :: [atom() | list(atom())]
   @typedoc """
   * component_path - element's or bin's path
   * metric - metric's name
   * value - metric's value
   """
   @type metric_event_value :: %{
-          component_path: String.t(),
+          component_path: Membrane.ComponentPath.path(),
           metric: String.t(),
           value: integer()
         }
