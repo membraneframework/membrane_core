@@ -1,8 +1,8 @@
 defmodule Membrane.Core.Telemetry do
   @moduledoc false
   # This module provides a way to gather metrics from running Membrane components, as well
-  # as exposing these metrics in a format idiomatic with [Telemetry](https://hexdocs.pm/telemetry/)
-  # library. It uses compile time flags from `config.exs` to determine a priori which metrics should be
+  # as exposing these metrics in a format idiomatic to [Telemetry](https://hexdocs.pm/telemetry/)
+  # library. It uses compile time flags from `config.exs` to determine which metrics should be
   # collected and propagated. This avoids unnecessary runtime overhead when telemetry is not needed.
 
   require Logger
@@ -35,7 +35,7 @@ defmodule Membrane.Core.Telemetry do
   end
 
   @doc """
-  Reports a metric with an inherent value. E.g. input buffers size or received stream format.
+  Reports a metric with its coresponding value. E.g. input buffers size or received stream format.
   """
   @spec report_metric(atom(), any(), map()) :: Macro.t()
   defmacro report_metric(metric, value, meta \\ %{}) do
@@ -127,8 +127,7 @@ defmodule Membrane.Core.Telemetry do
             path: ComponentPath.get()
           },
           fn ->
-            unquote(block)
-            |> then(&{&1, %{log_metadata: Logger.metadata(), path: ComponentPath.get()}})
+            {unquote(block), %{log_metadata: Logger.metadata(), path: ComponentPath.get()}}
           end
         )
       end

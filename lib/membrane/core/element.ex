@@ -250,8 +250,8 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:play), state) do
+    state = LifecycleController.handle_playing(state)
     Telemetry.report_playing(:element)
-    LifecycleController.handle_playing(state)
     {:noreply, state}
   end
 
