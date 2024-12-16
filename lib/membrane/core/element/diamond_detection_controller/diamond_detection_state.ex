@@ -1,6 +1,8 @@
 defmodule Membrane.Core.Element.DiamondDetectionController.DiamondDatectionState do
   @moduledoc false
 
+  use Bunch.Access
+
   alias Membrane.Core.Element.DiamondDetectionController.PathInGraph
 
   defstruct [

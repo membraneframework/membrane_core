@@ -85,11 +85,11 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
 
   @type diamond_detection_message() :: %{
           :type =>
-            :start
+            :start_search
+            | :forward_search
+            | :delete_search_ref
             | :start_trigger
-            | :diamond_detection
-            | :trigger
-            | :delete_ref
+            | :forward_trigger
             | :delete_trigger_ref,
           optional(:ref) => reference(),
           optional(:path) => PathInGraph.t(),
@@ -99,28 +99,28 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   @spec handle_diamond_detection_message(diamond_detection_message(), State.t()) :: State.t()
   def handle_diamond_detection_message(%{type: type} = message, state) do
     case type do
-      :start ->
-        start_diamond_detection(state)
+      :start_search ->
+        start_search(state)
 
       :start_trigger ->
-        start_diamond_detection_trigger(message.ref, state)
+        start_trigger(message.ref, state)
 
-      :diamond_detection ->
-        continue_diamond_detection(message.pad_ref, message.ref, message.path, state)
+      :forward_search ->
+        continue_search(message.pad_ref, message.ref, message.path, state)
 
-      :trigger ->
-        handle_diamond_detection_trigger(message.ref, state)
+      :forward_trigger ->
+        continue_trigger(message.ref, state)
 
-      :delete_ref ->
-        delete_diamond_detection_ref(message.ref, state)
+      :delete_search_ref ->
+        delete_search_ref(message.ref, state)
 
       :delete_trigger_ref ->
-        delete_diamond_detection_trigger_ref(message.ref, state)
+        delete_trigger_ref(message.ref, state)
     end
   end
 
-  @spec start_diamond_detection(State.t()) :: State.t()
-  defp start_diamond_detection(state) do
+  @spec start_search(State.t()) :: State.t()
+  defp start_search(state) do
     {component_path, state} = get_component_path(state)
 
     diamond_detection_path = [
@@ -134,9 +134,9 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     state
   end
 
-  @spec continue_diamond_detection(Pad.ref(), reference(), PathInGraph.t(), State.t()) ::
+  @spec continue_search(Pad.ref(), reference(), PathInGraph.t(), State.t()) ::
           State.t()
-  defp continue_diamond_detection(
+  defp continue_search(
          input_pad_ref,
          diamond_detection_ref,
          diamond_detecton_path,
@@ -157,12 +157,12 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
         :ok = forward_diamond_detection(diamond_detection_ref, diamond_detecton_path, state)
 
         :ok =
-          %{type: :delete_ref, ref: diamond_detection_ref}
+          %{type: :delete_search_ref, ref: diamond_detection_ref}
           |> send_after_to_self()
 
         state
         |> put_in(
-          [:diamond_detection, :ref_to_path, diamond_detection_ref],
+          [:diamond_detection_state, :ref_to_path, diamond_detection_ref],
           diamond_detecton_path
         )
 
@@ -189,11 +189,11 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     end
   end
 
-  @spec delete_diamond_detection_ref(reference(), State.t()) :: State.t()
-  defp delete_diamond_detection_ref(diamond_detection_ref, state) do
+  @spec delete_search_ref(reference(), State.t()) :: State.t()
+  defp delete_search_ref(diamond_detection_ref, state) do
     {_path, %State{} = state} =
       state
-      |> pop_in([:diamond_detection, :ref_to_path, diamond_detection_ref])
+      |> pop_in([:diamond_detection_state, :ref_to_path, diamond_detection_ref])
 
     state
   end
@@ -210,7 +210,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
         diamond_detection_path = [current_entry | diamond_detection_path_tail]
 
         message = %{
-          type: :diamond_detection,
+          type: :forward_search,
           pad_ref: pad_data.other_ref,
           ref: diamond_detection_ref,
           path: diamond_detection_path
@@ -225,7 +225,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     state.pads_data
     |> Enum.each(fn {_pad_ref, %PadData{} = pad_data} ->
       if pad_data.direction == :input and pad_data.flow_control != :push do
-        message = %{type: :trigger, ref: trigger_ref}
+        message = %{type: :forward_trigger, ref: trigger_ref}
         Message.send(pad_data.pid, :diamond_detection, message)
       end
     end)
@@ -242,29 +242,29 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     uniq_length < length(diamond_detection_path)
   end
 
-  @spec start_diamond_detection_trigger(reference(), State.t()) :: State.t()
-  defp start_diamond_detection_trigger(spec_ref, state) do
+  @spec start_trigger(reference(), State.t()) :: State.t()
+  defp start_trigger(spec_ref, state) do
     if map_size(state.pads_data) < 2 or
          MapSet.member?(state.diamond_detection_state.trigger_refs, spec_ref) do
       state
     else
-      do_handle_diamond_detection_trigger(spec_ref, state)
+      do_continue_trigger(spec_ref, state)
     end
   end
 
-  @spec handle_diamond_detection_trigger(reference(), State.t()) :: State.t()
-  defp handle_diamond_detection_trigger(trigger_ref, %State{} = state) do
+  @spec continue_trigger(reference(), State.t()) :: State.t()
+  defp continue_trigger(trigger_ref, %State{} = state) do
     if state.type == :endpoint or
          MapSet.member?(state.diamond_detection_state.trigger_refs, trigger_ref),
        do: state,
-       else: do_handle_diamond_detection_trigger(trigger_ref, state)
+       else: do_continue_trigger(trigger_ref, state)
   end
 
-  defp do_handle_diamond_detection_trigger(trigger_ref, %State{} = state) do
+  defp do_continue_trigger(trigger_ref, %State{} = state) do
     state =
       state
       |> update_in(
-        [:diamond_detection, :trigger_refs],
+        [:diamond_detection_state, :trigger_refs],
         &MapSet.put(&1, trigger_ref)
       )
 
@@ -285,17 +285,17 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   end
 
   defp postpone_diamond_detection(%State{} = state) do
-    :ok = %{type: :start} |> send_after_to_self(1)
+    :ok = %{type: :start_search} |> send_after_to_self(1)
 
     state
-    |> put_in([:diamond_detection, :postponed?], true)
+    |> put_in([:diamond_detection_state, :postponed?], true)
   end
 
-  @spec delete_diamond_detection_trigger_ref(reference(), State.t()) :: State.t()
-  defp delete_diamond_detection_trigger_ref(trigger_ref, state) do
+  @spec delete_trigger_ref(reference(), State.t()) :: State.t()
+  defp delete_trigger_ref(trigger_ref, state) do
     state
     |> update_in(
-      [:diamond_detection, :trigger_refs],
+      [:diamond_detection_state, :trigger_refs],
       &MapSet.delete(&1, trigger_ref)
     )
   end
@@ -327,7 +327,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
         state =
           state
           |> put_in(
-            [:diamond_detection, :serialized_component_path],
+            [:diamond_detection_state, :serialized_component_path],
             component_path
           )
 
