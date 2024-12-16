@@ -86,10 +86,10 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   @type diamond_detection_message() :: %{
           :type =>
             :start_search
-            | :forward_search
+            | :search
             | :delete_search_ref
             | :start_trigger
-            | :forward_trigger
+            | :trigger
             | :delete_trigger_ref,
           optional(:ref) => reference(),
           optional(:path) => PathInGraph.t(),
@@ -105,11 +105,11 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
       :start_trigger ->
         start_trigger(message.ref, state)
 
-      :forward_search ->
-        continue_search(message.pad_ref, message.ref, message.path, state)
+      :search ->
+        handle_and_forward_search(message.pad_ref, message.ref, message.path, state)
 
-      :forward_trigger ->
-        continue_trigger(message.ref, state)
+      :trigger ->
+        handle_and_forward_trigger(message.ref, state)
 
       :delete_search_ref ->
         delete_search_ref(message.ref, state)
@@ -129,14 +129,14 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
 
     :ok =
       make_ref()
-      |> forward_diamond_detection(diamond_detection_path, state)
+      |> forward_search(diamond_detection_path, state)
 
     state
   end
 
-  @spec continue_search(Pad.ref(), reference(), PathInGraph.t(), State.t()) ::
+  @spec handle_and_forward_search(Pad.ref(), reference(), PathInGraph.t(), State.t()) ::
           State.t()
-  defp continue_search(
+  defp handle_and_forward_search(
          input_pad_ref,
          diamond_detection_ref,
          diamond_detecton_path,
@@ -154,7 +154,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
 
     cond do
       not is_map_key(state.diamond_detection_state.ref_to_path, diamond_detection_ref) ->
-        :ok = forward_diamond_detection(diamond_detection_ref, diamond_detecton_path, state)
+        :ok = forward_search(diamond_detection_ref, diamond_detecton_path, state)
 
         :ok =
           %{type: :delete_search_ref, ref: diamond_detection_ref}
@@ -198,8 +198,8 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     state
   end
 
-  @spec forward_diamond_detection(reference(), PathInGraph.t(), State.t()) :: :ok
-  defp forward_diamond_detection(diamond_detection_ref, diamond_detection_path, state) do
+  @spec forward_search(reference(), PathInGraph.t(), State.t()) :: :ok
+  defp forward_search(diamond_detection_ref, diamond_detection_path, state) do
     auto_pull_mode? = state.effective_flow_control == :pull
     [current_entry | diamond_detection_path_tail] = diamond_detection_path
 
@@ -210,7 +210,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
         diamond_detection_path = [current_entry | diamond_detection_path_tail]
 
         message = %{
-          type: :forward_search,
+          type: :search,
           pad_ref: pad_data.other_ref,
           ref: diamond_detection_ref,
           path: diamond_detection_path
@@ -225,7 +225,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     state.pads_data
     |> Enum.each(fn {_pad_ref, %PadData{} = pad_data} ->
       if pad_data.direction == :input and pad_data.flow_control != :push do
-        message = %{type: :forward_trigger, ref: trigger_ref}
+        message = %{type: :trigger, ref: trigger_ref}
         Message.send(pad_data.pid, :diamond_detection, message)
       end
     end)
@@ -248,19 +248,19 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
          MapSet.member?(state.diamond_detection_state.trigger_refs, spec_ref) do
       state
     else
-      do_continue_trigger(spec_ref, state)
+      do_handle_and_forward_trigger(spec_ref, state)
     end
   end
 
-  @spec continue_trigger(reference(), State.t()) :: State.t()
-  defp continue_trigger(trigger_ref, %State{} = state) do
+  @spec handle_and_forward_trigger(reference(), State.t()) :: State.t()
+  defp handle_and_forward_trigger(trigger_ref, %State{} = state) do
     if state.type == :endpoint or
          MapSet.member?(state.diamond_detection_state.trigger_refs, trigger_ref),
        do: state,
-       else: do_continue_trigger(trigger_ref, state)
+       else: do_handle_and_forward_trigger(trigger_ref, state)
   end
 
-  defp do_continue_trigger(trigger_ref, %State{} = state) do
+  defp do_handle_and_forward_trigger(trigger_ref, %State{} = state) do
     state =
       state
       |> update_in(
