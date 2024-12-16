@@ -1,51 +1,70 @@
 defmodule Membrane.Core.Telemetry do
   @moduledoc false
+  # This module provides a way to gather metrics from running Membrane components, as well
+  # as exposing these metrics in a format idiomatic to [Telemetry](https://hexdocs.pm/telemetry/)
+  # library. It uses compile time flags from `config.exs` to determine which metrics should be
+  # collected and propagated. This avoids unnecessary runtime overhead when telemetry is not needed.
 
+  require Logger
   alias Membrane.ComponentPath
 
-  require Membrane.Pad
-
+  @possible_flags [:init, :terminate, :setup, :playing, :link]
   @telemetry_flags Application.compile_env(:membrane_core, :telemetry_flags, [])
-
-  @doc """
-  Reports metrics such as input buffer's size inside functions, incoming events and received stream format.
+  @invalid_config_warning """
+    `config :membrane_core, :telemetry_flags` should contain either :all, [include:[]] or [exclude:[]]"
   """
-  defmacro report_metric(metric, value, log_tag \\ nil) do
-    event =
-      quote do
-        [:membrane, :metric, :value]
-      end
 
-    value =
-      quote do
-        %{
-          component_path: ComponentPath.get_formatted() <> "/" <> (unquote(log_tag) || ""),
-          metric: Atom.to_string(unquote(metric)),
-          value: unquote(value)
-        }
-      end
+  @public_state_keys %{
+    Membrane.Core.Element.State => [
+      :type,
+      :name,
+      :pads_info,
+      :initialized?
+    ]
+  }
 
-    report_event(
-      event,
-      value,
-      Keyword.get(@telemetry_flags, :metrics, []) |> Enum.find(&(&1 == metric)) != nil
-    )
+  # Verify at compile time that every key is actually present in Core.Element.State
+  for {mod, keys} <- @public_state_keys do
+    case keys -- Map.keys(struct(mod)) do
+      [] ->
+        :ok
+
+      other ->
+        raise "Public telemetry keys #{inspect(other)} absent in #{mod}"
+    end
   end
 
   @doc """
-  Given list of buffers (or a single buffer) calculates total size of their payloads in bits
+  Reports a metric with its coresponding value. E.g. input buffers size or received stream format.
+  """
+  @spec report_metric(atom(), any(), map()) :: Macro.t()
+  defmacro report_metric(metric, value, meta \\ %{}) do
+    event =
+      [:membrane, :metric, :value]
+
+    value =
+      Macro.escape(%{
+        component_path: ComponentPath.get(),
+        metric: Atom.to_string(metric),
+        value: value,
+        meta: meta
+      })
+
+    report_event(:metrics, event, value)
+  end
+
+  @doc """
+  Given a list of buffers calculates total size of their payloads in bits
   and reports it.
   """
+  @spec report_bitrate([Membrane.Buffer.t()]) :: Macro.t()
   defmacro report_bitrate(buffers) do
-    event =
-      quote do
-        [:membrane, :metric, :value]
-      end
+    event = [:membrane, :metric, :value]
 
     value =
       quote do
         %{
-          component_path: ComponentPath.get_formatted() <> "/",
+          component_path: ComponentPath.get(),
           metric: "bitrate",
           value:
             8 *
@@ -57,117 +76,105 @@ defmodule Membrane.Core.Telemetry do
         }
       end
 
-    report_event(
-      event,
-      value,
-      Keyword.get(@telemetry_flags, :metrics, []) |> Enum.find(&(&1 == :bitrate)) != nil
-    )
+    report_event(:bitrate, event, value)
   end
 
-  @doc false
-  @spec __get_public_pad_name__(Membrane.Pad.ref()) :: Membrane.Pad.ref()
-  def __get_public_pad_name__(pad) do
-    case pad do
-      {:private, direction} -> direction
-      {Membrane.Pad, {:private, direction}, ref} -> {Membrane.Pad, direction, ref}
-      _pad -> pad
+  defp get_public_pad_name(pad) do
+    quote bind_quoted: [pad: pad] do
+      case pad.pad_ref do
+        {:private, direction} -> direction
+        {Membrane.Pad, {:private, direction}, ref} -> {Membrane.Pad, direction, ref}
+        _pad -> pad.pad_ref
+      end
     end
   end
 
   @doc """
   Reports new link connection being initialized in pipeline.
   """
+  @spec report_link(Membrane.Pad.t(), Membrane.Pad.t()) :: Macro.t()
   defmacro report_link(from, to) do
-    event =
-      quote do
-        [:membrane, :link, :new]
-      end
+    event = [:membrane, :link, :new]
 
     value =
       quote do
         %{
-          parent_path: Membrane.ComponentPath.get_formatted(),
-          from: inspect(unquote(from).child),
-          to: inspect(unquote(to).child),
-          pad_from:
-            Membrane.Core.Telemetry.__get_public_pad_name__(unquote(from).pad_ref) |> inspect(),
-          pad_to:
-            Membrane.Core.Telemetry.__get_public_pad_name__(unquote(to).pad_ref) |> inspect()
+          from: unquote(from),
+          to: unquote(to),
+          pad_from: unquote(get_public_pad_name(from)),
+          pad_to: unquote(get_public_pad_name(to))
         }
       end
 
-    report_event(event, value, Enum.find(@telemetry_flags, &(&1 == :links)) != nil)
+    report_event(:link, event, value)
+  end
+
+  defmacro report_playing(component_type) do
+    report_event(:playing, [:membrane, component_type, :playing], quote(do: %{}))
   end
 
   @doc """
-  Reports a pipeline/bin/element initialization.
+  Reports an arbitrary span consistent with span format in `:telementry`
   """
-  defmacro report_init(type) when type in [:pipeline, :bin, :element] do
-    event =
+  @spec report_span(atom(), atom(), do: block) :: block when block: Macro.t()
+  defmacro report_span(component_type, event_type, do: block) do
+    if event_enabled?(event_type) do
       quote do
-        [:membrane, unquote(type), :init]
+        :telemetry.span(
+          [:membrane, unquote(component_type), unquote(event_type)],
+          %{
+            log_metadata: Logger.metadata(),
+            path: ComponentPath.get()
+          },
+          fn ->
+            {unquote(block), %{log_metadata: Logger.metadata(), path: ComponentPath.get()}}
+          end
+        )
       end
-
-    value =
-      quote do
-        %{path: ComponentPath.get_formatted()}
-      end
-
-    metadata =
-      quote do
-        %{log_metadata: Logger.metadata()}
-      end
-
-    report_event(
-      event,
-      value,
-      Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil,
-      metadata
-    )
+    else
+      block
+    end
   end
 
-  @doc """
-  Reports a pipeline/bin/element termination.
-  """
-  defmacro report_terminate(type) when type in [:pipeline, :bin, :element] do
-    event =
-      quote do
-        [:membrane, unquote(type), :terminate]
-      end
-
-    value =
-      quote do
-        %{path: ComponentPath.get_formatted()}
-      end
-
-    report_event(
-      event,
-      value,
-      Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil
-    )
-  end
-
-  # Conditional event reporting of telemetry events
-  defp report_event(event_name, measurement, enable, metadata \\ nil) do
-    if enable do
+  defp report_event(event_type, event_name, measurement, metadata \\ quote(do: %{})) do
+    if event_enabled?(event_type) do
       quote do
         :telemetry.execute(
           unquote(event_name),
           unquote(measurement),
-          unquote(metadata) || %{}
+          %{
+            log_metadata: Logger.metadata(),
+            path: ComponentPath.get()
+          }
+          |> Map.merge(unquote(metadata))
         )
       end
     else
-      # A hack to suppress the 'unused variable' warnings
-      quote do
-        _fn = fn ->
-          _unused = unquote(event_name)
-          _unused = unquote(measurement)
-          _unused = unquote(metadata)
-        end
-
-        :ok
-      end
+      :ok
     end
+  end
+
+  defp event_enabled?(flag) do
+    Enum.member?(get_flags(@telemetry_flags), flag)
+  end
+
+  defp get_flags(:all), do: @possible_flags
+  defp get_flags(include: _, exclude: _), do: warn(@invalid_config_warning)
+  defp get_flags(exclude: exclude), do: @possible_flags -- exclude
+
+  defp get_flags(include: include) do
+    case include -- @possible_flags do
+      [] ->
+        include
+
+      incorrect_flags ->
+        warn("#{inspect(incorrect_flags)} are not correct Membrane telemetry flags")
+    end
+  end
+
+  defp get_flags(_), do: []
+
+  defp warn(warning) do
+    IO.warn(warning, Macro.Env.stacktrace(__ENV__))
   end
 end

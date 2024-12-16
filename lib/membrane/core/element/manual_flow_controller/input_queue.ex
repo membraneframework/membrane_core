@@ -132,11 +132,11 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   def store(input_queue, :buffer, v), do: store(input_queue, :buffers, [v])
 
-  def store(%__MODULE__{q: q, size: size} = input_queue, type, v)
+  def store(%__MODULE__{q: q} = input_queue, type, v)
       when type in @non_buf_types do
     "Storing #{type}" |> mk_log(input_queue) |> Membrane.Logger.debug_verbose()
 
-    Telemetry.report_metric(:store, size, input_queue.log_tag)
+    Telemetry.report_metric(:store, input_queue.size, input_queue.log_tag)
 
     %__MODULE__{input_queue | q: q |> @qe.push({:non_buffer, type, v})}
   end
