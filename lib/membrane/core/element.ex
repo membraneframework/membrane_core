@@ -20,6 +20,7 @@ defmodule Membrane.Core.Element do
 
   alias Membrane.{Clock, Core, ResourceGuard, Sync}
   alias Membrane.Core.Child.PadSpecHandler
+  alias Membrane.Core.Telemetry
 
   alias Membrane.Core.Element.{
     BufferController,
@@ -187,6 +188,7 @@ defmodule Membrane.Core.Element do
          _from,
          state
        ) do
+    Telemetry.report_link(this, other)
     {reply, state} = PadController.handle_link(direction, this, other, params, state)
     {:reply, reply, state}
   end
@@ -248,7 +250,8 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info(Message.new(:play), state) do
-    state = LifecycleController.handle_playing(state)
+    Telemetry.report_playing(:element)
+    LifecycleController.handle_playing(state)
     {:noreply, state}
   end
 

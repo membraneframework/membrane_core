@@ -8,6 +8,7 @@ if config_env() == :test do
       :init,
       :setup,
       :terminate,
-      :playing
+      :playing,
+      :link
     ]
 end
