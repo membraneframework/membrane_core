@@ -18,17 +18,21 @@ defmodule Membrane.Telemetry do
         * Measurement: `t:link_event_value/0`
         * Metadata: `%{}`
 
-    * `[:membrane, :pipeline | :bin | :element, :init]` - to report pipeline/element/bin initialization
+    * `[:membrane, :pipeline | :bin | :element, :init, :start | :stop | :exception]` - to report pipeline/element/bin initialization
         * Measurement: `t:init_or_terminate_event_value/0`
         * Metadata: `%{log_metadata: keyword()}`, includes Logger's metadata of created component
 
-    * `[:membrane, :pipeline | :bin | :element, :terminate]` - to report pipeline/element/bin termination
+     * `[:membrane, :pipeline | :bin | :element, :setup, :start | :stop | :exception]` - to report pipeline/element/bin setup
+        * Measurement: `t:init_or_terminate_event_value/0`
+        * Metadata: `%{log_metadata: keyword()}`, includes Logger's metadata of created component
+
+    * `[:membrane, :pipeline | :bin | :element, :terminate, :start | :stop | :exception]` - to report pipeline/element/bin termination
         * Measurement: `t:init_or_terminate_event_value/0`
         * Metadata: `%{}`
 
 
   ## Enabling certain metrics/events
-  A lot of events can happen literally hundreds times per second such as registering that a buffer has been sent/processed.
+  A lot of events can happen hundreds times per second such as registering that a buffer has been sent/processed.
 
   This behaviour can come with a great performance penalties but may be helpful for certain discoveries. To avoid any runtime overhead
   when the reporting is not necessary all metrics/events are hidden behind a compile-time feature flags.
@@ -37,19 +41,23 @@ defmodule Membrane.Telemetry do
 
       config :membrane_core,
         telemetry_flags: [
-          :flag_name,
-          ...,
-          {:metrics, [list of metrics]}
-          ...
+          include: [...] | exclude: [...] | :all
         ]
 
   Available flags are (those are of a very low overhead):
   * `:links` - enables new links notifications
+  # TODO redact
   * `:inits_and_terminates` - enables notifications of `init` and `terminate` events for elements/bins/pipelines
 
 
   Additionally one can control which metric values should get measured by passing an option of format :
   `{:metrics, [list of metrics]}`
+
+  Available spans are:
+  * `:init` - Time spent on executing components initialization handler
+  * `:terminate` - Time spent on executing components termination handler
+  * `:setup` - Time spent on executing components setup handler
+  * `:playing` - Time spent on executing components playing handler
 
   Available metrics are:
   * `:buffer` - number of buffers being sent from a particular element

@@ -1,9 +1,13 @@
 defmodule Membrane.TelemetryTest do
-  use ExUnit.Case, async: false
-  import Membrane.ChildrenSpec
+  @moduledoc """
+  Test suite for Membrane telemetry public API. It tests if telemetry events are reported
+  properly for all elements and pipelines upon attaching to the :telemetry system.
+  """
 
-  require Logger
+  use ExUnit.Case, async: false
   alias Membrane.Testing
+  import Membrane.ChildrenSpec
+  require Logger
 
   defmodule TestFilter do
     use Membrane.Filter
@@ -27,10 +31,6 @@ defmodule Membrane.TelemetryTest do
     end
   end
 
-  @paths ~w[:filter :sink :source]
-  @events [:init, :setup, :playing, :terminate]
-  @steps [:start, :stop]
-
   setup do
     ref = make_ref()
 
@@ -42,6 +42,10 @@ defmodule Membrane.TelemetryTest do
 
     [links: links, ref: ref]
   end
+
+  @paths ~w[:filter :sink :source]
+  @events [:init, :setup, :playing, :terminate]
+  @steps [:start, :stop]
 
   describe "Telemetry reports elements" do
     @tag :telemetry
@@ -107,19 +111,15 @@ defmodule Membrane.TelemetryTest do
 
     test "Pipeline lifecycle", %{ref: ref} do
       assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :start], meta, %{}}}
-
       assert meta.system_time > 0
 
       assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :stop], meta, %{}}}
-
       assert meta.duration > 0
 
       assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :start], meta, %{}}}
-
       assert meta.system_time > 0
 
       assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :stop], meta, %{}}}
-
       assert meta.duration > 0
     end
   end
