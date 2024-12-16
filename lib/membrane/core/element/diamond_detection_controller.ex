@@ -37,18 +37,18 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   # is part of this link.
 
   # After the spec status is set to :done, the parent component that returned the spec will
-  # triggerall elements whose output pads have been linked in this spec. The reference of the
-  # trigger is always set to the spec reference.
+  # triggerall elements whose output pads have been linked in this spec (`type: :start_trigger`).
+  # The reference of the trigger is always set to the spec reference.
 
-  # If the element is triggered with a specific reference for the first time, it does two
-  # things:
+  # If the element is triggered with a specific reference (`type: :trigger`) for the first time,
+  # it does two things:
   #   * the element forwards the trigger with the same reference via all input pads working
-  #     in the pull mode
+  #     in the pull mode (`type: :trigger`)
   #   * if the element has at least two output pads working in the pull mode, it postpones
-  #     the proper searching that will be spawned from itself. The time between postponing and the
-  #     proper searching is one second. If during this time an element is triggered once
-  #     again with a different reference, it won't cause another postponement of the proper
-  #     searching, this means that at the time there is at most one proper searching
+  #     the proper searching that will be spawned from itself (`type: :start_search`). The time
+  #     between postponing and the proper searching is one second. If during this time an element
+  #     is triggered once again with a different reference, it won't cause another postponement
+  #     of the proper searching, this means that at the time there is at most one proper searching
   #     postponed in the single element
 
   # (2) Proper searching:
@@ -61,6 +61,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   # just started the proper searching, or maybe it was forwarded to it via a link):
   #   * if the element sees the proper searching reference for the first time, then:
   #     - it forwards proper searching via all output pads working in the pull mode
+  #       (`type: :search`)
   #     - when proper searching is forwarded, it remembers the path in the graph through
   #       the elements that it has already passed
   #   * if the element has already seen the reference of proper searching, but there is
@@ -102,17 +103,17 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
       :start_search ->
         start_search(state)
 
-      :start_trigger ->
-        start_trigger(message.ref, state)
-
       :search ->
         handle_and_forward_search(message.pad_ref, message.ref, message.path, state)
 
-      :trigger ->
-        handle_and_forward_trigger(message.ref, state)
-
       :delete_search_ref ->
         delete_search_ref(message.ref, state)
+
+      :start_trigger ->
+        start_trigger(message.ref, state)
+
+      :trigger ->
+        handle_and_forward_trigger(message.ref, state)
 
       :delete_trigger_ref ->
         delete_trigger_ref(message.ref, state)
