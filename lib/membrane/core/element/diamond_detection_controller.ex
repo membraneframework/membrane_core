@@ -74,15 +74,12 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   #     and doesn't forward proper searching further.
 
   alias __MODULE__.{DiamondLogger, PathInGraph}
-  alias __MODULE__.PathInGraph.Vertex
   alias Membrane.Core.Element.State
   alias Membrane.Element.PadData
 
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
   require Membrane.Pad, as: Pad
-
-  @component_path_prefix "__membrane_component_path_64_byte_prefix________________________"
 
   @type diamond_detection_message() :: %{
           :type =>
@@ -101,7 +98,8 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   def handle_diamond_detection_message(%{type: type} = message, state) do
     case type do
       :start_search ->
-        start_search(state)
+        :ok = start_search(state)
+        state
 
       :search ->
         handle_and_forward_search(message.pad_ref, message.ref, message.path, state)
@@ -120,9 +118,9 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     end
   end
 
-  @spec start_search(State.t()) :: State.t()
+  @spec start_search(State.t()) :: :ok
   defp start_search(state) do
-    {component_path, state} = get_component_path(state)
+    component_path = Membrane.ComponentPath.get_formatted()
 
     diamond_detection_path = [
       %PathInGraph.Vertex{pid: self(), component_path: component_path}
@@ -132,7 +130,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
       make_ref()
       |> forward_search(diamond_detection_path, state)
 
-    state
+    :ok
   end
 
   @spec handle_and_forward_search(Pad.ref(), reference(), PathInGraph.t(), State.t()) ::
@@ -143,7 +141,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
          diamond_detecton_path,
          state
        ) do
-    {component_path, state} = get_component_path(state)
+    component_path = Membrane.ComponentPath.get_formatted()
 
     new_path_vertex = %PathInGraph.Vertex{
       pid: self(),
@@ -177,14 +175,9 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
         state
 
       true ->
-        old_diamond_detection_path =
-          state.diamond_detection_state.ref_to_path[diamond_detection_ref]
-          |> remove_component_path_prefix()
-
         :ok =
-          diamond_detecton_path
-          |> remove_component_path_prefix()
-          |> DiamondLogger.log_diamond(old_diamond_detection_path)
+          state.diamond_detection_state.ref_to_path[diamond_detection_ref]
+          |> DiamondLogger.log_diamond(diamond_detecton_path)
 
         state
     end
@@ -315,36 +308,5 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
     :ok
   end
 
-  defp get_component_path(state) do
-    case state.diamond_detection_state.serialized_component_path do
-      nil ->
-        # adding @component_path_prefix to component path causes that component path
-        # always has more than 64 bytes, so it won't be copied during sending a message
-
-        component_path =
-          [@component_path_prefix | Membrane.ComponentPath.get()]
-          |> Enum.join()
-
-        state =
-          state
-          |> put_in(
-            [:diamond_detection_state, :serialized_component_path],
-            component_path
-          )
-
-        {component_path, state}
-
-      component_path ->
-        {component_path, state}
-    end
-  end
-
   defp have_common_prefix?(path_a, path_b), do: List.last(path_a) == List.last(path_b)
-
-  defp remove_component_path_prefix(path_in_graph) do
-    path_in_graph
-    |> Enum.map(fn %Vertex{component_path: @component_path_prefix <> component_path} = vertex ->
-      %{vertex | component_path: component_path}
-    end)
-  end
 end
