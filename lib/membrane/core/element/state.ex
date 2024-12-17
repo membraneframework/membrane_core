@@ -9,6 +9,7 @@ defmodule Membrane.Core.Element.State do
 
   alias Membrane.{Clock, Element, Pad, Sync}
   alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Element.DiamondDetectionController.DiamondDatectionState
   alias Membrane.Core.Element.EffectiveFlowController
   alias Membrane.Core.Timer
 
@@ -46,7 +47,8 @@ defmodule Membrane.Core.Element.State do
           stalker: Membrane.Core.Stalker.t(),
           satisfied_auto_output_pads: MapSet.t(),
           awaiting_auto_input_pads: MapSet.t(),
-          resume_delayed_demands_loop_in_mailbox?: boolean()
+          resume_delayed_demands_loop_in_mailbox?: boolean(),
+          diamond_detection_state: DiamondDatectionState.t()
         }
 
   # READ THIS BEFORE ADDING NEW FIELD!!!
@@ -79,6 +81,7 @@ defmodule Membrane.Core.Element.State do
             handle_demand_loop_counter: 0,
             pads_to_snapshot: MapSet.new(),
             playback_queue: [],
+            diamond_detection_state: %DiamondDatectionState{},
             pads_data: %{},
             satisfied_auto_output_pads: MapSet.new(),
             awaiting_auto_input_pads: MapSet.new(),

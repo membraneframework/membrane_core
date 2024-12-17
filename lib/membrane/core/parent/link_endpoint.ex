@@ -3,14 +3,14 @@ defmodule Membrane.Core.Parent.Link.Endpoint do
 
   use Bunch.Access
 
-  alias Membrane.{Element, Pad}
+  alias Membrane.{Child, Pad}
 
   @enforce_keys [:child, :pad_spec]
   defstruct @enforce_keys ++
               [pad_ref: nil, pid: nil, pad_props: [], pad_info: %{}, child_spec_ref: nil]
 
   @type t() :: %__MODULE__{
-          child: Element.name() | {Membrane.Bin, :itself},
+          child: Child.name() | {Membrane.Bin, :itself},
           pad_spec: Pad.name() | Pad.ref(),
           pad_ref: Pad.ref(),
           pid: pid(),

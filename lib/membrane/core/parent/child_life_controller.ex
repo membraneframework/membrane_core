@@ -11,6 +11,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     ChildEntryParser,
     ChildrenModel,
     ClockHandler,
+    DiamondDetectionController,
     Link,
     SpecificationParser
   }
@@ -425,7 +426,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     end
   end
 
-  defp do_proceed_spec_startup(_spec_ref, %{status: :ready} = spec_data, state) do
+  defp do_proceed_spec_startup(spec_ref, %{status: :ready} = spec_data, state) do
     state =
       Enum.reduce(spec_data.children_names, state, fn child, state ->
         %{pid: pid, terminating?: terminating?} = state.children[child]
@@ -438,6 +439,13 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
         put_in(state.children[child].ready?, true)
       end)
+
+    spec_data.links_ids
+    |> Enum.map(&state.links[&1].from.child)
+    |> Enum.uniq()
+    |> Enum.each(fn child_name ->
+      DiamondDetectionController.start_diamond_detection_trigger(child_name, spec_ref, state)
+    end)
 
     state =
       with %{playback: :playing} <- state do
