@@ -2,11 +2,9 @@ defmodule Membrane.Funnel do
   @moduledoc """
   Element that can be used for collecting data from multiple inputs and sending it through one
   output. When a new input connects in the `:playing` state, the funnel sends
-  `Membrane.Funnel.NewInputEvent` via output.
+  `#{inspect(__MODULE__)}.NewInputEvent` via output.
   """
   use Membrane.Filter
-
-  alias Membrane.Funnel
 
   def_input_pad :input, accepted_format: _any, flow_control: :auto, availability: :on_request
   def_output_pad :output, accepted_format: _any, flow_control: :auto
@@ -25,7 +23,7 @@ defmodule Membrane.Funnel do
 
   @impl true
   def handle_pad_added(Pad.ref(:input, _id), %{playback_state: :playing}, state) do
-    {[event: {:output, %Funnel.NewInputEvent{}}], state}
+    {[event: {:output, %__MODULE__.NewInputEvent{}}], state}
   end
 
   @impl true
