@@ -7,7 +7,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
   alias Membrane.Testing
 
   defmodule AutoFilter do
-    use Membrane.Filter
+    use Membrane.Filter, flow_control_hints?: false
 
     def_input_pad :input, availability: :on_request, accepted_format: _any
     def_output_pad :output, availability: :on_request, accepted_format: _any
