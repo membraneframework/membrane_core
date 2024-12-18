@@ -52,12 +52,20 @@ defmodule Membrane.Tee do
   end
 
   @impl true
-  def handle_pad_added(Pad.ref(name, _ref) = output_pad, _ctx, state)
+  def handle_pad_added(Pad.ref(name, _ref) = output_pad, ctx, state)
       when name in [:output, :output_copy] do
-    case state.stream_format do
-      nil -> {[], state}
-      stream_format -> {[stream_format: {output_pad, stream_format}], state}
-    end
+    maybe_stream_format =
+      case state.stream_format do
+        nil -> []
+        stream_format -> [stream_format: {output_pad, stream_format}]
+      end
+
+    maybe_eos =
+      if ctx.pads.input.end_of_stream?,
+        do: [end_of_stream: output_pad],
+        else: []
+
+    {maybe_stream_format ++ maybe_eos, state}
   end
 
   @impl true
