@@ -10,7 +10,7 @@ defmodule Membrane.Tee do
   The `:output` pads dictate the speed of processing data and any element (or elements) connected to
   `:output_copy` pad will receive the same data as all `:output` instances.
   """
-  use Membrane.Filter
+  use Membrane.Filter, flow_control_hints?: false
 
   require Membrane.Logger
 
