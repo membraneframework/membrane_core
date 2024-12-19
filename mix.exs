@@ -68,6 +68,7 @@ defmodule Membrane.Mixfile do
         "guides/upgrading/v1.0.0-rc0.md",
         "guides/upgrading/v1.0.0-rc1.md",
         "guides/upgrading/v1.0.0.md",
+        "guides/timer.md",
         LICENSE: [title: "License"]
       ],
       formatters: ["html"],
