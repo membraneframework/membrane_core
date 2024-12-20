@@ -68,6 +68,8 @@ defmodule Membrane.Mixfile do
         "guides/upgrading/v1.0.0-rc0.md",
         "guides/upgrading/v1.0.0-rc1.md",
         "guides/upgrading/v1.0.0.md",
+        "guides/components_lifecycle.md",
+        "guides/timer.md",
         LICENSE: [title: "License"]
       ],
       formatters: ["html"],
@@ -146,7 +148,7 @@ defmodule Membrane.Mixfile do
       {:bunch, "~> 1.6"},
       {:ratio, "~> 3.0 or ~> 4.0"},
       # Development
-      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.35", only: :dev, runtime: false},
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: :dev, runtime: false},
