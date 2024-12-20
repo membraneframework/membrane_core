@@ -1,57 +1,51 @@
 # Lifecycle of Membrane Components
 
-Lifecycle of Membrane Components is strictly related to execution of Membrane callbacks withing these Components.
-Although there are some differences between lifecycles of Membrane Pipelines, Bins and Elements, they are very similar to each other.
-So let's take a look at what the component lifecycle looks like and what are the differences depending on the type of the Component we are dealing with.
+The lifecycle of Membrane Components is closely related to the execution of Membrane callbacks within these components. While there are some differences among the lifecycles of Membrane Pipelines, Bins, and Elements, they share many similarities. Let's explore the component lifecycle and identify differences depending on the type of component being addressed.
 
 ## Initialization
-The first callback, that is executed in every Membrane Component, is handle_init/2.
-handle_init is always executed synchronously and blocks the parent component (the exception is Membrane Pipeline, that never has a parent component), so it's good to avoid heavy computations within it.
-`handle_init` is a good place to spawn pipeline's or bin's children in the `:spec` action.
+The first callback executed in every Membrane Component is `handle_init/2`. This function is executed synchronously and blocks the parent component, except in the case of a Membrane Pipeline, as it does not have a parent. It is advisable to avoid heavy computations within this function. `handle_init/2` is ideally used for spawning children in a pipeline or bin through the `:spec` action.
 
 ## Setup
-The next callback after handle_init is `handle_setup`, that is executed asynchronusly and it is a good place to e.g. setup some resources or execute other heavy operations, that are necessary 
-for the element to play.
+Following `handle_init/2` is `handle_setup/2`, which is executed asynchronously. This is an optimal time to set up resources or perform other intensive operations required for the element to function properly.
 
-## Linking the pads 
-If the Component had some pads with `availability: :on_request` linked in the same `spec`, where it was spawned, the appropriate `handle_pad_added` callbacks will be invoked between `handle_setup` and `handle_playing`.
-Linking the pad with `availability: :on_request` in the another spec than the one that spawns the element might result in invoking `handle_pad_added` after `handle_playing`.
+## Linking the Pads
+For components with pads having `availability: :on_request`, the corresponding `handle_pad_added/3` callbacks are called between `handle_setup/2` and `handle_playing/2` if they are linked in the same spec where the component was spawned. Linking the pad in a different spec from the one spawning the element may lead to `handle_pad_added/3` being invoked after `handle_playing/2`.
 
 ## Playing
-After setup is completed, the component might now enter `:playing` playback, by invoking `handle_playing` callback.
-Note: 
- - components spawned within a single `spec` will always enter `:playing` state in the same moment - it means, if setup of one of them takes longer than other, the rest will wait on the component that is the last.
- - Elements and Bins always wait with execution of `handle_playing` until their parent enters `playing` playback.
- - by default, after `handle_setup` callback the component's setup is considered as completed. But this behaviour can be changed by returning `setup: :incomplete` action from `handle_setup`. If so, to enter `playing` playback, the component mark its setup as completed by returning `setup: :complete` from another callback, e.g. `handle_info/3`.
+Once setup is completed, a component can enter the `:playing` state by invoking the `handle_playing/2` callback. Note that:
+- Components spawned within the same `:spec` always enter the `:playing` state simultaneously. If the setup process for one component takes longer, the others will wait.
+- Elements and Bins wait for their parent to enter the `playing` state before executing `handle_playing/2`.
+- By default, after `handle_setup/2`, a component's setup is considered complete. This behavior can be modified by returning `setup: :incomplete` from `handle_setup/2`. The component must then mark its setup as completed by returning `setup: :complete` from another callback, like `handle_info/3`, to enter `:playing` playback.
 
-## Processing the data (applies only to `Elements`)
-After execution of `handle_playing`, Elements are now ready to process the data that flows through the pads.
+## Processing the Data (Applies Only to `Elements`)
+After `handle_playing/2`, Elements are prepared to process data flowing through their pads.
 
 ### Events
-The first type of the items that can be sent via Elements' pads are `events`. Handling an event takes place in `hanlde_event`. Event can be sent both upstream and downstream the direction of the pad.
+Events are one type of item that can be sent via an Element's pads and are managed in `handle_event/4`. Events can travel both upstream and downstream relative to the pad’s direction.
 
-### Stream formats
-Stream format specifies what type of the data will be sent in `Membrane.Buffer`'s. The stream format must be sent before first `Membrane.Buffer` and is handled in `handle_stream_format`
+### Stream Formats
+The stream format, which defines the type of data carried by `Membrane.Buffer`s, must be declared before the first data buffer and is managed in `handle_stream_format/4`.
 
-### Start of stream
-This callback (`handle_start_of_stream`) will be invoked just before handling the first `Membrane.Buffer` incoming from the specific input pad.
+### Start of Stream
+This callback (`handle_start_of_stream`) is activated just before processing the first `Membrane.Buffer` from a specific input pad.
 
 ### Buffers
-The core of the multimedia processing. `Membrane.Buffer`'s contain multimedia payload, but they also may have information about some metadata or timestamps. Handling them takes place in `handle_buffer` callback.
+The core of multimedia processing involves handling `Membrane.Buffer`s, which contain multimedia payload and may also include metadata or timestamps, all managed within the `handle_buffer/4` callback.
 
-## After processing the data
-If the element decides, that it won't send any more buffers on the specific pad, it can send `:end_of_stream` there. It will be received by the linked element in `handle_end_of_stream` callback. 
-When the element receives `end_of_stream` callback, it's parent (Bin or Pipeline) will be also notified about it in `handle_element_end_of_stream` callback.
+### Demands
+If the Element has pads with `flow_control: :manual`, entering `:playing` playback allows it to send demand using `:demand` action or to receive it in `handle_demand/5` callback.
+
+## After Processing the Data
+When an element determines that it will no longer send buffers from a specific pad, it can return `:end_of_stream` action to that pad. The linked element receives this in `handle_end_of_stream/3`. The parent component (either a Bin or Pipeline) is notified via `handle_element_end_of_stream/4`.
 
 ## Terminating
-Usually the last callback executed within a Membrane Component is `handle_terminate_request`. By default it returns `terminate: :normal` action, which ends the lifespan of the component (with reason `:normal`).
-You can change this behaviour by overriding defeault impelmentation of this callback, but remember tho return `terminate: reason` in another place! Otherwise, your Pipeline will have problems with getting termianted.
+Typically, the last callback executed within a Membrane Component is `handle_terminate_request`. By default, it returns a `terminate: :normal` action, concluding the component's lifespan with the reason `:normal`. This behavior can be modified by overriding the default implementation, but ensure to return a `terminate: reason` elsewhere to avoid termination issues in your Pipeline.
 
-## Callbacks not strictly related to the lifecycle
-Not all the callbacks are restricted to occur in specific moments in the Membrane Component lifecycle.
+## Callbacks Not Strictly Related to the Lifecycle
+Some callbacks are not confined to specific stages of the Membrane Component lifecycle.
 
-### Handling parent/child notification
-`handle_parent_notification` and `handle_child_notification` are the 2 callbacks that can during the whole Component's lifecycle. They are responsible for handling nofications sent from respectively parent or child Component.
+### Handling Parent/Child Notification
+`handle_parent_notification/3` and `handle_child_notification/4` can occur at any point during the component's lifecycle and are tasked with managing notifications from a parent or child component, respectively.
 
-### Handling messages from non-Membrane processes 
-There is also a `handle_info` callback in all of the Membrane Components and `handle_call` in Membrane Pipelines, that can be invoked in every moment, when the Component is alive. Their function is annalogical as in the `GenServer`.
+### Handling Messages from Non-Membrane Processes
+The `handle_info/3` callback is present in all Membrane Components and `handle_call/3` in Membrane Pipelines. These can be triggered at any time while the component is alive, functioning similarly to their substituted in `GenServer`.
