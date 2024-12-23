@@ -25,9 +25,9 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   # demand on the input, because one of the pads output with :auto flow control doesn't
   # have positive demand, so the whole pipeline will get stuck and won't process more data.
 
-  # The algorithm is made of two phases: (1) triggering and (2) proper searching.
+  # The algorithm is made of two phases: (1) triggering and (2) searching.
 
-  # (1) Triggering
+  # (1) Triggering:
 
   # Let's notice that:
   #   * a new diamond can be created only after linking a new spec
@@ -37,7 +37,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   # is part of this link.
 
   # After the spec status is set to :done, the parent component that returned the spec will
-  # triggerall elements whose output pads have been linked in this spec (`type: :start_trigger`).
+  # trigger all elements whose output pads have been linked in this spec (`type: :start_trigger`).
   # The reference of the trigger is always set to the spec reference.
 
   # If the element is triggered with a specific reference (`type: :trigger`) for the first time,
@@ -45,33 +45,33 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   #   * the element forwards the trigger with the same reference via all input pads working
   #     in the pull mode (`type: :trigger`)
   #   * if the element has at least two output pads working in the pull mode, it postpones
-  #     the proper searching that will be spawned from itself (`type: :start_search`). The time
-  #     between postponing and the proper searching is one second. If during this time an element
+  #     the searching that will be spawned from itself (`type: :start_search`). The time
+  #     between postponing and the searching is one second. If during this time an element
   #     is triggered once again with a different reference, it won't cause another postponement
-  #     of the proper searching, this means that at the time there is at most one proper searching
+  #     of the searching, this means that at the time there is at most one searching
   #     postponed in the single element
 
-  # (2) Proper searching:
+  # (2) Searching:
 
-  # Proper searching is started only in elements that have at least two output pads
-  # working in the pull mode. When an element starts proper searching, it assigns
+  # Searching is started only in elements that have at least two output pads
+  # working in the pull mode. When an element starts searching, it assigns
   # a new reference to it, different from the reference of the related trigger.
 
-  # When proper searching enters the element (no matter if it is the element that has
-  # just started the proper searching, or maybe it was forwarded to it via a link):
-  #   * if the element sees the proper searching reference for the first time, then:
-  #     - it forwards proper searching via all output pads working in the pull mode
+  # When searching enters the element (no matter if it is the element that has
+  # just started the searching, or maybe it was forwarded to it via a link):
+  #   * if the element sees the searching reference for the first time, then:
+  #     - it forwards searching via all output pads working in the pull mode
   #       (`type: :search`)
-  #     - when proper searching is forwarded, it remembers the path in the graph through
+  #     - when searching is forwarded, it remembers the path in the graph through
   #       the elements that it has already passed
-  #   * if the element has already seen the reference of proper searching, but there is
-  #     a repeated element on the path that proper searching traversed to this element,
+  #   * if the element has already seen the reference of searching, but there is
+  #     a repeated element on the path that searching traversed to this element,
   #     the element does nothing
-  #   * if the element has already seen the reference of proper searching and the traversed
+  #   * if the element has already seen the reference of searching and the traversed
   #     path doesn't contain any repeated elements, it means that the current traversed path
-  #     and the path that the proper searching traversed when it entered the element
+  #     and the path that the searching traversed when it entered the element
   #     the previous time together make a diamond. Then, the element logs the found diamond
-  #     and doesn't forward proper searching further.
+  #     and doesn't forward searching further.
 
   alias __MODULE__.{DiamondLogger, PathInGraph}
   alias Membrane.Core.Element.State
