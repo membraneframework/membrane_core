@@ -3,6 +3,7 @@
 ## 1.2.0
  * Add `:max_instances` option for dynamic pads. [#876](https://github.com/membraneframework/membrane_core/pull/876)
  * Implement `Membrane.Connector`. [#904](https://github.com/membraneframework/membrane_core/pull/904)
+ * Incorporate `Membrane.Funnel`, `Membrane.Tee` and `Membane.Fake.Sink`. [#922](https://github.com/membraneframework/membrane_core/issues/922)
 
 ## 1.1.2
  * Add new callback `handle_child_terminated/3` along with new assertions. [#894](https://github.com/membraneframework/membrane_core/pull/894)
