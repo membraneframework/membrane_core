@@ -19,7 +19,7 @@ defmodule Membrane.Integration.TeeTest do
         |> child(:tee, Membrane.Tee)
       ] ++
         for sink <- sinks do
-          pad = if sink in [:sink1, :sink2], do: :output, else: :output_copy
+          pad = if sink in [:sink1, :sink2], do: :output, else: :push_output
 
           get_child(:tee)
           |> via_out(pad)
@@ -36,7 +36,7 @@ defmodule Membrane.Integration.TeeTest do
       assert_sink_buffer(pipeline, sink, %Buffer{payload: ^element})
     end
 
-    for {pad, sink} <- [output_copy: :sink5, output: :sink6] do
+    for {pad, sink} <- [push_output: :sink5, output: :sink6] do
       spec =
         get_child(:tee)
         |> via_out(pad)

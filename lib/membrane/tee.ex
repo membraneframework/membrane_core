@@ -4,11 +4,11 @@ defmodule Membrane.Tee do
 
   It has one input pad `:input` and 2 output pads:
   * `:output` - is a dynamic pad which is always available and works in pull mode
-  * `:output_copy` - is a dynamic pad that can be linked to any number of elements (including 0) and works
+  * `:push_output` - is a dynamic pad that can be linked to any number of elements (including 0) and works
     in push mode
 
   The `:output` pads dictate the speed of processing data and any element (or elements) connected to
-  `:output_copy` pad will receive the same data as all `:output` instances.
+  `:push_output` pad will receive the same data as all `:output` instances.
   """
   use Membrane.Filter, flow_control_hints?: false
 
@@ -24,7 +24,7 @@ defmodule Membrane.Tee do
     flow_control: :auto,
     accepted_format: _any
 
-  def_output_pad :output_copy,
+  def_output_pad :push_output,
     availability: :on_request,
     flow_control: :push,
     accepted_format: _any
@@ -38,7 +38,7 @@ defmodule Membrane.Tee do
   def handle_playing(ctx, state) do
     if map_size(ctx.pads) < 2 do
       Membrane.Logger.debug("""
-      #{inspect(__MODULE__)} enters :playing playback without any output (:output or :output_copy) \
+      #{inspect(__MODULE__)} enters :playing playback without any output (:output or :push_output) \
       pads linked.
       """)
     end
@@ -53,7 +53,7 @@ defmodule Membrane.Tee do
 
   @impl true
   def handle_pad_added(Pad.ref(name, _ref) = output_pad, ctx, state)
-      when name in [:output, :output_copy] do
+      when name in [:output, :push_output] do
     maybe_stream_format =
       case state.stream_format do
         nil -> []
