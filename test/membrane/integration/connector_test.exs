@@ -34,6 +34,8 @@ defmodule Membrane.Integration.ConnectorTest do
           })
       )
 
+    assert_child_playing(pipeline, :source)
+
     data = generate_data(100, [:stream_format, :buffer, :event])
 
     data

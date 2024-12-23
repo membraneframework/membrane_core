@@ -13,7 +13,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
   end
 
   defmodule AutoFilter do
-    use Membrane.Filter
+    use Membrane.Filter, flow_control_hints?: false
 
     def_input_pad :input, availability: :on_request, accepted_format: _any, flow_control: :auto
     def_output_pad :output, availability: :on_request, accepted_format: _any, flow_control: :auto
