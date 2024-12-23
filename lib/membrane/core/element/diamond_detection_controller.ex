@@ -27,7 +27,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
 
   # The algorithm is made of two phases: (1) triggering and (2) searching.
 
-  # (1) Triggering:
+  # (1) Triggering
 
   # Let's notice that:
   #   * a new diamond can be created only after linking a new spec
@@ -51,7 +51,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   #     of the searching, this means that at the time there is at most one searching
   #     postponed in the single element
 
-  # (2) Searching:
+  # (2) Searching
 
   # Searching is started only in elements that have at least two output pads
   # working in the pull mode. When an element starts searching, it assigns
