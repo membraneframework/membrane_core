@@ -54,7 +54,11 @@ defmodule MyComplexSource
   @one_hundred_millis = Membrane.Time.milliseconds(100)
 
   @impl true
-  def handle_init(_ctx, _opts), do: {[], %{status: nil}}
+  def handle_init(_ctx, _opts) do 
+    # after starting a timer, status will always be either :resumed, :paused 
+    # or :pause_on_next_handle_tick
+    {[], %{status: nil}}
+  end
 
   @impl true 
   def handle_playing(_ctx, state) do
