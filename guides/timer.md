@@ -13,22 +13,28 @@ defmodule MySource do
 
   @impl true
   def handle_playing(_ctx, state) do
-    interval_in_millis = 100
-    interval = Membrane.Time.milliseconds(interval_in_millis)
+    # let's start a timer named :my_timer that will tick every 100 milliseconds
 
     actions = [
-      stream_format: %SomeFormat{},
-      start_timer: {:some_timer, interval}
+      start_timer: {:my_timer, Membrane.Time.milliseconds(100)}
     ]
 
     {actions, state}
   end
 
   @impl true
-  def handle_tick(:some_timer, _ctx, state) do
-    buffer = %Membrane.Buffer{payload: ""}
-    actions = [buffer: {:output, buffer}]
-    {actions, state}
+  def handle_tick(:my_timer, ctx, state) do
+    # in this callback we handle ticks of :my_timer:
+    # we send a stream format if it hasn't been sent yet and a buffer
+
+    maybe_stream_format = 
+      if ctx.pads.output.stream_format == nil, 
+        do: [stream_format: %SomeFormat{}],
+        else: []
+
+    buffer = [buffer: {:output, %Membrane.Buffer{payload: ""}}]
+
+    {maybe_stream_format ++ buffer, state}
   end
 end
 ```
@@ -52,14 +58,13 @@ defmodule MyComplexSource
 
   @impl true 
   def handle_playing(_ctx, state) do
-    interval_in_millis = 100
-    interval = Membrane.Time.milliseconds(interval_in_millis)
-
-    actions = [
-      stream_format: %SomeFormat{},
-      start_timer: {:some_timer, interval}
+    # let's start a timer named :my_timer ...
+    start_timer_action = [
+      start_timer: {:my_timer, Membrane.Time.milliseconds(100)}
     ]
-
+    
+    # ... and send a stream format
+    actions = start_timer_action ++ [stream_format: %SomeFormat{}]
     {actions, %{state | status: :resumed}}
   end
 
@@ -72,29 +77,35 @@ defmodule MyComplexSource
   def handle_parent_notification(notification, _ctx, state) when notification in [:pause, :resume, :stop] do
     case notification do
       :pause when state.status == :resumed -> 
+        # let's postopne pausing :my_timer to the upcomping handle_tick
         {[], %{state | status: :pause_on_next_handle_tick}}
 
       :resume when state.status == :paused -> 
-        actions = [timer_interval: {:some_timer, @one_hundred_millis}]
+        # resume :my_timer
+        actions = [timer_interval: {:my_timer, @one_hundred_millis}]
         {actions, %{state | status: :resumed}}
 
       :resume when state.status == :pause_on_next_handle_tick -> 
+        # case when we receive :pause and :resume notifications without a tick 
+        # between them
         {[], %{state | status: :resumed}}
 
       :stop -> 
-        {[stop_timer: :some_timer], %{state | status: :stopped}}
+        # stop :my_timer
+        {[stop_timer: :my_timer], %{state | status: :stopped}}
     end
   end
 
   @impl true
-  def handle_tick(:some_timer, _ctx, state) do
+  def handle_tick(:my_timer, _ctx, state) do
     case state.status do
       :resumed -> 
         buffer = %Membrane.Buffer{payload: ""}
         {[buffer: {:output, buffer}], state}
 
       :pause_on_next_handle_tick -> 
-        actions = [timer_interval: :no_interval]
+        # pause :my_timer
+        actions = [timer_interval: {:my_timer, :no_interval}]
         {actions, %{state | status: :paused}}
     end
   end
