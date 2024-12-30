@@ -12,7 +12,6 @@ defmodule Membrane.Core.Pipeline do
   require Membrane.Core.Utils, as: Utils
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Telemetry, as: Telemetry
-  require Membrane.Core.Component
 
   @spec get_stalker(pipeline :: pid()) :: Membrane.Core.Stalker.t()
   def get_stalker(pipeline) do
@@ -25,7 +24,9 @@ defmodule Membrane.Core.Pipeline do
   @impl GenServer
   def init(params) do
     Utils.log_on_error do
-      do_init(params)
+      Telemetry.report_span :pipeline, :init do
+        do_init(params)
+      end
     end
   end
 
@@ -42,12 +43,6 @@ defmodule Membrane.Core.Pipeline do
 
     {:ok, resource_guard} =
       SubprocessSupervisor.start_utility(subprocess_supervisor, {ResourceGuard, self()})
-
-    Telemetry.report_init(:pipeline)
-
-    ResourceGuard.register(resource_guard, fn ->
-      Telemetry.report_terminate(:pipeline)
-    end)
 
     {:ok, clock_proxy} =
       SubprocessSupervisor.start_utility(
@@ -82,8 +77,10 @@ defmodule Membrane.Core.Pipeline do
   @impl GenServer
   def handle_continue(:setup, state) do
     Utils.log_on_error do
-      state = LifecycleController.handle_setup(state)
-      {:noreply, state}
+      Telemetry.report_span :pipeline, :setup do
+        state = LifecycleController.handle_setup(state)
+        {:noreply, state}
+      end
     end
   end
 
