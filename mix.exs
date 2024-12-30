@@ -154,6 +154,7 @@ defmodule Membrane.Mixfile do
       {:credo, "~> 1.7", only: :dev, runtime: false},
       # Testing
       {:mox, "~> 1.0", only: :test},
+      {:mock, "~> 0.3.8", only: :test},
       {:junit_formatter, "~> 3.1", only: :test},
       {:excoveralls, "~> 0.14", only: :test}
     ]
