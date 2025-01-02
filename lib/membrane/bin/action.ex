@@ -37,7 +37,7 @@ defmodule Membrane.Bin.Action do
   Action that instantiates children and links them according to `Membrane.ChildrenSpec`.
 
   Children's playback is changed to the current bin playback.
-  `c:Membrane.Parent.handle_spec_started/3` callback is executed once the children are spawned.
+  `c:Membrane.Bin.handle_spec_started/3` callback is executed once the children are spawned.
 
   This is an example of a value that could be passed within `spec` action
   ```elixir

@@ -31,6 +31,34 @@ defmodule Membrane.Pipeline.Action do
 
   Children's playback is changed to the current pipeline state.
   `c:Membrane.Pipeline.handle_spec_started/3` callback is executed once it happens.
+
+  This is an example of a value that could be passed within `spec` action
+  ```elixir
+  child(:file_source, %My.File.Source{path: path})
+  |> child(:demuxer, My.Demuxer)
+  |> via_out(:video)
+  |> child(:decoder, My.Decoder)
+  |> child(:ai_filter, My.AI.Filter{mode: :picasso_effect)
+  |> child(:encoder, My.Encoder)
+  |> via_in(:video)
+  |> child(:webrtc_sink, My.WebRTC.Sink)
+  ```
+  along with it's visualisation
+
+  ![](assets/images/spec_without_audio.svg)
+
+  Returning another spec
+  ```elixir
+  get_child(:demuxer)
+  |> via_out(:audio)
+  |> child(:scratch_remover, My.Scratch.Remover)
+  |> via_in(:audio)
+  |> get_child(:webrtc_sink)
+  ```
+
+  will result in having following children topology:
+
+  ![](assets/images/spec_with_audio.svg)
   """
   @type spec :: {:spec, ChildrenSpec.t()}
 
