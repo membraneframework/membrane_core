@@ -210,7 +210,7 @@ defmodule Membrane.Core.Element.AutoFlowController do
         :pass
 
       pad_data.demand < pad_data.auto_demand_size / 2 and
-        state.satisfied_auto_output_pads == @empty_map_set ->
+          state.satisfied_auto_output_pads == @empty_map_set ->
         pad_data.auto_demand_size
 
       not pad_data.start_of_stream? and pad_data.demand == 0 ->
