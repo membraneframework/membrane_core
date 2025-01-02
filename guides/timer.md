@@ -24,7 +24,7 @@ defmodule MySource do
 
   @impl true
   def handle_tick(:my_timer, ctx, state) do
-    # in this callback we handle ticks of :my_timer:
+    # in this callback we handle ticks of :my_timer
     # we send a stream format if it hasn't been sent yet and a buffer
 
     maybe_stream_format = 
@@ -51,8 +51,6 @@ defmodule MyComplexSource
 
   def_output_pad :output, accepted_format: SomeFormat
 
-  @one_hundred_millis = Membrane.Time.milliseconds(100)
-
   @impl true
   def handle_init(_ctx, _opts) do 
     # after starting a timer, status will always be either :resumed, :paused 
@@ -74,7 +72,7 @@ defmodule MyComplexSource
 
   @impl true
   def handle_parent_notification(notification, ctx, _state) when ctx.playback == :stopped do
-    raise "Cannot handle parent notification: #{inspect(notification)} before handle_palaying"
+    raise "Cannot handle parent notification: #{inspect(notification)} before handle_playing"
   end
 
   @impl true
@@ -85,8 +83,8 @@ defmodule MyComplexSource
         {[], %{state | status: :pause_on_next_handle_tick}}
 
       :resume when state.status == :paused -> 
-        # resume :my_timer
-        actions = [timer_interval: {:my_timer, @one_hundred_millis}]
+        # resume :my_timer by returning :timer_interval action
+        actions = [timer_interval: {:my_timer, Membrane.Time.milliseconds(100)}]
         {actions, %{state | status: :resumed}}
 
       :resume when state.status == :pause_on_next_handle_tick -> 
@@ -95,7 +93,7 @@ defmodule MyComplexSource
         {[], %{state | status: :resumed}}
 
       :stop -> 
-        # stop :my_timer
+        # stop :my_timer using :stop_timer action
         {[stop_timer: :my_timer], %{state | status: :stopped}}
     end
   end
@@ -108,7 +106,7 @@ defmodule MyComplexSource
         {[buffer: {:output, buffer}], state}
 
       :pause_on_next_handle_tick -> 
-        # pause :my_timer
+        # pause :my_timer using :timer_interval action with interval set to :no_interval
         actions = [timer_interval: {:my_timer, :no_interval}]
         {actions, %{state | status: :paused}}
     end
