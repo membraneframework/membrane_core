@@ -39,7 +39,7 @@ defmodule Membrane.Bin.Action do
   Children's playback is changed to the current bin playback.
   `c:Membrane.Parent.handle_spec_started/3` callback is executed once the children are spawned.
 
-  This is an example of spec
+  This is an example of a value that could be passed within `spec` action
   ```elixir
   child(:file_source, %My.File.Source{path: path})
   |> child(:demuxer, My.Demuxer)
@@ -51,19 +51,10 @@ defmodule Membrane.Bin.Action do
   |> child(:webrtc_sink, My.WebRTC.Sink)
   ```
   along with it's visualisation
-  ```mermaid
-  graph TB;
-    file_source(File Source) --> demuxer(Demuxer);
-    demuxer -->|video| decoder(Decoder);
-    decoder --> ai_filter(AI Filter);
-    ai_filter --> encoder(Encoder);
-    encoder --> |video| webrtc_sink(WebRTC Sink);
 
-    classDef default fill:#add8e6, stroke:#333, stroke-width:2px, color:black;
-    linkStyle default stroke:#333, stroke-width:2px, fill:none;
-  ```
+  ![](assets/images/spec_without_audio.svg)
 
-  Returning another spec like this
+  Returning another spec
   ```elixir
   get_child(:demuxer)
   |> via_out(:audio)
@@ -72,20 +63,9 @@ defmodule Membrane.Bin.Action do
   |> get_child(:webrtc_sink)
   ```
 
-  will result in having such a pipeline topology:
-  ```mermaid
-  graph TB;
-    file_source(File Source) --> demuxer(Demuxer);
-    demuxer -->|video| decoder(Decoder);
-    decoder --> ai_filter(AI Filter);
-    ai_filter --> encoder(Encoder);
-    encoder -->|video| webrtc_sink(WebRTC Sink);
-    demuxer -->|audio| scratch_remover(Scratch Remover);
-    scratch_remover -->|audio| webrtc_sink;
+  will result in having following children topology:
 
-    classDef default fill:#add8e6, stroke:#333, stroke-width:2px, color:black;
-    linkStyle default stroke:#333, stroke-width:2px, fill:none;
-  ```
+  ![](assets/images/spec_with_audio.svg)
   """
   @type spec :: {:spec, ChildrenSpec.t()}
 
