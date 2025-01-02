@@ -37,7 +37,35 @@ defmodule Membrane.Bin.Action do
   Action that instantiates children and links them according to `Membrane.ChildrenSpec`.
 
   Children's playback is changed to the current bin playback.
-  `c:Membrane.Parent.handle_spec_started/3` callback is executed once the children are spawned.
+  `c:Membrane.Bin.handle_spec_started/3` callback is executed once the children are spawned.
+
+  This is an example of a value that could be passed within `spec` action
+  ```elixir
+  child(:file_source, %My.File.Source{path: path})
+  |> child(:demuxer, My.Demuxer)
+  |> via_out(:video)
+  |> child(:decoder, My.Decoder)
+  |> child(:ai_filter, My.AI.Filter{mode: :picasso_effect)
+  |> child(:encoder, My.Encoder)
+  |> via_in(:video)
+  |> child(:webrtc_sink, My.WebRTC.Sink)
+  ```
+  along with it's visualisation
+
+  ![](assets/images/spec_without_audio.svg)
+
+  Returning another spec
+  ```elixir
+  get_child(:demuxer)
+  |> via_out(:audio)
+  |> child(:scratch_remover, My.Scratch.Remover)
+  |> via_in(:audio)
+  |> get_child(:webrtc_sink)
+  ```
+
+  will result in having following children topology:
+
+  ![](assets/images/spec_with_audio.svg)
   """
   @type spec :: {:spec, ChildrenSpec.t()}
 
