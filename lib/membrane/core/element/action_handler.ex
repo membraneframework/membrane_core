@@ -319,9 +319,6 @@ defmodule Membrane.Core.Element.ActionHandler do
       "Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}"
     )
 
-    Telemetry.report_metric(:buffer, length(buffers))
-    Telemetry.report_bitrate(buffers)
-
     Enum.each(buffers, fn
       %Buffer{} -> :ok
       value -> raise ElementError, "Tried to send an invalid buffer #{inspect(value)}"
