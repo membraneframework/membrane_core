@@ -7,7 +7,7 @@ if config_env() == :test do
     include: [
       :init,
       :setup,
-      :terminate,
+      :terminate_request,
       :playing,
       :link
     ]

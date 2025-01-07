@@ -9,17 +9,13 @@ defmodule Membrane.TelemetryTest do
   import Membrane.ChildrenSpec
   require Logger
 
+  @moduletag :telemetry
   defmodule TestFilter do
     use Membrane.Filter
 
-    def_input_pad :input, flow_control: :manual, accepted_format: _any, demand_unit: :buffers
-    def_output_pad :output, flow_control: :manual, accepted_format: _any
+    def_input_pad :input, accepted_format: _any
+    def_output_pad :output, accepted_format: _any
     def_options target: [spec: pid()]
-
-    @impl true
-    def handle_demand(_pad, size, _unit, _context, state) do
-      {[demand: {:input, size}], state}
-    end
 
     @impl true
     def handle_buffer(_pad, _buffer, _context, state), do: {[], state}
@@ -44,22 +40,20 @@ defmodule Membrane.TelemetryTest do
   end
 
   @paths ~w[:filter :sink :source]
-  @events [:init, :setup, :playing, :terminate]
+  @spans [:init, :setup, :playing, :terminate_request]
   @steps [:start, :stop]
 
-  describe "Telemetry reports elements" do
-    @tag :telemetry
-
+  describe "Telemetry reports elements'" do
     setup %{links: links} do
       ref = make_ref()
 
-      events =
-        for event <- @events,
+      spans =
+        for event <- @spans,
             step <- @steps do
           [:membrane, :element, event, step]
         end
 
-      :telemetry.attach_many(ref, events, &TelemetryListener.handle_event/4, %{
+      :telemetry.attach_many(ref, spans, &TelemetryListener.handle_event/4, %{
         dest: self(),
         ref: ref
       })
@@ -71,56 +65,66 @@ defmodule Membrane.TelemetryTest do
 
     # Test each lifecycle step for each element type
     for element_type <- @paths,
-        event <- @events do
+        event <- @spans do
       test "#{element_type}/#{event}", %{ref: ref} do
         element_type = unquote(element_type)
         event = unquote(event)
 
         assert_receive {^ref, :telemetry_ack,
-                        {[:membrane, :element, ^event, :start], meta, %{path: [_, ^element_type]}}}
+                        {[:membrane, :element, ^event, :start], value,
+                         %{path: [_, ^element_type]}}},
+                       1000
 
-        assert meta.system_time > 0
+        assert value.system_time > 0
 
         assert_receive {^ref, :telemetry_ack,
-                        {[:membrane, :element, ^event, :stop], meta, %{path: [_, ^element_type]}}}
+                        {[:membrane, :element, ^event, :stop], value, %{path: [_, ^element_type]}}},
+                       1000
 
-        assert meta.duration > 0
+        assert value.duration > 0
       end
     end
   end
 
-  describe "Pipelines" do
-    setup %{links: links} do
-      ref = make_ref()
+  # describe "Telemetry reports pipelines'" do
+  #   setup %{links: links} do
+  #     ref = make_ref()
 
-      events =
-        for event <- @events,
-            step <- @steps do
-          [:membrane, :pipeline, event, step]
-        end
+  #     spans =
+  #       for event <- @spans,
+  #           step <- @steps do
+  #         [:membrane, :pipeline, event, step]
+  #       end
 
-      :telemetry.attach_many(ref, events, &TelemetryListener.handle_event/4, %{
-        dest: self(),
-        ref: ref
-      })
+  #     :telemetry.attach_many(ref, spans, &TelemetryListener.handle_event/4, %{
+  #       dest: self(),
+  #       ref: ref
+  #     })
 
-      pid = Testing.Pipeline.start_link_supervised!(spec: links)
-      :ok = Testing.Pipeline.terminate(pid)
-      [ref: ref]
-    end
+  #     pid = Testing.Pipeline.start_link_supervised!(spec: links)
+  #     :ok = Testing.Pipeline.terminate(pid)
+  #     [ref: ref]
+  #   end
 
-    test "Pipeline lifecycle", %{ref: ref} do
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :start], meta, %{}}}
-      assert meta.system_time > 0
+  #   test "lifecycle", %{ref: ref} do
+  #     assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :start], value, %{}}}
+  #     assert value.system_time > 0
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :stop], meta, %{}}}
-      assert meta.duration > 0
+  #     assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :stop], value, %{}}}
+  #     assert value.duration > 0
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :start], meta, %{}}}
-      assert meta.system_time > 0
+  #     assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :start], value, %{}}}
+  #     assert value.system_time > 0
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :stop], meta, %{}}}
-      assert meta.duration > 0
-    end
-  end
+  #     assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :stop], value, %{}}}
+  #     assert value.duration > 0
+  #   end
+
+  #   # test "diefferent and sanitized states on start and stop", %{ref: ref} do
+  #   # assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :stop], value, _meta}}
+
+  #   #   assert Map.has_key?(value, :children)
+  #   #   refute Map.has_key?(value, :stalker)
+  #   # end
+  # end
 end

@@ -13,7 +13,6 @@ defmodule Membrane.Core.Bin do
     Parent,
     ProcessHelper,
     SubprocessSupervisor,
-    Telemetry,
     TimerController
   }
 
@@ -96,9 +95,7 @@ defmodule Membrane.Core.Bin do
            {:continue, :setup}}
   def init(options) do
     Utils.log_on_error do
-      Telemetry.report_span :bin, :init do
-        do_init(options)
-      end
+      do_init(options)
     end
   end
 

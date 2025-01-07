@@ -112,9 +112,6 @@ defmodule Membrane.Core.Element.BufferController do
 
   def exec_buffer_callback(pad_ref, buffers, %State{type: type} = state)
       when type in [:sink, :endpoint] do
-    Telemetry.report_metric(:buffer, length(List.wrap(buffers)))
-    Telemetry.report_bitrate(buffers)
-
     do_exec_buffer_callback(pad_ref, buffers, state)
   end
 

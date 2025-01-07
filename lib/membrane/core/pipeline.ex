@@ -11,7 +11,7 @@ defmodule Membrane.Core.Pipeline do
 
   require Membrane.Core.Utils, as: Utils
   require Membrane.Core.Message, as: Message
-  require Membrane.Core.Telemetry, as: Telemetry
+  require Membrane.Core.Component
 
   @spec get_stalker(pipeline :: pid()) :: Membrane.Core.Stalker.t()
   def get_stalker(pipeline) do
@@ -24,9 +24,7 @@ defmodule Membrane.Core.Pipeline do
   @impl GenServer
   def init(params) do
     Utils.log_on_error do
-      Telemetry.report_span :pipeline, :init do
-        do_init(params)
-      end
+      do_init(params)
     end
   end
 
@@ -77,10 +75,8 @@ defmodule Membrane.Core.Pipeline do
   @impl GenServer
   def handle_continue(:setup, state) do
     Utils.log_on_error do
-      Telemetry.report_span :pipeline, :setup do
-        state = LifecycleController.handle_setup(state)
-        {:noreply, state}
-      end
+      state = LifecycleController.handle_setup(state)
+      {:noreply, state}
     end
   end
 

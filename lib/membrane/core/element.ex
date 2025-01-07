@@ -20,7 +20,6 @@ defmodule Membrane.Core.Element do
 
   alias Membrane.{Clock, Core, ResourceGuard, Sync}
   alias Membrane.Core.Child.PadSpecHandler
-  alias Membrane.Core.Telemetry
 
   alias Membrane.Core.Element.{
     BufferController,
@@ -153,10 +152,7 @@ defmodule Membrane.Core.Element do
       }
       |> PadSpecHandler.init_pads()
 
-    state =
-      Telemetry.report_span :element, :init do
-        LifecycleController.handle_init(options.user_options, state)
-      end
+    state = LifecycleController.handle_init(options.user_options, state)
 
     {:ok, state, {:continue, :setup}}
   end
@@ -164,10 +160,8 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def handle_continue(:setup, state) do
     Utils.log_on_error do
-      Telemetry.report_span :element, :setup do
-        state = LifecycleController.handle_setup(state)
-        {:noreply, state}
-      end
+      state = LifecycleController.handle_setup(state)
+      {:noreply, state}
     end
   end
 
@@ -250,7 +244,6 @@ defmodule Membrane.Core.Element do
 
   defp do_handle_info(Message.new(:play), state) do
     state = LifecycleController.handle_playing(state)
-    Telemetry.report_playing(:element)
     {:noreply, state}
   end
 
