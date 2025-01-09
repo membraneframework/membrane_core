@@ -19,6 +19,12 @@ defmodule Membrane.TelemetryTest do
 
     @impl true
     def handle_buffer(_pad, _buffer, _context, state), do: {[], state}
+
+    @impl true
+    def handle_parent_notification(:crash, _context, state) do
+      raise "Crash"
+      {[], state}
+    end
   end
 
   defmodule TelemetryListener do
@@ -30,13 +36,12 @@ defmodule Membrane.TelemetryTest do
   setup do
     ref = make_ref()
 
-    links = [
+    child_spec =
       child(:source, %Testing.Source{output: [~c"a", ~c"b", ~c"c"]})
       |> child(:filter, %TestFilter{target: self()})
       |> child(:sink, Testing.Sink)
-    ]
 
-    [links: links, ref: ref]
+    [child_spec: child_spec, ref: ref]
   end
 
   @paths ~w[:filter :sink :source]
@@ -44,7 +49,7 @@ defmodule Membrane.TelemetryTest do
   @steps [:start, :stop]
 
   describe "Telemetry reports elements'" do
-    setup %{links: links} do
+    setup %{child_spec: child_spec} do
       ref = make_ref()
 
       spans =
@@ -58,8 +63,9 @@ defmodule Membrane.TelemetryTest do
         ref: ref
       })
 
-      pid = Testing.Pipeline.start_link_supervised!(spec: links)
+      pid = Testing.Pipeline.start_link_supervised!(spec: child_spec)
       :ok = Testing.Pipeline.terminate(pid)
+
       [ref: ref]
     end
 
@@ -86,45 +92,87 @@ defmodule Membrane.TelemetryTest do
     end
   end
 
-  # describe "Telemetry reports pipelines'" do
-  #   setup %{links: links} do
-  #     ref = make_ref()
+  describe "Telemetry reports pipelines'" do
+    setup %{child_spec: child_spec} do
+      ref = make_ref()
 
-  #     spans =
-  #       for event <- @spans,
-  #           step <- @steps do
-  #         [:membrane, :pipeline, event, step]
-  #       end
+      spans =
+        for event <- @spans,
+            step <- @steps do
+          [:membrane, :pipeline, event, step]
+        end
 
-  #     :telemetry.attach_many(ref, spans, &TelemetryListener.handle_event/4, %{
-  #       dest: self(),
-  #       ref: ref
-  #     })
+      :telemetry.attach_many(ref, spans, &TelemetryListener.handle_event/4, %{
+        dest: self(),
+        ref: ref
+      })
 
-  #     pid = Testing.Pipeline.start_link_supervised!(spec: links)
-  #     :ok = Testing.Pipeline.terminate(pid)
-  #     [ref: ref]
-  #   end
+      pid = Testing.Pipeline.start_link_supervised!(spec: child_spec)
+      :ok = Testing.Pipeline.terminate(pid)
+      [ref: ref]
+    end
 
-  #   test "lifecycle", %{ref: ref} do
-  #     assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :start], value, %{}}}
-  #     assert value.system_time > 0
+    test "lifecycle", %{ref: ref} do
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :start], value, %{}}}
+      assert value.monotonic_time != 0
 
-  #     assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :stop], value, %{}}}
-  #     assert value.duration > 0
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :stop], value, %{}}}
+      assert value.duration > 0
 
-  #     assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :start], value, %{}}}
-  #     assert value.system_time > 0
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :start], value, %{}}}
+      assert value.monotonic_time != 0
 
-  #     assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :stop], value, %{}}}
-  #     assert value.duration > 0
-  #   end
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :stop], value, %{}}}
+      assert value.duration > 0
+    end
 
-  #   # test "diefferent and sanitized states on start and stop", %{ref: ref} do
-  #   # assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :stop], value, _meta}}
+    test "santized state and different internal states", %{ref: ref} do
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :stop], _value, meta}}
 
-  #   #   assert Map.has_key?(value, :children)
-  #   #   refute Map.has_key?(value, :stalker)
-  #   # end
-  # end
+      assert Map.has_key?(meta.old_state, :children)
+      refute Map.has_key?(meta.old_state, :stalker)
+
+      assert meta.old_internal_state != meta.new_internal_state
+    end
+  end
+
+  describe "Telemetry properly reports end of span when exception was encountered" do
+    setup %{child_spec: child_spec} do
+      ref = make_ref()
+
+      spans =
+        [
+          [:membrane, :element, :parent_notification, :start],
+          [:membrane, :element, :parent_notification, :stop],
+          [:membrane, :element, :parent_notification, :exception]
+        ]
+
+      :telemetry.attach_many(ref, spans, &TelemetryListener.handle_event/4, %{
+        dest: self(),
+        ref: ref
+      })
+
+      pid = Testing.Pipeline.start_link_supervised!(spec: child_spec)
+      Process.flag(:trap_exit, true)
+      :ok = Testing.Pipeline.notify_child(pid, :filter, :crash)
+      [ref: ref]
+    end
+
+    test "in filter", %{ref: ref} do
+      assert_receive {^ref, :telemetry_ack,
+                      {[:membrane, :element, :parent_notification, :start], _value,
+                       %{path: [_, ":filter"]}}},
+                     1000
+
+      assert_receive {^ref, :telemetry_ack,
+                      {[:membrane, :element, :parent_notification, :exception], value,
+                       %{path: [_, ":filter"]}}},
+                     1000
+
+      assert value.duration > 0
+
+      refute_received {^ref, :telemetry_ack,
+                       {[:membrane, :element, :parent_notification, :stop], _value, _}}
+    end
+  end
 end

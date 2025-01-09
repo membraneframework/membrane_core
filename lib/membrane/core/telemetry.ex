@@ -8,7 +8,9 @@ defmodule Membrane.Core.Telemetry do
   require Logger
   alias Membrane.ComponentPath
 
-  @possible_flags [:init, :terminate_request, :setup, :playing, :link]
+
+  # TODO find a proper way to describe types of measured metrics
+  @possible_flags [:init, :terminate_request, :setup, :playing, :link, :parent_notification]
   @telemetry_flags Application.compile_env(:membrane_core, :telemetry_flags, [])
 
   @public_state_keys %{
@@ -114,17 +116,13 @@ defmodule Membrane.Core.Telemetry do
     report_event(:link, event, value)
   end
 
-  defmacro report_playing(component_type) do
-    report_event(:playing, [:membrane, component_type, :playing], quote(do: %{}))
-  end
-
   @doc """
   Reports an arbitrary span consistent with span format in `:telementry`
   """
-  @spec report_span(module(), binary(), do: block) :: block when block: Macro.t()
+  @spec report_span(module(), binary(), fun()) :: any()
   def report_span(component_type, event_type, f) do
-    component_type = struct_to_name(component_type)
-    event_type = handler_to_name(event_type)
+    component_type = state_module_to_atom(component_type)
+    event_type = handler_to_event_name(event_type)
 
     if event_enabled?(event_type) do
       :telemetry.span(
@@ -140,6 +138,7 @@ defmodule Membrane.Core.Telemetry do
                %{
                  old_internal_state: old_intstate,
                  old_state: sanitize_state_data(old_state),
+                 new_internal_state: new_intstate,
                  log_metadata: Logger.metadata(),
                  path: ComponentPath.get()
                }}
@@ -155,12 +154,12 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  defp struct_to_name(Membrane.Core.Element.State), do: :element
-  defp struct_to_name(Membrane.Core.Bin.State), do: :bin
-  defp struct_to_name(Membrane.Core.Pipeline.State), do: :pipeline
+  defp state_module_to_atom(Membrane.Core.Element.State), do: :element
+  defp state_module_to_atom(Membrane.Core.Bin.State), do: :bin
+  defp state_module_to_atom(Membrane.Core.Pipeline.State), do: :pipeline
 
-  defp handler_to_name(a) when is_atom(a), do: handler_to_name(Atom.to_string(a))
-  defp handler_to_name("handle_" <> r) when is_binary(r), do: String.to_atom(r)
+  defp handler_to_event_name(a) when is_atom(a), do: handler_to_event_name(Atom.to_string(a))
+  defp handler_to_event_name("handle_" <> r) when is_binary(r), do: String.to_atom(r)
 
   def state_result(res = {_actions, new_internal_state}, old_internal_state, old_state) do
     {:telemetry_result, {res, new_internal_state, old_internal_state, old_state}}
@@ -188,13 +187,15 @@ defmodule Membrane.Core.Telemetry do
     :all ->
       def event_enabled?(_), do: true
 
-    include: _, exclude: _ ->
-      IO.warn(
-        """
+    exclude: _, include: _ ->
+      raise """
         `config :membrane_core, :telemetry_flags` should contain either :all, [include:[]] or [exclude:[]]
-        """,
-        Macro.Env.stacktrace(__ENV__)
-      )
+      """
+
+    include: _, exclude: _ ->
+      raise """
+        `config :membrane_core, :telemetry_flags` should contain either :all, [include:[]] or [exclude:[]]
+      """
 
     include: inc ->
       for event <- inc do
