@@ -9,6 +9,7 @@ if config_env() == :test do
       :setup,
       :terminate_request,
       :playing,
-      :link
+      :link,
+      :parent_notification
     ]
 end
