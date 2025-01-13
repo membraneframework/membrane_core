@@ -6,12 +6,31 @@ defmodule Membrane.Core.Telemetry do
   # collected and propagated. This avoids unnecessary runtime overhead when telemetry is not needed.
 
   require Logger
+  require Membrane.Element.Base, as: ElementBase
+  require Membrane.Element.WithOutputPads
+  require Membrane.Element.WithInputPads
+  require Membrane.Pipeline, as: Pipeline
+  require Membrane.Bin, as: Bin
+
+  alias Membrane.Element.WithOutputPads
+  alias Membrane.Element.WithInputPads
   alias Membrane.ComponentPath
 
+  @component_modules [
+    bin: [Bin],
+    pipeline: [Pipeline],
+    element: [ElementBase, WithInputPads, WithOutputPads]
+  ]
 
-  # TODO find a proper way to describe types of measured metrics
-  @possible_flags [:init, :terminate_request, :setup, :playing, :link, :parent_notification]
-  @telemetry_flags Application.compile_env(:membrane_core, :telemetry_flags, [])
+  @possible_handlers (for {elem, mods} <- @component_modules do
+                        mods
+                        |> Enum.flat_map(& &1.behaviour_info(:callbacks))
+                        |> Enum.map(&elem(&1, 0))
+                        |> Enum.filter(&String.starts_with?(to_string(&1), "handle_"))
+                        |> then(&{elem, &1})
+                      end)
+
+  @config Application.compile_env(:membrane_core, :telemetry_flags, [])
 
   @public_state_keys %{
     Membrane.Core.Element.State => [
@@ -74,9 +93,45 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  defmacro report_metric(_, _), do: nil
+  for {component, handlers} <- @config[:tracked_callbacks] || [] |> IO.inspect() do
+    case handlers do
+      :all ->
+        def handler_measured?(unquote(component), _), do: true
 
-  defmacro report_metric(_, _, _), do: nil
+      nil ->
+        _ = @possible_handlers
+        def handler_measured?(unquote(component), _), do: false
+
+      handler_names when is_list(handler_names) ->
+        for event <- handler_names do
+          if event not in @possible_handlers[component] do
+            raise """
+              Invalid telemetry flag: #{inspect(event)}.
+              Possible values for #{component} are: #{inspect(@possible_handlers[component])}
+            """
+          end
+
+          def handler_measured?(unquote(component), unquote(event)), do: true
+        end
+    end
+  end
+
+  def handler_measured?(_, _), do: false
+
+  case @config[:metrics] do
+    :all ->
+      def metric_measured?(_metric), do: true
+
+    nil ->
+      def metric_measured?(_metric), do: false
+
+    list when is_list(list) ->
+      for metric <- list do
+        def metric_measured?(unquote(metric)), do: true
+      end
+
+      def metric_measured?(_metric), do: false
+  end
 
   @doc """
   Sanitizes state data by removing keys that are meant to be internal-only.
@@ -86,45 +141,14 @@ defmodule Membrane.Core.Telemetry do
     Map.take(state, @public_state_keys[struct])
   end
 
-  defp get_public_pad_name(pad) do
-    quote bind_quoted: [pad: pad] do
-      case pad.pad_ref do
-        {:private, direction} -> direction
-        {Membrane.Pad, {:private, direction}, ref} -> {Membrane.Pad, direction, ref}
-        _pad -> pad.pad_ref
-      end
-    end
-  end
-
   @doc """
-  Reports new link connection being initialized in pipeline.
-  """
-  @spec report_link(Membrane.Pad.ref(), Membrane.Pad.ref()) :: Macro.t()
-  defmacro report_link(from, to) do
-    event = [:membrane, :link, :new]
-
-    value =
-      quote do
-        %{
-          from: unquote(from),
-          to: unquote(to),
-          pad_from: unquote(get_public_pad_name(from)),
-          pad_to: unquote(get_public_pad_name(to))
-        }
-      end
-
-    report_event(:link, event, value)
-  end
-
-  @doc """
-  Reports an arbitrary span consistent with span format in `:telementry`
+  Reports an arbitrary span of a function consistent with `span/3` format in `:telementry`
   """
   @spec report_span(module(), binary(), fun()) :: any()
   def report_span(component_type, event_type, f) do
     component_type = state_module_to_atom(component_type)
-    event_type = handler_to_event_name(event_type)
 
-    if event_enabled?(event_type) do
+    if handler_measured?(component_type, event_type) do
       :telemetry.span(
         [:membrane, component_type, event_type],
         %{
@@ -144,7 +168,7 @@ defmodule Membrane.Core.Telemetry do
                }}
 
             _other ->
-              raise "Unexpected telemetry span result. Use Telemetry.result/3 macro"
+              raise "Unexpected telemetry span result. Use Telemetry.state_result/3 instead"
           end
         end
       )
@@ -158,64 +182,15 @@ defmodule Membrane.Core.Telemetry do
   defp state_module_to_atom(Membrane.Core.Bin.State), do: :bin
   defp state_module_to_atom(Membrane.Core.Pipeline.State), do: :pipeline
 
-  defp handler_to_event_name(a) when is_atom(a), do: handler_to_event_name(Atom.to_string(a))
-  defp handler_to_event_name("handle_" <> r) when is_binary(r), do: String.to_atom(r)
-
   def state_result(res = {_actions, new_internal_state}, old_internal_state, old_state) do
     {:telemetry_result, {res, new_internal_state, old_internal_state, old_state}}
   end
 
-  defp report_event(event_type, event_name, measurement, metadata \\ quote(do: %{})) do
-    if event_enabled?(event_type) do
-      quote do
-        :telemetry.execute(
-          unquote(event_name),
-          unquote(measurement),
-          %{
-            log_metadata: Logger.metadata(),
-            path: ComponentPath.get()
-          }
-          |> Map.merge(unquote(metadata))
-        )
-      end
+  def report_metric(metric_name, measurement, metadata \\ %{}) do
+    if metric_measured?(metric_name) do
+      :telemetry.execute([:membrane, :metric, metric_name], %{value: measurement}, metadata)
     else
-      :ok
+      measurement
     end
-  end
-
-  case @telemetry_flags do
-    :all ->
-      def event_enabled?(_), do: true
-
-    exclude: _, include: _ ->
-      raise """
-        `config :membrane_core, :telemetry_flags` should contain either :all, [include:[]] or [exclude:[]]
-      """
-
-    include: _, exclude: _ ->
-      raise """
-        `config :membrane_core, :telemetry_flags` should contain either :all, [include:[]] or [exclude:[]]
-      """
-
-    include: inc ->
-      for event <- inc do
-        if event not in @possible_flags do
-          raise """
-            Invalid telemetry flag: #{inspect(event)}.
-            Possible values are: #{inspect(@possible_flags)}
-          """
-        end
-
-        def event_enabled?(unquote(event)), do: true
-      end
-
-      def event_enabled?(_), do: false
-
-    exclude: exc ->
-      for event <- exc do
-        def event_enabled?(unquote(event)), do: false
-      end
-
-      def event_enabled?(_), do: true
   end
 end

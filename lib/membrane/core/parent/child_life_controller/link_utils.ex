@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
   use Bunch
 
   alias Membrane.Child
-  alias Membrane.Core.{Bin, Message, Parent, Telemetry}
+  alias Membrane.Core.{Bin, Message, Parent}
   alias Membrane.Core.Bin.PadController
 
   alias Membrane.Core.Parent.{
@@ -274,8 +274,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
   end
 
   def link(%Link{from: from, to: to} = link, state) do
-    Telemetry.report_link(from, to)
-
     if {Membrane.Bin, :itself} in [from.child, to.child] do
       state
     else
