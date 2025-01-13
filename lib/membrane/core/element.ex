@@ -182,7 +182,6 @@ defmodule Membrane.Core.Element do
          _from,
          state
        ) do
-    Telemetry.report_link(this, other)
     {reply, state} = PadController.handle_link(direction, this, other, params, state)
     {:reply, reply, state}
   end

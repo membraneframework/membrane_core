@@ -22,7 +22,7 @@ defmodule Membrane.TelemetryTest do
 
     @impl true
     def handle_parent_notification(:crash, _context, state) do
-      raise "Crash"
+      raise "Intended Crash Test"
       {[], state}
     end
   end
@@ -45,7 +45,7 @@ defmodule Membrane.TelemetryTest do
   end
 
   @paths ~w[:filter :sink :source]
-  @spans [:init, :setup, :playing, :terminate_request]
+  @spans [:handle_init, :handle_setup, :handle_playing, :handle_terminate_request]
   @steps [:start, :stop]
 
   describe "Telemetry reports elements'" do
@@ -113,21 +113,30 @@ defmodule Membrane.TelemetryTest do
     end
 
     test "lifecycle", %{ref: ref} do
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :start], value, %{}}}
+      assert_receive {^ref, :telemetry_ack,
+                      {[:membrane, :pipeline, :handle_init, :start], value, %{}}}
+
       assert value.monotonic_time != 0
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :stop], value, %{}}}
+      assert_receive {^ref, :telemetry_ack,
+                      {[:membrane, :pipeline, :handle_init, :stop], value, %{}}}
+
       assert value.duration > 0
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :start], value, %{}}}
+      assert_receive {^ref, :telemetry_ack,
+                      {[:membrane, :pipeline, :handle_setup, :start], value, %{}}}
+
       assert value.monotonic_time != 0
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :setup, :stop], value, %{}}}
+      assert_receive {^ref, :telemetry_ack,
+                      {[:membrane, :pipeline, :handle_setup, :stop], value, %{}}}
+
       assert value.duration > 0
     end
 
     test "santized state and different internal states", %{ref: ref} do
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :pipeline, :init, :stop], _value, meta}}
+      assert_receive {^ref, :telemetry_ack,
+                      {[:membrane, :pipeline, :handle_init, :stop], _value, meta}}
 
       assert Map.has_key?(meta.old_state, :children)
       refute Map.has_key?(meta.old_state, :stalker)
@@ -142,9 +151,9 @@ defmodule Membrane.TelemetryTest do
 
       spans =
         [
-          [:membrane, :element, :parent_notification, :start],
-          [:membrane, :element, :parent_notification, :stop],
-          [:membrane, :element, :parent_notification, :exception]
+          [:membrane, :element, :handle_parent_notification, :start],
+          [:membrane, :element, :handle_parent_notification, :stop],
+          [:membrane, :element, :handle_parent_notification, :exception]
         ]
 
       :telemetry.attach_many(ref, spans, &TelemetryListener.handle_event/4, %{
@@ -160,19 +169,19 @@ defmodule Membrane.TelemetryTest do
 
     test "in filter", %{ref: ref} do
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :element, :parent_notification, :start], _value,
+                      {[:membrane, :element, :handle_parent_notification, :start], _value,
                        %{path: [_, ":filter"]}}},
                      1000
 
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :element, :parent_notification, :exception], value,
+                      {[:membrane, :element, :handle_parent_notification, :exception], value,
                        %{path: [_, ":filter"]}}},
                      1000
 
       assert value.duration > 0
 
       refute_received {^ref, :telemetry_ack,
-                       {[:membrane, :element, :parent_notification, :stop], _value, _}}
+                       {[:membrane, :element, :handle_parent_notification, :stop], _value, _}}
     end
   end
 end
