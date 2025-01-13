@@ -10,6 +10,7 @@ defmodule Membrane.Core.CallbackHandler do
   alias Membrane.CallbackError
 
   require Membrane.Logger
+  require Membrane.Core.Telemetry, as: Telemetry
 
   @type state :: %{
           :module => module,
@@ -136,7 +137,14 @@ defmodule Membrane.Core.CallbackHandler do
 
     callback_result =
       try do
-        apply(module, callback, args)
+        Telemetry.report_span(
+          state.__struct__,
+          callback,
+          fn ->
+            apply(module, callback, args)
+            |> Telemetry.state_result(internal_state, state)
+          end
+        )
       rescue
         e in UndefinedFunctionError ->
           _ignored =

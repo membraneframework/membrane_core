@@ -8,8 +8,6 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   import Membrane.Pad, only: [is_pad_ref: 1]
 
-  alias Membrane.Telemetry
-
   alias Membrane.{
     ActionError,
     Buffer,
@@ -34,7 +32,6 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
-  require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
   @impl CallbackHandler
@@ -318,9 +315,6 @@ defmodule Membrane.Core.Element.ActionHandler do
     Membrane.Logger.debug_verbose(
       "Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}"
     )
-
-    Telemetry.report_metric(:buffer, length(buffers))
-    Telemetry.report_bitrate(buffers)
 
     Enum.each(buffers, fn
       %Buffer{} -> :ok

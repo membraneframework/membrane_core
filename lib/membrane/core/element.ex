@@ -118,10 +118,6 @@ defmodule Membrane.Core.Element do
     {:ok, resource_guard} =
       SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
 
-    Telemetry.report_init(:element)
-
-    ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:element) end)
-
     self_pid = self()
 
     Stalker.register_metric_function(:message_queue_length, fn ->
@@ -158,6 +154,7 @@ defmodule Membrane.Core.Element do
       |> PadSpecHandler.init_pads()
 
     state = LifecycleController.handle_init(options.user_options, state)
+
     {:ok, state, {:continue, :setup}}
   end
 

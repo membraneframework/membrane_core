@@ -11,7 +11,6 @@ defmodule Membrane.Core.Pipeline do
 
   require Membrane.Core.Utils, as: Utils
   require Membrane.Core.Message, as: Message
-  require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Core.Component
 
   @spec get_stalker(pipeline :: pid()) :: Membrane.Core.Stalker.t()
@@ -42,12 +41,6 @@ defmodule Membrane.Core.Pipeline do
 
     {:ok, resource_guard} =
       SubprocessSupervisor.start_utility(subprocess_supervisor, {ResourceGuard, self()})
-
-    Telemetry.report_init(:pipeline)
-
-    ResourceGuard.register(resource_guard, fn ->
-      Telemetry.report_terminate(:pipeline)
-    end)
 
     {:ok, clock_proxy} =
       SubprocessSupervisor.start_utility(

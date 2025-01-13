@@ -13,7 +13,6 @@ defmodule Membrane.Core.Bin do
     Parent,
     ProcessHelper,
     SubprocessSupervisor,
-    Telemetry,
     TimerController
   }
 
@@ -126,9 +125,6 @@ defmodule Membrane.Core.Bin do
 
     {:ok, resource_guard} =
       SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
-
-    Telemetry.report_init(:bin)
-    ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:bin) end)
 
     state =
       %State{
