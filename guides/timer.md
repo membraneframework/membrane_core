@@ -46,7 +46,7 @@ defmodule MyComplexSource
 
   @impl true
   def handle_init(_ctx, _opts) do 
-    # after starting a timer, status will always be either :resumed, :paused 
+    # after starting a timer, the status will always be either :resumed, :paused 
     # or :pause_on_next_handle_tick
     {[], %{status: nil}}
   end

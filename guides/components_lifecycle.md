@@ -1,9 +1,9 @@
 # Lifecycle of Membrane Components
 
-The lifecycle of Membrane Components is closely related to the execution of Membrane callbacks within these components. While there are some differences among the lifecycles of Membrane Pipelines, Bins, and Elements, they share many similarities. Let's explore the component lifecycle and identify differences depending on the type of component being addressed.
+The lifecycle of Membrane Components is closely related to the execution of Membrane callbacks within these components. While some differences exist among the lifecycles of Membrane Pipelines, Bins, and Elements, they share many similarities. Let's explore the component lifecycle and identify differences depending on the type of component being addressed.
 
 ## Initialization
-The first callback executed in every Membrane Component is `handle_init/2`. This function is executed synchronously and blocks the parent process (this is a parent component or a process that spawns a pipeline) until it is done and actions returned from it are handled. It is advisable to avoid heavy computations within this function. `handle_init/2` is ideally used for spawning children in a pipeline or bin through the `:spec` action or parsing some options.
+The first callback executed in every Membrane Component is `handle_init/2`. This function is executed synchronously and blocks the parent process (the process that spawns a pipeline or the parent component) until it is done and actions returned from it are handled. It is advisable to avoid heavy computations within this function. `handle_init/2` is ideally used for spawning children in a pipeline or bin through the `:spec` action or parsing some options.
 
 ## Setup
 Following `handle_init/2` is `handle_setup/2`, which is executed asynchronously (the parent process does not wait for its completion). This is an optimal time to set up resources or perform other intensive operations required for the component to function properly. 
@@ -14,7 +14,7 @@ Note: By default, after `handle_setup/2`, a component's setup is considered comp
 For components with pads having `availability: :on_request`, the corresponding `handle_pad_added/3` callbacks are called just after setup is completed, but only if they are linked in the same spec where the component was spawned. Linking a pad in a different spec from the one spawning the element may lead to `handle_pad_added/3` being invoked after `handle_playing/2`.
 
 ## Playing
-Once the setup is completed and apropriate `handle_pad_added/3` are invoked, a component can enter the `:playing` state by invoking the `handle_playing/2` callback. Note that:
+Once the setup is completed and appropriate `handle_pad_added/3` are invoked, a component can enter the `:playing` state by invoking the `handle_playing/2` callback. Note that:
 - Components spawned within the same `:spec` always enter the `:playing` state simultaneously. If the setup of one component lasts longer, the others will wait.
 - Elements and Bins wait for their parent to enter the `playing` state before executing `handle_playing/2`.
 
