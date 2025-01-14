@@ -1,5 +1,5 @@
 # Timer usage examples
-Exampls below illustrate how to use `:start_timer`, `:timer_interval` and `:stop_timer` actions on the example of `Membrane.Source`, but the API looks the same for all kinds of the Membrane Components
+Examples below illustrate how to use `:start_timer`, `:timer_interval` and `:stop_timer` actions on the example of `Membrane.Source`, but the API looks the same for all kinds of the Membrane Components
 
 ### Emit empty buffer every 100 milliseconds
 ```elixir
@@ -13,28 +13,21 @@ defmodule MySource do
 
   @impl true
   def handle_playing(_ctx, state) do
-    # let's start a timer named :my_timer that will tick every 100 milliseconds
+    # let's start a timer named :my_timer that will tick every 100 milliseconds ...
 
-    actions = [
+    start_timer_action = [
       start_timer: {:my_timer, Membrane.Time.milliseconds(100)}
     ]
-
+    
+    # ... and send a stream format
+    actions = start_timer_action ++ [stream_format: {:output, %SomeFormat{}}]
     {actions, state}
   end
 
   @impl true
   def handle_tick(:my_timer, ctx, state) do
-    # in this callback we handle ticks of :my_timer
-    # we send a stream format if it hasn't been sent yet and a buffer
-
-    maybe_stream_format = 
-      if ctx.pads.output.stream_format == nil, 
-        do: [stream_format: %SomeFormat{}],
-        else: []
-
-    buffer = [buffer: {:output, %Membrane.Buffer{payload: ""}}]
-
-    {maybe_stream_format ++ buffer, state}
+    actions = [buffer: {:output, %Membrane.Buffer{payload: ""}}]
+    {actions, state}
   end
 end
 ```
@@ -66,7 +59,7 @@ defmodule MyComplexSource
     ]
     
     # ... and send a stream format
-    actions = start_timer_action ++ [stream_format: %SomeFormat{}]
+    actions = start_timer_action ++ [stream_format: {:output, %SomeFormat{}}]
     {actions, %{state | status: :resumed}}
   end
 
@@ -79,7 +72,7 @@ defmodule MyComplexSource
   def handle_parent_notification(notification, _ctx, state) when notification in [:pause, :resume, :stop] do
     case notification do
       :pause when state.status == :resumed -> 
-        # let's postopne pausing :my_timer to the upcomping handle_tick
+        # let's postpone pausing :my_timer to the upcoming handle_tick
         {[], %{state | status: :pause_on_next_handle_tick}}
 
       :resume when state.status == :paused -> 

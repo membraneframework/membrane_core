@@ -45,7 +45,7 @@ defmodule Membrane.Bin.Action do
   |> child(:demuxer, My.Demuxer)
   |> via_out(:video)
   |> child(:decoder, My.Decoder)
-  |> child(:ai_filter, My.AI.Filter{mode: :picasso_effect)
+  |> child(:ai_filter, %My.AI.Filter{mode: :picasso_effect})
   |> child(:encoder, My.Encoder)
   |> via_in(:video)
   |> child(:webrtc_sink, My.WebRTC.Sink)
@@ -54,7 +54,7 @@ defmodule Membrane.Bin.Action do
 
   ![](assets/images/spec_without_audio.svg)
 
-  Returning another spec
+  Returning another spec (on top of the previous one)
   ```elixir
   get_child(:demuxer)
   |> via_out(:audio)
