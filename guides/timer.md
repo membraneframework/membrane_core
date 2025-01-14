@@ -64,11 +64,6 @@ defmodule MyComplexSource
   end
 
   @impl true
-  def handle_parent_notification(notification, ctx, _state) when ctx.playback == :stopped do
-    raise "Cannot handle parent notification: #{inspect(notification)} before handle_playing"
-  end
-
-  @impl true
   def handle_parent_notification(notification, _ctx, state) when notification in [:pause, :resume, :stop] do
     case notification do
       :pause when state.status == :resumed -> 
