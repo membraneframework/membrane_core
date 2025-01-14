@@ -63,7 +63,7 @@ defmodule Membrane.Bin.Action do
   |> get_child(:webrtc_sink)
   ```
 
-  will result in having following children topology:
+  will result in having the following children's topology:
 
   ![](assets/images/spec_with_audio.svg)
   """
