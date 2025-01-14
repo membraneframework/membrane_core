@@ -2,7 +2,7 @@
 Examples below illustrate how to use `:start_timer`, `:timer_interval` and `:stop_timer` actions on the example of `Membrane.Source`, but the API looks the same for all kinds of the Membrane Components
 
 ### Simple example
-The example below emites an empty buffer every 100 milliseconds.
+The example below emits an empty buffer every 100 milliseconds.
 
 ```elixir
 defmodule MySource do
@@ -35,10 +35,10 @@ end
 ```
 
 ### Advanced example
-The example below emits an empty buffer every 100 millisecond if it hasn't been stopped or paused by the parent.
+The example below emits an empty buffer every 100 milliseconds if it hasn't been stopped or paused by the parent.
 
-The source accepts following notifications from the parent: 
- - `:pause` - after receiving it the source will pause sending buffers. The paused soure can be resumed again.
+The source accepts the following notifications from the parent: 
+ - `:pause` - after receiving it the source will pause sending buffers. The paused source can be resumed again.
  - `:resume` - resumes sending buffers from the paused source.
  - `:stop` - the stopped source won't send any buffer again.
 
