@@ -61,6 +61,28 @@ defmodule Membrane.Pipeline.Action do
 
   [comment]: <> (in case of need to edit the diagram below, open assets/drawio_schemes/spec_without_audio.drawio using draw.io)
   ![](assets/images/spec_with_audio.svg)
+
+  Both specs could also be returned together, in a single `spec` action.
+  This could done by wrapping them into a two-element list.
+  ```elixir
+  [
+    # first part
+    child(:file_source, %My.File.Source{path: path})
+    |> child(:demuxer, My.Demuxer)
+    |> via_out(:video)
+    |> child(:decoder, My.Decoder)
+    |> child(:ai_filter, %My.AI.Filter{mode: :picasso_effect})
+    |> child(:encoder, My.Encoder)
+    |> via_in(:video)
+    |> child(:webrtc_sink, My.WebRTC.Sink),
+    # second part
+    get_child(:demuxer)
+    |> via_out(:audio)
+    |> child(:scratch_remover, My.Scratch.Remover)
+    |> via_in(:audio)
+    |> get_child(:webrtc_sink)
+  ]
+  ```
   """
   @type spec :: {:spec, ChildrenSpec.t()}
 
