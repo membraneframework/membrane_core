@@ -22,13 +22,13 @@ Once the setup is completed and appropriate `handle_pad_added/3` are invoked, a 
 After `handle_playing/2`, Elements are prepared to process the data flowing through their pads.
 
 ### Events
-Events are one type of item that can be sent via an Element's pads and are managed in `handle_event/4`. Events are the only things that can travel both upstream and downstream relative to the pad’s direction - all other types of data sent through pads have to follow the direction of the link.
+Events are one type of data that can be sent via an Element's pads and are managed in `handle_event/4`. Events are the only items that can travel both upstream and downstream - all other types of data sent through pads have to follow the direction of the link.
 
 ### Stream Formats
 The stream format, which defines the type of data carried by `Membrane.Buffer`s, must be declared before the first data buffer and is managed in `handle_stream_format/4`.
 
 ### Start of Stream
-This callback `handle_start_of_stream/3` is invoked just before processing the first `Membrane.Buffer` from a specific input pad.
+Callback `handle_start_of_stream/3` is invoked just before processing the first `Membrane.Buffer` from a specific input pad.
 
 ### Buffers
 The core of multimedia processing is handling `Membrane.Buffer`s, which contain multimedia payload and may also include metadata or timestamps. Buffers are managed within the `handle_buffer/4` callback.
