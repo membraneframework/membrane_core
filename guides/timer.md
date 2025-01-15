@@ -26,6 +26,7 @@ defmodule MySource do
     {actions, state}
   end
 
+  # this callback is executed every 100 milliseconds
   @impl true
   def handle_tick(:my_timer, ctx, state) do
     actions = [buffer: {:output, %Membrane.Buffer{payload: ""}}]
