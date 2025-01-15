@@ -45,6 +45,7 @@ defmodule Membrane.Pipeline.Action do
   ```
   along with it's visualisation
 
+  [comment]: <> (in case of need to edit the diagram below, open assets/drawio_schemes/spec_without_audio.drawio using draw.io)
   ![](assets/images/spec_without_audio.svg)
 
   Returning another spec (on top of the previous one)
@@ -58,6 +59,7 @@ defmodule Membrane.Pipeline.Action do
 
   will result in the following children's topology:
 
+  [comment]: <> (in case of need to edit the diagram below, open assets/drawio_schemes/spec_without_audio.drawio using draw.io)
   ![](assets/images/spec_with_audio.svg)
   """
   @type spec :: {:spec, ChildrenSpec.t()}
