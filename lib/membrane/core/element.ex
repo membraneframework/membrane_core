@@ -153,7 +153,6 @@ defmodule Membrane.Core.Element do
       |> PadSpecHandler.init_pads()
 
     state = LifecycleController.handle_init(options.user_options, state)
-
     {:ok, state, {:continue, :setup}}
   end
 

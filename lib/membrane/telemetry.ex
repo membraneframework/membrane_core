@@ -41,12 +41,12 @@ defmodule Membrane.Telemetry do
 
       config :membrane_core,
         telemetry_flags: [
-          include: [...] | exclude: [...] | :all
-        ]
+          tracked_callbacks: [
+            [:handle_setup, ...] | :all
+          ]
 
   Available flags are (those are of a very low overhead):
   * `:links` - enables new links notifications
-  # TODO redact
   * `:inits_and_terminates` - enables notifications of `init` and `terminate` events for elements/bins/pipelines
 
 
@@ -70,7 +70,6 @@ defmodule Membrane.Telemetry do
   """
 
   @type instrument :: :element | :bin | :pipeline
-  @type event :: :init | :terminate | :setup | :playback_change
   @type event_name :: [atom() | list(atom())]
   @typedoc """
   * component_path - element's or bin's path

@@ -16,6 +16,8 @@ defmodule Membrane.Core.Telemetry do
   alias Membrane.Element.WithInputPads
   alias Membrane.ComponentPath
 
+  @type telemetry_result() :: {:telemetry_result, {any(), map(), map(), map()}}
+
   @component_modules [
     bin: [Bin],
     pipeline: [Pipeline],
@@ -29,6 +31,8 @@ defmodule Membrane.Core.Telemetry do
                         |> Enum.filter(&String.starts_with?(to_string(&1), "handle_"))
                         |> then(&{elem, &1})
                       end)
+
+  _ = @possible_handlers
 
   @config Application.compile_env(:membrane_core, :telemetry_flags, [])
 
@@ -93,13 +97,12 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  for {component, handlers} <- @config[:tracked_callbacks] || [] |> IO.inspect() do
+  for {component, handlers} <- @config[:tracked_callbacks] || [] do
     case handlers do
       :all ->
         def handler_measured?(unquote(component), _), do: true
 
       nil ->
-        _ = @possible_handlers
         def handler_measured?(unquote(component), _), do: false
 
       handler_names when is_list(handler_names) ->
@@ -134,17 +137,19 @@ defmodule Membrane.Core.Telemetry do
   end
 
   @doc """
-  Sanitizes state data by removing keys that are meant to be internal-only.
+  Formats a telemetry result to be used in a report_span function.
   """
-  @spec sanitize_state_data(struct()) :: map()
-  def sanitize_state_data(state = %struct{}) do
-    Map.take(state, @public_state_keys[struct])
+  @spec state_result(result, {any(), map()}, map()) ::
+          telemetry_result()
+        when result: any()
+  def state_result(res = {_actions, new_internal_state}, old_internal_state, old_state) do
+    {:telemetry_result, {res, new_internal_state, old_internal_state, old_state}}
   end
 
   @doc """
   Reports an arbitrary span of a function consistent with `span/3` format in `:telementry`
   """
-  @spec report_span(module(), binary(), fun()) :: any()
+  @spec report_span(module(), atom(), (-> telemetry_result())) :: any()
   def report_span(component_type, event_type, f) do
     component_type = state_module_to_atom(component_type)
 
@@ -160,9 +165,9 @@ defmodule Membrane.Core.Telemetry do
             {:telemetry_result, {r, new_intstate, old_intstate, old_state}} ->
               {r, %{new_state: new_intstate},
                %{
-                 old_internal_state: old_intstate,
-                 old_state: sanitize_state_data(old_state),
-                 new_internal_state: new_intstate,
+                 internal_state_before: old_intstate,
+                 state_before: sanitize_state_data(old_state),
+                 internal_state_after: new_intstate,
                  log_metadata: Logger.metadata(),
                  path: ComponentPath.get()
                }}
@@ -178,13 +183,13 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
+  defp sanitize_state_data(state = %struct{}) do
+    Map.take(state, @public_state_keys[struct])
+  end
+
   defp state_module_to_atom(Membrane.Core.Element.State), do: :element
   defp state_module_to_atom(Membrane.Core.Bin.State), do: :bin
   defp state_module_to_atom(Membrane.Core.Pipeline.State), do: :pipeline
-
-  def state_result(res = {_actions, new_internal_state}, old_internal_state, old_state) do
-    {:telemetry_result, {res, new_internal_state, old_internal_state, old_state}}
-  end
 
   def report_metric(metric_name, measurement, metadata \\ %{}) do
     if metric_measured?(metric_name) do
