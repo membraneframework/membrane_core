@@ -138,10 +138,13 @@ defmodule Membrane.TelemetryTest do
       assert_receive {^ref, :telemetry_ack,
                       {[:membrane, :pipeline, :handle_init, :stop], _value, meta}}
 
-      assert Map.has_key?(meta.old_state, :children)
-      refute Map.has_key?(meta.old_state, :stalker)
+      # :children is a publicly exposed key
+      assert Map.has_key?(meta.state_before, :children)
 
-      assert meta.old_internal_state != meta.new_internal_state
+      # :stalker is publicly hidden
+      refute Map.has_key?(meta.state_before, :stalker)
+
+      assert meta.internal_state_before != meta.internal_state_after
     end
   end
 
@@ -167,7 +170,7 @@ defmodule Membrane.TelemetryTest do
       [ref: ref]
     end
 
-    test "in filter", %{ref: ref} do
+    test "in element", %{ref: ref} do
       assert_receive {^ref, :telemetry_ack,
                       {[:membrane, :element, :handle_parent_notification, :start], _value,
                        %{path: [_, ":filter"]}}},
