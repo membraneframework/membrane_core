@@ -1,7 +1,7 @@
 defmodule Membrane.TelemetryTest do
   @moduledoc """
   Test suite for Membrane telemetry public API. It tests if telemetry events are reported
-  properly for all elements and pipelines upon attaching to the :telemetry system.
+  properly for all metrics and spans upon attaching to the :telemetry system.
   """
 
   use ExUnit.Case, async: false
@@ -15,7 +15,6 @@ defmodule Membrane.TelemetryTest do
 
     def_input_pad :input, accepted_format: _any
     def_output_pad :output, accepted_format: _any
-    def_options target: [spec: pid()]
 
     @impl true
     def handle_buffer(_pad, _buffer, _context, state), do: {[], state}
