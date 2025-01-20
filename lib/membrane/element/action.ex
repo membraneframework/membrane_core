@@ -223,6 +223,8 @@ defmodule Membrane.Element.Action do
   This action sets the latency for the element.
 
   This action is permitted only in callback `c:Membrane.Element.Base.handle_init/2`.
+
+  The example of usage of these actions is [there](../../../guides/timer.md)
   """
   @type latency :: {:latency, latency :: Membrane.Time.non_neg()}
 

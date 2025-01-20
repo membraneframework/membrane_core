@@ -37,7 +37,59 @@ defmodule Membrane.Bin.Action do
   Action that instantiates children and links them according to `Membrane.ChildrenSpec`.
 
   Children's playback is changed to the current bin playback.
-  `c:Membrane.Parent.handle_spec_started/3` callback is executed once the children are spawned.
+  `c:Membrane.Bin.handle_spec_started/3` callback is executed once the children are spawned.
+
+  This is an example of a value that could be passed within `spec` action
+  ```elixir
+  child(:file_source, %My.File.Source{path: path})
+  |> child(:demuxer, My.Demuxer)
+  |> via_out(:video)
+  |> child(:decoder, My.Decoder)
+  |> child(:ai_filter, %My.AI.Filter{mode: :picasso_effect})
+  |> child(:encoder, My.Encoder)
+  |> via_in(:video)
+  |> child(:webrtc_sink, My.WebRTC.Sink)
+  ```
+  along with it's visualisation
+
+  [comment]: <> (in case of need to edit the diagram below, open assets/drawio_schemes/spec_without_audio.drawio using draw.io)
+  ![](assets/images/spec_without_audio.svg)
+
+  Returning another spec (on top of the previous one)
+  ```elixir
+  get_child(:demuxer)
+  |> via_out(:audio)
+  |> child(:scratch_remover, My.Scratch.Remover)
+  |> via_in(:audio)
+  |> get_child(:webrtc_sink)
+  ```
+
+  will result in the following children's topology:
+
+  [comment]: <> (in case of need to edit the diagram below, open assets/drawio_schemes/spec_with_audio.drawio using draw.io)
+  ![](assets/images/spec_with_audio.svg)
+
+  Both specs could also be returned together, in a single `spec` action.
+  This could done by wrapping them into a two-element list.
+  ```elixir
+  [
+    # first part
+    child(:file_source, %My.File.Source{path: path})
+    |> child(:demuxer, My.Demuxer)
+    |> via_out(:video)
+    |> child(:decoder, My.Decoder)
+    |> child(:ai_filter, %My.AI.Filter{mode: :picasso_effect})
+    |> child(:encoder, My.Encoder)
+    |> via_in(:video)
+    |> child(:webrtc_sink, My.WebRTC.Sink),
+    # second part
+    get_child(:demuxer)
+    |> via_out(:audio)
+    |> child(:scratch_remover, My.Scratch.Remover)
+    |> via_in(:audio)
+    |> get_child(:webrtc_sink)
+  ]
+  ```
   """
   @type spec :: {:spec, ChildrenSpec.t()}
 
