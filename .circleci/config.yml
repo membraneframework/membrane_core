@@ -145,7 +145,7 @@ jobs:
   test_performance: 
     machine: true
     resource_class: membraneframework/core-performance-test
-    working_directory: /root
+    working_directory: /root/home
 
     steps:
       - attach_workspace:
