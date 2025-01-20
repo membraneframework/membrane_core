@@ -86,7 +86,7 @@ defmodule Membrane.Core.Telemetry do
     ]
   }
 
-  # Verify at compile time that every key is actually present in Core.*.State
+  # Verify at compile time that every key is actually present in Membrane.Core.*.State
   for {mod, keys} <- @public_state_keys do
     case keys -- Map.keys(struct(mod)) do
       [] ->
@@ -103,7 +103,7 @@ defmodule Membrane.Core.Telemetry do
         def handler_measured?(unquote(component), _), do: true
 
       nil ->
-        def handler_measured?(unquote(component), _), do: false
+        nil
 
       handler_names when is_list(handler_names) ->
         for event <- handler_names do

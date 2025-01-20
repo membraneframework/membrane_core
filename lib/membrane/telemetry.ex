@@ -10,26 +10,14 @@ defmodule Membrane.Telemetry do
   ## Instrumentation
   The following events are published by Membrane's Core with following measurement types and metadata:
 
-    * `[:membrane, :metric, :value]` - used to report metrics, such as input buffer's size inside functions, incoming events and received stream format
-        * Measurement: `t:metric_event_value/0`
-        * Metadata: `%{}`
+    * `[:membrane, :element | :bin | :pipeline, handler, :start | :stop | :exception]` -
+    where handler is any possible handle_* function defined for a component.
+      * `:start` - when the handler begins execution
+      * `:stop` - when the handler finishes execution
+      * `:exception` - when the handler crashes during execution
 
-    * `[:membrane, :link, :new]` - to report new link connection being initialized in pipeline.
-        * Measurement: `t:link_event_value/0`
-        * Metadata: `%{}`
-
-    * `[:membrane, :pipeline | :bin | :element, :init, :start | :stop | :exception]` - to report pipeline/element/bin initialization
-        * Measurement: `t:init_or_terminate_event_value/0`
-        * Metadata: `%{log_metadata: keyword()}`, includes Logger's metadata of created component
-
-     * `[:membrane, :pipeline | :bin | :element, :setup, :start | :stop | :exception]` - to report pipeline/element/bin setup
-        * Measurement: `t:init_or_terminate_event_value/0`
-        * Metadata: `%{log_metadata: keyword()}`, includes Logger's metadata of created component
-
-    * `[:membrane, :pipeline | :bin | :element, :terminate, :start | :stop | :exception]` - to report pipeline/element/bin termination
-        * Measurement: `t:init_or_terminate_event_value/0`
-        * Metadata: `%{}`
-
+    * `[:membrane, :metric, metric]` -
+    where metric is any of the available metrics (see below)
 
   ## Enabling certain metrics/events
   A lot of events can happen hundreds times per second such as registering that a buffer has been sent/processed.
@@ -39,11 +27,15 @@ defmodule Membrane.Telemetry do
   To enable a particular measurement one must recompile membrane core with the following snippet put inside
   user's application `config.exs` file:
 
+  ```
       config :membrane_core,
         telemetry_flags: [
           tracked_callbacks: [
             [:handle_setup, ...] | :all
           ]
+        metrics: [:buffer, ...] | :all
+        ]
+    ```
 
   Available flags are (those are of a very low overhead):
   * `:links` - enables new links notifications
@@ -51,14 +43,9 @@ defmodule Membrane.Telemetry do
 
 
   Additionally one can control which metric values should get measured by passing an option of format :
-  `{:metrics, [list of metrics]}`
+  `metrics: [list of metrics]`
 
-  Available spans are:
-  * `:init` - Time spent on executing components initialization handler
-  * `:terminate` - Time spent on executing components termination handler
-  * `:setup` - Time spent on executing components setup handler
-  * `:playing` - Time spent on executing components playing handler
-
+  # TODO revise possible metrics
   Available metrics are:
   * `:buffer` - number of buffers being sent from a particular element
   * `:bitrate` - total number of bits carried by the buffers mentioned above
