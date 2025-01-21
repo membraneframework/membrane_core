@@ -151,6 +151,7 @@ jobs:
       - attach_workspace:
           at: .
       - run: git add -A; git reset --hard; cd ..
+      - run: whoami
       - run: cp -r benchmark/ ~/benchmark_backup/
       - run: cp mix.exs ~/benchmark_backup/
       - run: docker pull membraneframeworklabs/docker_membrane
