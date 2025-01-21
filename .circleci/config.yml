@@ -145,7 +145,7 @@ jobs:
   test_performance: 
     machine: true
     resource_class: membraneframework/core-performance-test
-    working_directory: /root/home
+    working_directory: /var/opts/circleci/workdir
 
     steps:
       - attach_workspace:
