@@ -145,12 +145,12 @@ jobs:
   test_performance: 
     machine: true
     resource_class: membraneframework/core-performance-test
-    working_directory: /var/opt/circleci/workdir
+    working_directory: ~/app
 
     steps:
       - attach_workspace:
           at: .
-      - run: git add -A; git reset --hard; cd ..
+      - run: cd app; git add -A; git reset --hard; cd ..
       - run: cp -r benchmark/ ~/benchmark_backup/
       - run: cp mix.exs ~/benchmark_backup/
       - run: docker pull membraneframeworklabs/docker_membrane
