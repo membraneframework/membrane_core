@@ -334,7 +334,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         end)
       end
 
-    do_proceed_spec_startup(spec_ref, %{spec_data | status: :initializing}, state)
+    spec_data = %{spec_data | status: :initializing}
+
+    :telemetry.execute([:membrane, :spec, :initializing], %{}, %{
+      spec_data: spec_data,
+      component_state: state
+    })
+
+    do_proceed_spec_startup(spec_ref, spec_data, state)
   end
 
   defp do_proceed_spec_startup(spec_ref, %{status: :initializing} = spec_data, state) do
@@ -347,7 +354,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
       Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to initialized")
 
       state = handle_children_setup_completed(spec_data.children_names, state)
-      do_proceed_spec_startup(spec_ref, %{spec_data | status: :initialized}, state)
+      spec_data = %{spec_data | status: :initialized}
+
+      :telemetry.execute([:membrane, :spec, :initialized], %{}, %{
+        spec_data: spec_data,
+        component_state: state
+      })
+
+      do_proceed_spec_startup(spec_ref, spec_data, state)
     else
       {spec_data, state}
     end
@@ -375,6 +389,12 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     }
 
     Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to linking internally")
+
+    :telemetry.execute([:membrane, :spec, :linking_internally], %{}, %{
+      spec_data: spec_data,
+      component_state: state
+    })
+
     do_proceed_spec_startup(spec_ref, spec_data, state)
   end
 
@@ -386,7 +406,15 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         |> Enum.reduce(state, &LinkUtils.link/2)
 
       Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to linked internally")
-      do_proceed_spec_startup(spec_ref, %{spec_data | status: :linked_internally}, state)
+
+      spec_data = %{spec_data | status: :linked_internally}
+
+      :telemetry.execute([:membrane, :spec, :linked_internally], %{}, %{
+        spec_data: spec_data,
+        component_state: state
+      })
+
+      do_proceed_spec_startup(spec_ref, spec_data, state)
     else
       {spec_data, state}
     end
@@ -399,7 +427,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
        ) do
     Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to ready")
     state = remove_spec_from_dependencies(spec_ref, state)
-    do_proceed_spec_startup(spec_ref, %{spec_data | status: :ready}, state)
+    spec_data = %{spec_data | status: :ready}
+
+    :telemetry.execute([:membrane, :spec, :ready], %{}, %{
+      spec_data: spec_data,
+      component_state: state
+    })
+
+    do_proceed_spec_startup(spec_ref, spec_data, state)
   end
 
   defp do_proceed_spec_startup(
@@ -410,7 +445,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     state = Bin.PadController.respond_links(spec_ref, state)
     state = remove_spec_from_dependencies(spec_ref, state)
     Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to linking externally")
-    do_proceed_spec_startup(spec_ref, %{spec_data | status: :linking_externally}, state)
+    spec_data = %{spec_data | status: :linking_externally}
+
+    :telemetry.execute([:membrane, :spec, :linking_externally], %{}, %{
+      spec_data: spec_data,
+      component_state: state
+    })
+
+    do_proceed_spec_startup(spec_ref, spec_data, state)
   end
 
   defp do_proceed_spec_startup(
@@ -420,7 +462,14 @@ defmodule Membrane.Core.Parent.ChildLifeController do
        ) do
     if Bin.PadController.all_pads_linked?(spec_ref, state) do
       Membrane.Logger.debug("Spec #{inspect(spec_ref)} status changed to ready")
-      do_proceed_spec_startup(spec_ref, %{spec_data | status: :ready}, state)
+      spec_data = %{spec_data | status: :ready}
+
+      :telemetry.execute([:membrane, :spec, :ready], %{}, %{
+        spec_data: spec_data,
+        component_state: state
+      })
+
+      do_proceed_spec_startup(spec_ref, spec_data, state)
     else
       {spec_data, state}
     end

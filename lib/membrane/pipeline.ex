@@ -338,6 +338,7 @@ defmodule Membrane.Pipeline do
       name =
         case Keyword.fetch(process_options, :name) do
           {:ok, name} when is_atom(name) -> Atom.to_string(name)
+          {:ok, {:via, Registry, {_registry, name}}} -> name
           _other -> nil
         end
         |> case do
@@ -526,6 +527,10 @@ defmodule Membrane.Pipeline do
           type: :supervisor
         }
       end
+
+      @doc false
+      @spec membrane_component_type() :: :pipeline | :bin | :element
+      def membrane_component_type, do: :pipeline
 
       @doc false
       @spec membrane_pipeline?() :: true
