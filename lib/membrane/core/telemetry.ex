@@ -13,6 +13,7 @@ defmodule Membrane.Core.Telemetry do
   require Membrane.Bin, as: Bin
   require Membrane.Telemetry
 
+  alias Membrane.Pad
   alias Membrane.Element.WithOutputPads
   alias Membrane.Element.WithInputPads
   alias Membrane.ComponentPath
@@ -79,8 +80,8 @@ defmodule Membrane.Core.Telemetry do
   @doc """
   Reports an arbitrary span of a function consistent with `span/3` format in `:telementry`
   """
-  @spec report_span(module(), atom(), (-> telemetry_result())) :: any()
-  def report_span(component_type, event_type, f) do
+  @spec component_span(module(), atom(), (-> telemetry_result())) :: any()
+  def component_span(component_type, event_type, f) do
     component_type = state_module_to_atom(component_type)
 
     if handler_measured?(component_type, event_type) do
@@ -88,7 +89,8 @@ defmodule Membrane.Core.Telemetry do
         [:membrane, component_type, event_type],
         %{
           log_metadata: Logger.metadata(),
-          path: ComponentPath.get()
+          path: ComponentPath.get(),
+          component_path: ComponentPath.get_formatted()
         },
         fn ->
           case f.() do
@@ -113,10 +115,6 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  defp state_module_to_atom(Membrane.Core.Element.State), do: :element
-  defp state_module_to_atom(Membrane.Core.Bin.State), do: :bin
-  defp state_module_to_atom(Membrane.Core.Pipeline.State), do: :pipeline
-
   @doc """
   Formats a telemetry result to be used in a report_span function.
   """
@@ -127,6 +125,46 @@ defmodule Membrane.Core.Telemetry do
     {:telemetry_result, {res, new_internal_state, old_internal_state, old_state}}
   end
 
+  def report_event(meta \\ %{}), do: report_metric(:event, 1, meta)
+  def report_link(), do: report_metric(:link, 1)
+  def report_store(size, log_tag), do: report_metric(:store, size, %{log_tag: log_tag})
+  def report_stream_format(meta \\ %{}), do: report_metric(:stream_format, 1, meta)
+
+  def report_buffer(length, meta \\ %{})
+
+  def report_buffer(length, meta) when is_integer(length),
+    do: report_metric(:buffer, length, meta)
+
+  def report_buffer(buffers, meta) do
+    if metric_measured?(:buffer) do
+      value = length(List.wrap(buffers))
+      :telemetry.execute([:membrane, :metric, :buffer], %{value: value}, meta)
+    end
+  end
+
+  def report_bitrate(buffers, meta \\ %{}) do
+    if metric_measured?(:bitrate) do
+      value = Enum.reduce(List.wrap(buffers), 0, &(&2 + Membrane.Payload.size(&1.payload)))
+      :telemetry.execute([:membrane, :metric, :bitrate], %{value: value}, meta)
+    end
+  end
+
+  def report_link(from, to) do
+    if metric_measured?(:link) do
+      meta = %{
+        parent_path: ComponentPath.get_formatted(),
+        from: inspect(from.child),
+        to: inspect(to.child),
+        pad_from: Pad.name_by_ref(from.pad_ref) |> inspect(),
+        pad_to: Pad.name_by_ref(to.pad_ref) |> inspect()
+      }
+
+      # For backwards compatibility
+      :telemetry.execute([:membrane, :link, :new], %{from: from, to: to}, meta)
+      :telemetry.execute([:membrane, :metric, :link], %{from: from, to: to}, meta)
+    end
+  end
+
   def report_metric(metric_name, measurement, metadata \\ %{}) do
     if metric_measured?(metric_name) do
       :telemetry.execute([:membrane, :metric, metric_name], %{value: measurement}, metadata)
@@ -134,4 +172,8 @@ defmodule Membrane.Core.Telemetry do
       measurement
     end
   end
+
+  defp state_module_to_atom(Membrane.Core.Element.State), do: :element
+  defp state_module_to_atom(Membrane.Core.Bin.State), do: :bin
+  defp state_module_to_atom(Membrane.Core.Pipeline.State), do: :pipeline
 end

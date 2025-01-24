@@ -27,7 +27,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     StreamFormatController
   }
 
-  alias Membrane.Core.{Events, TimerController}
+  alias Membrane.Core.{Events, TimerController, Telemetry}
   alias Membrane.Element.Action
 
   require Membrane.Core.Child.PadModel, as: PadModel
@@ -315,6 +315,9 @@ defmodule Membrane.Core.Element.ActionHandler do
     Membrane.Logger.debug_verbose(
       "Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}"
     )
+
+    Telemetry.report_buffer(length(buffers))
+    Telemetry.report_bitrate(buffers)
 
     Enum.each(buffers, fn
       %Buffer{} -> :ok

@@ -13,7 +13,7 @@ defmodule Membrane.Core.Pipeline.State do
   alias Membrane.Core.Timer
 
   @type t :: %__MODULE__{
-          module: module,
+          module: module(),
           playback: Membrane.Playback.t(),
           internal_state: Membrane.Pipeline.state() | nil,
           children: ChildrenModel.children(),

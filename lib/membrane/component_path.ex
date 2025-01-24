@@ -8,6 +8,7 @@ defmodule Membrane.ComponentPath do
 
   @typedoc @moduledoc
   @type path :: list(String.t())
+  @type formatted_path :: String.t()
 
   @key :membrane_path
 

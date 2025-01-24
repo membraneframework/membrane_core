@@ -13,6 +13,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
   alias Membrane.Event
   alias Membrane.Pad
   alias Membrane.StreamFormat
+  alias Membrane.Core.Telemetry
 
   require Membrane.Core.Stalker, as: Stalker
   require Membrane.Logger
@@ -130,9 +131,10 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   def store(input_queue, :buffer, v), do: store(input_queue, :buffers, [v])
 
-  def store(%__MODULE__{q: q, size: _size} = input_queue, type, v)
+  def store(%__MODULE__{q: q, size: size} = input_queue, type, v)
       when type in @non_buf_types do
     "Storing #{type}" |> mk_log(input_queue) |> Membrane.Logger.debug_verbose()
+    Telemetry.report_store(size, input_queue.log_tag)
 
     %__MODULE__{input_queue | q: q |> @qe.push({:non_buffer, type, v})}
   end

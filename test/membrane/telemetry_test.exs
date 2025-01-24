@@ -5,9 +5,11 @@ defmodule Membrane.TelemetryTest do
   """
 
   use ExUnit.Case, async: false
-  alias Membrane.Testing
+
+  import ExUnit.CaptureLog
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
+  alias Membrane.Testing
   require Logger
 
   defmodule TestFilter do
@@ -34,7 +36,7 @@ defmodule Membrane.TelemetryTest do
 
   setup do
     child_spec =
-      child(:source, %Testing.Source{output: [~c"a", ~c"b", ~c"c"]})
+      child(:source, %Testing.Source{output: ["a", "b", "c"]})
       |> child(:filter, TestFilter)
       |> child(:sink, Testing.Sink)
 
@@ -150,7 +152,11 @@ defmodule Membrane.TelemetryTest do
 
       pid = Testing.Pipeline.start_link_supervised!(spec: child_spec)
       Process.flag(:trap_exit, true)
-      :ok = Testing.Pipeline.notify_child(pid, :filter, :crash)
+
+      capture_log(fn ->
+        :ok = Testing.Pipeline.notify_child(pid, :filter, :crash)
+      end)
+
       [ref: ref]
     end
 
@@ -170,5 +176,72 @@ defmodule Membrane.TelemetryTest do
       refute_received {^ref, :telemetry_ack,
                        {[:membrane, :element, :handle_parent_notification, :stop], _meta, _}}
     end
+  end
+
+  describe "Telemetry properly reports following metrics: " do
+    test "Link", %{child_spec: child_spec} do
+      ref = setup_pipeline_for(:link, child_spec)
+
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :link], _value, _metadata}}
+    end
+
+    # test "Store", %{child_spec: child_spec} do
+    #   ref = setup_pipeline_for(:store, child_spec)
+
+    #   assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :store], _value, _metadata}},
+    #                  1000
+    # end
+
+    # test "Take", %{child_spec: child_spec} do
+    #   ref = setup_pipeline_for(:take, child_spec)
+
+    #   assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :take], _value, _metadata}}
+    # end
+
+    test "Stream Format", %{child_spec: child_spec} do
+      ref = setup_pipeline_for(:stream_format, child_spec)
+
+      assert_receive {^ref, :telemetry_ack,
+                      {[:membrane, :metric, :stream_format], _value, _metadata}}
+    end
+
+    test "Buffer", %{child_spec: child_spec} do
+      ref = setup_pipeline_for(:buffer, child_spec)
+
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :buffer], _value, _metadata}}
+    end
+
+    test "Bitrate", %{child_spec: child_spec} do
+      ref = setup_pipeline_for(:bitrate, child_spec)
+
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :bitrate], _value, _metadata}}
+    end
+
+    test "Event", %{child_spec: child_spec} do
+      ref = setup_pipeline_for(:event, child_spec)
+
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :event], _value, _metadata}}
+    end
+
+    test "Queue Length", %{child_spec: child_spec} do
+      ref = setup_pipeline_for(:queue_len, child_spec)
+
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :queue_len], _value, _metadata}}
+    end
+  end
+
+  defp setup_pipeline_for(metric, child_spec) do
+    ref = make_ref()
+
+    :telemetry.attach(
+      ref,
+      [:membrane, :metric, metric],
+      &TelemetryListener.handle_event/4,
+      %{dest: self(), ref: ref}
+    )
+
+    Testing.Pipeline.start_link_supervised!(spec: child_spec)
+
+    ref
   end
 end
