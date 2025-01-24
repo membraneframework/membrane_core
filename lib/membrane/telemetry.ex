@@ -53,58 +53,62 @@ defmodule Membrane.Telemetry do
   * `:stream_format` - indicates that given element has received new stream format, value always equals '1'
   * `:event` - indicates that given element has received a new event, value always equals '1'
   * `:store` - reports the current size of a input buffer when storing a new buffer
-  * `:take_and_demand` - reports the current size of a input buffer when taking buffers and making a new demand
   """
+
+  alias Membrane.{Bin, ComponentPath, Element, Pipeline, Playback, ResourceGuard}
+  alias Membrane.Core.Child.PadModel
+  alias Membrane.Core.Element.EffectiveFlowController
+  alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
 
   @type instrument :: :element | :bin | :pipeline
   @type event_name :: [atom() | list(atom())]
 
   @type element_state :: %{
-          subprocess_supervisor: pid,
+          subprocess_supervisor: pid(),
           terminating?: boolean(),
           setup_incomplete?: boolean(),
           effective_flow_control: EffectiveFlowController.effective_flow_control(),
-          resource_guard: Membrane.ResourceGuard.t(),
+          resource_guard: ResourceGuard.t(),
           initialized?: boolean(),
-          playback: Membrane.Playback.t(),
-          module: module,
+          playback: Playback.t(),
+          module: module(),
           type: Element.type(),
           name: Element.name(),
           internal_state: Element.state() | nil,
           pads_info: PadModel.pads_info() | nil,
           pads_data: PadModel.pads_data() | nil,
-          parent_pid: pid
+          parent_pid: pid()
         }
 
   @type bin_state :: %{
-          internal_state: Membrane.Bin.state() | nil,
-          module: module,
+          internal_state: Bin.state() | nil,
+          module: module(),
           children: ChildrenModel.children(),
           subprocess_supervisor: pid(),
-          name: Membrane.Bin.name() | nil,
+          name: Bin.name() | nil,
           pads_info: PadModel.pads_info() | nil,
           pads_data: PadModel.pads_data() | nil,
-          parent_pid: pid,
+          parent_pid: pid(),
           links: %{Link.id() => Link.t()},
           crash_groups: %{CrashGroup.name() => CrashGroup.t()},
           children_log_metadata: Keyword.t(),
-          playback: Membrane.Playback.t(),
+          playback: Playback.t(),
           initialized?: boolean(),
           terminating?: boolean(),
-          resource_guard: Membrane.ResourceGuard.t(),
+          resource_guard: ResourceGuard.t(),
           setup_incomplete?: boolean()
         }
 
   @type pipeline_state :: %{
-          module: module,
-          playback: Membrane.Playback.t(),
-          internal_state: Membrane.Pipeline.state() | nil,
+          module: module(),
+          playback: Playback.t(),
+          internal_state: Pipeline.state() | nil,
           children: ChildrenModel.children(),
           links: %{Link.id() => Link.t()},
           crash_groups: %{CrashGroup.name() => CrashGroup.t()},
           initialized?: boolean(),
           terminating?: boolean(),
-          resource_guard: Membrane.ResourceGuard.t(),
+          resource_guard: ResourceGuard.t(),
           setup_incomplete?: boolean(),
           subprocess_supervisor: pid()
         }
@@ -115,16 +119,10 @@ defmodule Membrane.Telemetry do
   * value - metric's value
   """
   @type metric_event_value :: %{
+          path: ComponentPath.path(),
           component_path: String.t(),
           metric: String.t(),
           value: integer()
-        }
-
-  @typedoc """
-  * path - element's path
-  """
-  @type init_or_terminate_event_value :: %{
-          path: Membrane.ComponentPath.path()
         }
 
   @typedoc """

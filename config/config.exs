@@ -14,5 +14,6 @@ if config_env() == :test do
       ],
       bin: :all,
       pipeline: :all
-    ]
+    ],
+    metrics: :all
 end
