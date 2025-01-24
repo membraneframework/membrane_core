@@ -16,7 +16,7 @@ defmodule Membrane.ComponentPath do
 
   If path had already existed then replaces it.
   """
-  @spec set(path) :: :ok
+  @spec set(path()) :: :ok
   def set(path) do
     Process.put(@key, path)
     :ok
@@ -43,6 +43,6 @@ defmodule Membrane.ComponentPath do
 
   If path has not been set, empty list is returned.
   """
-  @spec get() :: list(String.t())
+  @spec get() :: path()
   def get(), do: Process.get(@key, [])
 end

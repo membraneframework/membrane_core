@@ -43,12 +43,12 @@ defmodule Membrane.Core.Element do
   require Membrane.Logger
 
   @type options :: %{
-          module: module,
+          module: module(),
           name: Membrane.Element.name(),
-          node: node | nil,
+          node: node() | nil,
           user_options: Membrane.Element.options(),
           sync: Sync.t(),
-          parent: pid,
+          parent: pid(),
           parent_clock: Clock.t(),
           parent_path: Membrane.ComponentPath.path(),
           log_metadata: Logger.metadata(),

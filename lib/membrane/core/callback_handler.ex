@@ -137,14 +137,10 @@ defmodule Membrane.Core.CallbackHandler do
 
     callback_result =
       try do
-        Telemetry.report_span(
-          state.__struct__,
-          callback,
-          fn ->
-            apply(module, callback, args)
-            |> Telemetry.state_result(internal_state, state)
-          end
-        )
+        Telemetry.report_span(state.__struct__, callback, fn ->
+          res = {_actions, new_internal_state} = apply(module, callback, args)
+          Telemetry.state_result(res, internal_state, new_internal_state, state)
+        end)
       rescue
         e in UndefinedFunctionError ->
           _ignored =
