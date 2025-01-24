@@ -7,9 +7,9 @@ defmodule Membrane.TelemetryTest do
   use ExUnit.Case, async: false
   alias Membrane.Testing
   import Membrane.ChildrenSpec
+  import Membrane.Testing.Assertions
   require Logger
 
-  @moduletag :telemetry
   defmodule TestFilter do
     use Membrane.Filter
 
@@ -17,7 +17,7 @@ defmodule Membrane.TelemetryTest do
     def_output_pad :output, accepted_format: _any
 
     @impl true
-    def handle_buffer(_pad, _buffer, _context, state), do: {[], state}
+    def handle_buffer(_pad, buffer, _context, state), do: {[buffer: {:output, buffer}], state}
 
     @impl true
     def handle_parent_notification(:crash, _context, state) do
@@ -33,14 +33,12 @@ defmodule Membrane.TelemetryTest do
   end
 
   setup do
-    ref = make_ref()
-
     child_spec =
       child(:source, %Testing.Source{output: [~c"a", ~c"b", ~c"c"]})
-      |> child(:filter, %TestFilter{target: self()})
+      |> child(:filter, TestFilter)
       |> child(:sink, Testing.Sink)
 
-    [child_spec: child_spec, ref: ref]
+    [child_spec: child_spec]
   end
 
   @paths ~w[:filter :sink :source]
@@ -63,6 +61,7 @@ defmodule Membrane.TelemetryTest do
       })
 
       pid = Testing.Pipeline.start_link_supervised!(spec: child_spec)
+      assert_end_of_stream(pid, :sink)
       :ok = Testing.Pipeline.terminate(pid)
 
       [ref: ref]
@@ -76,17 +75,16 @@ defmodule Membrane.TelemetryTest do
         event = unquote(event)
 
         assert_receive {^ref, :telemetry_ack,
-                        {[:membrane, :element, ^event, :start], value,
-                         %{path: [_, ^element_type]}}},
+                        {[:membrane, :element, ^event, :start], meta, %{path: [_, ^element_type]}}},
                        1000
 
-        assert value.system_time > 0
+        assert meta.system_time > 0
 
         assert_receive {^ref, :telemetry_ack,
-                        {[:membrane, :element, ^event, :stop], value, %{path: [_, ^element_type]}}},
+                        {[:membrane, :element, ^event, :stop], meta, %{path: [_, ^element_type]}}},
                        1000
 
-        assert value.duration > 0
+        assert meta.duration > 0
       end
     end
   end
@@ -113,37 +111,24 @@ defmodule Membrane.TelemetryTest do
 
     test "lifecycle", %{ref: ref} do
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :pipeline, :handle_init, :start], value, %{}}}
+                      {[:membrane, :pipeline, :handle_init, :start], meta, %{}}}
 
-      assert value.monotonic_time != 0
-
-      assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :pipeline, :handle_init, :stop], value, %{}}}
-
-      assert value.duration > 0
+      assert meta.monotonic_time != 0
 
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :pipeline, :handle_setup, :start], value, %{}}}
+                      {[:membrane, :pipeline, :handle_init, :stop], meta, %{}}}
 
-      assert value.monotonic_time != 0
+      assert meta.duration > 0
 
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :pipeline, :handle_setup, :stop], value, %{}}}
+                      {[:membrane, :pipeline, :handle_setup, :start], meta, %{}}}
 
-      assert value.duration > 0
-    end
+      assert meta.monotonic_time != 0
 
-    test "santized state and different internal states", %{ref: ref} do
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :pipeline, :handle_init, :stop], _value, meta}}
+                      {[:membrane, :pipeline, :handle_setup, :stop], meta, %{}}}
 
-      # :children is a publicly exposed key
-      assert Map.has_key?(meta.state_before, :children)
-
-      # :stalker is publicly hidden
-      refute Map.has_key?(meta.state_before, :stalker)
-
-      assert meta.internal_state_before != meta.internal_state_after
+      assert meta.duration > 0
     end
   end
 
@@ -171,19 +156,19 @@ defmodule Membrane.TelemetryTest do
 
     test "in element", %{ref: ref} do
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :element, :handle_parent_notification, :start], _value,
+                      {[:membrane, :element, :handle_parent_notification, :start], _meta,
                        %{path: [_, ":filter"]}}},
                      1000
 
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :element, :handle_parent_notification, :exception], value,
+                      {[:membrane, :element, :handle_parent_notification, :exception], meta,
                        %{path: [_, ":filter"]}}},
                      1000
 
-      assert value.duration > 0
+      assert meta.duration > 0
 
       refute_received {^ref, :telemetry_ack,
-                       {[:membrane, :element, :handle_parent_notification, :stop], _value, _}}
+                       {[:membrane, :element, :handle_parent_notification, :stop], _meta, _}}
     end
   end
 end

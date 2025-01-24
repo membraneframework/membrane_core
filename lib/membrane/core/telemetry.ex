@@ -11,6 +11,7 @@ defmodule Membrane.Core.Telemetry do
   require Membrane.Element.WithInputPads
   require Membrane.Pipeline, as: Pipeline
   require Membrane.Bin, as: Bin
+  require Membrane.Telemetry
 
   alias Membrane.Element.WithOutputPads
   alias Membrane.Element.WithInputPads
@@ -35,67 +36,6 @@ defmodule Membrane.Core.Telemetry do
   _ = @possible_handlers
 
   @config Application.compile_env(:membrane_core, :telemetry_flags, [])
-
-  @public_state_keys %{
-    Membrane.Core.Element.State => [
-      :subprocess_supervisor,
-      :terminating?,
-      :setup_incomplete?,
-      :effective_flow_control,
-      :resource_guard,
-      :initialized?,
-      :playback,
-      :module,
-      :type,
-      :name,
-      :internal_state,
-      :pads_info,
-      :pads_data,
-      :parent_pid
-    ],
-    Membrane.Core.Bin.State => [
-      :internal_state,
-      :module,
-      :children,
-      :subprocess_supervisor,
-      :name,
-      :pads_info,
-      :pads_data,
-      :parent_pid,
-      :links,
-      :crash_groups,
-      :children_log_metadata,
-      :playback,
-      :initialized?,
-      :terminating?,
-      :resource_guard,
-      :setup_incomplete?
-    ],
-    Membrane.Core.Pipeline.State => [
-      :module,
-      :playback,
-      :internal_state,
-      :children,
-      :links,
-      :crash_groups,
-      :initialized?,
-      :terminating?,
-      :resource_guard,
-      :setup_incomplete?,
-      :subprocess_supervisor
-    ]
-  }
-
-  # Verify at compile time that every key is actually present in Membrane.Core.*.State
-  for {mod, keys} <- @public_state_keys do
-    case keys -- Map.keys(struct(mod)) do
-      [] ->
-        :ok
-
-      other ->
-        raise "Public telemetry keys #{inspect(other)} absent in #{mod}"
-    end
-  end
 
   for {component, handlers} <- @config[:tracked_callbacks] || [] do
     case handlers do
@@ -137,16 +77,6 @@ defmodule Membrane.Core.Telemetry do
   end
 
   @doc """
-  Formats a telemetry result to be used in a report_span function.
-  """
-  @spec state_result(result, {any(), map()}, map()) ::
-          telemetry_result()
-        when result: any()
-  def state_result(res = {_actions, new_internal_state}, old_internal_state, old_state) do
-    {:telemetry_result, {res, new_internal_state, old_internal_state, old_state}}
-  end
-
-  @doc """
   Reports an arbitrary span of a function consistent with `span/3` format in `:telementry`
   """
   @spec report_span(module(), atom(), (-> telemetry_result())) :: any()
@@ -166,7 +96,7 @@ defmodule Membrane.Core.Telemetry do
               {r, %{new_state: new_intstate},
                %{
                  internal_state_before: old_intstate,
-                 state_before: sanitize_state_data(old_state),
+                 state_before: old_state,
                  internal_state_after: new_intstate,
                  log_metadata: Logger.metadata(),
                  path: ComponentPath.get()
@@ -183,13 +113,19 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  defp sanitize_state_data(state = %struct{}) do
-    Map.take(state, @public_state_keys[struct])
-  end
-
   defp state_module_to_atom(Membrane.Core.Element.State), do: :element
   defp state_module_to_atom(Membrane.Core.Bin.State), do: :bin
   defp state_module_to_atom(Membrane.Core.Pipeline.State), do: :pipeline
+
+  @doc """
+  Formats a telemetry result to be used in a report_span function.
+  """
+  @spec state_result(any(), internal_state, internal_state, map()) ::
+          telemetry_result()
+        when internal_state: any()
+  def state_result(res, old_internal_state, new_internal_state, old_state) do
+    {:telemetry_result, {res, new_internal_state, old_internal_state, old_state}}
+  end
 
   def report_metric(metric_name, measurement, metadata \\ %{}) do
     if metric_measured?(metric_name) do

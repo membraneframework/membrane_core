@@ -16,13 +16,13 @@ defmodule Membrane.Core.Bin.State do
 
   @type t :: %__MODULE__{
           internal_state: Membrane.Bin.state() | nil,
-          module: module,
+          module: module(),
           children: ChildrenModel.children(),
           subprocess_supervisor: pid(),
           name: Membrane.Bin.name() | nil,
           pads_info: PadModel.pads_info() | nil,
           pads_data: PadModel.pads_data() | nil,
-          parent_pid: pid,
+          parent_pid: pid(),
           links: %{Link.id() => Link.t()},
           crash_groups: %{CrashGroup.name() => CrashGroup.t()},
           synchronization: %{
