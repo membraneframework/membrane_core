@@ -37,16 +37,11 @@ defmodule Membrane.Telemetry do
         ]
     ```
 
-  Available flags are (those are of a very low overhead):
-  * `:links` - enables new links notifications
-  * `:inits_and_terminates` - enables notifications of `init` and `terminate` events for elements/bins/pipelines
-
-
   Additionally one can control which metric values should get measured by passing an option of format :
   `metrics: [list of metrics]`
 
-  # TODO revise possible metrics
   Available metrics are:
+  * `:link` - reports the number of links created in the pipeline
   * `:buffer` - number of buffers being sent from a particular element
   * `:bitrate` - total number of bits carried by the buffers mentioned above
   * `:queue_len` - number of messages in element's message queue during GenServer's `handle_info` invocation

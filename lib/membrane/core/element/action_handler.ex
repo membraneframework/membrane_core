@@ -316,7 +316,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       "Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}"
     )
 
-    Telemetry.report_buffer(length(buffers))
+    Telemetry.report_buffer(buffers)
     Telemetry.report_bitrate(buffers)
 
     Enum.each(buffers, fn

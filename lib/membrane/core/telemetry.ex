@@ -138,7 +138,7 @@ defmodule Membrane.Core.Telemetry do
   def report_buffer(buffers, meta) do
     if metric_measured?(:buffer) do
       value = length(List.wrap(buffers))
-      :telemetry.execute([:membrane, :metric, :buffer], %{value: value}, meta)
+      report_buffer(value, meta)
     end
   end
 
