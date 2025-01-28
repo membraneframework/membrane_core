@@ -132,13 +132,15 @@ defmodule Membrane.Telemetry do
         }
 
   @typedoc """
-  * component_path - element's or bin's path
-  * event - event's name
-  * value - events's value
+  Value of the specific event gathered
   """
   @type event_value :: %{
-          value: any()
+          value: map()
         }
+
+  @typedoc """
+  Metadata included with each telemetry event
+  """
   @type event_metadata :: %{
           event: event_type(),
           component_path: ComponentPath.path(),
@@ -146,6 +148,7 @@ defmodule Membrane.Telemetry do
         }
 
   @typedoc """
+  Value of the link event
   * parent_path - process path of link's parent
   * from - from element name
   * to - to element name
@@ -159,8 +162,33 @@ defmodule Membrane.Telemetry do
           pad_from: String.t(),
           pad_to: String.t()
         }
+  @type buffer_event_value :: integer()
+  @type queue_len_event_value :: integer()
+  @type stream_format_event_value :: %{format: map(), pad_ref: String.t()}
+  @type incoming_event_value :: String.t()
+  @type store_event_value :: %{value: integer(), log_tag: String.t()}
 
+  @doc """
+  Returns if the event type is configured to be gathered by Membrane's Core telemetry
+  """
+  @spec event_gathered?(any()) :: boolean()
   defdelegate event_gathered?(event_type), to: Membrane.Core.Telemetry
+
+  @doc """
+  Lists all components and their callbacks tracked by Membrane's Core telemetry
+  """
+  @spec tracked_callbacks() :: [
+          {:bin, [atom(), ...]} | {:element, [atom(), ...]} | {:pipeline, [atom(), ...]},
+          ...
+        ]
   defdelegate tracked_callbacks, to: Membrane.Core.Telemetry
+
+  @doc """
+  Lists all possible components and their callbacks that can be gathered when telemetry is enabled
+  """
+  @spec tracked_callbacks_available() :: [
+          {:bin, [atom(), ...]} | {:element, [atom(), ...]} | {:pipeline, [atom(), ...]},
+          ...
+        ]
   defdelegate tracked_callbacks_available, to: Membrane.Core.Telemetry
 end

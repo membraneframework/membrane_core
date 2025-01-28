@@ -64,14 +64,7 @@ defmodule Membrane.TelemetryTest do
           [:membrane, :element, handler, step]
         end
 
-      :telemetry.attach_many(ref, spans, &TelemetryListener.handle_event/4, %{
-        dest: self(),
-        ref: ref
-      })
-
-      pid = Testing.Pipeline.start_link_supervised!(spec: child_spec)
-      assert_end_of_stream(pid, :sink)
-      :ok = Testing.Pipeline.terminate(pid)
+      setup_pipeline_for_callbacks(spans, child_spec, ref)
 
       [ref: ref]
     end
@@ -108,13 +101,8 @@ defmodule Membrane.TelemetryTest do
           [:membrane, :pipeline, event, step]
         end
 
-      :telemetry.attach_many(ref, spans, &TelemetryListener.handle_event/4, %{
-        dest: self(),
-        ref: ref
-      })
+      setup_pipeline_for_callbacks(spans, child_spec, ref)
 
-      pid = Testing.Pipeline.start_link_supervised!(spec: child_spec)
-      :ok = Testing.Pipeline.terminate(pid)
       [ref: ref]
     end
 
@@ -274,5 +262,16 @@ defmodule Membrane.TelemetryTest do
     Testing.Pipeline.start_link_supervised!(spec: child_spec)
 
     ref
+  end
+
+  defp setup_pipeline_for_callbacks(spans, child_spec, ref) do
+    :telemetry.attach_many(ref, spans, &TelemetryListener.handle_event/4, %{
+      dest: self(),
+      ref: ref
+    })
+
+    pid = Testing.Pipeline.start_link_supervised!(spec: child_spec)
+    assert_end_of_stream(pid, :sink)
+    :ok = Testing.Pipeline.terminate(pid)
   end
 end

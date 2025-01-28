@@ -17,7 +17,7 @@ if config_env() == :test do
     ],
     events: :all
 
-  # config to legacy telemetry
+  # config to test legacy version of telemetry
   # config :membrane_core, :telemetry_flags, [
   #   :report_init,
   #   :report_terminate,
