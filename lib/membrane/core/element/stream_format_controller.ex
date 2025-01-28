@@ -33,7 +33,7 @@ defmodule Membrane.Core.Element.StreamFormatController do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
       %{direction: :input} = data
-      Telemetry.report_stream_format(%{pad_ref: inspect(pad_ref)})
+      Telemetry.report_stream_format(stream_format, %{pad_ref: inspect(pad_ref)})
 
       queue = data.input_queue
 

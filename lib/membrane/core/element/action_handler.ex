@@ -27,12 +27,14 @@ defmodule Membrane.Core.Element.ActionHandler do
     StreamFormatController
   }
 
-  alias Membrane.Core.{Events, TimerController, Telemetry}
+  alias Membrane.Core.{Events, TimerController}
   alias Membrane.Element.Action
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Message, as: Message
   require Membrane.Logger
+  require Membrane.Core.Telemetry, as: Telemetry
+  require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
   @impl CallbackHandler
   def transform_actions(actions, _callback, _handler_params, state) do
@@ -316,8 +318,8 @@ defmodule Membrane.Core.Element.ActionHandler do
       "Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}"
     )
 
+    LegacyTelemetry.report_bitrate(buffers)
     Telemetry.report_buffer(buffers)
-    Telemetry.report_bitrate(buffers)
 
     Enum.each(buffers, fn
       %Buffer{} -> :ok

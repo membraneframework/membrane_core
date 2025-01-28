@@ -6,7 +6,7 @@ defmodule Membrane.Core.Element.BufferController do
   use Bunch
 
   alias Membrane.{Buffer, Pad}
-  alias Membrane.Core.{CallbackHandler, Telemetry}
+  alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Child.PadModel
 
   alias Membrane.Core.Element.{
@@ -24,7 +24,8 @@ defmodule Membrane.Core.Element.BufferController do
   alias Membrane.Core.Telemetry
 
   require Membrane.Core.Child.PadModel
-  require Membrane.Core.Telemetry
+  require Membrane.Core.Telemetry, as: Telemetry
+  require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
   @doc """
   Handles incoming buffer: either stores it in InputQueue, or executes element's
@@ -105,8 +106,8 @@ defmodule Membrane.Core.Element.BufferController do
   """
   @spec exec_buffer_callback(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
   def exec_buffer_callback(pad_ref, buffers, %State{type: :filter} = state) do
+    LegacyTelemetry.report_bitrate(buffers)
     Telemetry.report_buffer(buffers)
-    Telemetry.report_bitrate(buffers)
 
     do_exec_buffer_callback(pad_ref, buffers, state)
   end

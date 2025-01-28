@@ -4,7 +4,7 @@ defmodule Membrane.Telemetry do
 
   Membrane uses [Telemetry Package](https://hex.pm/packages/telemetry) for instrumentation and does not store or save any measurements by itself.
 
-  It is user's responsibility to use some sort of metrics reporter
+  It is user's responsibility to use some sort of event consumer
   that will be attached to `:telemetry` package to consume and process generated measurements.
 
   ## Instrumentation
@@ -16,14 +16,14 @@ defmodule Membrane.Telemetry do
       * `:stop` - when the handler finishes execution
       * `:exception` - when the handler crashes during execution
 
-    * `[:membrane, :metric, metric]` -
-    where metric is any of the available metrics (see below)
+    * `[:membrane, :event, event_type]` -
+    where event_type is any of the available event types (see below)
 
-  ## Enabling certain metrics/events
+  ## Enabling certain events
   A lot of events can happen hundreds times per second such as registering that a buffer has been sent/processed.
 
   This behaviour can come with a great performance penalties but may be helpful for certain discoveries. To avoid any runtime overhead
-  when the reporting is not necessary all metrics/events are hidden behind a compile-time feature flags.
+  when the reporting is not necessary all events/events are hidden behind a compile-time feature flags.
   To enable a particular measurement one must recompile membrane core with the following snippet put inside
   user's application `config.exs` file:
 
@@ -33,17 +33,16 @@ defmodule Membrane.Telemetry do
           tracked_callbacks: [
             [:handle_setup, ...] | :all
           ]
-        metrics: [:buffer, ...] | :all
+        events: [:buffer, ...] | :all
         ]
     ```
 
-  Additionally one can control which metric values should get measured by passing an option of format :
-  `metrics: [list of metrics]`
+  Additionally one can control which event types should be gathered by passing an option of format :
+  `events: [list of events]`
 
-  Available metrics are:
+  Available events are:
   * `:link` - reports the number of links created in the pipeline
   * `:buffer` - number of buffers being sent from a particular element
-  * `:bitrate` - total number of bits carried by the buffers mentioned above
   * `:queue_len` - number of messages in element's message queue during GenServer's `handle_info` invocation
   * `:stream_format` - indicates that given element has received new stream format, value always equals '1'
   * `:event` - indicates that given element has received a new event, value always equals '1'
@@ -110,13 +109,13 @@ defmodule Membrane.Telemetry do
 
   @typedoc """
   * component_path - element's or bin's path
-  * metric - metric's name
-  * value - metric's value
+  * event - event's name
+  * value - events's value
   """
-  @type metric_event_value :: %{
+  @type event_value :: %{
           path: ComponentPath.path(),
           component_path: String.t(),
-          metric: String.t(),
+          event: String.t(),
           value: integer()
         }
 

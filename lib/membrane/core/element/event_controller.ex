@@ -39,7 +39,7 @@ defmodule Membrane.Core.Element.EventController do
   def handle_event(pad_ref, event, state) do
     withl pad: {:ok, data} <- PadModel.get_data(state, pad_ref),
           playback: %State{playback: :playing} <- state do
-      Telemetry.report_event(%{pad_ref: inspect(pad_ref)})
+      Telemetry.report_incoming_event(%{pad_ref: inspect(pad_ref)})
 
       async? = Event.async?(event)
 

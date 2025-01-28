@@ -15,5 +15,23 @@ if config_env() == :test do
       bin: :all,
       pipeline: :all
     ],
-    metrics: :all
+    events: :all
+
+  # config to legacy telemetry
+  # config :membrane_core, :telemetry_flags, [
+  #   :report_init,
+  #   :report_terminate,
+  #   :report_buffer,
+  #   :report_queue,
+  #   :report_link,
+  #   metrics: [
+  #     :buffer,
+  #     :bitrate,
+  #     :queue_len,
+  #     :stream_format,
+  #     :event,
+  #     :store,
+  #     :take_and_demand
+  #   ]
+  # ]
 end

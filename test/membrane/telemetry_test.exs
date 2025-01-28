@@ -1,7 +1,7 @@
 defmodule Membrane.TelemetryTest do
   @moduledoc """
   Test suite for Membrane telemetry public API. It tests if telemetry events are reported
-  properly for all metrics and spans upon attaching to the :telemetry system.
+  properly for all event types and span types upon attaching to the :telemetry system.
   """
 
   use ExUnit.Case, async: false
@@ -9,8 +9,11 @@ defmodule Membrane.TelemetryTest do
   import ExUnit.CaptureLog
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
+  alias Membrane.Core.Telemetry
   alias Membrane.Testing
   require Logger
+
+  @moduletag if Telemetry.legacy?(), do: :skip, else: nil
 
   defmodule TestFilter do
     use Membrane.Filter
@@ -35,12 +38,16 @@ defmodule Membrane.TelemetryTest do
   end
 
   setup do
-    child_spec =
-      child(:source, %Testing.Source{output: ["a", "b", "c"]})
-      |> child(:filter, TestFilter)
-      |> child(:sink, Testing.Sink)
+    if Telemetry.legacy?() do
+      [skip: true]
+    else
+      child_spec =
+        child(:source, %Testing.Source{output: ["a", "b", "c"]})
+        |> child(:filter, TestFilter)
+        |> child(:sink, Testing.Sink)
 
-    [child_spec: child_spec]
+      [child_spec: child_spec]
+    end
   end
 
   @paths ~w[:filter :sink :source]
@@ -52,9 +59,9 @@ defmodule Membrane.TelemetryTest do
       ref = make_ref()
 
       spans =
-        for event <- @spans,
+        for handler <- @spans,
             step <- @steps do
-          [:membrane, :element, event, step]
+          [:membrane, :element, handler, step]
         end
 
       :telemetry.attach_many(ref, spans, &TelemetryListener.handle_event/4, %{
@@ -178,64 +185,54 @@ defmodule Membrane.TelemetryTest do
     end
   end
 
-  describe "Telemetry properly reports following metrics: " do
+  describe "Telemetry properly reports following events: " do
     test "Link", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:link, child_spec)
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :link], _value, _metadata}}
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :event, :link], _measurement, _metadata}}
     end
-
-    # test "Store", %{child_spec: child_spec} do
-    #   ref = setup_pipeline_for(:store, child_spec)
-
-    #   assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :store], _value, _metadata}},
-    #                  1000
-    # end
-
-    # test "Take", %{child_spec: child_spec} do
-    #   ref = setup_pipeline_for(:take, child_spec)
-
-    #   assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :take], _value, _metadata}}
-    # end
 
     test "Stream Format", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:stream_format, child_spec)
 
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :metric, :stream_format], _value, _metadata}}
+                      {[:membrane, :event, :stream_format], measurement, _metadata}}
+
+      assert measurement.value.type == :bytestream
     end
 
     test "Buffer", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:buffer, child_spec)
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :buffer], _value, _metadata}}
-    end
+      for _ <- 1..3 do
+        assert_receive {^ref, :telemetry_ack,
+                        {[:membrane, :event, :buffer], measurement, _metadata}}
 
-    test "Bitrate", %{child_spec: child_spec} do
-      ref = setup_pipeline_for(:bitrate, child_spec)
-
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :bitrate], _value, _metadata}}
+        assert measurement.value != 0
+      end
     end
 
     test "Event", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:event, child_spec)
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :event], _value, _metadata}}
+      assert_receive {^ref, :telemetry_ack,
+                      {[:membrane, :event, :event], _measurement, _metadata}}
     end
 
     test "Queue Length", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:queue_len, child_spec)
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :metric, :queue_len], _value, _metadata}}
+      assert_receive {^ref, :telemetry_ack,
+                      {[:membrane, :event, :queue_len], _measurement, _metadata}}
     end
   end
 
-  defp setup_pipeline_for(metric, child_spec) do
+  defp setup_pipeline_for(event, child_spec) do
     ref = make_ref()
 
     :telemetry.attach(
       ref,
-      [:membrane, :metric, metric],
+      [:membrane, :event, event],
       &TelemetryListener.handle_event/4,
       %{dest: self(), ref: ref}
     )

@@ -20,7 +20,7 @@ defmodule Membrane.Core.Bin do
 
   require Membrane.Core.Utils, as: Utils
   require Membrane.Core.Message
-  require Membrane.Core.Telemetry
+  require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
   require Membrane.Logger
 
   @type options :: %{
@@ -125,6 +125,9 @@ defmodule Membrane.Core.Bin do
 
     {:ok, resource_guard} =
       SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
+
+    LegacyTelemetry.report_init(:bin)
+    ResourceGuard.register(resource_guard, fn -> LegacyTelemetry.report_terminate(:bin) end)
 
     state =
       %State{

@@ -1,8 +1,8 @@
 defmodule Membrane.Core.Telemetry do
   @moduledoc false
-  # This module provides a way to gather metrics from running Membrane components, as well
-  # as exposing these metrics in a format idiomatic to [Telemetry](https://hexdocs.pm/telemetry/)
-  # library. It uses compile time flags from `config.exs` to determine which metrics should be
+  # This module provides a way to gather events from running Membrane components, as well
+  # as exposing these events in a format idiomatic to [Telemetry](https://hexdocs.pm/telemetry/)
+  # library. It uses compile time flags from `config.exs` to determine which events should be
   # collected and propagated. This avoids unnecessary runtime overhead when telemetry is not needed.
 
   require Logger
@@ -11,12 +11,13 @@ defmodule Membrane.Core.Telemetry do
   require Membrane.Element.WithInputPads
   require Membrane.Pipeline, as: Pipeline
   require Membrane.Bin, as: Bin
-  require Membrane.Telemetry
 
   alias Membrane.Pad
   alias Membrane.Element.WithOutputPads
   alias Membrane.Element.WithInputPads
   alias Membrane.ComponentPath
+
+  require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
   @type telemetry_result() :: {:telemetry_result, {any(), map(), map(), map()}}
 
@@ -26,55 +27,114 @@ defmodule Membrane.Core.Telemetry do
     element: [ElementBase, WithInputPads, WithOutputPads]
   ]
 
-  @possible_handlers (for {elem, mods} <- @component_modules do
-                        mods
-                        |> Enum.flat_map(& &1.behaviour_info(:callbacks))
-                        |> Enum.map(&elem(&1, 0))
-                        |> Enum.filter(&String.starts_with?(to_string(&1), "handle_"))
-                        |> then(&{elem, &1})
-                      end)
+  @possible_callbacks (for {elem, mods} <- @component_modules do
+                         mods
+                         |> Enum.flat_map(& &1.behaviour_info(:callbacks))
+                         |> Enum.map(&elem(&1, 0))
+                         |> Enum.filter(&String.starts_with?(to_string(&1), "handle_"))
+                         |> then(&{elem, &1})
+                       end)
 
-  _ = @possible_handlers
+  _ = @possible_callbacks
 
   @config Application.compile_env(:membrane_core, :telemetry_flags, [])
+  @legacy? Enum.any?(@config, &is_atom(&1)) || Keyword.has_key?(@config, :metrics)
 
-  for {component, handlers} <- @config[:tracked_callbacks] || [] do
-    case handlers do
+  if @legacy? do
+    Logger.warning("""
+      Legacy telemetry is deprecated and will be removed in the next major release.
+      Please update your configuration to use the new telemetry system.
+    """)
+  end
+
+  def legacy?(), do: @legacy?
+
+  # Functions below are telemetry events that were measured before but differ in how they were emitted
+  defp do_legacy_telemetry(:link, _metadata, lazy_block) do
+    LegacyTelemetry.report_link(
+      quote(do: unquote(lazy_block)[:from]),
+      quote(do: unquote(lazy_block)[:to])
+    )
+  end
+
+  defp do_legacy_telemetry(metric_name, metadata, lazy_block) do
+    LegacyTelemetry.report_metric(metric_name, lazy_block, quote(do: unquote(metadata)[:log_tag]))
+  end
+
+  for {component, callbacks} <- @config[:tracked_callbacks] || [] do
+    case callbacks do
       :all ->
-        def handler_measured?(unquote(component), _), do: true
+        def handler_reported?(unquote(component), _), do: true
 
       nil ->
         nil
 
-      handler_names when is_list(handler_names) ->
-        for event <- handler_names do
-          if event not in @possible_handlers[component] do
+      callbacks_list when is_list(callbacks_list) ->
+        for event <- callbacks_list do
+          if event not in @possible_callbacks[component] do
             raise """
               Invalid telemetry flag: #{inspect(event)}.
-              Possible values for #{component} are: #{inspect(@possible_handlers[component])}
+              Possible values for #{component} are: #{inspect(@possible_callbacks[component])}
             """
           end
 
-          def handler_measured?(unquote(component), unquote(event)), do: true
+          def handler_reported?(unquote(component), unquote(event)), do: true
         end
     end
   end
 
-  def handler_measured?(_, _), do: false
+  def handler_reported?(_, _), do: false
 
-  case @config[:metrics] do
-    :all ->
-      def metric_measured?(_metric), do: true
+  def event_gathered?(event) do
+    events = @config[:events]
+    events && (events == :all || event in events)
+  end
 
-    nil ->
-      def metric_measured?(_metric), do: false
+  defmacrop report_event(event_name, metadata, do: lazy_block) do
+    unless Macro.quoted_literal?(event_name), do: raise("Event type must be a literal")
 
-    list when is_list(list) ->
-      for metric <- list do
-        def metric_measured?(unquote(metric)), do: true
+    if @legacy? do
+      do_legacy_telemetry(event_name, metadata, lazy_block)
+    else
+      if event_gathered?(event_name) do
+        quote do
+          value = unquote(lazy_block)
+
+          :telemetry.execute(
+            [:membrane, :event, unquote(event_name)],
+            %{value: value},
+            unquote(metadata)
+          )
+        end
+      else
+        quote do
+          _fn = fn ->
+            _unused = unquote(event_name)
+            _unused = unquote(metadata)
+            _unused = unquote(lazy_block)
+          end
+        end
       end
+    end
+  end
 
-      def metric_measured?(_metric), do: false
+  def tracked_callbacks_available do
+    @possible_callbacks
+  end
+
+  def tracked_callbacks do
+    for {component, callbacks} <- @config[:tracked_callbacks] || [] do
+      case callbacks do
+        :all ->
+          {component, @possible_callbacks[component]}
+
+        nil ->
+          {component, []}
+
+        callbacks_list when is_list(callbacks_list) ->
+          {component, callbacks_list}
+      end
+    end
   end
 
   @doc """
@@ -84,11 +144,11 @@ defmodule Membrane.Core.Telemetry do
   def component_span(component_type, event_type, f) do
     component_type = state_module_to_atom(component_type)
 
-    if handler_measured?(component_type, event_type) do
+    if handler_reported?(component_type, event_type) do
       :telemetry.span(
         [:membrane, component_type, event_type],
         %{
-          log_metadata: Logger.metadata(),
+          event_metadata: Logger.metadata(),
           path: ComponentPath.get(),
           component_path: ComponentPath.get_formatted()
         },
@@ -100,7 +160,7 @@ defmodule Membrane.Core.Telemetry do
                  internal_state_before: old_intstate,
                  state_before: old_state,
                  internal_state_after: new_intstate,
-                 log_metadata: Logger.metadata(),
+                 event_metadata: Logger.metadata(),
                  path: ComponentPath.get()
                }}
 
@@ -125,51 +185,42 @@ defmodule Membrane.Core.Telemetry do
     {:telemetry_result, {res, new_internal_state, old_internal_state, old_state}}
   end
 
-  def report_event(meta \\ %{}), do: report_metric(:event, 1, meta)
-  def report_link(), do: report_metric(:link, 1)
-  def report_store(size, log_tag), do: report_metric(:store, size, %{log_tag: log_tag})
-  def report_stream_format(meta \\ %{}), do: report_metric(:stream_format, 1, meta)
+  def report_incoming_event(meta \\ %{}), do: report_event(:event, meta, do: 1)
+
+  def report_stream_format(format, meta \\ %{}),
+    do: report_event(:stream_format, meta, do: format)
 
   def report_buffer(length, meta \\ %{})
 
   def report_buffer(length, meta) when is_integer(length),
-    do: report_metric(:buffer, length, meta)
+    do: report_event(:buffer, meta, do: length)
 
   def report_buffer(buffers, meta) do
-    if metric_measured?(:buffer) do
-      value = length(List.wrap(buffers))
-      report_buffer(value, meta)
+    report_event(:buffer, meta, do: length(buffers))
+  end
+
+  def report_store(size, log_tag) do
+    report_event :store, %{log_tag: log_tag} do
+      size
     end
   end
 
-  def report_bitrate(buffers, meta \\ %{}) do
-    if metric_measured?(:bitrate) do
-      value = Enum.reduce(List.wrap(buffers), 0, &(&2 + Membrane.Payload.size(&1.payload)))
-      :telemetry.execute([:membrane, :metric, :bitrate], %{value: value}, meta)
+  def report_queue_len(pid, meta \\ %{}) do
+    report_event :queue_len, meta do
+      {:message_queue_len, len} = Process.info(pid, :message_queue_len)
+      len
     end
   end
 
   def report_link(from, to) do
-    if metric_measured?(:link) do
-      meta = %{
-        parent_path: ComponentPath.get_formatted(),
-        from: inspect(from.child),
-        to: inspect(to.child),
-        pad_from: Pad.name_by_ref(from.pad_ref) |> inspect(),
-        pad_to: Pad.name_by_ref(to.pad_ref) |> inspect()
-      }
-
-      # For backwards compatibility
-      :telemetry.execute([:membrane, :link, :new], %{from: from, to: to}, meta)
-      :telemetry.execute([:membrane, :metric, :link], %{from: from, to: to}, meta)
-    end
-  end
-
-  def report_metric(metric_name, measurement, metadata \\ %{}) do
-    if metric_measured?(metric_name) do
-      :telemetry.execute([:membrane, :metric, metric_name], %{value: measurement}, metadata)
-    else
-      measurement
+    report_event :link, %{
+      parent_path: ComponentPath.get_formatted(),
+      from: inspect(from.child),
+      to: inspect(to.child),
+      pad_from: Pad.name_by_ref(from.pad_ref) |> inspect(),
+      pad_to: Pad.name_by_ref(to.pad_ref) |> inspect()
+    } do
+      %{from: from, to: to}
     end
   end
 
