@@ -189,16 +189,38 @@ defmodule Membrane.TelemetryTest do
     test "Link", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:link, child_spec)
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :event, :link], _measurement, _metadata}}
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :event, :link], link1, metadata}}
+      assert_event_metadata(metadata)
+
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :event, :link], link2, metadata}}
+      assert_event_metadata(metadata)
+
+      assert [
+               %{
+                 from: ":filter",
+                 pad_from: ":output",
+                 pad_to: ":input",
+                 parent_path: _,
+                 to: ":sink"
+               },
+               %{
+                 from: ":source",
+                 pad_from: ":output",
+                 pad_to: ":input",
+                 parent_path: _,
+                 to: ":filter"
+               }
+             ] = Enum.sort([link1.value, link2.value])
     end
 
     test "Stream Format", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:stream_format, child_spec)
 
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :event, :stream_format], measurement, _metadata}}
+                      {[:membrane, :event, :stream_format], measurement, metadata}}
 
-      assert measurement.value.type == :bytestream
+      assert measurement.value.format.type == :bytestream
+      assert_event_metadata(metadata)
     end
 
     test "Buffer", %{child_spec: child_spec} do
@@ -206,25 +228,37 @@ defmodule Membrane.TelemetryTest do
 
       for _ <- 1..3 do
         assert_receive {^ref, :telemetry_ack,
-                        {[:membrane, :event, :buffer], measurement, _metadata}}
+                        {[:membrane, :event, :buffer], measurement, metadata}}
 
         assert measurement.value != 0
+        assert_event_metadata(metadata)
       end
     end
 
     test "Event", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:event, child_spec)
 
-      assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :event, :event], _measurement, _metadata}}
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :event, :event], measurement, metadata}}
+
+      assert measurement.value.pad_ref == ":input"
+      assert_event_metadata(metadata)
     end
 
     test "Queue Length", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:queue_len, child_spec)
 
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :event, :queue_len], _measurement, _metadata}}
+                      {[:membrane, :event, :queue_len], measurement, metadata}}
+
+      assert measurement.value
+      assert_event_metadata(metadata)
     end
+  end
+
+  def assert_event_metadata(metadata) do
+    assert is_atom(metadata.event)
+    assert is_list(metadata.component_path)
+    assert metadata.component_metadata
   end
 
   defp setup_pipeline_for(event, child_spec) do

@@ -4,8 +4,8 @@ defmodule Membrane.Telemetry do
 
   Membrane uses [Telemetry Package](https://hex.pm/packages/telemetry) for instrumentation and does not store or save any measurements by itself.
 
-  It is user's responsibility to use some sort of event consumer
-  that will be attached to `:telemetry` package to consume and process generated measurements.
+  It is user's responsibility to use some sort of event consumer and metric reporter
+  that will be attached to `:telemetry` package to process generated measurements.
 
   ## Instrumentation
   The following events are published by Membrane's Core with following measurement types and metadata:
@@ -19,12 +19,12 @@ defmodule Membrane.Telemetry do
     * `[:membrane, :event, event_type]` -
     where event_type is any of the available event types (see below)
 
-  ## Enabling certain events
+  ## Enabling specific events
   A lot of events can happen hundreds times per second such as registering that a buffer has been sent/processed.
 
   This behaviour can come with a great performance penalties but may be helpful for certain discoveries. To avoid any runtime overhead
   when the reporting is not necessary all events/events are hidden behind a compile-time feature flags.
-  To enable a particular measurement one must recompile membrane core with the following snippet put inside
+  To enable a particular measurement one must recompile membrane core with the following config put inside
   user's application `config.exs` file:
 
   ```
@@ -36,9 +36,6 @@ defmodule Membrane.Telemetry do
         events: [:buffer, ...] | :all
         ]
     ```
-
-  Additionally one can control which event types should be gathered by passing an option of format :
-  `events: [list of events]`
 
   Available events are:
   * `:link` - reports the number of links created in the pipeline
@@ -54,8 +51,35 @@ defmodule Membrane.Telemetry do
   alias Membrane.Core.Element.EffectiveFlowController
   alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
 
-  @type instrument :: :element | :bin | :pipeline
-  @type event_name :: [atom() | list(atom())]
+  @typedoc """
+  Types of telemetry events reported by Membrane Core
+  """
+  @type event_type :: :link | :buffer | :queue_len | :stream_format | :event | :store
+
+  @typedoc """
+  Atom representation of Membrane components subject to telemetry reports
+  """
+  @type component :: :element | :bin | :pipeline
+
+  @typedoc """
+  Component metadata included in each `t:callback_event_metadata/0`
+  Internal state is gathered before and after each handler callback.
+  State only represents component's state at the start of the callback
+  """
+  @type component_metadata :: %{
+          component_state: element_state() | bin_state() | pipeline_state(),
+          internal_state_after: Element.state() | Bin.state() | Pipeline.state(),
+          internal_state_before: Element.state() | Bin.state() | Pipeline.state()
+        }
+  @typedoc """
+  Metadata included with each telemetry component's handler profiled
+  """
+  @type callback_event_metadata :: %{
+          callback: atom(),
+          callback_args: [any()],
+          component_metadata: component_metadata(),
+          component_type: component()
+        }
 
   @type element_state :: %{
           subprocess_supervisor: pid(),
@@ -113,10 +137,12 @@ defmodule Membrane.Telemetry do
   * value - events's value
   """
   @type event_value :: %{
-          path: ComponentPath.path(),
-          component_path: String.t(),
-          event: String.t(),
-          value: integer()
+          value: any()
+        }
+  @type event_metadata :: %{
+          event: event_type(),
+          component_path: ComponentPath.path(),
+          component_metadata: any()
         }
 
   @typedoc """
@@ -133,4 +159,8 @@ defmodule Membrane.Telemetry do
           pad_from: String.t(),
           pad_to: String.t()
         }
+
+  defdelegate event_gathered?(event_type), to: Membrane.Core.Telemetry
+  defdelegate tracked_callbacks, to: Membrane.Core.Telemetry
+  defdelegate tracked_callbacks_available, to: Membrane.Core.Telemetry
 end

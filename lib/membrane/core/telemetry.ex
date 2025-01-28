@@ -5,7 +5,7 @@ defmodule Membrane.Core.Telemetry do
   # library. It uses compile time flags from `config.exs` to determine which events should be
   # collected and propagated. This avoids unnecessary runtime overhead when telemetry is not needed.
 
-  require Logger
+  require Membrane.Logger
   require Membrane.Element.Base, as: ElementBase
   require Membrane.Element.WithOutputPads
   require Membrane.Element.WithInputPads
@@ -19,7 +19,7 @@ defmodule Membrane.Core.Telemetry do
 
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
-  @type telemetry_result() :: {:telemetry_result, {any(), map(), map(), map()}}
+  @type telemetry_result() :: {:telemetry_result, {any(), list(), map(), map(), map()}}
 
   @component_modules [
     bin: [Bin],
@@ -49,16 +49,16 @@ defmodule Membrane.Core.Telemetry do
 
   def legacy?(), do: @legacy?
 
-  # Functions below are telemetry events that were measured before but differ in how they were emitted
-  defp do_legacy_telemetry(:link, _metadata, lazy_block) do
+  # Handles telemetry events that were measured before but differ in how they were emitted
+  defp do_legacy_telemetry(:link, lazy_block) do
     LegacyTelemetry.report_link(
       quote(do: unquote(lazy_block)[:from]),
       quote(do: unquote(lazy_block)[:to])
     )
   end
 
-  defp do_legacy_telemetry(metric_name, metadata, lazy_block) do
-    LegacyTelemetry.report_metric(metric_name, lazy_block, quote(do: unquote(metadata)[:log_tag]))
+  defp do_legacy_telemetry(metric_name, lazy_block) do
+    LegacyTelemetry.report_metric(metric_name, lazy_block)
   end
 
   for {component, callbacks} <- @config[:tracked_callbacks] || [] do
@@ -85,37 +85,10 @@ defmodule Membrane.Core.Telemetry do
 
   def handler_reported?(_, _), do: false
 
+  @spec event_gathered?(any()) :: false | nil | true
   def event_gathered?(event) do
     events = @config[:events]
     events && (events == :all || event in events)
-  end
-
-  defmacrop report_event(event_name, metadata, do: lazy_block) do
-    unless Macro.quoted_literal?(event_name), do: raise("Event type must be a literal")
-
-    if @legacy? do
-      do_legacy_telemetry(event_name, metadata, lazy_block)
-    else
-      if event_gathered?(event_name) do
-        quote do
-          value = unquote(lazy_block)
-
-          :telemetry.execute(
-            [:membrane, :event, unquote(event_name)],
-            %{value: value},
-            unquote(metadata)
-          )
-        end
-      else
-        quote do
-          _fn = fn ->
-            _unused = unquote(event_name)
-            _unused = unquote(metadata)
-            _unused = unquote(lazy_block)
-          end
-        end
-      end
-    end
   end
 
   def tracked_callbacks_available do
@@ -137,29 +110,64 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
+  defmacrop report_event(event_name, do: lazy_block) do
+    unless Macro.quoted_literal?(event_name), do: raise("Event type must be a literal")
+
+    if @legacy? do
+      do_legacy_telemetry(event_name, lazy_block)
+    else
+      if event_gathered?(event_name) do
+        quote do
+          value = unquote(lazy_block)
+
+          :telemetry.execute(
+            [:membrane, :event, unquote(event_name)],
+            %{value: value},
+            %{
+              event: unquote(event_name),
+              component_path: ComponentPath.get(),
+              component_metadata: Logger.metadata()
+            }
+          )
+        end
+      else
+        quote do
+          _fn = fn ->
+            _unused = unquote(event_name)
+            _unused = unquote(lazy_block)
+          end
+        end
+      end
+    end
+  end
+
   @doc """
   Reports an arbitrary span of a function consistent with `span/3` format in `:telementry`
   """
   @spec component_span(module(), atom(), (-> telemetry_result())) :: any()
-  def component_span(component_type, event_type, f) do
+  def component_span(component_type, callback, f) do
     component_type = state_module_to_atom(component_type)
 
-    if handler_reported?(component_type, event_type) do
+    if handler_reported?(component_type, callback) do
       :telemetry.span(
-        [:membrane, component_type, event_type],
+        [:membrane, component_type, callback],
         %{
           event_metadata: Logger.metadata(),
-          path: ComponentPath.get(),
-          component_path: ComponentPath.get_formatted()
+          path: ComponentPath.get()
         },
         fn ->
           case f.() do
-            {:telemetry_result, {r, new_intstate, old_intstate, old_state}} ->
-              {r, %{new_state: new_intstate},
+            {:telemetry_result, {r, args, new_intstate, old_intstate, old_state}} ->
+              {r, %{},
                %{
-                 internal_state_before: old_intstate,
-                 state_before: old_state,
-                 internal_state_after: new_intstate,
+                 callback: callback,
+                 component_type: component_type,
+                 component_metadata: %{
+                   component_state: old_state,
+                   internal_state_before: old_intstate,
+                   internal_state_after: new_intstate
+                 },
+                 callback_args: args,
                  event_metadata: Logger.metadata(),
                  path: ComponentPath.get()
                }}
@@ -170,7 +178,7 @@ defmodule Membrane.Core.Telemetry do
         end
       )
     else
-      {:telemetry_result, {result, _, _, _}} = f.()
+      {:telemetry_result, {result, _, _, _, _}} = f.()
       result
     end
   end
@@ -178,49 +186,49 @@ defmodule Membrane.Core.Telemetry do
   @doc """
   Formats a telemetry result to be used in a report_span function.
   """
-  @spec state_result(any(), internal_state, internal_state, map()) ::
+  @spec state_result(any(), list(), internal_state, internal_state, map()) ::
           telemetry_result()
         when internal_state: any()
-  def state_result(res, old_internal_state, new_internal_state, old_state) do
-    {:telemetry_result, {res, new_internal_state, old_internal_state, old_state}}
+  def state_result(res, args, old_internal_state, new_internal_state, old_state) do
+    {:telemetry_result, {res, args, new_internal_state, old_internal_state, old_state}}
   end
 
-  def report_incoming_event(meta \\ %{}), do: report_event(:event, meta, do: 1)
+  def report_incoming_event(pad_ref), do: report_event(:event, do: pad_ref)
 
-  def report_stream_format(format, meta \\ %{}),
-    do: report_event(:stream_format, meta, do: format)
+  def report_stream_format(format, pad_ref),
+    do: report_event(:stream_format, do: %{format: format, pad_ref: pad_ref})
 
-  def report_buffer(length, meta \\ %{})
+  def report_buffer(length)
 
-  def report_buffer(length, meta) when is_integer(length),
-    do: report_event(:buffer, meta, do: length)
+  def report_buffer(length) when is_integer(length),
+    do: report_event(:buffer, do: length)
 
-  def report_buffer(buffers, meta) do
-    report_event(:buffer, meta, do: length(buffers))
+  def report_buffer(buffers) do
+    report_event(:buffer, do: length(buffers))
   end
 
   def report_store(size, log_tag) do
-    report_event :store, %{log_tag: log_tag} do
-      size
+    report_event :store do
+      %{value: size, log_tag: log_tag}
     end
   end
 
-  def report_queue_len(pid, meta \\ %{}) do
-    report_event :queue_len, meta do
+  def report_queue_len(pid) do
+    report_event :queue_len do
       {:message_queue_len, len} = Process.info(pid, :message_queue_len)
       len
     end
   end
 
   def report_link(from, to) do
-    report_event :link, %{
-      parent_path: ComponentPath.get_formatted(),
-      from: inspect(from.child),
-      to: inspect(to.child),
-      pad_from: Pad.name_by_ref(from.pad_ref) |> inspect(),
-      pad_to: Pad.name_by_ref(to.pad_ref) |> inspect()
-    } do
-      %{from: from, to: to}
+    report_event :link do
+      %{
+        parent_path: ComponentPath.get_formatted(),
+        from: inspect(from.child),
+        to: inspect(to.child),
+        pad_from: Pad.name_by_ref(from.pad_ref) |> inspect(),
+        pad_to: Pad.name_by_ref(to.pad_ref) |> inspect()
+      }
     end
   end
 

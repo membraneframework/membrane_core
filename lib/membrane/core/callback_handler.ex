@@ -143,7 +143,7 @@ defmodule Membrane.Core.CallbackHandler do
           fn ->
             res = {_actions, new_internal_state} = apply(module, callback, args)
 
-            Telemetry.state_result(res, internal_state, new_internal_state, state)
+            Telemetry.state_result(res, args, internal_state, new_internal_state, state)
           end
         )
       rescue
