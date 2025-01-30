@@ -1,5 +1,10 @@
 defmodule Membrane.Core.LegacyTelemetry do
   @moduledoc false
+
+  # This module is deprecated and will be removed in the next major release (2.0)
+  # All contents below starting from the next comment are from Legacy Telemetry system
+  # to retain compatibility with the old telemetry system in case of outdated configuration.
+
   # This module provides a way to gather events from running Membrane components, as well
   # as exposing these events in a format idiomatic to [Telemetry](https://hexdocs.pm/telemetry/)
   # library. It uses compile time flags from `config.exs` to determine which events should be
@@ -56,7 +61,7 @@ defmodule Membrane.Core.LegacyTelemetry do
               Enum.reduce(
                 List.wrap(unquote(buffers)),
                 0,
-                &(Membrane.Core.LegacyTelemetry.get_payload_size(&1.payload) + &2)
+                &(unquote(__MODULE__).get_payload_size(&1.payload) + &2)
               )
         }
       end
@@ -100,10 +105,10 @@ defmodule Membrane.Core.LegacyTelemetry do
           from: inspect(unquote(from).child),
           to: inspect(unquote(to).child),
           pad_from:
-            Membrane.Core.LegacyTelemetry.__get_public_pad_name__(unquote(from).pad_ref)
+            unquote(__MODULE__).__get_public_pad_name__(unquote(from).pad_ref)
             |> inspect(),
           pad_to:
-            Membrane.Core.LegacyTelemetry.__get_public_pad_name__(unquote(to).pad_ref)
+            unquote(__MODULE__).__get_public_pad_name__(unquote(to).pad_ref)
             |> inspect()
         }
       end

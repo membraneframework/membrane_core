@@ -19,7 +19,15 @@ defmodule Membrane.Core.Telemetry do
 
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
-  @type telemetry_result() :: {:telemetry_result, {any(), list(), map(), map(), map()}}
+  @type telemetry_result() ::
+          {:telemetry_result,
+           {
+             result :: any(),
+             arguments :: list(),
+             new_internal_state :: map(),
+             old_internal_state :: map(),
+             state :: map()
+           }}
 
   @component_modules [
     bin: [Bin],
@@ -35,7 +43,7 @@ defmodule Membrane.Core.Telemetry do
                          |> then(&{elem, &1})
                        end)
 
-  _ = @possible_callbacks
+  _callbacks = @possible_callbacks
 
   @config Application.compile_env(:membrane_core, :telemetry_flags, [])
   @legacy? Enum.any?(@config, &is_atom(&1)) || Keyword.has_key?(@config, :metrics)
@@ -61,10 +69,11 @@ defmodule Membrane.Core.Telemetry do
     LegacyTelemetry.report_metric(metric_name, lazy_block)
   end
 
+  @spec handler_reported?(atom(), atom()) :: boolean()
   for {component, callbacks} <- @config[:tracked_callbacks] || [] do
     case callbacks do
       :all ->
-        def handler_reported?(unquote(component), _), do: true
+        def handler_reported?(unquote(component), _callback), do: true
 
       nil ->
         nil
@@ -83,7 +92,7 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  def handler_reported?(_, _), do: false
+  def handler_reported?(_component, _callback), do: false
 
   @spec event_gathered?(any()) :: false | nil | true
   def event_gathered?(event) do
@@ -91,10 +100,20 @@ defmodule Membrane.Core.Telemetry do
     events && (events == :all || event in events)
   end
 
+  @spec tracked_callbacks_available() :: [
+          pipeline: [atom()],
+          bin: [atom()],
+          element: [atom()]
+        ]
   def tracked_callbacks_available do
     @possible_callbacks
   end
 
+  @spec tracked_callbacks() :: [
+          pipeline: [atom()],
+          bin: [atom()],
+          element: [atom()]
+        ]
   def tracked_callbacks do
     for {component, callbacks} <- @config[:tracked_callbacks] || [] do
       case callbacks do
@@ -155,31 +174,33 @@ defmodule Membrane.Core.Telemetry do
           event_metadata: Logger.metadata(),
           path: ComponentPath.get()
         },
-        fn ->
-          case f.() do
-            {:telemetry_result, {r, args, new_intstate, old_intstate, old_state}} ->
-              {r, %{},
-               %{
-                 callback: callback,
-                 component_type: component_type,
-                 component_metadata: %{
-                   component_state: old_state,
-                   internal_state_before: old_intstate,
-                   internal_state_after: new_intstate
-                 },
-                 callback_args: args,
-                 event_metadata: Logger.metadata(),
-                 path: ComponentPath.get()
-               }}
-
-            _other ->
-              raise "Unexpected telemetry span result. Use Telemetry.state_result/3 instead"
-          end
-        end
+        fn -> unpack_state_result(f, component_type, callback) end
       )
     else
-      {:telemetry_result, {result, _, _, _, _}} = f.()
+      {:telemetry_result, {result, _args, _new_intstate, _old_intstate, _old_state}} = f.()
       result
+    end
+  end
+
+  defp unpack_state_result(fun, component_type, callback) do
+    case fun.() do
+      {:telemetry_result, {r, args, new_intstate, old_intstate, old_state}} ->
+        {r, %{},
+         %{
+           callback: callback,
+           component_type: component_type,
+           component_metadata: %{
+             component_state: old_state,
+             internal_state_before: old_intstate,
+             internal_state_after: new_intstate
+           },
+           callback_args: args,
+           event_metadata: Logger.metadata(),
+           path: ComponentPath.get()
+         }}
+
+      _other ->
+        raise "Unexpected telemetry span result. Use Telemetry.state_result/3 instead"
     end
   end
 
@@ -193,11 +214,14 @@ defmodule Membrane.Core.Telemetry do
     {:telemetry_result, {res, args, new_internal_state, old_internal_state, old_state}}
   end
 
-  def report_incoming_event(pad_ref), do: report_event(:event, do: pad_ref)
+  @spec report_incoming_event(%{pad_ref: String.t()}) :: :ok
+  def report_incoming_event(meta), do: report_event(:event, do: meta)
 
+  @spec report_stream_format(Membrane.StreamFormat.t(), String.t()) :: :ok
   def report_stream_format(format, pad_ref),
     do: report_event(:stream_format, do: %{format: format, pad_ref: pad_ref})
 
+  @spec report_buffer(integer() | list()) :: :ok
   def report_buffer(length)
 
   def report_buffer(length) when is_integer(length),
@@ -207,12 +231,21 @@ defmodule Membrane.Core.Telemetry do
     report_event(:buffer, do: length(buffers))
   end
 
+  @spec report_store(integer(), String.t()) :: :ok
   def report_store(size, log_tag) do
     report_event :store do
       %{value: size, log_tag: log_tag}
     end
   end
 
+  @spec report_take(integer(), String.t()) :: :ok
+  def report_take(size, log_tag) do
+    report_event :take do
+      %{value: size, log_tag: log_tag}
+    end
+  end
+
+  @spec report_queue_len(integer()) :: :ok
   def report_queue_len(pid) do
     report_event :queue_len do
       {:message_queue_len, len} = Process.info(pid, :message_queue_len)
@@ -220,6 +253,7 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
+  @spec report_link(Membrane.Pad.ref(), Membrane.Pad.ref()) :: :ok
   def report_link(from, to) do
     report_event :link do
       %{

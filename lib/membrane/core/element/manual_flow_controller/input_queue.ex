@@ -174,6 +174,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
     input_queue = maybe_increase_atomic_demand(input_queue)
 
     %{size: size, stalker_metrics: stalker_metrics} = input_queue
+    Telemetry.report_take(size, input_queue.log_tag)
     :atomics.put(stalker_metrics.size, 1, size)
 
     {out, input_queue}

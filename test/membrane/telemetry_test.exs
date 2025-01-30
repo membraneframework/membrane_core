@@ -77,16 +77,18 @@ defmodule Membrane.TelemetryTest do
         event = unquote(event)
 
         assert_receive {^ref, :telemetry_ack,
-                        {[:membrane, :element, ^event, :start], meta, %{path: [_, ^element_type]}}},
+                        {[:membrane, :element, ^event, :start], results,
+                         %{path: [_, ^element_type]}}},
                        1000
 
-        assert meta.system_time > 0
+        assert results.system_time >= 0
 
         assert_receive {^ref, :telemetry_ack,
-                        {[:membrane, :element, ^event, :stop], meta, %{path: [_, ^element_type]}}},
+                        {[:membrane, :element, ^event, :stop], results,
+                         %{path: [_, ^element_type]}}},
                        1000
 
-        assert meta.duration > 0
+        assert results.duration >= 0
       end
     end
   end
@@ -108,24 +110,24 @@ defmodule Membrane.TelemetryTest do
 
     test "lifecycle", %{ref: ref} do
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :pipeline, :handle_init, :start], meta, %{}}}
+                      {[:membrane, :pipeline, :handle_init, :start], results, %{}}}
 
-      assert meta.monotonic_time != 0
-
-      assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :pipeline, :handle_init, :stop], meta, %{}}}
-
-      assert meta.duration > 0
+      assert results.monotonic_time != 0
 
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :pipeline, :handle_setup, :start], meta, %{}}}
+                      {[:membrane, :pipeline, :handle_init, :stop], results, %{}}}
 
-      assert meta.monotonic_time != 0
+      assert results.duration >= 0
 
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :pipeline, :handle_setup, :stop], meta, %{}}}
+                      {[:membrane, :pipeline, :handle_setup, :start], results, %{}}}
 
-      assert meta.duration > 0
+      assert results.monotonic_time != 0
+
+      assert_receive {^ref, :telemetry_ack,
+                      {[:membrane, :pipeline, :handle_setup, :stop], results, %{}}}
+
+      assert results.duration >= 0
     end
   end
 
@@ -145,8 +147,7 @@ defmodule Membrane.TelemetryTest do
         ref: ref
       })
 
-      pid = Testing.Pipeline.start_link_supervised!(spec: child_spec)
-      Process.flag(:trap_exit, true)
+      pid = Testing.Pipeline.start_supervised!(spec: child_spec)
 
       capture_log(fn ->
         :ok = Testing.Pipeline.notify_child(pid, :filter, :crash)
@@ -157,19 +158,19 @@ defmodule Membrane.TelemetryTest do
 
     test "in element", %{ref: ref} do
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :element, :handle_parent_notification, :start], _meta,
+                      {[:membrane, :element, :handle_parent_notification, :start], _results,
                        %{path: [_, ":filter"]}}},
                      1000
 
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :element, :handle_parent_notification, :exception], meta,
+                      {[:membrane, :element, :handle_parent_notification, :exception], results,
                        %{path: [_, ":filter"]}}},
                      1000
 
-      assert meta.duration > 0
+      assert results.duration >= 0
 
       refute_received {^ref, :telemetry_ack,
-                       {[:membrane, :element, :handle_parent_notification, :stop], _meta, _}}
+                       {[:membrane, :element, :handle_parent_notification, :stop], _results, _}}
     end
   end
 

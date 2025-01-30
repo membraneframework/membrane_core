@@ -14,7 +14,7 @@ defmodule Membrane.Telemetry do
     where handler is any possible handle_* function defined for a component.
       * `:start` - when the handler begins execution
       * `:stop` - when the handler finishes execution
-      * `:exception` - when the handler crashes during execution
+      * `:exception` - when the component's handler crashes during execution
 
     * `[:membrane, :event, event_type]` -
     where event_type is any of the available event types (see below)
@@ -44,6 +44,7 @@ defmodule Membrane.Telemetry do
   * `:stream_format` - indicates that given element has received new stream format, value always equals '1'
   * `:event` - indicates that given element has received a new event, value always equals '1'
   * `:store` - reports the current size of a input buffer when storing a new buffer
+  * `:take` - reports the number of buffers taken from the input buffer
   """
 
   alias Membrane.{Bin, ComponentPath, Element, Pipeline, Playback, ResourceGuard}
