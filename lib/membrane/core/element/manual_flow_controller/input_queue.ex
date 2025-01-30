@@ -10,10 +10,10 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   alias Membrane.Buffer
   alias Membrane.Core.Element.AtomicDemand
+  alias Membrane.Core.Telemetry
   alias Membrane.Event
   alias Membrane.Pad
   alias Membrane.StreamFormat
-  alias Membrane.Core.Telemetry
 
   require Membrane.Core.Stalker, as: Stalker
   require Membrane.Logger

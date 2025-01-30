@@ -19,6 +19,7 @@ defmodule Membrane.Core.LegacyTelemetry do
   @doc """
   Reports metrics such as input buffer's size inside functions, incoming events and received stream format.
   """
+  @spec report_metric(atom(), any(), log_tag :: nil | String.t()) :: :ok
   def report_metric(metric, value, log_tag \\ nil) do
     event =
       quote do
@@ -45,6 +46,7 @@ defmodule Membrane.Core.LegacyTelemetry do
   Given list of buffers (or a single buffer) calculates total size of their payloads in bits
   and reports it.
   """
+  @spec report_bitrate([Membrane.Buffer.t()]) :: Macro.t()
   def report_bitrate(buffers) do
     event =
       quote do
@@ -73,6 +75,7 @@ defmodule Membrane.Core.LegacyTelemetry do
     )
   end
 
+  @spec get_payload_size(any()) :: non_neg_integer()
   def get_payload_size(payload) when is_bitstring(payload) do
     Membrane.Payload.size(payload)
   end
@@ -89,6 +92,7 @@ defmodule Membrane.Core.LegacyTelemetry do
     end
   end
 
+  @spec report_link(any(), any()) :: Macro.t()
   @doc """
   Reports new link connection being initialized in pipeline.
   """
@@ -119,6 +123,7 @@ defmodule Membrane.Core.LegacyTelemetry do
   @doc """
   Reports a pipeline/bin/element initialization.
   """
+  @spec report_init(atom()) :: Macro.t()
   def report_init(type) when type in [:pipeline, :bin, :element] do
     event =
       quote do
@@ -146,6 +151,7 @@ defmodule Membrane.Core.LegacyTelemetry do
   @doc """
   Reports a pipeline/bin/element termination.
   """
+  @spec report_terminate(atom()) :: Macro.t()
   def report_terminate(type) when type in [:pipeline, :bin, :element] do
     event =
       quote do

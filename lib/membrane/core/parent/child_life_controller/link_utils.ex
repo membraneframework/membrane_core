@@ -5,8 +5,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
 
   alias Membrane.Child
   alias Membrane.Core.{Bin, Message, Parent}
-  alias Membrane.Core.Telemetry
   alias Membrane.Core.Bin.PadController
+  alias Membrane.Core.Telemetry
 
   alias Membrane.Core.Parent.{
     ChildLifeController,

@@ -32,6 +32,7 @@ defmodule Membrane.TelemetryTest do
   end
 
   defmodule TelemetryListener do
+    @spec handle_event(atom(), any(), map(), map()) :: :ok
     def handle_event(name, value, metadata, %{dest: pid, ref: ref}) do
       pid |> send({ref, :telemetry_ack, {name, value, metadata}})
     end
@@ -244,7 +245,7 @@ defmodule Membrane.TelemetryTest do
     end
   end
 
-  def assert_event_metadata(metadata) do
+  defp assert_event_metadata(metadata) do
     assert is_atom(metadata.event)
     assert is_list(metadata.component_path)
     assert metadata.component_metadata

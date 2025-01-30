@@ -5,17 +5,18 @@ defmodule Membrane.Core.Telemetry do
   # library. It uses compile time flags from `config.exs` to determine which events should be
   # collected and propagated. This avoids unnecessary runtime overhead when telemetry is not needed.
 
+  alias Membrane.ComponentPath
+  alias Membrane.Element.WithInputPads
+  alias Membrane.Element.WithOutputPads
+  alias Membrane.Pad
+
   require Membrane.Logger
+
+  require Membrane.Bin, as: Bin
   require Membrane.Element.Base, as: ElementBase
   require Membrane.Element.WithOutputPads
   require Membrane.Element.WithInputPads
   require Membrane.Pipeline, as: Pipeline
-  require Membrane.Bin, as: Bin
-
-  alias Membrane.Pad
-  alias Membrane.Element.WithOutputPads
-  alias Membrane.Element.WithInputPads
-  alias Membrane.ComponentPath
 
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
@@ -55,6 +56,7 @@ defmodule Membrane.Core.Telemetry do
     """)
   end
 
+  @spec legacy?() :: boolean()
   def legacy?(), do: @legacy?
 
   # Handles telemetry events that were measured before but differ in how they were emitted
