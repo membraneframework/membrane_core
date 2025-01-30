@@ -61,10 +61,9 @@ defmodule Membrane.Core.Telemetry do
 
   # Handles telemetry events that were measured before but differ in how they were emitted
   defp do_legacy_telemetry(:link, lazy_block) do
-    LegacyTelemetry.report_link(
-      quote(do: unquote(lazy_block)[:from]),
-      quote(do: unquote(lazy_block)[:to])
-    )
+    quote do
+      LegacyTelemetry.report_link(unquote(lazy_block)[:from], unquote(lazy_block)[:to])
+    end
   end
 
   defp do_legacy_telemetry(metric_name, lazy_block) do
@@ -159,6 +158,8 @@ defmodule Membrane.Core.Telemetry do
             _unused = unquote(event_name)
             _unused = unquote(lazy_block)
           end
+
+          :ok
         end
     end
   end
