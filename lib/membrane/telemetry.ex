@@ -188,8 +188,9 @@ defmodule Membrane.Telemetry do
   Lists all possible components and their callbacks that can be gathered when telemetry is enabled
   """
   @spec tracked_callbacks_available() :: [
-          {:bin, [atom(), ...]} | {:element, [atom(), ...]} | {:pipeline, [atom(), ...]},
-          ...
+          pipeline: [atom()],
+          bin: [atom()],
+          element: [atom()]
         ]
   defdelegate tracked_callbacks_available, to: Membrane.Core.Telemetry
 end
