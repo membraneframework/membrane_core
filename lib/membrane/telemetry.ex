@@ -94,8 +94,7 @@ defmodule Membrane.Telemetry do
           type: Element.type(),
           name: Element.name(),
           internal_state: Element.state() | nil,
-          pads_info: PadModel.pads_info() | nil,
-          pads_data: PadModel.pads_data() | nil,
+          pads_data: Membrane.Element.PadData.t() | nil,
           parent_pid: pid()
         }
 
@@ -105,8 +104,7 @@ defmodule Membrane.Telemetry do
           children: ChildrenModel.children(),
           subprocess_supervisor: pid(),
           name: Bin.name() | nil,
-          pads_info: PadModel.pads_info() | nil,
-          pads_data: PadModel.pads_data() | nil,
+          pads_data: Membrane.Bin.PadData.t() | nil,
           parent_pid: pid(),
           links: %{Link.id() => Link.t()},
           crash_groups: %{CrashGroup.name() => CrashGroup.t()},
