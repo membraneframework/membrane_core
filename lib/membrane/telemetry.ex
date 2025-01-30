@@ -4,7 +4,7 @@ defmodule Membrane.Telemetry do
 
   Membrane uses [Telemetry Package](https://hex.pm/packages/telemetry) for instrumentation and does not store or save any measurements by itself.
 
-  It is user's responsibility to use some sort of event consumer and metric reporter
+  It is user's responsibility to use some sort of event handler and metric reporter
   that will be attached to `:telemetry` package to process generated measurements.
 
   ## Instrumentation
