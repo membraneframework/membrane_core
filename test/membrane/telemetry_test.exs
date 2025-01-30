@@ -79,14 +79,14 @@ defmodule Membrane.TelemetryTest do
 
         assert_receive {^ref, :telemetry_ack,
                         {[:membrane, :element, ^event, :start], results,
-                         %{path: [_, ^element_type]}}},
+                         %{component_path: [_, ^element_type]}}},
                        1000
 
-        assert results.system_time >= 0
+        assert results.monotonic_time < 0
 
         assert_receive {^ref, :telemetry_ack,
                         {[:membrane, :element, ^event, :stop], results,
-                         %{path: [_, ^element_type]}}},
+                         %{component_path: [_, ^element_type]}}},
                        1000
 
         assert results.duration >= 0
@@ -160,12 +160,12 @@ defmodule Membrane.TelemetryTest do
     test "in element", %{ref: ref} do
       assert_receive {^ref, :telemetry_ack,
                       {[:membrane, :element, :handle_parent_notification, :start], _results,
-                       %{path: [_, ":filter"]}}},
+                       %{component_path: [_, ":filter"]}}},
                      1000
 
       assert_receive {^ref, :telemetry_ack,
                       {[:membrane, :element, :handle_parent_notification, :exception], results,
-                       %{path: [_, ":filter"]}}},
+                       %{component_path: [_, ":filter"]}}},
                      1000
 
       assert results.duration >= 0
@@ -190,14 +190,14 @@ defmodule Membrane.TelemetryTest do
                  from: ":filter",
                  pad_from: ":output",
                  pad_to: ":input",
-                 parent_path: _,
+                 parent_component_path: _,
                  to: ":sink"
                },
                %{
                  from: ":source",
                  pad_from: ":output",
                  pad_to: ":input",
-                 parent_path: _,
+                 parent_component_path: _,
                  to: ":filter"
                }
              ] = Enum.sort([link1.value, link2.value])

@@ -47,19 +47,12 @@ defmodule Membrane.Telemetry do
   * `:take` - reports the number of buffers taken from the input buffer
   """
 
-  alias Membrane.{Bin, ComponentPath, Element, Pipeline, Playback, ResourceGuard}
-  alias Membrane.Core.Element.EffectiveFlowController
-  alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
-
-  @typedoc """
-  Types of telemetry events reported by Membrane Core
-  """
-  @type event_type :: :link | :buffer | :queue_len | :stream_format | :event | :store
+  alias Membrane.{Bin, ComponentPath, Element, Pipeline}
 
   @typedoc """
   Atom representation of Membrane components subject to telemetry reports
   """
-  @type component :: :element | :bin | :pipeline
+  @type component_type :: :element | :bin | :pipeline
 
   @typedoc """
   Component metadata included in each `t:callback_event_metadata/0`
@@ -67,9 +60,12 @@ defmodule Membrane.Telemetry do
   State only represents component's state at the start of the callback
   """
   @type component_metadata :: %{
-          component_state: element_state() | bin_state() | pipeline_state(),
-          internal_state_after: Element.state() | Bin.state() | Pipeline.state(),
-          internal_state_before: Element.state() | Bin.state() | Pipeline.state()
+          component_context:
+            Element.CallbackContext.t() | Bin.CallbackContext.t() | Pipeline.CallbackContext.t(),
+          component_module: module(),
+          component_path: ComponentPath.path(),
+          internal_state_before: Element.state() | Bin.state() | Pipeline.state(),
+          internal_state_after: Element.state() | Bin.state() | Pipeline.state()
         }
   @typedoc """
   Metadata included with each telemetry component's handler profiled
@@ -78,83 +74,24 @@ defmodule Membrane.Telemetry do
           callback: atom(),
           callback_args: [any()],
           component_metadata: component_metadata(),
-          component_type: component()
-        }
-
-  @type element_state :: %{
-          subprocess_supervisor: pid(),
-          terminating?: boolean(),
-          setup_incomplete?: boolean(),
-          effective_flow_control: EffectiveFlowController.effective_flow_control(),
-          resource_guard: ResourceGuard.t(),
-          initialized?: boolean(),
-          playback: Playback.t(),
-          module: module(),
-          type: Element.type(),
-          name: Element.name(),
-          internal_state: Element.state() | nil,
-          pads_data: Membrane.Element.PadData.t() | nil,
-          parent_pid: pid()
-        }
-
-  @type bin_state :: %{
-          internal_state: Bin.state() | nil,
-          module: module(),
-          children: ChildrenModel.children(),
-          subprocess_supervisor: pid(),
-          name: Bin.name() | nil,
-          pads_data: Membrane.Bin.PadData.t() | nil,
-          parent_pid: pid(),
-          links: %{Link.id() => Link.t()},
-          crash_groups: %{CrashGroup.name() => CrashGroup.t()},
-          children_log_metadata: Keyword.t(),
-          playback: Playback.t(),
-          initialized?: boolean(),
-          terminating?: boolean(),
-          resource_guard: ResourceGuard.t(),
-          setup_incomplete?: boolean()
-        }
-
-  @type pipeline_state :: %{
-          module: module(),
-          playback: Playback.t(),
-          internal_state: Pipeline.state() | nil,
-          children: ChildrenModel.children(),
-          links: %{Link.id() => Link.t()},
-          crash_groups: %{CrashGroup.name() => CrashGroup.t()},
-          initialized?: boolean(),
-          terminating?: boolean(),
-          resource_guard: ResourceGuard.t(),
-          setup_incomplete?: boolean(),
-          subprocess_supervisor: pid()
+          component_type: component_type()
         }
 
   @typedoc """
-  Value of the specific event gathered
+  Types of telemetry events reported by Membrane Core
   """
-  @type event_value :: %{
-          value: map()
-        }
-
-  @typedoc """
-  Metadata included with each telemetry event
-  """
-  @type event_metadata :: %{
-          event: event_type(),
-          component_path: ComponentPath.path(),
-          component_metadata: any()
-        }
+  @type event_type :: :link | :buffer | :queue_len | :stream_format | :event | :store | :take
 
   @typedoc """
   Value of the link event
-  * parent_path - process path of link's parent
+  * parent_component_path - process path of link's parent
   * from - from element name
   * to - to element name
   * pad_from - from's pad name
   * pad_to - to's pad name
   """
   @type link_event_value :: %{
-          parent_path: String.t(),
+          parent_component_path: String.t(),
           from: String.t(),
           to: String.t(),
           pad_from: String.t(),
@@ -165,6 +102,28 @@ defmodule Membrane.Telemetry do
   @type stream_format_event_value :: %{format: map(), pad_ref: String.t()}
   @type incoming_event_value :: String.t()
   @type store_event_value :: %{value: integer(), log_tag: String.t()}
+
+  @typedoc """
+  Value of the specific event gathered
+  """
+  @type event_value :: %{
+          value:
+            buffer_event_value()
+            | queue_len_event_value()
+            | stream_format_event_value()
+            | incoming_event_value()
+            | store_event_value()
+            | integer()
+        }
+
+  @typedoc """
+  Metadata included with each telemetry event
+  """
+  @type event_metadata :: %{
+          event: event_type(),
+          component_path: ComponentPath.path(),
+          component_metadata: any()
+        }
 
   @doc """
   Returns if the event type is configured to be gathered by Membrane's Core telemetry

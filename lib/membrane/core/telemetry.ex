@@ -20,14 +20,14 @@ defmodule Membrane.Core.Telemetry do
 
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
-  @type telemetry_result() ::
+  @type telemetry_callback_result() ::
           {:telemetry_result,
            {
              result :: any(),
              arguments :: list(),
              new_internal_state :: map(),
              old_internal_state :: map(),
-             state :: map()
+             context :: Membrane.Telemetry.callback_event_metadata()
            }}
 
   @component_modules [
@@ -134,10 +134,11 @@ defmodule Membrane.Core.Telemetry do
   defmacrop report_event(event_name, do: lazy_block) do
     unless Macro.quoted_literal?(event_name), do: raise("Event type must be a literal")
 
-    if @legacy? do
-      do_legacy_telemetry(event_name, lazy_block)
-    else
-      if event_gathered?(event_name) do
+    cond do
+      @legacy? ->
+        do_legacy_telemetry(event_name, lazy_block)
+
+      event_gathered?(event_name) ->
         quote do
           value = unquote(lazy_block)
 
@@ -151,21 +152,21 @@ defmodule Membrane.Core.Telemetry do
             }
           )
         end
-      else
+
+      true ->
         quote do
           _fn = fn ->
             _unused = unquote(event_name)
             _unused = unquote(lazy_block)
           end
         end
-      end
     end
   end
 
   @doc """
   Reports an arbitrary span of a function consistent with `span/3` format in `:telementry`
   """
-  @spec component_span(module(), atom(), (-> telemetry_result())) :: any()
+  @spec component_span(module(), atom(), (-> telemetry_callback_result())) :: any()
   def component_span(component_type, callback, f) do
     component_type = state_module_to_atom(component_type)
 
@@ -173,10 +174,11 @@ defmodule Membrane.Core.Telemetry do
       :telemetry.span(
         [:membrane, component_type, callback],
         %{
-          event_metadata: Logger.metadata(),
-          path: ComponentPath.get()
+          component_path: ComponentPath.get(),
+          callback: callback,
+          component_type: component_type
         },
-        fn -> unpack_state_result(f, component_type, callback) end
+        fn -> unpack_state_result(f, callback, component_type) end
       )
     else
       {:telemetry_result, {result, _args, _new_intstate, _old_intstate, _old_state}} = f.()
@@ -184,21 +186,21 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  defp unpack_state_result(fun, component_type, callback) do
+  defp unpack_state_result(fun, callback, component_type) do
     case fun.() do
       {:telemetry_result, {r, args, new_intstate, old_intstate, old_state}} ->
         {r, %{},
          %{
+           callback_args: args,
+           component_path: ComponentPath.get(),
            callback: callback,
-           component_type: component_type,
            component_metadata: %{
-             component_state: old_state,
+             component_type: component_type,
+             component_context: old_state,
+             component_module: old_state.module,
              internal_state_before: old_intstate,
              internal_state_after: new_intstate
-           },
-           callback_args: args,
-           event_metadata: Logger.metadata(),
-           path: ComponentPath.get()
+           }
          }}
 
       _other ->
@@ -210,7 +212,7 @@ defmodule Membrane.Core.Telemetry do
   Formats a telemetry result to be used in a report_span function.
   """
   @spec state_result(any(), list(), internal_state, internal_state, map()) ::
-          telemetry_result()
+          telemetry_callback_result()
         when internal_state: any()
   def state_result(res, args, old_internal_state, new_internal_state, old_state) do
     {:telemetry_result, {res, args, new_internal_state, old_internal_state, old_state}}
@@ -236,22 +238,22 @@ defmodule Membrane.Core.Telemetry do
   @spec report_store(integer(), String.t()) :: :ok
   def report_store(size, log_tag) do
     report_event :store do
-      %{value: size, log_tag: log_tag}
+      %{size: size, log_tag: log_tag}
     end
   end
 
   @spec report_take(integer(), String.t()) :: :ok
   def report_take(size, log_tag) do
     report_event :take do
-      %{value: size, log_tag: log_tag}
+      %{size: size, log_tag: log_tag}
     end
   end
 
-  @spec report_queue_len(integer()) :: :ok
+  @spec report_queue_len(pid()) :: :ok
   def report_queue_len(pid) do
     report_event :queue_len do
       {:message_queue_len, len} = Process.info(pid, :message_queue_len)
-      len
+      %{len: len}
     end
   end
 
@@ -259,7 +261,7 @@ defmodule Membrane.Core.Telemetry do
   def report_link(from, to) do
     report_event :link do
       %{
-        parent_path: ComponentPath.get_formatted(),
+        parent_component_path: ComponentPath.get_formatted(),
         from: inspect(from.child),
         to: inspect(to.child),
         pad_from: Pad.name_by_ref(from.pad_ref) |> inspect(),
