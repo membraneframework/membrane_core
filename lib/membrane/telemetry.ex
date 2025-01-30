@@ -48,7 +48,6 @@ defmodule Membrane.Telemetry do
   """
 
   alias Membrane.{Bin, ComponentPath, Element, Pipeline, Playback, ResourceGuard}
-  alias Membrane.Core.Child.PadModel
   alias Membrane.Core.Element.EffectiveFlowController
   alias Membrane.Core.Parent.{ChildrenModel, CrashGroup, Link}
 
