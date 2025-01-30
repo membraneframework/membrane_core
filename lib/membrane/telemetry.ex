@@ -178,8 +178,9 @@ defmodule Membrane.Telemetry do
   Lists all components and their callbacks tracked by Membrane's Core telemetry
   """
   @spec tracked_callbacks() :: [
-          {:bin, [atom(), ...]} | {:element, [atom(), ...]} | {:pipeline, [atom(), ...]},
-          ...
+          pipeline: [atom()],
+          bin: [atom()],
+          element: [atom()]
         ]
   defdelegate tracked_callbacks, to: Membrane.Core.Telemetry
 
