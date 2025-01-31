@@ -133,7 +133,8 @@ defmodule Membrane.Core.CallbackHandler do
          %{context: context_fun},
          %{module: module, internal_state: internal_state} = state
        ) do
-    args = args ++ [context_fun.(state), internal_state]
+    context = context_fun.(state)
+    args = args ++ [context, internal_state]
 
     callback_result =
       try do
@@ -143,7 +144,13 @@ defmodule Membrane.Core.CallbackHandler do
           fn ->
             res = {_actions, new_internal_state} = apply(module, callback, args)
 
-            Telemetry.state_result(res, args, internal_state, new_internal_state, state)
+            Telemetry.state_result(res, %{
+              args: args,
+              module: module,
+              internal_state_before: internal_state,
+              internal_state_after: new_internal_state,
+              component_context: context
+            })
           end
         )
       rescue

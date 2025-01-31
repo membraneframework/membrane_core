@@ -54,14 +54,16 @@ defmodule Membrane.Telemetry do
   """
   @type component_type :: :element | :bin | :pipeline
 
+  @type component_context ::
+          Element.CallbackContext.t() | Bin.CallbackContext.t() | Pipeline.CallbackContext.t()
+
   @typedoc """
   Component metadata included in each `t:callback_event_metadata/0`
   Internal state is gathered before and after each handler callback.
   State only represents component's state at the start of the callback
   """
   @type component_metadata :: %{
-          component_context:
-            Element.CallbackContext.t() | Bin.CallbackContext.t() | Pipeline.CallbackContext.t(),
+          component_context: component_context(),
           component_module: module(),
           component_path: ComponentPath.path(),
           internal_state_before: Element.state() | Bin.state() | Pipeline.state(),

@@ -21,15 +21,13 @@ defmodule Membrane.Core.Telemetry do
 
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
-  @type telemetry_callback_result() ::
-          {:telemetry_result,
-           {
-             result :: any(),
-             arguments :: list(),
-             new_internal_state :: map(),
-             old_internal_state :: map(),
-             context :: Membrane.Telemetry.callback_event_metadata()
-           }}
+  @type telemetry_callback_metadata() :: %{
+          args: list(any()),
+          module: module(),
+          internal_state_before: any(),
+          internal_state_after: any(),
+          component_context: Membrane.Telemetry.component_context()
+        }
 
   @component_modules [
     bin: [Bin],
@@ -170,7 +168,8 @@ defmodule Membrane.Core.Telemetry do
   @doc """
   Reports an arbitrary span of a function consistent with `span/3` format in `:telementry`
   """
-  @spec component_span(module(), atom(), (-> telemetry_callback_result())) :: any()
+  @spec component_span(module(), atom(), (-> {:telemetry, telemetry_callback_metadata()})) ::
+          any()
   def component_span(component_type, callback, f) do
     component_type = state_module_to_atom(component_type)
 
@@ -185,25 +184,27 @@ defmodule Membrane.Core.Telemetry do
         fn -> unpack_state_result(f, callback, component_type) end
       )
     else
-      {:telemetry_result, {result, _args, _new_intstate, _old_intstate, _old_state}} = f.()
+      {:telemetry_result, {result, _meta}} =
+        f.()
+
       result
     end
   end
 
   defp unpack_state_result(fun, callback, component_type) do
     case fun.() do
-      {:telemetry_result, {r, args, new_intstate, old_intstate, old_state}} ->
-        {r, %{},
+      {:telemetry_result, {result, metadata}} ->
+        {result, %{},
          %{
-           callback_args: args,
+           callback_args: metadata.args,
            component_path: ComponentPath.get(),
            callback: callback,
            component_metadata: %{
              component_type: component_type,
-             component_context: old_state,
-             component_module: old_state.module,
-             internal_state_before: old_intstate,
-             internal_state_after: new_intstate
+             component_context: metadata.component_context,
+             component_module: metadata.module,
+             internal_state_before: metadata.internal_state_before,
+             internal_state_after: metadata.internal_state_after
            }
          }}
 
@@ -215,11 +216,14 @@ defmodule Membrane.Core.Telemetry do
   @doc """
   Formats a telemetry result to be used in a report_span function.
   """
-  @spec state_result(any(), list(), internal_state, internal_state, map()) ::
-          telemetry_callback_result()
-        when internal_state: any()
-  def state_result(res, args, old_internal_state, new_internal_state, old_state) do
-    {:telemetry_result, {res, args, new_internal_state, old_internal_state, old_state}}
+  @spec state_result(
+          result :: result,
+          metadata :: telemetry_callback_metadata()
+        ) ::
+          {:telemetry_result, {result, telemetry_callback_metadata()}}
+        when result: any()
+  def state_result(result, metadata) do
+    {:telemetry_result, {result, metadata}}
   end
 
   @spec report_incoming_event(%{pad_ref: String.t()}) :: :ok
