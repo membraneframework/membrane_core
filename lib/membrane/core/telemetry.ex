@@ -62,6 +62,7 @@ defmodule Membrane.Core.Telemetry do
 
   # Handles telemetry events that were measured before but differ in how they were emitted
   # It's public to avoid dialyzer warnings. Not intended for external use
+  @spec do_legacy_telemetry(atom(), Macro.t()) :: Macro.t()
   def do_legacy_telemetry(:link, lazy_block) do
     quote do
       LegacyTelemetry.report_link(unquote(lazy_block)[:from], unquote(lazy_block)[:to])
