@@ -60,13 +60,14 @@ defmodule Membrane.Core.Telemetry do
   def legacy?(), do: @legacy?
 
   # Handles telemetry events that were measured before but differ in how they were emitted
-  defp do_legacy_telemetry(:link, lazy_block) do
+  # It's public to avoid dialyzer warnings. Not intended for external use
+  def do_legacy_telemetry(:link, lazy_block) do
     quote do
       LegacyTelemetry.report_link(unquote(lazy_block)[:from], unquote(lazy_block)[:to])
     end
   end
 
-  defp do_legacy_telemetry(metric_name, lazy_block) do
+  def do_legacy_telemetry(metric_name, lazy_block) do
     LegacyTelemetry.report_metric(metric_name, lazy_block)
   end
 
