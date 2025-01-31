@@ -6,6 +6,7 @@ defmodule Membrane.Core.Telemetry do
   # collected and propagated. This avoids unnecessary runtime overhead when telemetry is not needed.
 
   alias Membrane.ComponentPath
+  alias Membrane.Core.Parent.Link
   alias Membrane.Element.WithInputPads
   alias Membrane.Element.WithOutputPads
   alias Membrane.Pad
@@ -259,7 +260,7 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  @spec report_link(Membrane.Pad.ref(), Membrane.Pad.ref()) :: :ok
+  @spec report_link(Link.Endpoint.t(), Link.Endpoint.t()) :: :ok
   def report_link(from, to) do
     report_event :link do
       %{
