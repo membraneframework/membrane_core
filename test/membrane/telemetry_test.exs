@@ -179,10 +179,10 @@ defmodule Membrane.TelemetryTest do
     test "Link", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:link, child_spec)
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :event, :link], link1, metadata}}
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :datapoint, :link], link1, metadata}}
       assert_event_metadata(metadata)
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :event, :link], link2, metadata}}
+      assert_receive {^ref, :telemetry_ack, {[:membrane, :datapoint, :link], link2, metadata}}
       assert_event_metadata(metadata)
 
       assert [
@@ -207,7 +207,7 @@ defmodule Membrane.TelemetryTest do
       ref = setup_pipeline_for(:stream_format, child_spec)
 
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :event, :stream_format], measurement, metadata}}
+                      {[:membrane, :datapoint, :stream_format], measurement, metadata}}
 
       assert measurement.value.format.type == :bytestream
       assert_event_metadata(metadata)
@@ -218,7 +218,7 @@ defmodule Membrane.TelemetryTest do
 
       for _ <- 1..3 do
         assert_receive {^ref, :telemetry_ack,
-                        {[:membrane, :event, :buffer], measurement, metadata}}
+                        {[:membrane, :datapoint, :buffer], measurement, metadata}}
 
         assert measurement.value != 0
         assert_event_metadata(metadata)
@@ -228,7 +228,8 @@ defmodule Membrane.TelemetryTest do
     test "Event", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:event, child_spec)
 
-      assert_receive {^ref, :telemetry_ack, {[:membrane, :event, :event], measurement, metadata}}
+      assert_receive {^ref, :telemetry_ack,
+                      {[:membrane, :datapoint, :event], measurement, metadata}}
 
       assert measurement.value.pad_ref == ":input"
       assert_event_metadata(metadata)
@@ -238,7 +239,7 @@ defmodule Membrane.TelemetryTest do
       ref = setup_pipeline_for(:queue_len, child_spec)
 
       assert_receive {^ref, :telemetry_ack,
-                      {[:membrane, :event, :queue_len], measurement, metadata}}
+                      {[:membrane, :datapoint, :queue_len], measurement, metadata}}
 
       assert measurement.value
       assert_event_metadata(metadata)
@@ -246,7 +247,7 @@ defmodule Membrane.TelemetryTest do
   end
 
   defp assert_event_metadata(metadata) do
-    assert is_atom(metadata.event)
+    assert is_atom(metadata.datapoint)
     assert is_list(metadata.component_path)
     assert metadata.component_metadata
   end
@@ -256,7 +257,7 @@ defmodule Membrane.TelemetryTest do
 
     :telemetry.attach(
       ref,
-      [:membrane, :event, event],
+      [:membrane, :datapoint, event],
       &TelemetryListener.handle_measurements/4,
       %{dest: self(), ref: ref}
     )

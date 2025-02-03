@@ -161,7 +161,8 @@ defmodule Membrane.Core.CallbackHandler do
     end
   end
 
-  defp validate_callback_result!({actions, _state} = callback_result) when is_list(actions) do
+  defp validate_callback_result!({actions, _state} = callback_result, _module, _cb)
+       when is_list(actions) do
     callback_result
   end
 

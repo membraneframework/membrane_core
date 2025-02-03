@@ -130,8 +130,8 @@ defmodule Membrane.Telemetry do
   @doc """
   Returns if the event type is configured to be gathered by Membrane's Core telemetry
   """
-  @spec event_gathered?(any()) :: boolean()
-  defdelegate event_gathered?(event_type), to: Membrane.Core.Telemetry
+  @spec datapoint_gathered?(any()) :: boolean()
+  defdelegate datapoint_gathered?(event_type), to: Membrane.Core.Telemetry
 
   @doc """
   Lists all components and their callbacks tracked by Membrane's Core telemetry
