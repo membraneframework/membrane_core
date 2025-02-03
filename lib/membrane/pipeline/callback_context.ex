@@ -15,10 +15,12 @@ defmodule Membrane.Pipeline.CallbackContext do
   `c:Membrane.Pipeline.handle_crash_group_down/3`.
   """
   @type t :: %{
-          :clock => Membrane.Clock.t(),
           :children => %{Membrane.Child.name() => Membrane.ChildEntry.t()},
+          :clock => Membrane.Clock.t(),
+          :module => module(),
           :playback => Membrane.Playback.t(),
           :resource_guard => Membrane.ResourceGuard.t(),
+          :setup_incomplete? => boolean(),
           :utility_supervisor => Membrane.UtilitySupervisor.t(),
           optional(:from) => [GenServer.from()],
           optional(:members) => [Membrane.Child.name()],

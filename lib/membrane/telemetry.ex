@@ -54,35 +54,35 @@ defmodule Membrane.Telemetry do
   """
   @type component_type :: :element | :bin | :pipeline
 
-  @type component_context ::
+  @type callback_context ::
           Element.CallbackContext.t() | Bin.CallbackContext.t() | Pipeline.CallbackContext.t()
 
-  @typedoc """
-  Component metadata included in each `t:callback_event_metadata/0`
-  Internal state is gathered before and after each handler callback.
-  State only represents component's state at the start of the callback
-  """
-  @type component_metadata :: %{
-          component_context: component_context(),
-          component_module: module(),
-          component_path: ComponentPath.path(),
-          internal_state_before: Element.state() | Bin.state() | Pipeline.state(),
-          internal_state_after: Element.state() | Bin.state() | Pipeline.state()
-        }
   @typedoc """
   Metadata included with each telemetry component's handler profiled
   """
   @type callback_event_metadata :: %{
           callback: atom(),
           callback_args: [any()],
-          component_metadata: component_metadata(),
-          component_type: component_type()
+          callback_context: callback_context(),
+          component_path: ComponentPath.path(),
+          component_type: component_type(),
+          internal_state_before: Element.state() | Bin.state() | Pipeline.state(),
+          internal_state_after: Element.state() | Bin.state() | Pipeline.state() | nil
         }
 
   @typedoc """
   Types of telemetry events reported by Membrane Core
   """
   @type event_type :: :link | :buffer | :queue_len | :stream_format | :event | :store | :take
+
+  @typedoc """
+  Metadata included with each telemetry event
+  """
+  @type event_metadata :: %{
+          event: event_type(),
+          component_path: ComponentPath.path(),
+          component_type: component_type()
+        }
 
   @typedoc """
   Value of the link event
@@ -116,15 +116,6 @@ defmodule Membrane.Telemetry do
             | incoming_event_value()
             | store_event_value()
             | integer()
-        }
-
-  @typedoc """
-  Metadata included with each telemetry event
-  """
-  @type event_metadata :: %{
-          event: event_type(),
-          component_path: ComponentPath.path(),
-          component_metadata: any()
         }
 
   @doc """

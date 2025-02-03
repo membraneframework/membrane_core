@@ -8,6 +8,7 @@ defmodule Membrane.Core.CallbackHandler do
   use Bunch
 
   alias Membrane.CallbackError
+  alias Membrane.ComponentPath
 
   require Membrane.Logger
   require Membrane.Core.Telemetry, as: Telemetry
@@ -138,21 +139,8 @@ defmodule Membrane.Core.CallbackHandler do
 
     callback_result =
       try do
-        Telemetry.component_span(
-          state.__struct__,
-          callback,
-          fn ->
-            res = {_actions, new_internal_state} = apply(module, callback, args)
-
-            Telemetry.state_result(res, %{
-              args: args,
-              module: module,
-              internal_state_before: internal_state,
-              internal_state_after: new_internal_state,
-              component_context: context
-            })
-          end
-        )
+        fn -> apply(module, callback, args) end
+        |> report_telemetry(callback, args, state, context)
       rescue
         e in UndefinedFunctionError ->
           _ignored =
@@ -180,6 +168,23 @@ defmodule Membrane.Core.CallbackHandler do
           callback: {module, callback},
           value: callback_result
     end
+  end
+
+  defp report_telemetry(f, callback, args, state, context) do
+    Telemetry.span_component_callback(
+      f,
+      state.__struct__,
+      callback,
+      %{
+        callback: callback,
+        callback_args: args,
+        callback_context: context,
+        component_type: state.module,
+        component_path: ComponentPath.get(),
+        internal_state_before: state.internal_state,
+        internal_state_after: nil
+      }
+    )
   end
 
   @spec handle_callback_result(

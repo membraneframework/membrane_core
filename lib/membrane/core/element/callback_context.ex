@@ -15,9 +15,11 @@ defmodule Membrane.Core.Element.CallbackContext do
       pads: state.pads_data,
       clock: state.synchronization.clock,
       parent_clock: state.synchronization.parent_clock,
+      module: state.module,
       name: state.name,
       playback: state.playback,
       resource_guard: state.resource_guard,
+      setup_incomplete?: state.setup_incomplete?,
       utility_supervisor: state.subprocess_supervisor
     })
   end

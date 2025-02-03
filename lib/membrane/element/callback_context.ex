@@ -19,12 +19,14 @@ defmodule Membrane.Element.CallbackContext do
   `c:Membrane.Element.WithInputPads.handle_stream_format/4`.
   """
   @type t :: %{
-          :pads => %{Membrane.Pad.ref() => Membrane.Element.PadData.t()},
           :clock => Membrane.Clock.t() | nil,
-          :parent_clock => Membrane.Clock.t() | nil,
+          :module => module(),
           :name => Membrane.Element.name(),
+          :pads => %{Membrane.Pad.ref() => Membrane.Element.PadData.t()},
+          :parent_clock => Membrane.Clock.t() | nil,
           :playback => Membrane.Playback.t(),
           :resource_guard => Membrane.ResourceGuard.t(),
+          :setup_incomplete? => boolean(),
           :utility_supervisor => Membrane.UtilitySupervisor.t(),
           optional(:incoming_demand) => non_neg_integer(),
           optional(:pad_options) => map(),

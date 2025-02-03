@@ -5,11 +5,15 @@ defmodule Membrane.Core.Telemetry do
   # library. It uses compile time flags from `config.exs` to determine which events should be
   # collected and propagated. This avoids unnecessary runtime overhead when telemetry is not needed.
 
-  alias Membrane.ComponentPath
+  require Logger
+  alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Parent.Link
+
+  alias Membrane.ComponentPath
   alias Membrane.Element.WithInputPads
   alias Membrane.Element.WithOutputPads
   alias Membrane.Pad
+  alias Membrane.Telemetry
 
   require Membrane.Logger
 
@@ -20,14 +24,6 @@ defmodule Membrane.Core.Telemetry do
   require Membrane.Pipeline, as: Pipeline
 
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
-
-  @type telemetry_callback_metadata() :: %{
-          args: list(any()),
-          module: module(),
-          internal_state_before: any(),
-          internal_state_after: any(),
-          component_context: Membrane.Telemetry.component_context()
-        }
 
   @component_modules [
     bin: [Bin],
@@ -168,62 +164,34 @@ defmodule Membrane.Core.Telemetry do
   @doc """
   Reports an arbitrary span of a function consistent with `span/3` format in `:telementry`
   """
-  @spec component_span(module(), atom(), (-> {:telemetry, telemetry_callback_metadata()})) ::
-          any()
-  def component_span(component_type, callback, f) do
-    component_type = state_module_to_atom(component_type)
+  @spec span_component_callback(
+          (-> CallbackHandler.callback_return() | any()),
+          module(),
+          atom(),
+          Telemetry.callback_event_metadata()
+        ) :: CallbackHandler.callback_return() | any()
+  def span_component_callback(f, component_module, callback, meta) do
+    component_type = state_module_to_atom(component_module)
 
     if handler_reported?(component_type, callback) do
-      :telemetry.span(
-        [:membrane, component_type, callback],
-        %{
-          component_path: ComponentPath.get(),
-          callback: callback,
-          component_type: component_type
-        },
-        fn -> unpack_state_result(f, callback, component_type) end
-      )
+      :telemetry.span([:membrane, component_type, callback], meta, fn -> report_span(f, meta) end)
     else
-      {:telemetry_result, {result, _meta}} =
-        f.()
-
-      result
+      f.()
     end
   end
 
-  defp unpack_state_result(fun, callback, component_type) do
-    case fun.() do
-      {:telemetry_result, {result, metadata}} ->
-        {result, %{},
-         %{
-           callback_args: metadata.args,
-           component_path: ComponentPath.get(),
-           callback: callback,
-           component_metadata: %{
-             component_type: component_type,
-             component_context: metadata.component_context,
-             component_module: metadata.module,
-             internal_state_before: metadata.internal_state_before,
-             internal_state_after: metadata.internal_state_after
-           }
-         }}
+  defp report_span(f, meta) do
+    case f.() do
+      {_actions, int_state} = res ->
+        {res, %{meta | internal_state_after: int_state}}
 
-      _other ->
-        raise "Unexpected telemetry span result. Use Telemetry.state_result/3 instead"
+      other ->
+        Logger.warning(
+          "Telemetry span_component_callback failed due to incorrect callback return type"
+        )
+
+        {other, %{}}
     end
-  end
-
-  @doc """
-  Formats a telemetry result to be used in a report_span function.
-  """
-  @spec state_result(
-          result :: result,
-          metadata :: telemetry_callback_metadata()
-        ) ::
-          {:telemetry_result, {result, telemetry_callback_metadata()}}
-        when result: any()
-  def state_result(result, metadata) do
-    {:telemetry_result, {result, metadata}}
   end
 
   @spec report_incoming_event(%{pad_ref: String.t()}) :: :ok
@@ -278,7 +246,7 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  defp state_module_to_atom(Membrane.Core.Element.State), do: :element
-  defp state_module_to_atom(Membrane.Core.Bin.State), do: :bin
-  defp state_module_to_atom(Membrane.Core.Pipeline.State), do: :pipeline
+  def state_module_to_atom(Membrane.Core.Element.State), do: :element
+  def state_module_to_atom(Membrane.Core.Bin.State), do: :bin
+  def state_module_to_atom(Membrane.Core.Pipeline.State), do: :pipeline
 end
