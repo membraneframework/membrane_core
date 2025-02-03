@@ -162,7 +162,7 @@ defmodule Membrane.Core.Telemetry do
   end
 
   @doc """
-  Reports an arbitrary span of a function consistent with `span/3` format in `:telementry`
+  Reports a span of a compoment callback function in a format consistent with `span/3` in `:telementry`
   """
   @spec span_component_callback(
           (-> CallbackHandler.callback_return() | any()),
@@ -183,6 +183,7 @@ defmodule Membrane.Core.Telemetry do
   defp report_span(f, meta) do
     case f.() do
       {_actions, int_state} = res ->
+        # Append the internal state returned from the callback to the metadata
         {res, %{meta | internal_state_after: int_state}}
 
       other ->

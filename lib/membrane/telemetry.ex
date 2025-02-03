@@ -59,6 +59,13 @@ defmodule Membrane.Telemetry do
 
   @typedoc """
   Metadata included with each telemetry component's handler profiled
+  * callback - name of the callback function
+  * callback_args - arguments passed to the callback
+  * callback_context - context of the callback consistent with Membrane.*.CallbackContext
+  * component_path - path of the component in the pipeline consistent with t:ComponentPath.path/0
+  * component_type - atom representation of the base component type
+  * internal_state_before - state of the component before the callback execution
+  * internal_state_after - state of the component after the callback execution, it's `nil` on :start and :exception events
   """
   @type callback_event_metadata :: %{
           callback: atom(),

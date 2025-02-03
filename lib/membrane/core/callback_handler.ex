@@ -179,8 +179,8 @@ defmodule Membrane.Core.CallbackHandler do
         callback: callback,
         callback_args: args,
         callback_context: context,
-        component_type: state.module,
         component_path: ComponentPath.get(),
+        component_type: state.module,
         internal_state_before: state.internal_state,
         internal_state_after: nil
       }
