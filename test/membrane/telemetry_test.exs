@@ -1,6 +1,6 @@
 defmodule Membrane.TelemetryTest do
   @moduledoc """
-  Test suite for Membrane telemetry public API. It tests if telemetry events are reported
+  Test suite for Membrane telemetry public API. It tests if telemetry datapoints are reported
   properly for all event types and span types upon attaching to the :telemetry system.
   """
 
@@ -32,8 +32,8 @@ defmodule Membrane.TelemetryTest do
   end
 
   defmodule TelemetryListener do
-    @spec handle_event(atom(), any(), map(), map()) :: :ok
-    def handle_event(name, value, metadata, %{dest: pid, ref: ref}) do
+    @spec handle_measurements(atom(), any(), map(), map()) :: :ok
+    def handle_measurements(name, value, metadata, %{dest: pid, ref: ref}) do
       pid |> send({ref, :telemetry_ack, {name, value, metadata}})
     end
   end
@@ -72,20 +72,20 @@ defmodule Membrane.TelemetryTest do
 
     # Test each lifecycle step for each element type
     for element_type <- @paths,
-        event <- @spans do
-      test "#{element_type}/#{event}", %{ref: ref} do
+        span <- @spans do
+      test "#{element_type}/#{span}", %{ref: ref} do
         element_type = unquote(element_type)
-        event = unquote(event)
+        span = unquote(span)
 
         assert_receive {^ref, :telemetry_ack,
-                        {[:membrane, :element, ^event, :start], results,
+                        {[:membrane, :element, ^span, :start], results,
                          %{component_path: [_, ^element_type]}}},
                        1000
 
         assert results.monotonic_time
 
         assert_receive {^ref, :telemetry_ack,
-                        {[:membrane, :element, ^event, :stop], results,
+                        {[:membrane, :element, ^span, :stop], results,
                          %{component_path: [_, ^element_type]}}},
                        1000
 
@@ -99,9 +99,9 @@ defmodule Membrane.TelemetryTest do
       ref = make_ref()
 
       spans =
-        for event <- @spans,
+        for span <- @spans,
             step <- @steps do
-          [:membrane, :pipeline, event, step]
+          [:membrane, :pipeline, span, step]
         end
 
       setup_pipeline_for_callbacks(spans, child_spec, ref)
@@ -143,7 +143,7 @@ defmodule Membrane.TelemetryTest do
           [:membrane, :element, :handle_parent_notification, :exception]
         ]
 
-      :telemetry.attach_many(ref, spans, &TelemetryListener.handle_event/4, %{
+      :telemetry.attach_many(ref, spans, &TelemetryListener.handle_measurements/4, %{
         dest: self(),
         ref: ref
       })
@@ -175,7 +175,7 @@ defmodule Membrane.TelemetryTest do
     end
   end
 
-  describe "Telemetry properly reports following events: " do
+  describe "Telemetry properly reports following datapoints: " do
     test "Link", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:link, child_spec)
 
@@ -257,7 +257,7 @@ defmodule Membrane.TelemetryTest do
     :telemetry.attach(
       ref,
       [:membrane, :event, event],
-      &TelemetryListener.handle_event/4,
+      &TelemetryListener.handle_measurements/4,
       %{dest: self(), ref: ref}
     )
 
@@ -267,7 +267,7 @@ defmodule Membrane.TelemetryTest do
   end
 
   defp setup_pipeline_for_callbacks(spans, child_spec, ref) do
-    :telemetry.attach_many(ref, spans, &TelemetryListener.handle_event/4, %{
+    :telemetry.attach_many(ref, spans, &TelemetryListener.handle_measurements/4, %{
       dest: self(),
       ref: ref
     })

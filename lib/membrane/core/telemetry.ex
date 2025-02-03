@@ -1,6 +1,6 @@
 defmodule Membrane.Core.Telemetry do
   @moduledoc false
-  # This module provides a way to gather events from running Membrane components, as well
+  # This module provides a way to gather datapoints and spans from running Membrane components, as well
   # as exposing these events in a format idiomatic to [Telemetry](https://hexdocs.pm/telemetry/)
   # library. It uses compile time flags from `config.exs` to determine which events should be
   # collected and propagated. This avoids unnecessary runtime overhead when telemetry is not needed.
@@ -52,7 +52,7 @@ defmodule Membrane.Core.Telemetry do
   @spec legacy?() :: boolean()
   def legacy?(), do: @legacy?
 
-  # Handles telemetry events that were measured before but differ in how they were emitted
+  # Handles telemetry datapoints that were measured before but differ in how they were emitted
   # It's public to avoid dialyzer warnings. Not intended for external use
   @spec do_legacy_telemetry(atom(), Macro.t()) :: Macro.t()
   def do_legacy_telemetry(:link, lazy_block) do
@@ -75,25 +75,25 @@ defmodule Membrane.Core.Telemetry do
         nil
 
       callbacks_list when is_list(callbacks_list) ->
-        for event <- callbacks_list do
-          if event not in @possible_callbacks[component] do
+        for callback <- callbacks_list do
+          if callback not in @possible_callbacks[component] do
             raise """
-              Invalid telemetry flag: #{inspect(event)}.
+              Invalid telemetry flag: #{inspect(callback)}.
               Possible values for #{component} are: #{inspect(@possible_callbacks[component])}
             """
           end
 
-          def handler_reported?(unquote(component), unquote(event)), do: true
+          def handler_reported?(unquote(component), unquote(callback)), do: true
         end
     end
   end
 
   def handler_reported?(_component, _callback), do: false
 
-  @spec event_gathered?(any()) :: false | nil | true
-  def event_gathered?(event) do
-    events = @config[:events]
-    events && (events == :all || event in events)
+  @spec datapoint_gathered?(any()) :: false | nil | true
+  def datapoint_gathered?(datapoint) do
+    datapoints = @config[:datapoints]
+    datapoints && (datapoints == :all || datapoint in datapoints)
   end
 
   @spec tracked_callbacks_available() :: [
@@ -125,22 +125,22 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  defmacrop report_event(event_name, do: lazy_block) do
-    unless Macro.quoted_literal?(event_name), do: raise("Event type must be a literal")
+  defmacrop report_datapoint(datapoint_name, do: lazy_block) do
+    unless Macro.quoted_literal?(datapoint_name), do: raise("Datapoint type must be a literal")
 
     cond do
       @legacy? ->
-        do_legacy_telemetry(event_name, lazy_block)
+        do_legacy_telemetry(datapoint_name, lazy_block)
 
-      event_gathered?(event_name) ->
+      datapoint_gathered?(datapoint_name) ->
         quote do
           value = unquote(lazy_block)
 
           :telemetry.execute(
-            [:membrane, :event, unquote(event_name)],
+            [:membrane, :datapoint, unquote(datapoint_name)],
             %{value: value},
             %{
-              event: unquote(event_name),
+              datapoint: unquote(datapoint_name),
               component_path: ComponentPath.get(),
               component_metadata: Logger.metadata()
             }
@@ -150,7 +150,7 @@ defmodule Membrane.Core.Telemetry do
       true ->
         quote do
           _fn = fn ->
-            _unused = unquote(event_name)
+            _unused = unquote(datapoint_name)
             _unused = unquote(lazy_block)
           end
 
@@ -163,70 +163,60 @@ defmodule Membrane.Core.Telemetry do
   Reports a span of a compoment callback function in a format consistent with `span/3` in `:telementry`
   """
   @spec span_component_callback(
-          (-> CallbackHandler.callback_return() | any()),
+          (-> CallbackHandler.callback_return() | no_return()),
           module(),
           atom(),
-          Telemetry.callback_event_metadata()
-        ) :: CallbackHandler.callback_return() | any()
+          Telemetry.callback_span_metadata()
+        ) :: CallbackHandler.callback_return() | no_return()
   def span_component_callback(f, component_module, callback, meta) do
     component_type = state_module_to_atom(component_module)
 
     if handler_reported?(component_type, callback) do
-      :telemetry.span([:membrane, component_type, callback], meta, fn -> report_span(f, meta) end)
+      :telemetry.span([:membrane, component_type, callback], meta, fn ->
+        {_actions, int_state} = res = f.()
+
+        # Append the internal state returned from the callback to the metadata
+        {res, %{meta | internal_state_after: int_state}}
+      end)
     else
       f.()
     end
   end
 
-  defp report_span(f, meta) do
-    case f.() do
-      {_actions, int_state} = res ->
-        # Append the internal state returned from the callback to the metadata
-        {res, %{meta | internal_state_after: int_state}}
-
-      other ->
-        Logger.warning(
-          "Telemetry span_component_callback failed due to incorrect callback return type"
-        )
-
-        {other, %{}}
-    end
-  end
-
   @spec report_incoming_event(%{pad_ref: String.t()}) :: :ok
-  def report_incoming_event(meta), do: report_event(:event, do: meta)
+  def report_incoming_event(meta), do: report_datapoint(:event, do: meta)
 
   @spec report_stream_format(Membrane.StreamFormat.t(), String.t()) :: :ok
   def report_stream_format(format, pad_ref),
-    do: report_event(:stream_format, do: %{format: format, pad_ref: pad_ref})
+    do: report_datapoint(:stream_format, do: %{format: format, pad_ref: pad_ref})
 
   @spec report_buffer(integer() | list()) :: :ok
   def report_buffer(length)
 
   def report_buffer(length) when is_integer(length),
-    do: report_event(:buffer, do: length)
+    do: report_datapoint(:buffer, do: length)
 
   def report_buffer(buffers) do
-    report_event(:buffer, do: length(buffers))
+    report_datapoint(:buffer, do: length(buffers))
   end
 
   @spec report_store(integer(), String.t()) :: :ok
   def report_store(size, log_tag) do
-    report_event :store do
+    report_datapoint :store do
       %{size: size, log_tag: log_tag}
     end
   end
 
   @spec report_take(integer(), String.t()) :: :ok
   def report_take(size, log_tag) do
-    report_event :take do
+    report_datapoint :take do
       %{size: size, log_tag: log_tag}
     end
   end
 
   @spec report_queue_len(pid()) :: :ok
   def report_queue_len(pid) do
-    report_event :queue_len do
+    report_datapoint :queue_len do
       {:message_queue_len, len} = Process.info(pid, :message_queue_len)
       %{len: len}
     end
@@ -234,7 +224,7 @@ defmodule Membrane.Core.Telemetry do
 
   @spec report_link(Link.Endpoint.t(), Link.Endpoint.t()) :: :ok
   def report_link(from, to) do
-    report_event :link do
+    report_datapoint :link do
       %{
         parent_component_path: ComponentPath.get_formatted(),
         from: inspect(from.child),

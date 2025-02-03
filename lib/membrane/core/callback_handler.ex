@@ -127,7 +127,7 @@ defmodule Membrane.Core.CallbackHandler do
   end
 
   @spec exec_callback(callback :: atom, args :: list, handler_params, state) ::
-          {list, internal_state}
+          {list, internal_state} | no_return()
   defp exec_callback(
          callback,
          args,
@@ -137,37 +137,39 @@ defmodule Membrane.Core.CallbackHandler do
     context = context_fun.(state)
     args = args ++ [context, internal_state]
 
-    callback_result =
-      try do
-        fn -> apply(module, callback, args) end
-        |> report_telemetry(callback, args, state, context)
-      rescue
-        e in UndefinedFunctionError ->
-          _ignored =
-            with %{module: ^module, function: ^callback, arity: arity} <- e do
-              reraise CallbackError,
-                      [
-                        kind: :not_implemented,
-                        callback: {module, callback},
-                        arity: arity,
-                        args: args
-                      ],
-                      __STACKTRACE__
-            end
-
-          reraise e, __STACKTRACE__
+    try do
+      fn ->
+        apply(module, callback, args)
+        |> validate_callback_result!(module, callback)
       end
+      |> report_telemetry(callback, args, state, context)
+    rescue
+      e in UndefinedFunctionError ->
+        _ignored =
+          with %{module: ^module, function: ^callback, arity: arity} <- e do
+            reraise CallbackError,
+                    [
+                      kind: :not_implemented,
+                      callback: {module, callback},
+                      arity: arity,
+                      args: args
+                    ],
+                    __STACKTRACE__
+          end
 
-    case callback_result do
-      {actions, _state} when is_list(actions) ->
-        callback_result
-
-      _result ->
-        raise CallbackError,
-          kind: :bad_return,
-          callback: {module, callback},
-          value: callback_result
+        reraise e, __STACKTRACE__
     end
+  end
+
+  defp validate_callback_result!({actions, _state} = callback_result) when is_list(actions) do
+    callback_result
+  end
+
+  defp validate_callback_result!(callback_result, module, callback) do
+    raise CallbackError,
+      kind: :bad_return,
+      callback: {module, callback},
+      value: callback_result
   end
 
   defp report_telemetry(f, callback, args, state, context) do

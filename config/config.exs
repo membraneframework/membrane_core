@@ -15,7 +15,7 @@ if config_env() == :test do
       bin: :all,
       pipeline: :all
     ],
-    events: :all
+    datapoints: :all
 
   # config to test legacy version of telemetry
   # config :membrane_core, :telemetry_flags, [

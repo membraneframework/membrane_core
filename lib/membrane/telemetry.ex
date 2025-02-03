@@ -8,7 +8,7 @@ defmodule Membrane.Telemetry do
   that will be attached to `:telemetry` package to process generated measurements.
 
   ## Instrumentation
-  The following events are published by Membrane's Core with following measurement types and metadata:
+  The following telemetric events are published by Membrane's Core components:
 
     * `[:membrane, :element | :bin | :pipeline, handler, :start | :stop | :exception]` -
     where handler is any possible handle_* function defined for a component.
@@ -16,14 +16,14 @@ defmodule Membrane.Telemetry do
       * `:stop` - when the handler finishes execution
       * `:exception` - when the component's handler crashes during execution
 
-    * `[:membrane, :event, event_type]` -
-    where event_type is any of the available event types (see below)
+    * `[:membrane, :datapoint, datapoint_type]` -
+    where datapoint_type is any of the available datapoint types (see below)
 
-  ## Enabling specific events
-  A lot of events can happen hundreds times per second such as registering that a buffer has been sent/processed.
+  ## Enabling specific datapoints
+  A lot of datapoints can happen hundreds times per second such as registering that a buffer has been sent/processed.
 
   This behaviour can come with a great performance penalties but may be helpful for certain discoveries. To avoid any runtime overhead
-  when the reporting is not necessary all events/events are hidden behind a compile-time feature flags.
+  when the reporting is not necessary all spans/datapoints are hidden behind a compile-time feature flags.
   To enable a particular measurement one must recompile membrane core with the following config put inside
   user's application `config.exs` file:
 
@@ -31,13 +31,15 @@ defmodule Membrane.Telemetry do
       config :membrane_core,
         telemetry_flags: [
           tracked_callbacks: [
-            [:handle_setup, ...] | :all
-          ]
-        events: [:buffer, ...] | :all
+            bin: [:handle_setup, ...] | :all,
+            element: [:handle_init, ...] | :all,
+            pipeline: [:handle_init, ...] | :all
+          ],
+        datapoints: [:buffer, ...] | :all
         ]
     ```
 
-  Available events are:
+  Available datapoints are:
   * `:link` - reports the number of links created in the pipeline
   * `:buffer` - number of buffers being sent from a particular element
   * `:queue_len` - number of messages in element's message queue during GenServer's `handle_info` invocation
@@ -67,7 +69,7 @@ defmodule Membrane.Telemetry do
   * internal_state_before - state of the component before the callback execution
   * internal_state_after - state of the component after the callback execution, it's `nil` on :start and :exception events
   """
-  @type callback_event_metadata :: %{
+  @type callback_span_metadata :: %{
           callback: atom(),
           callback_args: [any()],
           callback_context: callback_context(),
@@ -78,50 +80,50 @@ defmodule Membrane.Telemetry do
         }
 
   @typedoc """
-  Types of telemetry events reported by Membrane Core
+  Types of telemetry datapoints reported by Membrane Core
   """
-  @type event_type :: :link | :buffer | :queue_len | :stream_format | :event | :store | :take
+  @type datapoint_type :: :link | :buffer | :queue_len | :stream_format | :event | :store | :take
 
   @typedoc """
   Metadata included with each telemetry event
   """
-  @type event_metadata :: %{
-          event: event_type(),
+  @type datapoint_metadata :: %{
+          datapoint: datapoint_type(),
           component_path: ComponentPath.path(),
           component_type: component_type()
         }
 
   @typedoc """
-  Value of the link event
+  Value of the link datapoint
   * parent_component_path - process path of link's parent
   * from - from element name
   * to - to element name
   * pad_from - from's pad name
   * pad_to - to's pad name
   """
-  @type link_event_value :: %{
+  @type link_datapoint_value :: %{
           parent_component_path: String.t(),
           from: String.t(),
           to: String.t(),
           pad_from: String.t(),
           pad_to: String.t()
         }
-  @type buffer_event_value :: integer()
-  @type queue_len_event_value :: integer()
-  @type stream_format_event_value :: %{format: map(), pad_ref: String.t()}
-  @type incoming_event_value :: String.t()
-  @type store_event_value :: %{value: integer(), log_tag: String.t()}
+  @type buffer_datapoint_value :: integer()
+  @type queue_len_datapoint_value :: integer()
+  @type stream_format_datapoint_value :: %{format: map(), pad_ref: String.t()}
+  @type incoming_datapoint_value :: String.t()
+  @type store_datapoint_value :: %{value: integer(), log_tag: String.t()}
 
   @typedoc """
   Value of the specific event gathered
   """
-  @type event_value :: %{
+  @type datapoint_value :: %{
           value:
-            buffer_event_value()
-            | queue_len_event_value()
-            | stream_format_event_value()
-            | incoming_event_value()
-            | store_event_value()
+            buffer_datapoint_value()
+            | queue_len_datapoint_value()
+            | stream_format_datapoint_value()
+            | incoming_datapoint_value()
+            | store_datapoint_value()
             | integer()
         }
 
