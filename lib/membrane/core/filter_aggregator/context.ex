@@ -37,12 +37,14 @@ defmodule Membrane.Core.FilterAggregator.Context do
       |> Map.new(fn {name, description} -> {name, build_pad_data(description)} end)
 
     %{
+      module: module,
       pads: pads_data,
       clock: nil,
       name: name,
       parent_clock: nil,
       playback: :stopped,
       resource_guard: agg_ctx.resource_guard,
+      setup_incomplete?: true,
       utility_supervisor: agg_ctx.utility_supervisor
     }
   end

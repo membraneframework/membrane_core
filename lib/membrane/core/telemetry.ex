@@ -5,7 +5,6 @@ defmodule Membrane.Core.Telemetry do
   # library. It uses compile time flags from `config.exs` to determine which events should be
   # collected and propagated. This avoids unnecessary runtime overhead when telemetry is not needed.
 
-  require Logger
   alias Membrane.Core.CallbackHandler
   alias Membrane.Core.Parent.Link
 
@@ -15,13 +14,12 @@ defmodule Membrane.Core.Telemetry do
   alias Membrane.Pad
   alias Membrane.Telemetry
 
-  require Membrane.Logger
-
   require Membrane.Bin, as: Bin
   require Membrane.Element.Base, as: ElementBase
   require Membrane.Element.WithOutputPads
   require Membrane.Element.WithInputPads
   require Membrane.Pipeline, as: Pipeline
+  require Logger
 
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
@@ -247,7 +245,7 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  def state_module_to_atom(Membrane.Core.Element.State), do: :element
-  def state_module_to_atom(Membrane.Core.Bin.State), do: :bin
-  def state_module_to_atom(Membrane.Core.Pipeline.State), do: :pipeline
+  defp state_module_to_atom(Membrane.Core.Element.State), do: :element
+  defp state_module_to_atom(Membrane.Core.Bin.State), do: :bin
+  defp state_module_to_atom(Membrane.Core.Pipeline.State), do: :pipeline
 end
