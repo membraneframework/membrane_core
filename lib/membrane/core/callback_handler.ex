@@ -8,7 +8,6 @@ defmodule Membrane.Core.CallbackHandler do
   use Bunch
 
   alias Membrane.CallbackError
-  alias Membrane.ComponentPath
 
   require Membrane.Logger
   require Membrane.Core.Telemetry, as: Telemetry
@@ -174,19 +173,16 @@ defmodule Membrane.Core.CallbackHandler do
   end
 
   defp report_telemetry(f, callback, args, state, context) do
-    Telemetry.span_component_callback(
+    Telemetry.track_component_callback(
       f,
       state.__struct__,
       callback,
-      %{
-        callback: callback,
-        callback_args: args,
-        callback_context: context,
-        component_path: ComponentPath.get(),
-        component_type: state.module,
-        internal_state_before: state.internal_state,
-        internal_state_after: nil
-      }
+      Telemetry.callback_meta(
+        state,
+        callback,
+        args,
+        context
+      )
     )
   end
 

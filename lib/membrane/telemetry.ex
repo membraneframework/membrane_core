@@ -66,8 +66,8 @@ defmodule Membrane.Telemetry do
   * callback_context - context of the callback consistent with Membrane.*.CallbackContext
   * component_path - path of the component in the pipeline consistent with t:ComponentPath.path/0
   * component_type - atom representation of the base component type
-  * internal_state_before - state of the component before the callback execution
-  * internal_state_after - state of the component after the callback execution, it's `nil` on :start and :exception events
+  * state_before_callback - state of the component before the callback execution
+  * state_after_callback - state of the component after the callback execution, it's `nil` on :start and :exception events
   """
   @type callback_span_metadata :: %{
           callback: atom(),
@@ -75,8 +75,8 @@ defmodule Membrane.Telemetry do
           callback_context: callback_context(),
           component_path: ComponentPath.path(),
           component_type: component_type(),
-          internal_state_before: Element.state() | Bin.state() | Pipeline.state(),
-          internal_state_after: Element.state() | Bin.state() | Pipeline.state() | nil
+          state_before_callback: Element.state() | Bin.state() | Pipeline.state(),
+          state_after_callback: Element.state() | Bin.state() | Pipeline.state() | nil
         }
 
   @typedoc """
@@ -131,7 +131,7 @@ defmodule Membrane.Telemetry do
   Returns if the event type is configured to be gathered by Membrane's Core telemetry
   """
   @spec datapoint_gathered?(any()) :: boolean()
-  defdelegate datapoint_gathered?(event_type), to: Membrane.Core.Telemetry
+  defdelegate datapoint_gathered?(type), to: Membrane.Core.Telemetry
 
   @doc """
   Lists all components and their callbacks tracked by Membrane's Core telemetry

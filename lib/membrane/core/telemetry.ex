@@ -9,6 +9,7 @@ defmodule Membrane.Core.Telemetry do
   alias Membrane.Core.Parent.Link
 
   alias Membrane.ComponentPath
+  alias Membrane.Element
   alias Membrane.Element.WithInputPads
   alias Membrane.Element.WithOutputPads
   alias Membrane.Pad
@@ -162,13 +163,13 @@ defmodule Membrane.Core.Telemetry do
   @doc """
   Reports a span of a compoment callback function in a format consistent with `span/3` in `:telementry`
   """
-  @spec span_component_callback(
+  @spec track_component_callback(
           (-> CallbackHandler.callback_return() | no_return()),
           module(),
           atom(),
           Telemetry.callback_span_metadata()
         ) :: CallbackHandler.callback_return() | no_return()
-  def span_component_callback(f, component_module, callback, meta) do
+  def track_component_callback(f, component_module, callback, meta) do
     component_type = state_module_to_atom(component_module)
 
     if handler_reported?(component_type, callback) do
@@ -176,11 +177,32 @@ defmodule Membrane.Core.Telemetry do
         {_actions, int_state} = res = f.()
 
         # Append the internal state returned from the callback to the metadata
-        {res, %{meta | internal_state_after: int_state}}
+        {res, %{meta | state_after_callback: int_state}}
       end)
     else
       f.()
     end
+  end
+
+  @doc """
+  Formats metadata for a span of a component callback function
+  """
+  @spec callback_meta(
+          Element.state() | Bin.state() | Pipeline.state(),
+          atom(),
+          [any()],
+          Telemetry.callback_context()
+        ) :: Telemetry.callback_span_metadata()
+  def callback_meta(state, callback, args, context) do
+    %{
+      callback: callback,
+      callback_args: args,
+      callback_context: context,
+      component_path: ComponentPath.get(),
+      component_type: state.module,
+      state_before_callback: state.internal_state,
+      state_after_callback: nil
+    }
   end
 
   @spec report_incoming_event(%{pad_ref: String.t()}) :: :ok
