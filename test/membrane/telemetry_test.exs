@@ -2,6 +2,30 @@ defmodule Membrane.TelemetryTest do
   @moduledoc """
   Test suite for Membrane telemetry public API. It tests if telemetry datapoints are reported
   properly for all event types and span types upon attaching to the :telemetry system.
+
+
+  Remove below with 2.0.0 release:
+  In case of a need to test legacy telemetry paste the following snippet into the config file:
+
+  # config to test legacy version of telemetry
+  # config :membrane_core, :telemetry_flags, [
+  #   :report_init,
+  #   :report_terminate,
+  #   :report_buffer,
+  #   :report_queue,
+  #   :report_link,
+  #   metrics: [
+  #     :buffer,
+  #     :bitrate,
+  #     :queue_len,
+  #     :stream_format,
+  #     :event,
+  #     :store,
+  #     :take_and_demand
+  #   ]
+  # ]
+
+  ```
   """
 
   use ExUnit.Case, async: false
