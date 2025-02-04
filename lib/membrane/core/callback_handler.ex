@@ -173,7 +173,7 @@ defmodule Membrane.Core.CallbackHandler do
   end
 
   defp report_telemetry(f, callback, args, state, context) do
-    Telemetry.track_component_callback(
+    Telemetry.track_callback_handler(
       f,
       state.__struct__,
       callback,

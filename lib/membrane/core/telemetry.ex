@@ -163,13 +163,13 @@ defmodule Membrane.Core.Telemetry do
   @doc """
   Reports a span of a compoment callback function in a format consistent with `span/3` in `:telementry`
   """
-  @spec track_component_callback(
+  @spec track_callback_handler(
           (-> CallbackHandler.callback_return() | no_return()),
           module(),
           atom(),
           Telemetry.callback_span_metadata()
         ) :: CallbackHandler.callback_return() | no_return()
-  def track_component_callback(f, component_module, callback, meta) do
+  def track_callback_handler(f, component_module, callback, meta) do
     component_type = state_module_to_atom(component_module)
 
     if handler_reported?(component_type, callback) do
