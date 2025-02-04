@@ -12,9 +12,9 @@ defmodule Membrane.Telemetry do
 
     * `[:membrane, :element | :bin | :pipeline, handler, :start | :stop | :exception]` -
     where handler is any possible handle_* function defined for a component.
-      * `:start` - when the handler begins execution
-      * `:stop` - when the handler finishes execution
-      * `:exception` - when the component's handler crashes during execution
+      * `:start` - when the components begins callback's execution
+      * `:stop` - when the components finishes callback's execution
+      * `:exception` - when the component crashes during callback's execution
 
     * `[:membrane, :datapoint, datapoint_type]` -
     where datapoint_type is any of the available datapoint types (see below)
