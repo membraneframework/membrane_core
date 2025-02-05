@@ -111,7 +111,7 @@ defmodule Membrane.Telemetry do
   @type buffer_datapoint_value :: integer()
   @type queue_len_datapoint_value :: integer()
   @type stream_format_datapoint_value :: %{format: map(), pad_ref: String.t()}
-  @type incoming_datapoint_value :: String.t()
+  @type incoming_event_datapoint_value :: String.t()
   @type store_datapoint_value :: %{value: integer(), log_tag: String.t()}
 
   @typedoc """
@@ -122,7 +122,7 @@ defmodule Membrane.Telemetry do
             buffer_datapoint_value()
             | queue_len_datapoint_value()
             | stream_format_datapoint_value()
-            | incoming_datapoint_value()
+            | incoming_event_datapoint_value()
             | store_datapoint_value()
             | integer()
         }
