@@ -165,12 +165,21 @@ defmodule Membrane.Core.Telemetry do
   """
   @spec track_callback_handler(
           (-> CallbackHandler.callback_return() | no_return()),
-          module(),
           atom(),
-          Telemetry.callback_span_metadata()
+          list(),
+          Element.state() | Bin.state() | Pipeline.state(),
+          Telemetry.callback_context()
         ) :: CallbackHandler.callback_return() | no_return()
-  def track_callback_handler(f, component_module, callback, meta) do
-    component_type = state_module_to_atom(component_module)
+  def track_callback_handler(f, callback, args, state, context) do
+    meta =
+      callback_meta(
+        state,
+        callback,
+        args,
+        context
+      )
+
+    component_type = state_module_to_atom(state.__struct__)
 
     if handler_reported?(component_type, callback) do
       :telemetry.span([:membrane, component_type, callback], meta, fn ->
@@ -184,16 +193,7 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  @doc """
-  Formats metadata for a span of a component callback function
-  """
-  @spec callback_meta(
-          Element.state() | Bin.state() | Pipeline.state(),
-          atom(),
-          [any()],
-          Telemetry.callback_context()
-        ) :: Telemetry.callback_span_metadata()
-  def callback_meta(state, callback, args, context) do
+  defp callback_meta(state, callback, args, context) do
     %{
       callback: callback,
       callback_args: args,

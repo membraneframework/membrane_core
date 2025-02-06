@@ -141,7 +141,7 @@ defmodule Membrane.Core.CallbackHandler do
         apply(module, callback, args)
         |> validate_callback_result!(module, callback)
       end
-      |> report_telemetry(callback, args, state, context)
+      |> Telemetry.track_callback_handler(callback, args, state, context)
     rescue
       e in UndefinedFunctionError ->
         _ignored =
@@ -170,20 +170,6 @@ defmodule Membrane.Core.CallbackHandler do
       kind: :bad_return,
       callback: {module, callback},
       value: callback_result
-  end
-
-  defp report_telemetry(f, callback, args, state, context) do
-    Telemetry.track_callback_handler(
-      f,
-      state.__struct__,
-      callback,
-      Telemetry.callback_meta(
-        state,
-        callback,
-        args,
-        context
-      )
-    )
   end
 
   @spec handle_callback_result(
