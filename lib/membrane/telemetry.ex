@@ -10,8 +10,8 @@ defmodule Membrane.Telemetry do
   ## Instrumentation
   The following telemetric events are published by Membrane's Core components:
 
-    * `[:membrane, :element | :bin | :pipeline, callback, :start | :stop | :exception]` -
-    where `callback` is any possible handle_* function defined for a component.
+    * `[:membrane, :element | :bin | :pipeline, handler, :start | :stop | :exception]` -
+    where handler is any possible handle_* function defined for a component.
       * `:start` - when the components begins callback's execution
       * `:stop` - when the components finishes callback's execution
       * `:exception` - when the component crashes during callback's execution
@@ -38,6 +38,8 @@ defmodule Membrane.Telemetry do
         datapoints: [:buffer, ...] | :all
         ]
     ```
+
+  Datapoint metrics are to be deprecated in the future (2.0) in favor of spans. They are still available for now.
 
   Available datapoints are:
   * `:link` - reports the number of links created in the pipeline
