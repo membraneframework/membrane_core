@@ -5,6 +5,7 @@
  * Implement `Membrane.Connector`. [#904](https://github.com/membraneframework/membrane_core/pull/904)
  * Implememnt diamonds detection. [#909](https://github.com/membraneframework/membrane_core/pull/909)
  * Incorporate `Membrane.Funnel`, `Membrane.Tee` and `Membane.Fake.Sink`. [#922](https://github.com/membraneframework/membrane_core/issues/922)
+ * Added new, revised Telemetry system [#905](https://github.com/membraneframework/membrane_core/pull/918)
 
 ## 1.1.2
  * Add new callback `handle_child_terminated/3` along with new assertions. [#894](https://github.com/membraneframework/membrane_core/pull/894)

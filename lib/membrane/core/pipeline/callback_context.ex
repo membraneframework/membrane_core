@@ -17,8 +17,10 @@ defmodule Membrane.Core.Pipeline.CallbackContext do
     |> Map.merge(%{
       clock: state.synchronization.clock_proxy,
       children: state.children,
+      module: state.module,
       playback: state.playback,
       resource_guard: state.resource_guard,
+      setup_incomplete?: state.setup_incomplete?,
       utility_supervisor: state.subprocess_supervisor
     })
   end

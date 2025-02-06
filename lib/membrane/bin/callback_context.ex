@@ -16,13 +16,15 @@ defmodule Membrane.Bin.CallbackContext do
   `c:Membrane.Bin.handle_crash_group_down/3`.
   """
   @type t :: %{
+          :children => %{Membrane.Child.name() => Membrane.ChildEntry.t()},
           :clock => Membrane.Clock.t(),
           :parent_clock => Membrane.Clock.t(),
-          :pads => %{Membrane.Pad.ref() => Membrane.Bin.PadData.t()},
+          :module => module(),
           :name => Membrane.Bin.name(),
-          :children => %{Membrane.Child.name() => Membrane.ChildEntry.t()},
+          :pads => %{Membrane.Pad.ref() => Membrane.Bin.PadData.t()},
           :playback => Membrane.Playback.t(),
           :resource_guard => Membrane.ResourceGuard.t(),
+          :setup_incomplete? => boolean(),
           :utility_supervisor => Membrane.UtilitySupervisor.t(),
           optional(:pad_options) => map(),
           optional(:members) => [Membrane.Child.name()],

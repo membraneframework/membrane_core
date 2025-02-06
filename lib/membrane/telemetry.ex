@@ -4,95 +4,154 @@ defmodule Membrane.Telemetry do
 
   Membrane uses [Telemetry Package](https://hex.pm/packages/telemetry) for instrumentation and does not store or save any measurements by itself.
 
-  It is user's responsibility to use some sort of metrics reporter
-  that will be attached to `:telemetry` package to consume and process generated measurements.
+  It is user's responsibility to use some sort of event handler and metric reporter
+  that will be attached to `:telemetry` package to process generated measurements.
 
   ## Instrumentation
-  The following events are published by Membrane's Core with following measurement types and metadata:
+  The following telemetric events are published by Membrane's Core components:
 
-    * `[:membrane, :metric, :value]` - used to report metrics, such as input buffer's size inside functions, incoming events and received stream format
-        * Measurement: `t:metric_event_value/0`
-        * Metadata: `%{}`
+    * `[:membrane, :element | :bin | :pipeline, callback, :start | :stop | :exception]` -
+    where callback is any possible handle_* function defined for a component.
+      * `:start` - when the components begins callback's execution
+      * `:stop` - when the components finishes callback's execution
+      * `:exception` - when the component crashes during callback's execution
 
-    * `[:membrane, :link, :new]` - to report new link connection being initialized in pipeline.
-        * Measurement: `t:link_event_value/0`
-        * Metadata: `%{}`
+    * `[:membrane, :datapoint, datapoint_type]` -
+    where datapoint_type is any of the available datapoint types (see below)
 
-    * `[:membrane, :pipeline | :bin | :element, :init]` - to report pipeline/element/bin initialization
-        * Measurement: `t:init_or_terminate_event_value/0`
-        * Metadata: `%{log_metadata: keyword()}`, includes Logger's metadata of created component
-
-    * `[:membrane, :pipeline | :bin | :element, :terminate]` - to report pipeline/element/bin termination
-        * Measurement: `t:init_or_terminate_event_value/0`
-        * Metadata: `%{}`
-
-
-  ## Enabling certain metrics/events
-  A lot of events can happen literally hundreds times per second such as registering that a buffer has been sent/processed.
+  ## Enabling specific datapoints
+  A lot of datapoints can happen hundreds times per second such as registering that a buffer has been sent/processed.
 
   This behaviour can come with a great performance penalties but may be helpful for certain discoveries. To avoid any runtime overhead
-  when the reporting is not necessary all metrics/events are hidden behind a compile-time feature flags.
-  To enable a particular measurement one must recompile membrane core with the following snippet put inside
+  when the reporting is not necessary all spans/datapoints are hidden behind a compile-time feature flags.
+  To enable a particular measurement one must recompile membrane core with the following config put inside
   user's application `config.exs` file:
 
+  ```
       config :membrane_core,
         telemetry_flags: [
-          :flag_name,
-          ...,
-          {:metrics, [list of metrics]}
-          ...
+          tracked_callbacks: [
+            bin: [:handle_setup, ...] | :all,
+            element: [:handle_init, ...] | :all,
+            pipeline: [:handle_init, ...] | :all
+          ],
+        datapoints: [:buffer, ...] | :all
         ]
+    ```
 
-  Available flags are (those are of a very low overhead):
-  * `:links` - enables new links notifications
-  * `:inits_and_terminates` - enables notifications of `init` and `terminate` events for elements/bins/pipelines
+  Datapoint metrics are to be deprecated in the future (2.0) in favor of spans. They are still available for now.
 
-
-  Additionally one can control which metric values should get measured by passing an option of format :
-  `{:metrics, [list of metrics]}`
-
-  Available metrics are:
+  Available datapoints are:
+  * `:link` - reports the number of links created in the pipeline
   * `:buffer` - number of buffers being sent from a particular element
-  * `:bitrate` - total number of bits carried by the buffers mentioned above
   * `:queue_len` - number of messages in element's message queue during GenServer's `handle_info` invocation
   * `:stream_format` - indicates that given element has received new stream format, value always equals '1'
   * `:event` - indicates that given element has received a new event, value always equals '1'
   * `:store` - reports the current size of a input buffer when storing a new buffer
-  * `:take_and_demand` - reports the current size of a input buffer when taking buffers and making a new demand
+  * `:take` - reports the number of buffers taken from the input buffer
   """
 
-  @type event_name :: [atom(), ...]
+  alias Membrane.{Bin, ComponentPath, Element, Pipeline}
 
   @typedoc """
-  * component_path - element's or bin's path
-  * metric - metric's name
-  * value - metric's value
+  Atom representation of Membrane components subject to telemetry reports
   """
-  @type metric_event_value :: %{
-          component_path: String.t(),
-          metric: String.t(),
-          value: integer()
+  @type component_type :: :element | :bin | :pipeline
+
+  @type callback_context ::
+          Element.CallbackContext.t() | Bin.CallbackContext.t() | Pipeline.CallbackContext.t()
+
+  @typedoc """
+  Metadata included with each telemetry component's handler profiled
+  * callback - name of the callback function
+  * callback_args - arguments passed to the callback
+  * callback_context - context of the callback consistent with Membrane.*.CallbackContext
+  * component_path - path of the component in the pipeline consistent with t:ComponentPath.path/0
+  * component_type - atom representation of the base component type
+  * state_before_callback - state of the component before the callback execution
+  * state_after_callback - state of the component after the callback execution, it's `nil` on :start and :exception events
+  """
+  @type callback_span_metadata :: %{
+          callback: atom(),
+          callback_args: [any()],
+          callback_context: callback_context(),
+          component_path: ComponentPath.path(),
+          component_type: component_type(),
+          state_before_callback: Element.state() | Bin.state() | Pipeline.state(),
+          state_after_callback: Element.state() | Bin.state() | Pipeline.state() | nil
         }
 
   @typedoc """
-  * path - element's path
+  Types of telemetry datapoints reported by Membrane Core
   """
-  @type init_or_terminate_event_value :: %{
-          path: Membrane.ComponentPath.path()
+  @type datapoint_type :: :link | :buffer | :queue_len | :stream_format | :event | :store | :take
+
+  @typedoc """
+  Metadata included with each telemetry event
+  """
+  @type datapoint_metadata :: %{
+          datapoint: datapoint_type(),
+          component_path: ComponentPath.path(),
+          component_type: component_type()
         }
 
   @typedoc """
-  * parent_path - process path of link's parent
+  Value of the link datapoint
+  * parent_component_path - process path of link's parent
   * from - from element name
   * to - to element name
   * pad_from - from's pad name
   * pad_to - to's pad name
   """
-  @type link_event_value :: %{
-          parent_path: String.t(),
+  @type link_datapoint_value :: %{
+          parent_component_path: String.t(),
           from: String.t(),
           to: String.t(),
           pad_from: String.t(),
           pad_to: String.t()
         }
+  @type buffer_datapoint_value :: integer()
+  @type queue_len_datapoint_value :: integer()
+  @type stream_format_datapoint_value :: %{format: map(), pad_ref: String.t()}
+  @type incoming_event_datapoint_value :: String.t()
+  @type store_datapoint_value :: %{value: integer(), log_tag: String.t()}
+
+  @typedoc """
+  Value of the specific event gathered
+  """
+  @type datapoint_value :: %{
+          value:
+            buffer_datapoint_value()
+            | queue_len_datapoint_value()
+            | stream_format_datapoint_value()
+            | incoming_event_datapoint_value()
+            | store_datapoint_value()
+            | integer()
+        }
+
+  @doc """
+  Returns if the event type is configured to be gathered by Membrane's Core telemetry
+  """
+  @spec datapoint_gathered?(any()) :: boolean()
+  defdelegate datapoint_gathered?(type), to: Membrane.Core.Telemetry
+
+  @doc """
+  Lists all components and their callbacks tracked by Membrane's Core telemetry
+  """
+  @spec tracked_callbacks() :: [
+          pipeline: [atom()],
+          bin: [atom()],
+          element: [atom()]
+        ]
+  defdelegate tracked_callbacks, to: Membrane.Core.Telemetry
+
+  @doc """
+  Lists all possible components and their callbacks that can be gathered when telemetry is enabled
+  """
+  @spec tracked_callbacks_available() :: [
+          pipeline: [atom()],
+          bin: [atom()],
+          element: [atom()]
+        ]
+  defdelegate tracked_callbacks_available, to: Membrane.Core.Telemetry
 end

@@ -10,12 +10,12 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   alias Membrane.Buffer
   alias Membrane.Core.Element.AtomicDemand
+  alias Membrane.Core.Telemetry
   alias Membrane.Event
   alias Membrane.Pad
   alias Membrane.StreamFormat
 
   require Membrane.Core.Stalker, as: Stalker
-  require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Logger
 
   @qe Qex
@@ -124,7 +124,6 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
     %__MODULE__{size: size} = input_queue = do_store_buffers(input_queue, v)
 
-    Telemetry.report_metric(:store, size, input_queue.log_tag)
     :atomics.put(stalker_metrics.size, 1, size)
 
     input_queue
@@ -135,8 +134,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
   def store(%__MODULE__{q: q, size: size} = input_queue, type, v)
       when type in @non_buf_types do
     "Storing #{type}" |> mk_log(input_queue) |> Membrane.Logger.debug_verbose()
-
-    Telemetry.report_metric(:store, size, input_queue.log_tag)
+    Telemetry.report_store(size, input_queue.log_tag)
 
     %__MODULE__{input_queue | q: q |> @qe.push({:non_buffer, type, v})}
   end
@@ -176,7 +174,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
     input_queue = maybe_increase_atomic_demand(input_queue)
 
     %{size: size, stalker_metrics: stalker_metrics} = input_queue
-    Telemetry.report_metric(:take, size, input_queue.log_tag)
+    Telemetry.report_take(size, input_queue.log_tag)
     :atomics.put(stalker_metrics.size, 1, size)
 
     {out, input_queue}

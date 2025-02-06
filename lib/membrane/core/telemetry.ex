@@ -1,173 +1,263 @@
 defmodule Membrane.Core.Telemetry do
   @moduledoc false
+  # This module provides a way to gather datapoints and spans from running Membrane components, as well
+  # as exposing these events in a format idiomatic to [Telemetry](https://hexdocs.pm/telemetry/)
+  # library. It uses compile time flags from `config.exs` to determine which events should be
+  # collected and propagated. This avoids unnecessary runtime overhead when telemetry is not needed.
+
+  alias Membrane.Core.CallbackHandler
+  alias Membrane.Core.Parent.Link
 
   alias Membrane.ComponentPath
+  alias Membrane.Element
+  alias Membrane.Element.WithInputPads
+  alias Membrane.Element.WithOutputPads
+  alias Membrane.Pad
+  alias Membrane.Telemetry
 
-  require Membrane.Pad
+  require Membrane.Bin, as: Bin
+  require Membrane.Element.Base, as: ElementBase
+  require Membrane.Element.WithOutputPads
+  require Membrane.Element.WithInputPads
+  require Membrane.Pipeline, as: Pipeline
+  require Logger
 
-  @telemetry_flags Application.compile_env(:membrane_core, :telemetry_flags, [])
+  require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
-  @doc """
-  Reports metrics such as input buffer's size inside functions, incoming events and received stream format.
-  """
-  defmacro report_metric(metric, value, log_tag \\ nil) do
-    event =
-      quote do
-        [:membrane, :metric, :value]
-      end
+  @component_modules [
+    bin: [Bin],
+    pipeline: [Pipeline],
+    element: [ElementBase, WithInputPads, WithOutputPads]
+  ]
 
-    value =
-      quote do
-        %{
-          component_path: ComponentPath.get_formatted() <> "/" <> (unquote(log_tag) || ""),
-          metric: Atom.to_string(unquote(metric)),
-          value: unquote(value)
-        }
-      end
+  @possible_callbacks (for {elem, mods} <- @component_modules do
+                         mods
+                         |> Enum.flat_map(& &1.behaviour_info(:callbacks))
+                         |> Enum.map(&elem(&1, 0))
+                         |> Enum.filter(&String.starts_with?(to_string(&1), "handle_"))
+                         |> then(&{elem, &1})
+                       end)
 
-    report_event(
-      event,
-      value,
-      Keyword.get(@telemetry_flags, :metrics, []) |> Enum.find(&(&1 == metric)) != nil
-    )
+  _callbacks = @possible_callbacks
+
+  @config Application.compile_env(:membrane_core, :telemetry_flags, [])
+  @legacy? Enum.any?(@config, &is_atom(&1)) || Keyword.has_key?(@config, :metrics)
+
+  if @legacy? do
+    Logger.warning("""
+      Legacy telemetry is deprecated and will be removed in the next major release.
+      Please update your configuration to use the new telemetry system.
+    """)
   end
 
-  @doc """
-  Given list of buffers (or a single buffer) calculates total size of their payloads in bits
-  and reports it.
-  """
-  defmacro report_bitrate(buffers) do
-    event =
-      quote do
-        [:membrane, :metric, :value]
-      end
+  @spec legacy?() :: boolean()
+  def legacy?(), do: @legacy?
 
-    value =
-      quote do
-        %{
-          component_path: ComponentPath.get_formatted() <> "/",
-          metric: "bitrate",
-          value:
-            8 *
-              Enum.reduce(
-                List.wrap(unquote(buffers)),
-                0,
-                &(Membrane.Payload.size(&1.payload) + &2)
-              )
-        }
-      end
-
-    report_event(
-      event,
-      value,
-      Keyword.get(@telemetry_flags, :metrics, []) |> Enum.find(&(&1 == :bitrate)) != nil
-    )
-  end
-
-  @doc false
-  @spec __get_public_pad_name__(Membrane.Pad.ref()) :: Membrane.Pad.ref()
-  def __get_public_pad_name__(pad) do
-    case pad do
-      {:private, direction} -> direction
-      {Membrane.Pad, {:private, direction}, ref} -> {Membrane.Pad, direction, ref}
-      _pad -> pad
+  # Handles telemetry datapoints that were measured before but differ in how they were emitted
+  # It's public to avoid dialyzer warnings. Not intended for external use
+  @spec do_legacy_telemetry(atom(), Macro.t()) :: Macro.t()
+  def do_legacy_telemetry(:link, lazy_block) do
+    quote do
+      LegacyTelemetry.report_link(unquote(lazy_block)[:from], unquote(lazy_block)[:to])
     end
   end
 
-  @doc """
-  Reports new link connection being initialized in pipeline.
-  """
-  defmacro report_link(from, to) do
-    event =
-      quote do
-        [:membrane, :link, :new]
-      end
-
-    value =
-      quote do
-        %{
-          parent_path: Membrane.ComponentPath.get_formatted(),
-          from: inspect(unquote(from).child),
-          to: inspect(unquote(to).child),
-          pad_from:
-            Membrane.Core.Telemetry.__get_public_pad_name__(unquote(from).pad_ref) |> inspect(),
-          pad_to:
-            Membrane.Core.Telemetry.__get_public_pad_name__(unquote(to).pad_ref) |> inspect()
-        }
-      end
-
-    report_event(event, value, Enum.find(@telemetry_flags, &(&1 == :links)) != nil)
+  def do_legacy_telemetry(metric_name, lazy_block) do
+    LegacyTelemetry.report_metric(metric_name, lazy_block)
   end
 
-  @doc """
-  Reports a pipeline/bin/element initialization.
-  """
-  defmacro report_init(type) when type in [:pipeline, :bin, :element] do
-    event =
-      quote do
-        [:membrane, unquote(type), :init]
-      end
+  @spec handler_reported?(atom(), atom()) :: boolean()
+  for {component, callbacks} <- @config[:tracked_callbacks] || [] do
+    case callbacks do
+      :all ->
+        def handler_reported?(unquote(component), _callback), do: true
 
-    value =
-      quote do
-        %{path: ComponentPath.get_formatted()}
-      end
+      nil ->
+        nil
 
-    metadata =
-      quote do
-        %{log_metadata: Logger.metadata()}
-      end
+      callbacks_list when is_list(callbacks_list) ->
+        for callback <- callbacks_list do
+          if callback not in @possible_callbacks[component] do
+            raise """
+              Invalid telemetry flag: #{inspect(callback)}.
+              Possible values for #{component} are: #{inspect(@possible_callbacks[component])}
+            """
+          end
 
-    report_event(
-      event,
-      value,
-      Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil,
-      metadata
-    )
+          def handler_reported?(unquote(component), unquote(callback)), do: true
+        end
+    end
   end
 
-  @doc """
-  Reports a pipeline/bin/element termination.
-  """
-  defmacro report_terminate(type) when type in [:pipeline, :bin, :element] do
-    event =
-      quote do
-        [:membrane, unquote(type), :terminate]
-      end
+  def handler_reported?(_component, _callback), do: false
 
-    value =
-      quote do
-        %{path: ComponentPath.get_formatted()}
-      end
-
-    report_event(
-      event,
-      value,
-      Enum.find(@telemetry_flags, &(&1 == :inits_and_terminates)) != nil
-    )
+  @spec datapoint_gathered?(any()) :: false | nil | true
+  def datapoint_gathered?(datapoint) do
+    datapoints = @config[:datapoints]
+    datapoints && (datapoints == :all || datapoint in datapoints)
   end
 
-  # Conditional event reporting of telemetry events
-  defp report_event(event_name, measurement, enable, metadata \\ nil) do
-    if enable do
-      quote do
-        :telemetry.execute(
-          unquote(event_name),
-          unquote(measurement),
-          unquote(metadata) || %{}
-        )
+  @spec tracked_callbacks_available() :: [
+          pipeline: [atom()],
+          bin: [atom()],
+          element: [atom()]
+        ]
+  def tracked_callbacks_available do
+    @possible_callbacks
+  end
+
+  @spec tracked_callbacks() :: [
+          pipeline: [atom()],
+          bin: [atom()],
+          element: [atom()]
+        ]
+  def tracked_callbacks do
+    for {component, callbacks} <- @config[:tracked_callbacks] || [] do
+      case callbacks do
+        :all ->
+          {component, @possible_callbacks[component]}
+
+        nil ->
+          {component, []}
+
+        callbacks_list when is_list(callbacks_list) ->
+          {component, callbacks_list}
       end
-    else
-      # A hack to suppress the 'unused variable' warnings
-      quote do
-        _fn = fn ->
-          _unused = unquote(event_name)
-          _unused = unquote(measurement)
-          _unused = unquote(metadata)
+    end
+  end
+
+  defmacrop report_datapoint(datapoint_name, do: lazy_block) do
+    unless Macro.quoted_literal?(datapoint_name), do: raise("Datapoint type must be a literal")
+
+    cond do
+      @legacy? ->
+        do_legacy_telemetry(datapoint_name, lazy_block)
+
+      datapoint_gathered?(datapoint_name) ->
+        quote do
+          value = unquote(lazy_block)
+
+          :telemetry.execute(
+            [:membrane, :datapoint, unquote(datapoint_name)],
+            %{value: value},
+            %{
+              datapoint: unquote(datapoint_name),
+              component_path: ComponentPath.get(),
+              component_metadata: Logger.metadata()
+            }
+          )
         end
 
-        :ok
-      end
+      true ->
+        quote do
+          _fn = fn ->
+            _unused = unquote(datapoint_name)
+            _unused = unquote(lazy_block)
+          end
+
+          :ok
+        end
     end
   end
+
+  @doc """
+  Reports a span of a compoment callback function in a format consistent with `span/3` in `:telementry`
+  """
+  @spec track_callback_handler(
+          (-> CallbackHandler.callback_return() | no_return()),
+          atom(),
+          list(),
+          Element.state() | Bin.state() | Pipeline.state(),
+          Telemetry.callback_context()
+        ) :: CallbackHandler.callback_return() | no_return()
+  def track_callback_handler(f, callback, args, state, context) do
+    meta =
+      callback_meta(
+        state,
+        callback,
+        args,
+        context
+      )
+
+    component_type = state_module_to_atom(state.__struct__)
+
+    if handler_reported?(component_type, callback) do
+      :telemetry.span([:membrane, component_type, callback], meta, fn ->
+        {_actions, int_state} = res = f.()
+
+        # Append the internal state returned from the callback to the metadata
+        {res, %{meta | state_after_callback: int_state}}
+      end)
+    else
+      f.()
+    end
+  end
+
+  defp callback_meta(state, callback, args, context) do
+    %{
+      callback: callback,
+      callback_args: args,
+      callback_context: context,
+      component_path: ComponentPath.get(),
+      component_type: state.module,
+      state_before_callback: state.internal_state,
+      state_after_callback: nil
+    }
+  end
+
+  @spec report_incoming_event(%{pad_ref: String.t()}) :: :ok
+  def report_incoming_event(meta), do: report_datapoint(:event, do: meta)
+
+  @spec report_stream_format(Membrane.StreamFormat.t(), String.t()) :: :ok
+  def report_stream_format(format, pad_ref),
+    do: report_datapoint(:stream_format, do: %{format: format, pad_ref: pad_ref})
+
+  @spec report_buffer(integer() | list()) :: :ok
+  def report_buffer(length)
+
+  def report_buffer(length) when is_integer(length),
+    do: report_datapoint(:buffer, do: length)
+
+  def report_buffer(buffers) do
+    report_datapoint(:buffer, do: length(buffers))
+  end
+
+  @spec report_store(integer(), String.t()) :: :ok
+  def report_store(size, log_tag) do
+    report_datapoint :store do
+      %{size: size, log_tag: log_tag}
+    end
+  end
+
+  @spec report_take(integer(), String.t()) :: :ok
+  def report_take(size, log_tag) do
+    report_datapoint :take do
+      %{size: size, log_tag: log_tag}
+    end
+  end
+
+  @spec report_queue_len(pid()) :: :ok
+  def report_queue_len(pid) do
+    report_datapoint :queue_len do
+      {:message_queue_len, len} = Process.info(pid, :message_queue_len)
+      %{len: len}
+    end
+  end
+
+  @spec report_link(Link.Endpoint.t(), Link.Endpoint.t()) :: :ok
+  def report_link(from, to) do
+    report_datapoint :link do
+      %{
+        parent_component_path: ComponentPath.get_formatted(),
+        from: inspect(from.child),
+        to: inspect(to.child),
+        pad_from: Pad.name_by_ref(from.pad_ref) |> inspect(),
+        pad_to: Pad.name_by_ref(to.pad_ref) |> inspect()
+      }
+    end
+  end
+
+  defp state_module_to_atom(Membrane.Core.Element.State), do: :element
+  defp state_module_to_atom(Membrane.Core.Bin.State), do: :bin
+  defp state_module_to_atom(Membrane.Core.Pipeline.State), do: :pipeline
 end

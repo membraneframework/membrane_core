@@ -40,15 +40,16 @@ defmodule Membrane.Core.Element do
   require Membrane.Core.Message, as: Message
   require Membrane.Core.Stalker, as: Stalker
   require Membrane.Core.Telemetry, as: Telemetry
+  require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
   require Membrane.Logger
 
   @type options :: %{
-          module: module,
+          module: module(),
           name: Membrane.Element.name(),
-          node: node | nil,
+          node: node() | nil,
           user_options: Membrane.Element.options(),
           sync: Sync.t(),
-          parent: pid,
+          parent: pid(),
           parent_clock: Clock.t(),
           parent_path: Membrane.ComponentPath.path(),
           log_metadata: Logger.metadata(),
@@ -118,9 +119,8 @@ defmodule Membrane.Core.Element do
     {:ok, resource_guard} =
       SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
 
-    Telemetry.report_init(:element)
-
-    ResourceGuard.register(resource_guard, fn -> Telemetry.report_terminate(:element) end)
+    LegacyTelemetry.report_init(:element)
+    ResourceGuard.register(resource_guard, fn -> LegacyTelemetry.report_terminate(:element) end)
 
     self_pid = self()
 
@@ -206,10 +206,7 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def handle_info(message, state) do
     Utils.log_on_error do
-      Telemetry.report_metric(
-        :queue_len,
-        :erlang.process_info(self(), :message_queue_len) |> elem(1)
-      )
+      Telemetry.report_queue_len(self())
 
       do_handle_info(message, state)
     end

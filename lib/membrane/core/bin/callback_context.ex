@@ -15,13 +15,15 @@ defmodule Membrane.Core.Bin.CallbackContext do
   def from_state(state, optional_fields \\ []) do
     Map.new(optional_fields)
     |> Map.merge(%{
+      children: state.children,
       clock: state.synchronization.clock,
       parent_clock: state.synchronization.parent_clock,
       pads: state.pads_data,
+      module: state.module,
       name: state.name,
-      children: state.children,
       playback: state.playback,
       resource_guard: state.resource_guard,
+      setup_incomplete?: state.setup_incomplete?,
       utility_supervisor: state.subprocess_supervisor
     })
   end

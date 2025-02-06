@@ -13,16 +13,14 @@ defmodule Membrane.Core.Element.State do
   alias Membrane.Core.Element.EffectiveFlowController
   alias Membrane.Core.Timer
 
-  require Membrane.Pad
-
   @type t :: %__MODULE__{
-          module: module,
+          module: module(),
           type: Element.type(),
           name: Element.name(),
           internal_state: Element.state() | nil,
           pads_info: PadModel.pads_info() | nil,
           pads_data: PadModel.pads_data() | nil,
-          parent_pid: pid,
+          parent_pid: pid(),
           delay_demands?: boolean(),
           delayed_demands: MapSet.t({Pad.ref(), :supply | :redemand}),
           handle_demand_loop_counter: non_neg_integer(),
@@ -38,7 +36,7 @@ defmodule Membrane.Core.Element.State do
           playback: Membrane.Playback.t(),
           playback_queue: Membrane.Core.Element.PlaybackQueue.t(),
           resource_guard: Membrane.ResourceGuard.t(),
-          subprocess_supervisor: pid,
+          subprocess_supervisor: pid(),
           terminating?: boolean(),
           setup_incomplete?: boolean(),
           effective_flow_control: EffectiveFlowController.effective_flow_control(),
