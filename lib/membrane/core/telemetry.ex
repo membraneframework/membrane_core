@@ -195,6 +195,7 @@ defmodule Membrane.Core.Telemetry do
 
   defp callback_meta(state, callback, args, context) do
     %{
+      monotonic_time: System.monotonic_time(),
       callback: callback,
       callback_args: args,
       callback_context: context,
