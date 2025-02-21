@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.0-rc1
+* Added `:monotonic_time` field to telemetry meta data
+
 ## 1.2.0-rc0
  * Add `:max_instances` option for dynamic pads. [#876](https://github.com/membraneframework/membrane_core/pull/876)
  * Implement `Membrane.Connector`. [#904](https://github.com/membraneframework/membrane_core/pull/904)

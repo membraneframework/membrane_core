@@ -195,12 +195,12 @@ defmodule Membrane.Core.Telemetry do
 
   defp callback_meta(state, callback, args, context) do
     %{
-      monotonic_time: System.monotonic_time(),
       callback: callback,
       callback_args: args,
       callback_context: context,
       component_path: ComponentPath.get(),
       component_type: state.module,
+      monotonic_time: System.monotonic_time(),
       state_before_callback: state.internal_state,
       state_after_callback: nil
     }
