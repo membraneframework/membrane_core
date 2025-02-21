@@ -32,7 +32,7 @@ defmodule Membrane.Core.Parent.LifecycleController do
         state
       )
 
-    with %{setup_incomplete?: false} <- state do
+    with %{setup_completed?: true} <- state do
       Membrane.Core.LifecycleController.complete_setup(state)
     end
   end

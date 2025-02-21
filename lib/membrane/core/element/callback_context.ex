@@ -19,7 +19,7 @@ defmodule Membrane.Core.Element.CallbackContext do
       name: state.name,
       playback: state.playback,
       resource_guard: state.resource_guard,
-      setup_incomplete?: state.setup_incomplete?,
+      setup_completed?: state.setup_completed?,
       utility_supervisor: state.subprocess_supervisor
     })
   end

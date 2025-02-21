@@ -24,7 +24,7 @@ defmodule Membrane.Bin.CallbackContext do
           :pads => %{Membrane.Pad.ref() => Membrane.Bin.PadData.t()},
           :playback => Membrane.Playback.t(),
           :resource_guard => Membrane.ResourceGuard.t(),
-          :setup_incomplete? => boolean(),
+          :setup_completed? => boolean(),
           :utility_supervisor => Membrane.UtilitySupervisor.t(),
           optional(:pad_options) => map(),
           optional(:members) => [Membrane.Child.name()],
