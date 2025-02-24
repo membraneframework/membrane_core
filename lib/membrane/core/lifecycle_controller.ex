@@ -12,12 +12,12 @@ defmodule Membrane.Core.LifecycleController do
   @spec handle_setup_operation(setup_operation(), Component.state()) ::
           Component.state()
   def handle_setup_operation(operation, state) do
-    :ok = assert_operation_allowed!(operation, state.setup_incomplete?)
+    :ok = assert_operation_allowed!(operation, state.setup_incomplete_returned?)
 
     cond do
       operation == :incomplete ->
         Membrane.Logger.debug("Component deferred initialization")
-        %{state | setup_incomplete?: true}
+        %{state | setup_incomplete_returned?: true}
 
       Component.pipeline?(state) ->
         # complete_setup/1 will be called in Membrane.Core.Pipeline.ActionHandler.handle_end_of_actions/1
@@ -30,7 +30,7 @@ defmodule Membrane.Core.LifecycleController do
 
   @spec complete_setup(Component.state()) :: Component.state()
   def complete_setup(state) do
-    state = %{state | initialized?: true, setup_incomplete?: false}
+    state = %{state | initialized?: true, setup_incomplete_returned?: false}
     Membrane.Logger.debug("Component initialized")
 
     cond do
