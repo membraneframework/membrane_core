@@ -1,7 +1,7 @@
 # Changelog
 
  1.2.0-rc1
- * Change `setup_incomplete?` to `setup_incomplete_returned?` in codebase. [#944](https://github.com/membraneframework/membrane_core/pull/944)
+ * Change `setup_incomplete?` to `setup_incomplete_returned?` in codebase. [#945](https://github.com/membraneframework/membrane_core/pull/945)
 
 ## 1.2.0-rc0
  * Add `:max_instances` option for dynamic pads. [#876](https://github.com/membraneframework/membrane_core/pull/876)
