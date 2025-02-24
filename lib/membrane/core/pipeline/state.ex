@@ -31,7 +31,7 @@ defmodule Membrane.Core.Pipeline.State do
           initialized?: boolean(),
           terminating?: boolean(),
           resource_guard: Membrane.ResourceGuard.t(),
-          setup_completed?: boolean(),
+          setup_incomplete_returned?: boolean(),
           stalker: Membrane.Core.Stalker.t(),
           subprocess_supervisor: pid(),
           awaiting_setup_completition?: boolean()
@@ -54,7 +54,7 @@ defmodule Membrane.Core.Pipeline.State do
             synchronization: nil,
             initialized?: false,
             terminating?: false,
-            setup_completed?: false,
+            setup_incomplete_returned?: false,
             stalker: nil,
             resource_guard: nil,
             subprocess_supervisor: nil,

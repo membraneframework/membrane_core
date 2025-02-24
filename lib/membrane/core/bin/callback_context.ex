@@ -23,7 +23,7 @@ defmodule Membrane.Core.Bin.CallbackContext do
       name: state.name,
       playback: state.playback,
       resource_guard: state.resource_guard,
-      setup_completed?: state.setup_completed?,
+      setup_incomplete_returned?: state.setup_incomplete_returned?,
       utility_supervisor: state.subprocess_supervisor
     })
   end

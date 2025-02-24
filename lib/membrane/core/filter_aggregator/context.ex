@@ -44,7 +44,7 @@ defmodule Membrane.Core.FilterAggregator.Context do
       parent_clock: nil,
       playback: :stopped,
       resource_guard: agg_ctx.resource_guard,
-      setup_completed?: false,
+      setup_incomplete_returned?: true,
       utility_supervisor: agg_ctx.utility_supervisor
     }
   end
