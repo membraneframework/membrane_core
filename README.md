@@ -94,7 +94,7 @@ The API for creating pipelines (and custom elements too) is provided by [membran
 ```
 or to get the newest release candidate
 ```elixir 
-{:membrane_core, "1.2.0-rc0"}
+{:membrane_core, "1.2.0-rc1"}
 ```
 
 **Standalone libraries**
