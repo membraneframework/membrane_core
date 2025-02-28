@@ -43,7 +43,7 @@ defmodule Membrane.Core.Bin.State do
           initialized?: boolean(),
           terminating?: boolean(),
           resource_guard: Membrane.ResourceGuard.t(),
-          setup_incomplete?: boolean(),
+          setup_incomplete_returned?: boolean(),
           stalker: Membrane.Core.Stalker.t()
         }
 
@@ -69,7 +69,7 @@ defmodule Membrane.Core.Bin.State do
             synchronization: nil,
             initialized?: false,
             terminating?: false,
-            setup_incomplete?: false,
+            setup_incomplete_returned?: false,
             stalker: nil,
             resource_guard: nil,
             subprocess_supervisor: nil,

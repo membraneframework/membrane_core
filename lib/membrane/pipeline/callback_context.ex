@@ -20,7 +20,6 @@ defmodule Membrane.Pipeline.CallbackContext do
           :module => module(),
           :playback => Membrane.Playback.t(),
           :resource_guard => Membrane.ResourceGuard.t(),
-          :setup_incomplete? => boolean(),
           :utility_supervisor => Membrane.UtilitySupervisor.t(),
           optional(:from) => [GenServer.from()],
           optional(:members) => [Membrane.Child.name()],

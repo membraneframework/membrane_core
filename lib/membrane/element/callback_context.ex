@@ -26,7 +26,6 @@ defmodule Membrane.Element.CallbackContext do
           :parent_clock => Membrane.Clock.t() | nil,
           :playback => Membrane.Playback.t(),
           :resource_guard => Membrane.ResourceGuard.t(),
-          :setup_incomplete? => boolean(),
           :utility_supervisor => Membrane.UtilitySupervisor.t(),
           optional(:incoming_demand) => non_neg_integer(),
           optional(:pad_options) => map(),
