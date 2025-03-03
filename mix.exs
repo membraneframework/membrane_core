@@ -102,12 +102,7 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Endpoint($|\.)/,
           ~r/^Membrane\.Sink($|\.)/,
           ~r/^Membrane\.Source($|\.)/,
-          ~r/^Membrane\.Element($|\.)/,
-          ~r/^Membrane\.Connector($|\.)/,
-          ~r/^Membrane\.Fake($|\.)/,
-          ~r/^Membrane\.Debug($|\.)/,
-          ~r/^Membrane\.Tee($|\.)/,
-          ~r/^Membrane\.Funnel($|\.)/
+          ~r/^Membrane\.Element($|\.)/
         ],
         Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
         Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
@@ -117,6 +112,13 @@ defmodule Membrane.Mixfile do
         Logging: [~r/^Membrane\.Logger($|\.)/],
         Telemetry: [~r/^Membrane\.Telemetry($|\.)/],
         Testing: [~r/^Membrane\.Testing($|\.)/],
+        "Helper Elements": [
+          ~r/^Membrane\.Connector($|\.)/,
+          ~r/^Membrane\.Fake($|\.)/,
+          ~r/^Membrane\.Debug($|\.)/,
+          ~r/^Membrane\.Tee($|\.)/,
+          ~r/^Membrane\.Funnel($|\.)/
+        ],
         Utils: [
           ~r/^Membrane\.Clock($|\.)/,
           ~r/^Membrane\.Sync($|\.)/,
