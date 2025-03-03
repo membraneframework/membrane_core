@@ -102,7 +102,12 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Endpoint($|\.)/,
           ~r/^Membrane\.Sink($|\.)/,
           ~r/^Membrane\.Source($|\.)/,
-          ~r/^Membrane\.Element($|\.)/
+          ~r/^Membrane\.Element($|\.)/,
+          ~r/^Membrane\.Connector($|\.)/,
+          ~r/^Membrane\.Fake($|\.)/,
+          ~r/^Membrane\.Debug($|\.)/,
+          ~r/^Membrane\.Tee($|\.)/,
+          ~r/^Membrane\.Funnel($|\.)/
         ],
         Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
         Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
