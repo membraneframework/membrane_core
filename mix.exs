@@ -98,7 +98,6 @@ defmodule Membrane.Mixfile do
         Bin: [~r/^Membrane\.Bin($|\.)/],
         Element: [
           ~r/^Membrane\.Filter($|\.)/,
-          ~r/^Membrane\.FilterAggregator($|\.)/,
           ~r/^Membrane\.Endpoint($|\.)/,
           ~r/^Membrane\.Sink($|\.)/,
           ~r/^Membrane\.Source($|\.)/,
@@ -117,7 +116,8 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Fake($|\.)/,
           ~r/^Membrane\.Debug($|\.)/,
           ~r/^Membrane\.Tee($|\.)/,
-          ~r/^Membrane\.Funnel($|\.)/
+          ~r/^Membrane\.Funnel($|\.)/,
+          ~r/^Membrane\.FilterAggregator($|\.)/
         ],
         Utils: [
           ~r/^Membrane\.Clock($|\.)/,
