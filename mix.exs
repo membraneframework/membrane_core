@@ -103,14 +103,6 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Source($|\.)/,
           ~r/^Membrane\.Element($|\.)/
         ],
-        Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
-        Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
-        Communication: [
-          ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
-        ],
-        Logging: [~r/^Membrane\.Logger($|\.)/],
-        Telemetry: [~r/^Membrane\.Telemetry($|\.)/],
-        Testing: [~r/^Membrane\.Testing($|\.)/],
         "Helper Elements": [
           ~r/^Membrane\.Connector($|\.)/,
           ~r/^Membrane\.Fake($|\.)/,
@@ -119,6 +111,14 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.Funnel($|\.)/,
           ~r/^Membrane\.FilterAggregator($|\.)/
         ],
+        Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
+        Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
+        Communication: [
+          ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
+        ],
+        Logging: [~r/^Membrane\.Logger($|\.)/],
+        Telemetry: [~r/^Membrane\.Telemetry($|\.)/],
+        Testing: [~r/^Membrane\.Testing($|\.)/],
         Utils: [
           ~r/^Membrane\.Clock($|\.)/,
           ~r/^Membrane\.Sync($|\.)/,
