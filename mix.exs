@@ -110,13 +110,13 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
         ],
         Logging: [~r/^Membrane\.Logger($|\.)/],
+        Telemetry: [~r/^Membrane\.Telemetry($|\.)/],
         Testing: [~r/^Membrane\.Testing($|\.)/],
         Utils: [
           ~r/^Membrane\.Clock($|\.)/,
           ~r/^Membrane\.Sync($|\.)/,
           ~r/^Membrane\.Time($|\.)/,
           ~r/^Membrane\.Playback($|\.)/,
-          ~r/^Membrane\.Telemetry($|\.)/,
           ~r/^Membrane\.ComponentPath($|\.)/,
           ~r/^Membrane\.ResourceGuard($|\.)/,
           ~r/^Membrane\.UtilitySupervisor($|\.)/
