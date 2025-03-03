@@ -98,11 +98,18 @@ defmodule Membrane.Mixfile do
         Bin: [~r/^Membrane\.Bin($|\.)/],
         Element: [
           ~r/^Membrane\.Filter($|\.)/,
-          ~r/^Membrane\.FilterAggregator($|\.)/,
           ~r/^Membrane\.Endpoint($|\.)/,
           ~r/^Membrane\.Sink($|\.)/,
           ~r/^Membrane\.Source($|\.)/,
           ~r/^Membrane\.Element($|\.)/
+        ],
+        "Helper Elements": [
+          ~r/^Membrane\.Connector($|\.)/,
+          ~r/^Membrane\.Fake($|\.)/,
+          ~r/^Membrane\.Debug($|\.)/,
+          ~r/^Membrane\.Tee($|\.)/,
+          ~r/^Membrane\.Funnel($|\.)/,
+          ~r/^Membrane\.FilterAggregator($|\.)/
         ],
         Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
         Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
@@ -110,13 +117,13 @@ defmodule Membrane.Mixfile do
           ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
         ],
         Logging: [~r/^Membrane\.Logger($|\.)/],
+        Telemetry: [~r/^Membrane\.Telemetry($|\.)/],
         Testing: [~r/^Membrane\.Testing($|\.)/],
         Utils: [
           ~r/^Membrane\.Clock($|\.)/,
           ~r/^Membrane\.Sync($|\.)/,
           ~r/^Membrane\.Time($|\.)/,
           ~r/^Membrane\.Playback($|\.)/,
-          ~r/^Membrane\.Telemetry($|\.)/,
           ~r/^Membrane\.ComponentPath($|\.)/,
           ~r/^Membrane\.ResourceGuard($|\.)/,
           ~r/^Membrane\.UtilitySupervisor($|\.)/

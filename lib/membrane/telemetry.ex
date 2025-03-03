@@ -11,13 +11,15 @@ defmodule Membrane.Telemetry do
   The following telemetric events are published by Membrane's Core components:
 
     * `[:membrane, :element | :bin | :pipeline, callback, :start | :stop | :exception]` -
-    where callback is any possible handle_* function defined for a component.
+    where `callback` is any possible `handle_*` function defined for a component. Metadata
+    passed to these events is `t:callback_span_metadata/0`.
       * `:start` - when the components begins callback's execution
       * `:stop` - when the components finishes callback's execution
       * `:exception` - when the component crashes during callback's execution
 
     * `[:membrane, :datapoint, datapoint_type]` -
-    where datapoint_type is any of the available datapoint types (see below)
+    where datapoint_type is any of the available datapoint types (see below).
+    Metadata passed to these events is `t:datapoint_metadata/0`.
 
   ## Enabling specific datapoints
   A lot of datapoints can happen hundreds times per second such as registering that a buffer has been sent/processed.
@@ -62,15 +64,17 @@ defmodule Membrane.Telemetry do
           Element.CallbackContext.t() | Bin.CallbackContext.t() | Pipeline.CallbackContext.t()
 
   @typedoc """
-  Metadata included with each telemetry component's handler profiled
-  * callback - name of the callback function
-  * callback_args - arguments passed to the callback
-  * callback_context - context of the callback consistent with Membrane.*.CallbackContext
-  * component_path - path of the component in the pipeline consistent with t:ComponentPath.path/0
-  * component_type - atom representation of the base component type
-  * monotonic_time - monotonic time when the callback was executed in native time unit
-  * state_before_callback - state of the component before the callback execution
-  * state_after_callback - state of the component after the callback execution, it's `nil` on :start and :exception events
+  Metadata passed to telemetry events emitted on component's callbacks.
+
+  Fields:
+  * `callback` - name of the callback function
+  * `callback_args` - arguments passed to the callback
+  * `callback_context` - context of the callback consistent with Membrane.*.CallbackContext
+  * `component_path` - path of the component in the pipeline consistent with t:ComponentPath.path/0
+  * `component_type` - atom representation of the base component type
+  * `monotonic_time` - monotonic time when the callback was executed in native time unit
+  * `state_before_callback` - state of the component before the callback execution
+  * `state_after_callback` - state of the component after the callback execution, it's `nil` on :start and :exception events
   """
   @type callback_span_metadata :: %{
           callback: atom(),
