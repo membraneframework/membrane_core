@@ -118,8 +118,10 @@ defmodule Membrane.Core.Element.StreamFormatController do
           end
 
         raise Membrane.StreamFormatError, """
-        Stream format: #{inspect(stream_format)} is not matching accepted format pattern #{pretty_accepted_format} in def_#{direction}_pad
-        for pad #{inspect(pad_name)} in #{inspect(module)}
+        Stream format: #{inspect(stream_format)} is not matching accepted format pattern \
+        #{pretty_accepted_format} in def_#{direction}_pad for pad #{inspect(pad_name)} \
+        in #{inspect(module)}. Beware that stream format is forwarded by the default implemetation \
+        of handle_stream_format in filters.
         """
       end
     end
