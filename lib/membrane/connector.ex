@@ -62,7 +62,7 @@ defmodule Membrane.Connector do
   end
 
   @impl true
-  def handle_playing(ctx, state), do: handle_flowing_state_changed(ctx, state)
+  def handle_start_of_stream(_input_pad, ctx, state), do: manage_input_demand(ctx, state)
 
   [handle_buffer: :buffer, handle_event: :event, handle_stream_format: :stream_format]
   |> Enum.map(fn {callback, action} ->
@@ -110,6 +110,8 @@ defmodule Membrane.Connector do
        when input_demand_should_be_paused?(ctx, state) do
     {[pause_auto_demand: state.input], %{state | input_demand_paused?: true}}
   end
+
+  defp manage_input_demand()
 
   defp manage_input_demand(_ctx, state), do: {[], state}
 
