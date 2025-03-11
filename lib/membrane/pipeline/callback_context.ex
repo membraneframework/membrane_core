@@ -18,6 +18,7 @@ defmodule Membrane.Pipeline.CallbackContext do
           :children => %{Membrane.Child.name() => Membrane.ChildEntry.t()},
           :clock => Membrane.Clock.t(),
           :module => module(),
+          :name => term(),
           :playback => Membrane.Playback.t(),
           :resource_guard => Membrane.ResourceGuard.t(),
           :utility_supervisor => Membrane.UtilitySupervisor.t(),

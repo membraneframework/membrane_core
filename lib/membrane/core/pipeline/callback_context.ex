@@ -18,6 +18,7 @@ defmodule Membrane.Core.Pipeline.CallbackContext do
       clock: state.synchronization.clock_proxy,
       children: state.children,
       module: state.module,
+      name: state.name,
       playback: state.playback,
       resource_guard: state.resource_guard,
       utility_supervisor: state.subprocess_supervisor
