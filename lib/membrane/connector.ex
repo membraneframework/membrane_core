@@ -42,9 +42,6 @@ defmodule Membrane.Connector do
   defguardp flowing?(ctx, state)
             when ctx.playback == :playing and state.input != nil and state.output != nil
 
-  defguardp input_demand_should_be_paused?(ctx, state)
-            when ctx.playback == :playing and state.input != nil and state.output == nil
-
   @impl true
   def handle_init(_ctx, opts) do
     state =
@@ -58,11 +55,13 @@ defmodule Membrane.Connector do
   @impl true
   def handle_pad_added(Pad.ref(direction, _ref) = pad, ctx, state) do
     state = state |> Map.put(direction, pad)
-    handle_flowing_state_changed(ctx, state)
+    {maybe_resume, state} = maybe_resume_auto_demand(state)
+    {maybe_flush, state} = maybe_flush_queue(ctx, state)
+    {maybe_resume ++ maybe_flush, state}
   end
 
   @impl true
-  def handle_playing(ctx, state), do: handle_flowing_state_changed(ctx, state)
+  def handle_start_of_stream(_input_pad, ctx, state), do: maybe_pause_auto_demand(ctx, state)
 
   [handle_buffer: :buffer, handle_event: :event, handle_stream_format: :stream_format]
   |> Enum.map(fn {callback, action} ->
@@ -95,23 +94,18 @@ defmodule Membrane.Connector do
     state |> Map.update!(:queue, &[{action, pad, item} | &1])
   end
 
-  defp handle_flowing_state_changed(ctx, state) do
-    {pause_or_resume_demand, state} = manage_input_demand(ctx, state)
-    {flush_queue_actions, state} = maybe_flush_queue(ctx, state)
-    {pause_or_resume_demand ++ flush_queue_actions, state}
+  defp maybe_pause_auto_demand(ctx, state) do
+    if state.output == nil and not state.input_demand_paused? and
+         ctx.pads[state.input].stream_format != nil,
+       do: {[pause_auto_demand: state.input], %{state | input_demand_paused?: true}},
+       else: {[], state}
   end
 
-  defp manage_input_demand(ctx, %{input_demand_paused?: true} = state)
-       when not input_demand_should_be_paused?(ctx, state) do
-    {[resume_auto_demand: state.input], %{state | input_demand_paused?: false}}
+  defp maybe_resume_auto_demand(state) do
+    if state.input_demand_paused? and state.output != nil,
+      do: {[resume_auto_demand: state.input], %{state | input_demand_paused?: false}},
+      else: {[], state}
   end
-
-  defp manage_input_demand(ctx, %{input_demand_paused?: false} = state)
-       when input_demand_should_be_paused?(ctx, state) do
-    {[pause_auto_demand: state.input], %{state | input_demand_paused?: true}}
-  end
-
-  defp manage_input_demand(_ctx, state), do: {[], state}
 
   defp maybe_flush_queue(ctx, state) when flowing?(ctx, state) do
     actions =
