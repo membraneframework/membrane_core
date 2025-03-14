@@ -126,11 +126,16 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
+  @doc false
+  @spec identity(term()) :: term()
+  def identity(term), do: term
+
   defmacrop report_datapoint(datapoint_name, do: lazy_block) do
     unless Macro.quoted_literal?(datapoint_name), do: raise("Datapoint type must be a literal")
 
+    # @legacy? |> indentity() is a hack to mute compilation warnings
     cond do
-      @legacy? ->
+      @legacy? |> identity() ->
         do_legacy_telemetry(datapoint_name, lazy_block)
 
       datapoint_gathered?(datapoint_name) ->
