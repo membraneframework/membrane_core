@@ -174,8 +174,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       |> Enum.filter(fn {_pad, info} -> info[:flow_control] in [:auto, :push] end)
       |> Enum.split_with(fn {_pad, info} -> info.flow_control == :auto end)
 
-    if auto_pads != [] and push_pads != [] and
-         not endpoint_with_surely_valid_flow_control(used_module, pads) do
+    if should_warn_on_mixing_push_and_auto_pads?(pads, auto_pads, push_pads, used_module) do
       Membrane.Logger.warning("""
       #{inspect(env.module)} defines pads with `flow_control: :auto` and pads with `flow_control: :push` \
       at the same time. Please, consider if this what you want to do - flow control of these pads won't be \
@@ -220,6 +219,11 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
 
     :ok
+  end
+
+  defp should_warn_on_mixing_push_and_auto_pads?(all_pads, auto_pads, push_pads, used_module) do
+    auto_pads != [] and push_pads != [] and
+      not endpoint_with_surely_valid_flow_control(used_module, all_pads)
   end
 
   # returns true if e.g. Endpoint has all input pads in auto and all output pads in push
