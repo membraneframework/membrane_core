@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.2
+ * Improve conditions for generating compilation warnings. [#956](https://github.com/membraneframework/membrane_core/pull/956)
+
 ## 1.2.1
  * Improve stream format error. [#950](https://github.com/membraneframework/membrane_core/pull/950)
  * Minor fixes in `Membrane.Connector`. [#952](https://github.com/membraneframework/membrane_core/pull/952)
