@@ -176,15 +176,17 @@ defmodule Membrane.Core.Telemetry do
           Telemetry.callback_context()
         ) :: CallbackHandler.callback_return() | no_return()
   def track_callback_handler(f, callback, args, state, context) do
+
+    component_type = state_module_to_atom(state.__struct__)
     meta =
       callback_meta(
         state,
         callback,
         args,
-        context
+        context, component_type
       )
 
-    component_type = state_module_to_atom(state.__struct__)
+
 
     if handler_reported?(component_type, callback) do
       :telemetry.span([:membrane, component_type, callback], meta, fn ->
@@ -198,13 +200,13 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  defp callback_meta(state, callback, args, context) do
+  defp callback_meta(state, callback, args, context, component_type) do
     %{
       callback: callback,
       callback_args: args,
       callback_context: context,
       component_path: ComponentPath.get(),
-      component_type: state.module,
+      component_type: component_type,
       monotonic_time: System.monotonic_time(),
       state_before_callback: state.internal_state,
       state_after_callback: nil
