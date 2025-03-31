@@ -114,7 +114,7 @@ defmodule Membrane.TelemetryTest do
                        1000
 
         assert results.duration >= 0
-        assert_span_metadata(metadata)
+        assert metadata.component_type == :element
       end
     end
   end
@@ -275,12 +275,6 @@ defmodule Membrane.TelemetryTest do
     assert is_atom(metadata.datapoint)
     assert is_list(metadata.component_path)
     assert metadata.component_metadata
-  end
-
-  defp assert_span_metadata(metadata) do
-    assert is_atom(metadata.component_type)
-
-    refute to_string(metadata.component_type) |> String.starts_with?("Elixir.")
   end
 
   defp setup_pipeline_for(event, child_spec) do
