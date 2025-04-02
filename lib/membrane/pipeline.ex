@@ -47,7 +47,7 @@ defmodule Membrane.Pipeline do
   Use the [Applications tab](https://www.erlang.org/doc/apps/observer/observer_ug#applications-tab) in Erlang's Observer GUI
   (or the `Kino` library in Livebook) to visualize a pipeline's internal supervision tree. Use the following configuration for debugging purposes only:
 
-        config :membrane_core, unsafely_name_processes_for_stalker: [:components]
+        config :membrane_core, unsafely_name_processes_for_observer: [:components]
 
   This improves the readability of the Observer's process tree graph by naming the pipeline descendants, as demonstrated here:
 
