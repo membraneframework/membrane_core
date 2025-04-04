@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.3
+ * Makes sure that all handle_child_terminated callbacks for children in crash group are called before handle_crash_group_down of that group in [#962](https://github.com/membraneframework/membrane_core/pull/962)
+
 ## 1.2.2
  * Improve conditions for generating compilation warnings. [#956](https://github.com/membraneframework/membrane_core/pull/956)
 
