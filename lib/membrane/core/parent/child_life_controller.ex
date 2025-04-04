@@ -728,11 +728,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
         else: state
 
     with {:ok, crash_group} <- CrashGroupUtils.get_child_crash_group(child_name, state) do
+      state = exec_handle_child_terminated(child_name, state)
+
       state =
         CrashGroupUtils.handle_crash_group_member_death(child_name, crash_group, reason, state)
         |> ChildrenModel.delete_child(child_name)
-
-      state = exec_handle_child_terminated(child_name, state)
 
       {:ok, state}
     else

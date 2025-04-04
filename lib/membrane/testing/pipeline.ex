@@ -57,6 +57,7 @@ defmodule Membrane.Testing.Pipeline do
   ## Example usage
 
   Firstly, we can start the pipeline providing its options as a keyword list:
+
     import Membrane.ChildrenSpec
     children = [
         child(source, %Membrane.Testing.Source{} ) |>
