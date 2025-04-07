@@ -734,7 +734,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
 
       state = exec_handle_child_terminated(child_name, state)
 
-      CrashGroupUtils.handle_crash_group_member_death(child_name, crash_group, reason, state)
+      state =
+        CrashGroupUtils.handle_crash_group_member_death(child_name, crash_group, reason, state)
+
       {:ok, state}
     else
       :error when reason == :normal ->
