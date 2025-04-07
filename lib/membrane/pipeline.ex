@@ -267,8 +267,10 @@ defmodule Membrane.Pipeline do
             ) :: {[Action.common_actions()], state()}
 
   @doc """
-  Callback invoked when a crash group crashes.
+  Callback invoked when a crash group crashes, when all children from
+  the crash group are already dead.
 
+  You can use this callback to respawn the children from the failed crashed crash group.
   Context passed to this callback contains 2 additional fields: `:members` and `:crash_initiator`.
   By default, it does nothing.
   """
