@@ -97,17 +97,16 @@ defmodule Membrane.Integration.CallbacksTest do
     @impl true
     def handle_crash_group_down(_group_id, _ctx, state) do
       assert MapSet.size(state.crash_group_children) == 0
-      {[terminate: :normal], state}
+      {[terminate: :shutdown], state}
     end
   end
 
-  @tag :sometag
   test "handle_child_terminated and handle_crash_group_down in proper order" do
-    pipeline = Testing.Pipeline.start_link_supervised!(module: CallbacksOrderAssertingPipeline)
+    pipeline = Testing.Pipeline.start_supervised!(module: CallbacksOrderAssertingPipeline)
     Process.monitor(pipeline)
 
     receive do
-      {:DOWN, _ref, _process, ^pipeline, :normal} -> :ok
+      {:DOWN, _ref, _process, ^pipeline, _reason} -> :ok
     end
   end
 end
