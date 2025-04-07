@@ -45,7 +45,7 @@ defmodule Membrane.Integration.CallbacksTest do
 
     @impl true
     def handle_playing(_ctx, state) do
-      Process.send_after(self(), :raise, 3000)
+      Process.send_after(self(), :raise, 500)
       {[], state}
     end
 
