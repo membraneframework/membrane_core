@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.3
+* Telemetry event's metadata `component_type` now correctly refers to the root type and not the implementing module [#958](https://github.com/membraneframework/membrane_core/pull/958)
+
 ## 1.2.2
  * Improve conditions for generating compilation warnings. [#956](https://github.com/membraneframework/membrane_core/pull/956)
 
