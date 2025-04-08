@@ -93,7 +93,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     )
   end
 
-  def maybe_detonate_crash_group(_child_name, %CrashGroup{} = _group, _reason, state), do: state
+  def maybe_detonate_crash_group(_child_name, %CrashGroup{}, _reason, state), do: state
 
   defp cleanup_crash_group(group_name, state) do
     state = exec_handle_crash_group_down(group_name, state)
