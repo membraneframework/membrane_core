@@ -15,7 +15,6 @@ defmodule Membrane.Core.Pipeline.CallbackContext do
               exit_reason: :normal | :shutdown | {:shutdown, term()} | term()
             ]
 
-
   @spec from_state(Membrane.Core.Pipeline.State.t(), optional_fields()) ::
           Membrane.Pipeline.CallbackContext.t()
   def from_state(state, optional_fields \\ []) do
