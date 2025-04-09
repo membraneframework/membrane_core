@@ -730,7 +730,9 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     with {:ok, crash_group} <- CrashGroupUtils.get_child_crash_group(child_name, state) do
       state =
         CrashGroupUtils.maybe_detonate_crash_group(child_name, crash_group, reason, state)
-        |> ChildrenModel.delete_child(child_name)
+
+      {:ok, crash_group} = CrashGroupUtils.get_child_crash_group(child_name, state)
+      state = ChildrenModel.delete_child(state, child_name)
 
       state = exec_handle_child_terminated(child_name, reason, crash_group, state)
 

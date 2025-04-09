@@ -113,7 +113,6 @@ defmodule Membrane.Integration.CallbacksTest do
     end
   end
 
-  @tag :sometag
   test "handle_child_terminated and handle_crash_group_down in proper order" do
     pipeline = Testing.Pipeline.start_link_supervised!(module: CallbacksOrderAssertingPipeline)
     Process.monitor(pipeline)
