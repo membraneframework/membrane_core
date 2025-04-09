@@ -1,6 +1,7 @@
 # Changelog
 
 ## 1.2.3
+ * Adds new fields for the handle_child_terminated context: crash_initiator, exit_reason and group_name in [#964](https://github.com/membraneframework/membrane_core/pull/964)
  * Makes sure that all handle_child_terminated callbacks for children in crash group are called before handle_crash_group_down of that group in [#962](https://github.com/membraneframework/membrane_core/pull/962)
  * Telemetry event's metadata `component_type` now correctly refers to the root type and not the implementing module [#958](https://github.com/membraneframework/membrane_core/pull/958)
 
