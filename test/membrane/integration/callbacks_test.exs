@@ -89,7 +89,19 @@ defmodule Membrane.Integration.CallbacksTest do
     end
 
     @impl true
-    def handle_child_terminated(child, _ctx, state) do
+    def handle_child_terminated(:filter2, ctx, state) do
+      assert ctx.crash_initiator == :filter2
+      assert ctx.group_name == :crash_group
+      assert match?({%RuntimeError{message: "Raising"}, _stacktrace}, ctx.exit_reason)
+      state = %{crash_group_children: MapSet.delete(state.crash_group_children, :filter2)}
+      {[], state}
+    end
+
+    @impl true
+    def handle_child_terminated(child, ctx, state) do
+      assert ctx.exit_reason == {:shutdown, :membrane_crash_group_kill}
+      assert ctx.crash_initiator == :filter2
+      assert ctx.group_name == :crash_group
       state = %{crash_group_children: MapSet.delete(state.crash_group_children, child)}
       {[], state}
     end
@@ -97,12 +109,13 @@ defmodule Membrane.Integration.CallbacksTest do
     @impl true
     def handle_crash_group_down(_group_id, _ctx, state) do
       assert MapSet.size(state.crash_group_children) == 0
-      {[terminate: :shutdown], state}
+      {[terminate: :normal], state}
     end
   end
 
+  @tag :sometag
   test "handle_child_terminated and handle_crash_group_down in proper order" do
-    pipeline = Testing.Pipeline.start_supervised!(module: CallbacksOrderAssertingPipeline)
+    pipeline = Testing.Pipeline.start_link_supervised!(module: CallbacksOrderAssertingPipeline)
     Process.monitor(pipeline)
 
     receive do
