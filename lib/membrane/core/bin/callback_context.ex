@@ -9,6 +9,11 @@ defmodule Membrane.Core.Bin.CallbackContext do
               crash_reason: :normal | :shutdown | {:shutdown, term()} | term()
             ]
           | [start_of_stream_received?: boolean()]
+          | [
+              group_name: Membrane.Child.group(),
+              crash_initiator: Membrane.Child.name(),
+              exit_reason: :normal | :shutdown | {:shutdown, term()} | term()
+            ]
 
   @spec from_state(Membrane.Core.Bin.State.t(), optional_fields()) ::
           Membrane.Bin.CallbackContext.t()
