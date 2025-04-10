@@ -11,7 +11,7 @@ defmodule Membrane.Core.Pipeline.CallbackContext do
           | [start_of_stream_received?: boolean()]
           | [
               group_name: Membrane.Child.group() | nil,
-              crash_initiator: Membrane.Child.name(),
+              crash_initiator: Membrane.Child.name() | nil,
               exit_reason: :normal | :shutdown | {:shutdown, term()} | term()
             ]
 
