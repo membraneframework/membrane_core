@@ -6,6 +6,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
   alias Membrane.Core.{CallbackHandler, Component, Parent}
   alias Membrane.Core.Parent.{ChildLifeController, ChildrenModel, CrashGroup}
   alias Membrane.Core.Parent.ChildLifeController.LinkUtils
+  require Membrane.Logger
 
   @spec add_crash_group(
           Child.group(),
@@ -15,6 +16,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
         ) :: Parent.state()
   def add_crash_group(group_name, mode, children, state)
       when not is_map_key(state.crash_groups, group_name) do
+    if group_name == nil do
+      Membrane.Logger.warning("""
+      Calling a children group `nil` is depracated, please use some other value
+      for `:group` when you specify the children group in `:spec` action options.
+      """)
+    end
+
     put_in(
       state.crash_groups[group_name],
       %CrashGroup{

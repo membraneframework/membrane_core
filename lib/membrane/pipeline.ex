@@ -245,9 +245,9 @@ defmodule Membrane.Pipeline do
   @doc """
   Callback invoked after a child terminates.
 
+  Context passed to this callback contains 3 additional fields: `:exit_reason`, `:group_name` and `:crash_initiator`.
   Terminated child won't be present in the context of this callback. It is allowed to spawn a new child
   with the same name.
-
   By default, it does nothing.
   """
   @callback handle_child_terminated(
@@ -271,7 +271,7 @@ defmodule Membrane.Pipeline do
   the crash group are already dead.
 
   You can use this callback to respawn the children from the failed crashed crash group.
-  Context passed to this callback contains 2 additional fields: `:members` and `:crash_initiator`.
+  Context passed to this callback contains 3 additional fields: `:members`, `:crash_initiator` and `:crash_reason`.
   By default, it does nothing.
   """
   @callback handle_crash_group_down(

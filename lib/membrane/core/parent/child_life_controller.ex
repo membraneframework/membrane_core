@@ -730,9 +730,11 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     with {:ok, crash_group} <- CrashGroupUtils.get_child_crash_group(child_name, state) do
       state =
         CrashGroupUtils.maybe_detonate_crash_group(child_name, crash_group, reason, state)
-        |> ChildrenModel.delete_child(child_name)
 
-      state = exec_handle_child_terminated(child_name, state)
+      {:ok, crash_group} = CrashGroupUtils.get_child_crash_group(child_name, state)
+      state = ChildrenModel.delete_child(state, child_name)
+
+      state = exec_handle_child_terminated(child_name, reason, crash_group, state)
 
       state =
         CrashGroupUtils.handle_crash_group_member_death(child_name, crash_group, reason, state)
@@ -741,7 +743,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     else
       :error when reason == :normal ->
         state = ChildrenModel.delete_child(state, child_name)
-        state = exec_handle_child_terminated(child_name, state)
+        state = exec_handle_child_terminated(child_name, reason, state)
         {:ok, state}
 
       :error when reason == {:shutdown, :membrane_crash_group_kill} ->
@@ -787,11 +789,25 @@ defmodule Membrane.Core.Parent.ChildLifeController do
     related_specs |> Map.keys() |> Enum.reduce(state, &proceed_spec_startup/2)
   end
 
-  defp exec_handle_child_terminated(child_name, state) do
+  defp exec_handle_child_terminated(child_name, reason, group \\ nil, state) do
+    {crash_initiator, group_name} =
+      if group do
+        {group.crash_initiator, group.name}
+      else
+        {nil, nil}
+      end
+
+    context_generator =
+      &Component.context_from_state(&1,
+        exit_reason: reason,
+        crash_initiator: crash_initiator,
+        group_name: group_name
+      )
+
     CallbackHandler.exec_and_handle_callback(
       :handle_child_terminated,
       Component.action_handler(state),
-      %{context: &Component.context_from_state/1},
+      %{context: context_generator},
       [child_name],
       state
     )
