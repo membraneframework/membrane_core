@@ -2,12 +2,11 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
   @moduledoc false
   # A module responsible for managing crash groups inside the state of pipeline.
 
-  require Membrane.Logger
-
   alias Membrane.{Child, ChildrenSpec}
   alias Membrane.Core.{CallbackHandler, Component, Parent}
   alias Membrane.Core.Parent.{ChildLifeController, ChildrenModel, CrashGroup}
   alias Membrane.Core.Parent.ChildLifeController.LinkUtils
+  require Membrane.Logger
 
   @spec add_crash_group(
           Child.group(),
