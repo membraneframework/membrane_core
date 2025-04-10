@@ -2,6 +2,8 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
   @moduledoc false
   # A module responsible for managing crash groups inside the state of pipeline.
 
+  require Membrane.Logger
+
   alias Membrane.{Child, ChildrenSpec}
   alias Membrane.Core.{CallbackHandler, Component, Parent}
   alias Membrane.Core.Parent.{ChildLifeController, ChildrenModel, CrashGroup}
@@ -15,6 +17,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
         ) :: Parent.state()
   def add_crash_group(group_name, mode, children, state)
       when not is_map_key(state.crash_groups, group_name) do
+    if group_name == nil do
+      Membrane.Logger.warning("""
+      Calling a children group `nil` is depracated, please use some other value
+      for `:group` when you specify the children group in `:spec` action options.
+      """)
+    end
+
     put_in(
       state.crash_groups[group_name],
       %CrashGroup{

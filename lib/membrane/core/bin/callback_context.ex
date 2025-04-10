@@ -10,7 +10,7 @@ defmodule Membrane.Core.Bin.CallbackContext do
             ]
           | [start_of_stream_received?: boolean()]
           | [
-              group_name: Membrane.Child.group(),
+              group_name: Membrane.Child.group() | nil,
               crash_initiator: Membrane.Child.name(),
               exit_reason: :normal | :shutdown | {:shutdown, term()} | term()
             ]

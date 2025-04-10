@@ -33,6 +33,6 @@ defmodule Membrane.Pipeline.CallbackContext do
           optional(:crash_reason) => :normal | :shutdown | {:shutdown, term()} | term(),
           optional(:start_of_stream_received?) => boolean(),
           optional(:exit_reason) => :normal | :shutdown | {:shutdown, term()} | term(),
-          optional(:group_name) => Membrane.Child.group()
+          optional(:group_name) => Membrane.Child.group() | nil
         }
 end
