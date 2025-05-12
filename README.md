@@ -18,6 +18,8 @@ If you have questions or need consulting, we're for you at our [Discord](https:/
 
 You can also [follow Membrane on X (Twitter)](https://twitter.com/ElixirMembrane) or [join our Discord](https://discord.gg/nwnfVSY) to be up to date and get involved in the community.
 
+If you already had a chance to use Membrane, we will be greateful if could fill out quick survey to help us improve framework and decide on what to do next.
+
 Membrane is maintained by [Software Mansion](swmansion.com).
 
 ## Quick start
