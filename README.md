@@ -20,7 +20,7 @@ You can also [follow Membrane on X (Twitter)](https://twitter.com/ElixirMembrane
 
 If you already had a chance to use Membrane, we will be greateful if could fill out quick [survey](https://forms.gle/dgVDFHUD7CUGxU5VA) to help us improve framework and decide on what to do next.
 
-Membrane is maintained by [Software Mansion](swmansion.com).
+Membrane is maintained by [Software Mansion](https://swmansion.com).
 
 ## Quick start
 
