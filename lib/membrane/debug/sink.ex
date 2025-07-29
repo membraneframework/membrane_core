@@ -74,7 +74,7 @@ defmodule Membrane.Debug.Sink do
 
   @impl true
   def handle_start_of_stream(:input, _ctx, state) do
-    _ingored = state.handle_start_of_stream.()
+    _ignored = state.handle_start_of_stream.()
     {[], state}
   end
 
