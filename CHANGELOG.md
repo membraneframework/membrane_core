@@ -1,6 +1,6 @@
 # Changelog
 
-# 1.2.4
+## 1.2.4
  * Add `:handle_end_of_stream` option to debug elements. [#993](https://github.com/membraneframework/membrane_core/pull/993)
 
 ## 1.2.3
