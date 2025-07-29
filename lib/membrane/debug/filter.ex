@@ -26,10 +26,7 @@ defmodule Membrane.Debug.Filter do
   def_output_pad :output, accepted_format: _any, flow_control: :auto
 
   @spec noop(any()) :: :ok
-  def noop(_arg), do: :ok
-
-  @spec noop() :: :ok
-  def noop(), do: :ok
+  def noop(_arg \\ nil), do: :ok
 
   def_options handle_start_of_stream: [
                 spec: (-> any()),
