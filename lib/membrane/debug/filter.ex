@@ -79,31 +79,31 @@ defmodule Membrane.Debug.Filter do
 
   @impl true
   def handle_start_of_stream(:input, _ctx, state) do
-    _ingored = state.handle_start_of_stream.()
+    _ignored = state.handle_start_of_stream.()
     {[], state}
   end
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, state) do
-    _ingored = state.handle_buffer.(buffer)
+    _ignored = state.handle_buffer.(buffer)
     {[buffer: {:output, buffer}], state}
   end
 
   @impl true
   def handle_event(_pad, event, _ctx, state) do
-    _ingored = state.handle_event.(event)
+    _ignored = state.handle_event.(event)
     {[forward: event], state}
   end
 
   @impl true
   def handle_stream_format(:input, stream_format, _ctx, state) do
-    _ingored = state.handle_stream_format.(stream_format)
+    _ignored = state.handle_stream_format.(stream_format)
     {[stream_format: {:output, stream_format}], state}
   end
 
   @impl true
   def handle_end_of_stream(:input, _ctx, state) do
-    _ingored = state.handle_end_of_stream.()
+    _ignored = state.handle_end_of_stream.()
     {[end_of_stream: :output], state}
   end
 end
