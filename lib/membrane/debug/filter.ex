@@ -31,7 +31,15 @@ defmodule Membrane.Debug.Filter do
   @spec noop() :: :ok
   def noop(), do: :ok
 
-  def_options handle_buffer: [
+  def_options handle_start_of_stream: [
+                spec: (-> any()),
+                default: &__MODULE__.noop/0,
+                description: """
+                Function with arity 0, that will be called when the start of stream is received on the input pad.
+                Result of this function is ignored.
+                """
+              ],
+              handle_buffer: [
                 spec: (Buffer.t() -> any()),
                 default: &__MODULE__.noop/1,
                 description: """
@@ -67,6 +75,12 @@ defmodule Membrane.Debug.Filter do
   @impl true
   def handle_init(_ctx, opts) do
     {[], Map.from_struct(opts)}
+  end
+
+  @impl true
+  def handle_start_of_stream(:input, _ctx, state) do
+    _ingored = state.handle_start_of_stream.()
+    {[], state}
   end
 
   @impl true
