@@ -26,9 +26,17 @@ defmodule Membrane.Debug.Filter do
   def_output_pad :output, accepted_format: _any, flow_control: :auto
 
   @spec noop(any()) :: :ok
-  def noop(_arg), do: :ok
+  def noop(_arg \\ nil), do: :ok
 
-  def_options handle_buffer: [
+  def_options handle_start_of_stream: [
+                spec: (-> any()),
+                default: &__MODULE__.noop/0,
+                description: """
+                Function with arity 0, that will be called when the start of stream is received on the input pad.
+                Result of this function is ignored.
+                """
+              ],
+              handle_buffer: [
                 spec: (Buffer.t() -> any()),
                 default: &__MODULE__.noop/1,
                 description: """
@@ -51,6 +59,14 @@ defmodule Membrane.Debug.Filter do
                 Function with arity 1, that will be called with all stream formats handled by this sink.
                 Result of this function is ignored.
                 """
+              ],
+              handle_end_of_stream: [
+                spec: (-> any()),
+                default: &__MODULE__.noop/0,
+                description: """
+                Function with arity 0, that will be called when the end of stream is received on the input pad.
+                Result of this function is ignored.
+                """
               ]
 
   @impl true
@@ -59,20 +75,32 @@ defmodule Membrane.Debug.Filter do
   end
 
   @impl true
+  def handle_start_of_stream(:input, _ctx, state) do
+    _ignored = state.handle_start_of_stream.()
+    {[], state}
+  end
+
+  @impl true
   def handle_buffer(:input, buffer, _ctx, state) do
-    _ingored = state.handle_buffer.(buffer)
+    _ignored = state.handle_buffer.(buffer)
     {[buffer: {:output, buffer}], state}
   end
 
   @impl true
   def handle_event(_pad, event, _ctx, state) do
-    _ingored = state.handle_event.(event)
+    _ignored = state.handle_event.(event)
     {[forward: event], state}
   end
 
   @impl true
   def handle_stream_format(:input, stream_format, _ctx, state) do
-    _ingored = state.handle_stream_format.(stream_format)
+    _ignored = state.handle_stream_format.(stream_format)
     {[stream_format: {:output, stream_format}], state}
+  end
+
+  @impl true
+  def handle_end_of_stream(:input, _ctx, state) do
+    _ignored = state.handle_end_of_stream.()
+    {[end_of_stream: :output], state}
   end
 end

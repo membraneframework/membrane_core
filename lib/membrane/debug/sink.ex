@@ -21,9 +21,17 @@ defmodule Membrane.Debug.Sink do
   def_input_pad :input, accepted_format: _any, flow_control: :auto
 
   @spec noop(any()) :: :ok
-  def noop(_arg), do: :ok
+  def noop(_arg \\ nil), do: :ok
 
-  def_options handle_buffer: [
+  def_options handle_start_of_stream: [
+                spec: (-> any()),
+                default: &__MODULE__.noop/0,
+                description: """
+                Function with arity 0, that will be called when the start of stream is received on the input pad.
+                Result of this function is ignored.
+                """
+              ],
+              handle_buffer: [
                 spec: (Buffer.t() -> any()),
                 default: &__MODULE__.noop/1,
                 description: """
@@ -46,11 +54,25 @@ defmodule Membrane.Debug.Sink do
                 Function with arity 1, that will be called with all stream formats handled by this sink.
                 Result of this function is ignored.
                 """
+              ],
+              handle_end_of_stream: [
+                spec: (-> any()),
+                default: &__MODULE__.noop/0,
+                description: """
+                Function with arity 0, that will be called when the end of stream is received on the input pad.
+                Result of this function is ignored.
+                """
               ]
 
   @impl true
   def handle_init(_ctx, opts) do
     {[], Map.from_struct(opts)}
+  end
+
+  @impl true
+  def handle_start_of_stream(:input, _ctx, state) do
+    _ignored = state.handle_start_of_stream.()
+    {[], state}
   end
 
   @impl true
@@ -68,6 +90,12 @@ defmodule Membrane.Debug.Sink do
   @impl true
   def handle_stream_format(:input, stream_format, _ctx, state) do
     _ignored = state.handle_stream_format.(stream_format)
+    {[], state}
+  end
+
+  @impl true
+  def handle_end_of_stream(:input, _ctx, state) do
+    _ignored = state.handle_end_of_stream.()
     {[], state}
   end
 end

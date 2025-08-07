@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.4
+ * Add `:handle_end_of_stream` and `:handle_start_of_stream` options to debug elements. [#993](https://github.com/membraneframework/membrane_core/pull/993)
+
 ## 1.2.3
  * Deprecate calling a children group `nil` in [#964](https://github.com/membraneframework/membrane_core/pull/964)
  * Adds new fields for the handle_child_terminated context: crash_initiator, exit_reason and group_name in [#964](https://github.com/membraneframework/membrane_core/pull/964)
