@@ -60,7 +60,7 @@ defmodule Membrane.Testing.Pipeline do
   import Membrane.ChildrenSpec
 
   spec = [
-      child(:source, Membrane.Testing.Source)
+      child(:source, %Membrane.Testing.Source{output: [1, 2, 3]})
       |> child(:tested_element, TestedElement)
       |> child(:sink, Membrane.Testing.Sink)
   ]
