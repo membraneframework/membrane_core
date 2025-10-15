@@ -59,19 +59,7 @@ defmodule Membrane.Mixfile do
   defp docs do
     [
       main: "readme",
-      extras: [
-        "README.md",
-        "CHANGELOG.md",
-        "CONTRIBUTING.md",
-        "guides/upgrading/v0.11.md",
-        "guides/upgrading/v0.12.md",
-        "guides/upgrading/v1.0.0-rc0.md",
-        "guides/upgrading/v1.0.0-rc1.md",
-        "guides/upgrading/v1.0.0.md",
-        "guides/components_lifecycle.md",
-        "guides/timer.md",
-        LICENSE: [title: "License"]
-      ],
+      extras: extras(),
       formatters: ["html"],
       source_ref: @source_ref,
       nest_modules_by_prefix: [
@@ -89,47 +77,95 @@ defmodule Membrane.Mixfile do
         Membrane.RCPipeline,
         Membrane.RCMessage
       ],
-      groups_for_modules: [
-        Pipeline: [~r/^Membrane\.Pipeline($|\.)/],
-        "RC Pipeline": [
-          ~r/^Membrane\.(RCPipeline)($|\.)/,
-          ~r/^Membrane\.(RCMessage)($|\.)/
-        ],
-        Bin: [~r/^Membrane\.Bin($|\.)/],
-        Element: [
-          ~r/^Membrane\.Filter($|\.)/,
-          ~r/^Membrane\.Endpoint($|\.)/,
-          ~r/^Membrane\.Sink($|\.)/,
-          ~r/^Membrane\.Source($|\.)/,
-          ~r/^Membrane\.Element($|\.)/
-        ],
-        "Helper Elements": [
-          ~r/^Membrane\.Connector($|\.)/,
-          ~r/^Membrane\.Fake($|\.)/,
-          ~r/^Membrane\.Debug($|\.)/,
-          ~r/^Membrane\.Tee($|\.)/,
-          ~r/^Membrane\.Funnel($|\.)/,
-          ~r/^Membrane\.FilterAggregator($|\.)/
-        ],
-        Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
-        Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
-        Communication: [
-          ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
-        ],
-        Logging: [~r/^Membrane\.Logger($|\.)/],
-        Telemetry: [~r/^Membrane\.Telemetry($|\.)/],
-        Testing: [~r/^Membrane\.Testing($|\.)/],
-        Utils: [
-          ~r/^Membrane\.Clock($|\.)/,
-          ~r/^Membrane\.Sync($|\.)/,
-          ~r/^Membrane\.Time($|\.)/,
-          ~r/^Membrane\.Playback($|\.)/,
-          ~r/^Membrane\.ComponentPath($|\.)/,
-          ~r/^Membrane\.ResourceGuard($|\.)/,
-          ~r/^Membrane\.UtilitySupervisor($|\.)/
-        ],
-        Errors: [~r/Error$/]
-      ]
+      groups_for_modules: groups_for_modules(),
+      groups_for_extras: groups_for_extras()
+    ]
+  end
+
+  defp extras do
+    [
+      "README.md",
+      "CHANGELOG.md",
+      "CONTRIBUTING.md",
+      Path.wildcard("guides/**/*.md")
+      |> Enum.reject(&(Path.basename(&1) in ["README.md", "index.md"]))
+      |> Enum.map(&{String.to_atom(&1), [title: reformat_tutorial_title(&1)]}),
+      LICENSE: [title: "License"]
+    ]
+    |> List.flatten()
+  end
+
+  defp reformat_tutorial_title(filename) do
+    {first_letter, rest} =
+      filename
+      |> Path.basename()
+      |> String.replace(~r/^\d+_/, "")
+      |> String.replace("_", " ")
+      |> String.trim_trailing(".md")
+      |> String.next_grapheme()
+
+    String.upcase(first_letter) <> rest
+  end
+
+  defp groups_for_modules do
+    [
+      Pipeline: [~r/^Membrane\.Pipeline($|\.)/],
+      "RC Pipeline": [
+        ~r/^Membrane\.(RCPipeline)($|\.)/,
+        ~r/^Membrane\.(RCMessage)($|\.)/
+      ],
+      Bin: [~r/^Membrane\.Bin($|\.)/],
+      Element: [
+        ~r/^Membrane\.Filter($|\.)/,
+        ~r/^Membrane\.Endpoint($|\.)/,
+        ~r/^Membrane\.Sink($|\.)/,
+        ~r/^Membrane\.Source($|\.)/,
+        ~r/^Membrane\.Element($|\.)/
+      ],
+      "Helper Elements": [
+        ~r/^Membrane\.Connector($|\.)/,
+        ~r/^Membrane\.Fake($|\.)/,
+        ~r/^Membrane\.Debug($|\.)/,
+        ~r/^Membrane\.Tee($|\.)/,
+        ~r/^Membrane\.Funnel($|\.)/,
+        ~r/^Membrane\.FilterAggregator($|\.)/
+      ],
+      Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
+      Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
+      Communication: [
+        ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
+      ],
+      Logging: [~r/^Membrane\.Logger($|\.)/],
+      Telemetry: [~r/^Membrane\.Telemetry($|\.)/],
+      Testing: [~r/^Membrane\.Testing($|\.)/],
+      Utils: [
+        ~r/^Membrane\.Clock($|\.)/,
+        ~r/^Membrane\.Sync($|\.)/,
+        ~r/^Membrane\.Time($|\.)/,
+        ~r/^Membrane\.Playback($|\.)/,
+        ~r/^Membrane\.ComponentPath($|\.)/,
+        ~r/^Membrane\.ResourceGuard($|\.)/,
+        ~r/^Membrane\.UtilitySupervisor($|\.)/
+      ],
+      Errors: [~r/Error$/]
+    ]
+  end
+
+  defp groups_for_extras do
+    [
+      "Get started with Membrane":
+        Path.wildcard("guides/membrane_tutorials/get_started_with_membrane/*.md"),
+      "Intro to pipelines": Path.wildcard("guides/membrane_tutorials/basic_pipeline/*.md"),
+      "Intro to pipelines - advanced concepts":
+        Path.wildcard("guides/membrane_tutorials/basic_pipeline_extension/*.md"),
+      "Creating plugins": Path.wildcard("guides/membrane_tutorials/create_new_plugin/*.md"),
+      "Useful concepts": Path.wildcard("guides/useful_concepts/*.md"),
+      "Digital video introduction":
+        Path.wildcard("guides/membrane_tutorials/digital_video_introduction/*.md"),
+      H264: Path.wildcard("guides/membrane_tutorials/h264/*.md"),
+      Broadcasting: Path.wildcard("guides/membrane_tutorials/broadcasting/*.md"),
+      Glossary: Path.wildcard("guides/membrane_tutorials/glossary/*.md"),
+      Upgrading: Path.wildcard("guides/upgrading/*.md")
     ]
   end
 
