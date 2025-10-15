@@ -62,6 +62,16 @@ defmodule Membrane.Mixfile do
       extras: extras(),
       formatters: ["html"],
       source_ref: @source_ref,
+      assets: %{
+        "guides/membrane_tutorials/get_started_with_membrane/assets" => "assets",
+        "guides/membrane_tutorials/basic_pipeline/assets" => "assets",
+        "guides/membrane_tutorials/basic_pipeline_extension/assets" => "assets",
+        "guides/membrane_tutorials/create_new_plugin/assets" => "assets",
+        "guides/membrane_tutorials/digital_video_introduction/assets" => "assets",
+        "guides/membrane_tutorials/h264/assets" => "assets",
+        "guides/membrane_tutorials/broadcasting/assets" => "assets",
+        "guides/membrane_tutorials/glossary/assets" => "assets"
+      },
       nest_modules_by_prefix: [
         Membrane.Bin,
         Membrane.Element,
@@ -88,7 +98,7 @@ defmodule Membrane.Mixfile do
       "CHANGELOG.md",
       "CONTRIBUTING.md",
       Path.wildcard("guides/**/*.md")
-      |> Enum.reject(&(Path.basename(&1) in ["README.md", "index.md"]))
+      |> Enum.reject(&(Path.basename(&1) in ["README.md", "index.md", "1_preface.md"]))
       |> Enum.map(&{String.to_atom(&1), [title: reformat_tutorial_title(&1)]}),
       LICENSE: [title: "License"]
     ]
@@ -160,8 +170,6 @@ defmodule Membrane.Mixfile do
         Path.wildcard("guides/membrane_tutorials/basic_pipeline_extension/*.md"),
       "Creating plugins": Path.wildcard("guides/membrane_tutorials/create_new_plugin/*.md"),
       "Useful concepts": Path.wildcard("guides/useful_concepts/*.md"),
-      "Digital video introduction":
-        Path.wildcard("guides/membrane_tutorials/digital_video_introduction/*.md"),
       H264: Path.wildcard("guides/membrane_tutorials/h264/*.md"),
       Broadcasting: Path.wildcard("guides/membrane_tutorials/broadcasting/*.md"),
       Glossary: Path.wildcard("guides/membrane_tutorials/glossary/*.md"),
