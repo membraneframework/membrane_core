@@ -13,6 +13,7 @@ packages =
     "docker_membrane",
     "membrane_demo",
     "membrane_tutorials",
+    "boombox",
     {:md, "### Plugins"},
     {:md, "#### General purpose"},
     "membrane_file_plugin",
@@ -24,22 +25,26 @@ packages =
     "membrane_stream_plugin",
     "membrane_fake_plugin",
     "membrane_pcap_plugin",
+    "membrane_transcoder_plugin",
     "kim-company/membrane_live_framerate_converter_plugin",
     "membrane_template_plugin",
     {:md, "#### Streaming protocols"},
     "membrane_webrtc_plugin",
     "membrane_rtmp_plugin",
     "membrane_http_adaptive_stream_plugin",
+    "membrane_srt_plugin",
     "membrane_ice_plugin",
     "membrane_udp_plugin",
     "membrane_tcp_plugin",
     "membrane_rtp_plugin",
     "membrane_rtp_h264_plugin",
+    "membrane_rtp_aac_plugin",
     "membrane_rtp_vp8_plugin",
     "membrane_rtp_vp9_plugin",
     "membrane_rtp_mpegaudio_plugin",
     "membrane_rtp_opus_plugin",
     "membrane_rtp_g711_plugin",
+    "gBillal/membrane_rtsp_plugin",
     "mickel8/membrane_quic_plugin",
     "kim-company/membrane_mpeg_ts_plugin",
     "kim-company/membrane_hls_plugin",
@@ -58,6 +63,7 @@ packages =
     "membrane_opus_plugin",
     "membrane_wav_plugin",
     "membrane_g711_plugin",
+    "membrane_g711_ffmpeg_plugin",
     {:md, "#### Video codecs"},
     "membrane_h26x_plugin",
     "membrane_h264_ffmpeg_plugin",
@@ -78,7 +84,7 @@ packages =
     {:md, "**Raw video**"},
     "membrane_raw_video_parser_plugin",
     "membrane_video_merger_plugin",
-    "membrane_live_compositor_plugin",
+    "membrane_smelter_plugin",
     "membrane_camera_capture_plugin",
     "membrane_rpicam_plugin",
     "membrane_framerate_converter_plugin",
@@ -90,6 +96,7 @@ packages =
     {:md, "#### External APIs"},
     "membrane_aws_plugin",
     "membrane_agora_plugin",
+    "membrane_webrtc_live",
     "membrane_element_gcloud_speech_to_text",
     "membrane_element_ibm_speech_to_text",
     "YuzuTen/membrane_s3_plugin",
@@ -109,12 +116,15 @@ packages =
     "membrane_vp8_format",
     "membrane_vp9_format",
     "membrane_g711_format",
+    "gBillal/membrane_h265_format",
     {:md, "### Standalone media libs"},
     "elixir-webrtc/ex_webrtc",
     "ex_sdp",
     "ex_libnice",
     "ex_libsrtp",
     "ex_m3u8",
+    "ex_hls",
+    "ex_libsrt",
     "membrane_rtsp",
     "membrane_ffmpeg_generator",
     {:md, "### Utils"},
@@ -156,7 +166,18 @@ repos =
       Process.sleep(gh_req_timeout)
       url = "https://api.github.com/orgs/#{org}/repos?per_page=100&page=#{page}"
       Logger.debug("Fetching #{url}")
-      resp = Req.get!(url, decode_json: [keys: :atoms]).body
+
+      headers =
+        case System.get_env("GITHUB_TOKEN") do
+          nil -> []
+          token -> [Authorization: "Bearer #{token}"]
+        end
+
+      resp =
+        Req.get!(url,
+          headers: headers,
+          decode_json: [keys: :atoms]
+        ).body
 
       unless is_list(resp) do
         raise "Received invalid response: #{inspect(resp)}"
@@ -184,7 +205,6 @@ packages_blacklist = [
   ".github",
   "membraneframework.github.io",
   "membrane_rtc_engine_timescaledb",
-  "membrane_g711_ffmpeg_plugin",
   "github_actions_test"
 ]
 
@@ -218,7 +238,17 @@ packages =
             Process.sleep(gh_req_timeout)
             url = "https://api.github.com/repos/#{owner}/#{name}"
             Logger.debug("Fetching #{url}")
-            Req.get!(url, decode_json: [keys: :atoms]).body
+
+            headers =
+              case System.get_env("GITHUB_TOKEN") do
+                nil -> []
+                token -> [Authorization: "Bearer #{token}"]
+              end
+
+            Req.get!(url,
+              headers: headers,
+              decode_json: [keys: :atoms]
+            ).body
 
           Map.has_key?(repos, name) ->
             Map.fetch!(repos, name)
@@ -250,11 +280,34 @@ header = """
 | --- | --- | --- |
 """
 
+ecosystem_docs_path = "guides/ecosystem"
+
+File.rm_rf!(ecosystem_docs_path)
+File.mkdir_p(ecosystem_docs_path)
+
 packages_md =
   packages
-  |> Enum.map_reduce(%{is_header_present: false}, fn
+  |> Enum.map_reduce(%{is_header_present: false, file_path: nil, section_number: 0}, fn
     %{type: :markdown, content: content}, acc ->
-      {"\n#{content}", %{acc | is_header_present: false}}
+      filename =
+        content
+        |> String.trim("#")
+        |> String.trim("*")
+        |> String.trim()
+
+      # So that the files have correct order
+      prefix = "#{acc.section_number}_" |> String.pad_leading(3, "0")
+
+      file_path = Path.join(ecosystem_docs_path, prefix <> filename <> ".md")
+
+      acc = %{
+        acc
+        | is_header_present: false,
+          file_path: file_path,
+          section_number: acc.section_number + 1
+      }
+
+      {"\n" <> content, acc}
 
     %{type: :package} = package, acc ->
       prefix =
@@ -276,12 +329,22 @@ packages_md =
 
       url = "[#{package.name}](#{package.url})"
 
-      result = """
+      readme_result = """
       #{if acc.is_header_present, do: "", else: header}\
       | #{url} | #{prefix}#{package.description} | #{hex_badge} #{hexdocs_badge} |\
       """
 
-      {result, %{acc | is_header_present: true}}
+      docs_result = """
+      ## #{url}
+      #{prefix}#{package.description} 
+
+      #{hex_badge} #{hexdocs_badge} 
+       
+      """
+
+      File.write(acc.file_path, docs_result, [:append])
+
+      {readme_result, %{acc | is_header_present: true}}
   end)
   |> elem(0)
   |> Enum.join("\n")

@@ -165,6 +165,7 @@ defmodule Membrane.Mixfile do
     [
       "Get started with Membrane":
         Path.wildcard("guides/membrane_tutorials/get_started_with_membrane/*.md"),
+      Ecosystem: Path.wildcard("guides/ecosystem/*.md"),
       "Intro to pipelines": Path.wildcard("guides/membrane_tutorials/basic_pipeline/*.md"),
       "Intro to pipelines - advanced concepts":
         Path.wildcard("guides/membrane_tutorials/basic_pipeline_extension/*.md"),
