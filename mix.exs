@@ -61,6 +61,7 @@ defmodule Membrane.Mixfile do
       main: "readme",
       extras: extras(),
       formatters: ["html"],
+      logo: "assets/logo.svg",
       source_ref: @source_ref,
       assets: %{
         "guides/membrane_tutorials/get_started_with_membrane/assets" => "assets",
@@ -97,12 +98,40 @@ defmodule Membrane.Mixfile do
       "README.md",
       "CHANGELOG.md",
       "CONTRIBUTING.md",
-      Path.wildcard("guides/**/*.md")
+      Path.wildcard("guides/upgrading/*.md"),
+      Path.wildcard("guides/useful_concepts/*.md"),
+      Path.wildcard("guides/membrane_demo/*")
+      |> Enum.filter(&File.dir?/1)
+      |> Enum.reject(&(Path.basename(&1) == "livebooks"))
+      |> Enum.map(&get_demo_external_extra/1),
+      Path.wildcard("guides/membrane_demo/livebooks/*/*.livemd"),
+      Path.wildcard("guides/membrane_tutorials/**/*.md")
       |> Enum.reject(&(Path.basename(&1) in ["README.md", "index.md", "1_preface.md"]))
+      |> Enum.map(&{String.to_atom(&1), [title: reformat_tutorial_title(&1)]}),
+      Path.wildcard("guides/packages/*.md")
       |> Enum.map(&{String.to_atom(&1), [title: reformat_tutorial_title(&1)]}),
       LICENSE: [title: "License"]
     ]
     |> List.flatten()
+  end
+
+  defp get_demo_external_extra(demo_path) do
+    demos_url = "https://github.com/membraneframework/membrane_demo/tree/master"
+
+    demo_title =
+      demo_path
+      |> Path.join("README.md")
+      |> File.read!()
+      |> String.split("\n")
+      |> List.first()
+      |> String.trim_leading("#")
+      |> String.trim_leading()
+      |> String.to_atom()
+
+    demo_url =
+      Path.join(demos_url, Path.basename(demo_path))
+
+    {demo_title, [url: demo_url]}
   end
 
   defp reformat_tutorial_title(filename) do
@@ -163,15 +192,16 @@ defmodule Membrane.Mixfile do
 
   defp groups_for_extras do
     [
-      "Packages in our ecosystem": Path.wildcard("guides/packages/*.md"),
       "Get started with Membrane":
         Path.wildcard("guides/membrane_tutorials/get_started_with_membrane/*.md"),
-      "Intro to pipelines": Path.wildcard("guides/membrane_tutorials/basic_pipeline/*.md"),
-      "Creating plugins": Path.wildcard("guides/membrane_tutorials/create_new_plugin/*.md"),
       "Useful concepts": Path.wildcard("guides/useful_concepts/*.md"),
-      H264: Path.wildcard("guides/membrane_tutorials/h264/*.md"),
+      "Pipelines 101": Path.wildcard("guides/membrane_tutorials/basic_pipeline/*.md"),
+      "Our demos": ~r"(https://github.com/membraneframework/membrane_demo|.*\.livemd)",
+      "Packages in our ecosystem": Path.wildcard("guides/packages/*.md"),
+      "Creating plugins": Path.wildcard("guides/membrane_tutorials/create_new_plugin/*.md"),
       Broadcasting: Path.wildcard("guides/membrane_tutorials/broadcasting/*.md"),
       Glossary: Path.wildcard("guides/membrane_tutorials/glossary/*.md"),
+      H264: Path.wildcard("guides/membrane_tutorials/h264/*.md"),
       Upgrading: Path.wildcard("guides/upgrading/*.md")
     ]
   end
@@ -198,7 +228,7 @@ defmodule Membrane.Mixfile do
       {:bunch, "~> 1.6"},
       {:ratio, "~> 3.0 or ~> 4.0"},
       # Development
-      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.39", only: :dev, runtime: false},
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: :dev, runtime: false},
