@@ -159,6 +159,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_fake_plugin](https://github.com/membraneframework/membrane_fake_plugin) | Fake Membrane sinks that drop incoming data | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_fake_plugin.svg)](https://hex.pm/api/packages/membrane_fake_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_fake_plugin/) |
 | [membrane_pcap_plugin](https://github.com/membraneframework-labs/membrane_pcap_plugin) | [Labs] Membrane PCAP source, capable of reading captured packets in pcap format |   |
 | [membrane_transcoder_plugin](https://github.com/membraneframework/membrane_transcoder_plugin) | Membrane plugin providing audio and video transcoding capabilities | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_transcoder_plugin.svg)](https://hex.pm/api/packages/membrane_transcoder_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_transcoder_plugin/) |
+| [membrane_generator_plugin](https://github.com/membraneframework/membrane_generator_plugin) | Video and audio samples generator | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_generator_plugin.svg)](https://hex.pm/api/packages/membrane_generator_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_generator_plugin/) |
 | [membrane_live_framerate_converter_plugin](https://github.com/kim-company/membrane_live_framerate_converter_plugin) | [Maintainer: [kim-company](https://github.com/kim-company)] Membrane.Filter that drops or duplicates frames to match a target framerate. Designed for realtime applications |   |
 | [membrane_template_plugin](https://github.com/membraneframework/membrane_template_plugin) | Template for Membrane Elements |   |
 
@@ -222,13 +223,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [elixir-turbojpeg](https://github.com/BinaryNoggin/elixir-turbojpeg) | [Maintainer: [BinaryNoggin](https://github.com/BinaryNoggin)] libjpeg-turbo bindings for Elixir |   |
 | [membrane_subtitle_mixer_plugin](https://github.com/kim-company/membrane_subtitle_mixer_plugin) | [Maintainer: [kim-company](https://github.com/kim-company)] Membrane.Filter that uses CEA708 to merge subtitles directly in H264 packets. |   |
 
-#### Raw audio & video
-
-| Package | Description | Links |
-| --- | --- | --- |
-| [membrane_generator_plugin](https://github.com/membraneframework/membrane_generator_plugin) | Video and audio samples generator | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_generator_plugin.svg)](https://hex.pm/api/packages/membrane_generator_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_generator_plugin/) |
-
-**Raw audio**
+#### Raw audio
 
 | Package | Description | Links |
 | --- | --- | --- |
@@ -239,7 +234,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_ffmpeg_swresample_plugin](https://github.com/membraneframework/membrane_ffmpeg_swresample_plugin) | Plugin performing audio conversion, resampling and channel mixing, using SWResample module of FFmpeg library | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_ffmpeg_swresample_plugin.svg)](https://hex.pm/api/packages/membrane_ffmpeg_swresample_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_ffmpeg_swresample_plugin/) |
 | [membrane_audiometer_plugin](https://github.com/membraneframework/membrane_audiometer_plugin) | Elements for measuring the level of the audio stream | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_audiometer_plugin.svg)](https://hex.pm/api/packages/membrane_audiometer_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_audiometer_plugin/) |
 
-**Raw video**
+#### Raw video
 
 | Package | Description | Links |
 | --- | --- | --- |

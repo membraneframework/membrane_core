@@ -26,6 +26,7 @@ packages =
     "membrane_fake_plugin",
     "membrane_pcap_plugin",
     "membrane_transcoder_plugin",
+    "membrane_generator_plugin",
     "kim-company/membrane_live_framerate_converter_plugin",
     "membrane_template_plugin",
     {:md, "#### Streaming protocols"},
@@ -72,16 +73,14 @@ packages =
     "gBillal/membrane_h265_ffmpeg_plugin",
     "binarynoggin/elixir-turbojpeg",
     "kim-company/membrane_subtitle_mixer_plugin",
-    {:md, "#### Raw audio & video"},
-    "membrane_generator_plugin",
-    {:md, "**Raw audio**"},
+    {:md, "#### Raw audio"},
     "membrane_raw_audio_parser_plugin",
     "membrane_portaudio_plugin",
     "membrane_audio_mix_plugin",
     "membrane_audio_filler_plugin",
     "membrane_ffmpeg_swresample_plugin",
     "membrane_audiometer_plugin",
-    {:md, "**Raw video**"},
+    {:md, "#### Raw video"},
     "membrane_raw_video_parser_plugin",
     "membrane_video_merger_plugin",
     "membrane_smelter_plugin",
@@ -280,72 +279,79 @@ header = """
 | --- | --- | --- |
 """
 
-ecosystem_docs_path = "guides/ecosystem"
+packages_docs_path = "guides/packages"
 
-File.rm_rf!(ecosystem_docs_path)
-File.mkdir_p(ecosystem_docs_path)
+File.rm_rf!(packages_docs_path)
+File.mkdir_p(packages_docs_path)
 
 packages_md =
   packages
-  |> Enum.map_reduce(%{is_header_present: false, file_path: nil, section_number: 0}, fn
-    %{type: :markdown, content: content}, acc ->
-      filename =
-        content
-        |> String.trim("#")
-        |> String.trim("*")
-        |> String.trim()
+  |> Enum.map_reduce(
+    %{is_header_present: false, file_path: nil, file_number: 0, section: nil},
+    fn
+      %{type: :markdown, content: content}, acc ->
+        # So that the files have correct order
+        prefix = "#{acc.file_number}_" |> String.pad_leading(3, "0")
 
-      # So that the files have correct order
-      prefix = "#{acc.section_number}_" |> String.pad_leading(3, "0")
+        {filename, section} =
+          case content do
+            "### " <> section -> {section, section}
+            "#### " <> subsection -> {"#{acc.section} | #{subsection}", acc.section}
+          end
 
-      file_path = Path.join(ecosystem_docs_path, prefix <> filename <> ".md")
+        file_path = Path.join(packages_docs_path, prefix <> filename <> ".md")
 
-      acc = %{
-        acc
-        | is_header_present: false,
-          file_path: file_path,
-          section_number: acc.section_number + 1
-      }
+        acc = %{
+          acc
+          | is_header_present: false,
+            file_path: file_path,
+            section: section,
+            file_number: acc.file_number + 1
+        }
 
-      {"\n" <> content, acc}
+        {"\n" <> content, acc}
 
-    %{type: :package} = package, acc ->
-      prefix =
-        case package.owner do
-          "membraneframework-labs" -> "[Labs] "
-          "membraneframework" -> ""
-          _other -> "[Maintainer: [#{package.owner}](https://github.com/#{package.owner})] "
-        end
+      %{type: :package} = package, acc ->
+        prefix =
+          case package.owner do
+            "membraneframework-labs" -> "[Labs] "
+            "membraneframework" -> ""
+            _other -> "[Maintainer: [#{package.owner}](https://github.com/#{package.owner})] "
+          end
 
-      hex_badge =
-        if package.hex_url,
-          do:
-            "[![Hex.pm](https://img.shields.io/hexpm/v/#{package.name}.svg)](#{package.hex_url})"
+        hex_badge =
+          if package.hex_url,
+            do:
+              "[![Hex.pm](https://img.shields.io/hexpm/v/#{package.name}.svg)](#{package.hex_url})"
 
-      hexdocs_badge =
-        if package.hexdocs_url,
-          do:
-            "[![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](#{package.hexdocs_url})"
+        hexdocs_badge =
+          if package.hexdocs_url,
+            do:
+              "[![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](#{package.hexdocs_url})"
 
-      url = "[#{package.name}](#{package.url})"
+        github_badge =
+          "[![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](#{package.url})"
 
-      readme_result = """
-      #{if acc.is_header_present, do: "", else: header}\
-      | #{url} | #{prefix}#{package.description} | #{hex_badge} #{hexdocs_badge} |\
-      """
+        markdown_link = "[#{package.name}](#{package.url})"
 
-      docs_result = """
-      ## #{url}
-      #{prefix}#{package.description} 
+        readme_result = """
+        #{if acc.is_header_present, do: "", else: header}\
+        | #{markdown_link} | #{prefix}#{package.description} | #{hex_badge} #{hexdocs_badge} |\
+        """
 
-      #{hex_badge} #{hexdocs_badge} 
-       
-      """
+        docs_result = """
+        ## #{package.name}
+        #{prefix}#{package.description} 
 
-      File.write(acc.file_path, docs_result, [:append])
+        #{hex_badge} #{hexdocs_badge} #{github_badge}
+         
+        """
 
-      {readme_result, %{acc | is_header_present: true}}
-  end)
+        File.write(acc.file_path, docs_result, [:append])
+
+        {readme_result, %{acc | is_header_present: true}}
+    end
+  )
   |> elem(0)
   |> Enum.join("\n")
 
