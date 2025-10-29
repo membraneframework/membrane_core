@@ -1,0 +1,3 @@
+[submodule "guides/membrane_tutorials"]
+	path = guides/membrane_tutorials
+	url = https://github.com/membraneframework/membrane_tutorials.git
