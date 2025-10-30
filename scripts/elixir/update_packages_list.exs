@@ -202,7 +202,8 @@ packages_blacklist = [
   ".github",
   "membraneframework.github.io",
   "membrane_rtc_engine_timescaledb",
-  "github_actions_test"
+  "github_actions_test",
+  "membrane_ice_plugin"
 ]
 
 lacking_repos =
@@ -297,7 +298,8 @@ packages_md =
             "#### " <> subsection -> {"#{acc.section} | #{subsection}", acc.section}
           end
 
-        file_path = Path.join(packages_docs_path, prefix <> filename <> ".md")
+        file_path =
+          Path.join(packages_docs_path, prefix <> filename <> ".md") |> String.replace(" ", "_")
 
         acc = %{
           acc

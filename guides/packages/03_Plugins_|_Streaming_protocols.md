@@ -18,11 +18,6 @@ Plugin generating manifests for HLS
 
 [![Hex.pm](https://img.shields.io/hexpm/v/membrane_srt_plugin.svg)](https://hex.pm/api/packages/membrane_srt_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_srt_plugin/) [![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](https://github.com/membraneframework/membrane_srt_plugin)
  
-## membrane_ice_plugin
-[Maintainer: [fishjam-dev](https://github.com/fishjam-dev)] Membrane plugin for ICE protocol 
-
-[![Hex.pm](https://img.shields.io/hexpm/v/membrane_ice_plugin.svg)](https://hex.pm/api/packages/membrane_ice_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_ice_plugin/) [![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](https://github.com/fishjam-dev/membrane_ice_plugin)
- 
 ## membrane_udp_plugin
 Membrane plugin for sending and receiving UDP streams 
 
@@ -77,11 +72,6 @@ Membrane RTP payloader and depayloader for G711 audio
 [Maintainer: [gBillal](https://github.com/gBillal)] Simplify connecting to RTSP server 
 
 [![Hex.pm](https://img.shields.io/hexpm/v/membrane_rtsp_plugin.svg)](https://hex.pm/api/packages/membrane_rtsp_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_rtsp_plugin/) [![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](https://github.com/gBillal/membrane_rtsp_plugin)
- 
-## membrane_quic_plugin
-[Maintainer: [mickel8](https://github.com/mickel8)]  
-
-  [![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](https://github.com/mickel8/membrane_quic_plugin)
  
 ## membrane_mpeg_ts_plugin
 [Maintainer: [kim-company](https://github.com/kim-company)] Membrane.Filter that demuxes MPEG-TS streams 
