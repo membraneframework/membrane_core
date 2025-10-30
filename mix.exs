@@ -163,11 +163,10 @@ defmodule Membrane.Mixfile do
 
   defp groups_for_extras do
     [
+      "Packages in our ecosystem": Path.wildcard("guides/packages/*.md"),
       "Get started with Membrane":
         Path.wildcard("guides/membrane_tutorials/get_started_with_membrane/*.md"),
       "Intro to pipelines": Path.wildcard("guides/membrane_tutorials/basic_pipeline/*.md"),
-      "Intro to pipelines - advanced concepts":
-        Path.wildcard("guides/membrane_tutorials/basic_pipeline_extension/*.md"),
       "Creating plugins": Path.wildcard("guides/membrane_tutorials/create_new_plugin/*.md"),
       "Useful concepts": Path.wildcard("guides/useful_concepts/*.md"),
       H264: Path.wildcard("guides/membrane_tutorials/h264/*.md"),
