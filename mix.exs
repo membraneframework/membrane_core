@@ -135,15 +135,12 @@ defmodule Membrane.Mixfile do
   end
 
   defp reformat_tutorial_title(filename) do
-    {first_letter, rest} =
-      filename
-      |> Path.basename()
-      |> String.replace(~r/^\d+_/, "")
-      |> String.replace("_", " ")
-      |> String.trim_trailing(".md")
-      |> String.next_grapheme()
-
-    String.upcase(first_letter) <> rest
+    filename
+    |> Path.basename()
+    |> String.replace(~r/^\d+_/, "")
+    |> String.replace("_", " ")
+    |> String.trim_trailing(".md")
+    |> :string.titlecase()
   end
 
   defp groups_for_modules do
