@@ -5,7 +5,7 @@ require Logger
 # define packages structure
 packages =
   [
-    {:md, "### General"},
+    {:section, "General"},
     "membrane_sdk",
     "membrane_core",
     "membrane_rtc_engine",
@@ -14,8 +14,8 @@ packages =
     "membrane_demo",
     "membrane_tutorials",
     "boombox",
-    {:md, "### Plugins"},
-    {:md, "#### General purpose"},
+    {:section, "Plugins"},
+    {:subsection, "General purpose"},
     "membrane_file_plugin",
     "membrane_hackney_plugin",
     "membrane_scissors_plugin",
@@ -29,7 +29,7 @@ packages =
     "membrane_generator_plugin",
     "kim-company/membrane_live_framerate_converter_plugin",
     "membrane_template_plugin",
-    {:md, "#### Streaming protocols"},
+    {:subsection, "Streaming protocols"},
     "membrane_webrtc_plugin",
     "membrane_rtmp_plugin",
     "membrane_http_adaptive_stream_plugin",
@@ -47,13 +47,13 @@ packages =
     "gBillal/membrane_rtsp_plugin",
     "kim-company/membrane_mpeg_ts_plugin",
     "kim-company/membrane_hls_plugin",
-    {:md, "#### Containers"},
+    {:subsection, "Containers"},
     "membrane_mp4_plugin",
     "membrane_matroska_plugin",
     "membrane_flv_plugin",
     "membrane_ivf_plugin",
     "membrane_ogg_plugin",
-    {:md, "#### Audio codecs"},
+    {:subsection, "Audio codecs"},
     "membrane_aac_plugin",
     "membrane_aac_fdk_plugin",
     "membrane_flac_plugin",
@@ -63,7 +63,7 @@ packages =
     "membrane_wav_plugin",
     "membrane_g711_plugin",
     "membrane_g711_ffmpeg_plugin",
-    {:md, "#### Video codecs"},
+    {:subsection, "Video codecs"},
     "membrane_h26x_plugin",
     "membrane_h264_ffmpeg_plugin",
     "membrane_vpx_plugin",
@@ -71,14 +71,14 @@ packages =
     "gBillal/membrane_h265_ffmpeg_plugin",
     "binarynoggin/elixir-turbojpeg",
     "kim-company/membrane_subtitle_mixer_plugin",
-    {:md, "#### Raw audio"},
+    {:subsection, "Raw audio"},
     "membrane_raw_audio_parser_plugin",
     "membrane_portaudio_plugin",
     "membrane_audio_mix_plugin",
     "membrane_audio_filler_plugin",
     "membrane_ffmpeg_swresample_plugin",
     "membrane_audiometer_plugin",
-    {:md, "#### Raw video"},
+    {:subsection, "Raw video"},
     "membrane_raw_video_parser_plugin",
     "membrane_video_merger_plugin",
     "membrane_smelter_plugin",
@@ -90,7 +90,7 @@ packages =
     "membrane_ffmpeg_swscale_plugin",
     "membrane_ffmpeg_video_filter_plugin",
     "kim-company/membrane_video_mixer_plugin",
-    {:md, "#### External APIs"},
+    {:subsection, "External APIs"},
     "membrane_aws_plugin",
     "membrane_agora_plugin",
     "membrane_webrtc_live",
@@ -98,7 +98,7 @@ packages =
     "membrane_element_ibm_speech_to_text",
     "YuzuTen/membrane_s3_plugin",
     "lawik/membrane_transcription",
-    {:md, "### Formats"},
+    {:section, "Formats"},
     "membrane_rtp_format",
     "membrane_cmaf_format",
     "membrane_matroska_format",
@@ -114,7 +114,7 @@ packages =
     "membrane_vp9_format",
     "membrane_g711_format",
     "gBillal/membrane_h265_format",
-    {:md, "### Standalone media libs"},
+    {:section, "Standalone media libs"},
     "elixir-webrtc/ex_webrtc",
     "ex_sdp",
     "ex_libnice",
@@ -124,7 +124,7 @@ packages =
     "ex_libsrt",
     "membrane_rtsp",
     "membrane_ffmpeg_generator",
-    {:md, "### Utils"},
+    {:section, "Utils"},
     "unifex",
     "bundlex",
     "beamchmark",
@@ -138,8 +138,8 @@ packages =
     "membrane_precompiled_dependency_provider"
   ]
   |> Enum.map(fn
-    {:md, markdown} ->
-      %{type: :markdown, content: markdown}
+    {type, markdown} ->
+      %{type: type, content: markdown}
 
     package when is_binary(package) ->
       case String.split(package, "/", parts: 2) do
@@ -155,7 +155,7 @@ gh_req_timeout = 500
 gh_req_mock = false
 
 # gh token for larger request rate
-gh_token_header =
+gh_auth_header =
   case System.get_env("GITHUB_TOKEN") do
     nil -> []
     token -> [Authorization: "Bearer #{token}"]
@@ -167,15 +167,12 @@ repos =
   |> Enum.flat_map(fn org ->
     Stream.from_index()
     |> Stream.map(fn page ->
-      if gh_token_header == [], do: Process.sleep(gh_req_timeout)
+      if gh_auth_header == [], do: Process.sleep(gh_req_timeout)
       url = "https://api.github.com/orgs/#{org}/repos?per_page=100&page=#{page}"
       Logger.debug("Fetching #{url}")
 
       resp =
-        Req.get!(url,
-          headers: gh_token_header,
-          decode_json: [keys: :atoms]
-        ).body
+        Req.get!(url, headers: gh_auth_header, decode_json: [keys: :atoms]).body
 
       unless is_list(resp) do
         raise "Received invalid response: #{inspect(resp)}"
@@ -234,15 +231,11 @@ packages =
             %{owner: %{login: :mock}, html_url: :mock, description: :mock}
 
           owner != nil ->
-            if gh_token_header == [], do: if(gh_token_header == [])
-            Process.sleep(gh_req_timeout)
+            if gh_auth_header == [], do: Process.sleep(gh_req_timeout)
             url = "https://api.github.com/repos/#{owner}/#{name}"
             Logger.debug("Fetching #{url}")
 
-            Req.get!(url,
-              headers: gh_token_header,
-              decode_json: [keys: :atoms]
-            ).body
+            Req.get!(url, headers: gh_auth_header, decode_json: [keys: :atoms]).body
 
           Map.has_key?(repos, name) ->
             Map.fetch!(repos, name)
@@ -263,6 +256,9 @@ packages =
           "[![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](#{hex.body.docs_html_url})"
         end
 
+      github_badge =
+        "[![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](#{repo.html_url})"
+
       owner_prefix =
         case repo.owner.login do
           "membraneframework-labs" -> "[Labs] "
@@ -276,7 +272,8 @@ packages =
         description: repo.description,
         owner_prefix: owner_prefix,
         hex_badge: hex_badge,
-        hexdocs_badge: hexdocs_badge
+        hexdocs_badge: hexdocs_badge,
+        github_badge: github_badge
       })
 
     other ->
@@ -291,21 +288,27 @@ header = """
 | --- | --- | --- |
 """
 
+generated_code_comment =
+  "<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->"
+
 packages_md =
   packages
   |> Enum.map_reduce(
     %{is_header_present: false},
     fn
-      %{type: :markdown, content: content}, acc ->
-        {"\n" <> content, %{acc | is_header_present: false}}
+      %{type: :section, content: content}, acc ->
+        {"\n### " <> content, %{acc | is_header_present: false}}
+
+      %{type: :subsection, content: content}, acc ->
+        {"\n#### " <> content, %{acc | is_header_present: false}}
 
       %{type: :package} = package, acc ->
-        readme_result = """
+        package_info = """
         #{if acc.is_header_present, do: "", else: header}\
         | [#{package.name}](#{package.url}) | #{package.owner_prefix}#{package.description} | #{package.hex_badge} #{package.hexdocs_badge} |\
         """
 
-        {readme_result, %{acc | is_header_present: true}}
+        {package_info, %{acc | is_header_present: true}}
     end
   )
   |> elem(0)
@@ -314,7 +317,7 @@ packages_md =
 packages_md =
   """
   <!-- packages-list-start -->
-  <!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
+  #{generated_code_comment}
 
   #{packages_md}
 
@@ -340,45 +343,51 @@ File.mkdir_p(packages_docs_path)
 
 packages
 |> Enum.reduce(
-  %{file_path: nil, file_number: 0, section: nil},
+  %{file_path: nil, file_number: 0, section: nil, files: []},
   fn
-    %{type: :markdown, content: content}, acc ->
+    %{type: :package} = package, acc ->
+      package_info = """
+      ## #{package.name}
+      #{package.owner_prefix}#{package.description} 
+
+      #{package.hex_badge} #{package.hexdocs_badge} #{package.github_badge}
+       
+      """
+
+      files =
+        List.update_at(acc.files, 0, fn {file_path, file_content} ->
+          {file_path, file_content <> package_info}
+        end)
+
+      %{acc | files: files}
+
+    %{type: type, content: content}, acc ->
       # So that the files have correct order
       prefix = "#{acc.file_number}_" |> String.pad_leading(3, "0")
 
       {filename, section} =
-        case content do
-          "### " <> section -> {section, section}
-          "#### " <> subsection -> {"#{acc.section} | #{subsection}", acc.section}
+        case type do
+          :section -> {content, content}
+          :subsection -> {"#{acc.section} | #{content}", acc.section}
         end
 
       file_path =
         Path.join(packages_docs_path, prefix <> filename <> ".md") |> String.replace(" ", "_")
 
-      if filename != "Plugins" do
-        File.write!(
-          file_path,
-          "<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->\n"
-        )
-      end
+      files = [{file_path, ""} | acc.files]
 
-      %{acc | file_path: file_path, section: section, file_number: acc.file_number + 1}
-
-    %{type: :package} = package, acc ->
-      github_badge =
-        "[![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](#{package.url})"
-
-      docs_result = """
-      ## #{package.name}
-      #{package.owner_prefix}#{package.description} 
-
-      #{package.hex_badge} #{package.hexdocs_badge} #{github_badge}
-       
-      """
-
-      File.write(acc.file_path, docs_result, [:append])
-      acc
+      %{
+        acc
+        | file_path: file_path,
+          section: section,
+          file_number: acc.file_number + 1,
+          files: files
+      }
   end
 )
+|> Map.get(:files)
+|> Enum.each(fn {file_path, file_content} ->
+  if file_content != "", do: File.write!(file_path, "#{generated_code_comment}\n#{file_content}")
+end)
 
 IO.puts("Packages updated successfully.")
