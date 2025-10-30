@@ -139,7 +139,7 @@ packages =
   ]
   |> Enum.map(fn
     {type, markdown} ->
-      %{type: type, content: markdown}
+      %{type: type, name: markdown}
 
     package when is_binary(package) ->
       case String.split(package, "/", parts: 2) do
@@ -155,7 +155,7 @@ gh_req_timeout = 500
 gh_req_mock = false
 
 # gh token for larger request rate
-gh_auth_header =
+gh_auth_headers =
   case System.get_env("GITHUB_TOKEN") do
     nil -> []
     token -> [Authorization: "Bearer #{token}"]
@@ -167,12 +167,12 @@ repos =
   |> Enum.flat_map(fn org ->
     Stream.from_index()
     |> Stream.map(fn page ->
-      if gh_auth_header == [], do: Process.sleep(gh_req_timeout)
+      if gh_auth_headers == [], do: Process.sleep(gh_req_timeout)
       url = "https://api.github.com/orgs/#{org}/repos?per_page=100&page=#{page}"
       Logger.debug("Fetching #{url}")
 
       resp =
-        Req.get!(url, headers: gh_auth_header, decode_json: [keys: :atoms]).body
+        Req.get!(url, headers: gh_auth_headers, decode_json: [keys: :atoms]).body
 
       unless is_list(resp) do
         raise "Received invalid response: #{inspect(resp)}"
@@ -231,11 +231,11 @@ packages =
             %{owner: %{login: :mock}, html_url: :mock, description: :mock}
 
           owner != nil ->
-            if gh_auth_header == [], do: Process.sleep(gh_req_timeout)
+            if gh_auth_headers == [], do: Process.sleep(gh_req_timeout)
             url = "https://api.github.com/repos/#{owner}/#{name}"
             Logger.debug("Fetching #{url}")
 
-            Req.get!(url, headers: gh_auth_header, decode_json: [keys: :atoms]).body
+            Req.get!(url, headers: gh_auth_headers, decode_json: [keys: :atoms]).body
 
           Map.has_key?(repos, name) ->
             Map.fetch!(repos, name)
@@ -296,11 +296,11 @@ packages_md =
   |> Enum.map_reduce(
     %{is_header_present: false},
     fn
-      %{type: :section, content: content}, acc ->
-        {"\n### " <> content, %{acc | is_header_present: false}}
+      %{type: :section, name: name}, acc ->
+        {"\n### " <> name, %{acc | is_header_present: false}}
 
-      %{type: :subsection, content: content}, acc ->
-        {"\n#### " <> content, %{acc | is_header_present: false}}
+      %{type: :subsection, name: name}, acc ->
+        {"\n#### " <> name, %{acc | is_header_present: false}}
 
       %{type: :package} = package, acc ->
         package_info = """
@@ -361,14 +361,14 @@ packages
 
       %{acc | files: files}
 
-    %{type: type, content: content}, acc ->
+    %{type: type, name: name}, acc ->
       # So that the files have correct order
       prefix = "#{acc.file_number}_" |> String.pad_leading(3, "0")
 
       {filename, section} =
         case type do
-          :section -> {content, content}
-          :subsection -> {"#{acc.section} | #{content}", acc.section}
+          :section -> {name, name}
+          :subsection -> {"#{acc.section} | #{name}", acc.section}
         end
 
       file_path =
