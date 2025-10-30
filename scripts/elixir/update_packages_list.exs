@@ -154,25 +154,26 @@ gh_req_timeout = 500
 # for debugging, allows mocking requests for particular repos
 gh_req_mock = false
 
+# gh token for larger request rate
+gh_token_header =
+  case System.get_env("GITHUB_TOKEN") do
+    nil -> []
+    token -> [Authorization: "Bearer #{token}"]
+  end
+
 # fetch repos from the known organizations
 repos =
   ["membraneframework", "membraneframework-labs", "fishjam-dev"]
   |> Enum.flat_map(fn org ->
     Stream.from_index()
     |> Stream.map(fn page ->
-      Process.sleep(gh_req_timeout)
+      if gh_token_header == [], do: Process.sleep(gh_req_timeout)
       url = "https://api.github.com/orgs/#{org}/repos?per_page=100&page=#{page}"
       Logger.debug("Fetching #{url}")
 
-      headers =
-        case System.get_env("GITHUB_TOKEN") do
-          nil -> []
-          token -> [Authorization: "Bearer #{token}"]
-        end
-
       resp =
         Req.get!(url,
-          headers: headers,
+          headers: gh_token_header,
           decode_json: [keys: :atoms]
         ).body
 
@@ -233,18 +234,13 @@ packages =
             %{owner: %{login: :mock}, html_url: :mock, description: :mock}
 
           owner != nil ->
+            if gh_token_header == [], do: if(gh_token_header == [])
             Process.sleep(gh_req_timeout)
             url = "https://api.github.com/repos/#{owner}/#{name}"
             Logger.debug("Fetching #{url}")
 
-            headers =
-              case System.get_env("GITHUB_TOKEN") do
-                nil -> []
-                token -> [Authorization: "Bearer #{token}"]
-              end
-
             Req.get!(url,
-              headers: headers,
+              headers: gh_token_header,
               decode_json: [keys: :atoms]
             ).body
 
@@ -256,14 +252,31 @@ packages =
         end
 
       hex = Req.get!("https://hex.pm/api/packages/#{name}", decode_json: [keys: :atoms])
-      is_hex_present = hex.status == 200
+
+      hex_badge =
+        if hex.status == 200 and hex.body.url != nil do
+          "[![Hex.pm](https://img.shields.io/hexpm/v/#{name}.svg)](#{hex.body.url})"
+        end
+
+      hexdocs_badge =
+        if hex.status == 200 and hex.body.docs_html_url != nil do
+          "[![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](#{hex.body.docs_html_url})"
+        end
+
+      owner_prefix =
+        case repo.owner.login do
+          "membraneframework-labs" -> "[Labs] "
+          "membraneframework" -> ""
+          owner -> "[Maintainer: [#{owner}](https://github.com/#{owner})] "
+        end
 
       Map.merge(package, %{
         owner: repo.owner.login,
         url: repo.html_url,
         description: repo.description,
-        hex_url: if(is_hex_present, do: hex.body.url),
-        hexdocs_url: if(is_hex_present, do: hex.body.docs_html_url)
+        owner_prefix: owner_prefix,
+        hex_badge: hex_badge,
+        hexdocs_badge: hexdocs_badge
       })
 
     other ->
@@ -278,76 +291,19 @@ header = """
 | --- | --- | --- |
 """
 
-packages_docs_path = "guides/packages"
-
-File.rm_rf!(packages_docs_path)
-File.mkdir_p(packages_docs_path)
-
 packages_md =
   packages
   |> Enum.map_reduce(
-    %{is_header_present: false, file_path: nil, file_number: 0, section: nil},
+    %{is_header_present: false},
     fn
       %{type: :markdown, content: content}, acc ->
-        # So that the files have correct order
-        prefix = "#{acc.file_number}_" |> String.pad_leading(3, "0")
-
-        {filename, section} =
-          case content do
-            "### " <> section -> {section, section}
-            "#### " <> subsection -> {"#{acc.section} | #{subsection}", acc.section}
-          end
-
-        file_path =
-          Path.join(packages_docs_path, prefix <> filename <> ".md") |> String.replace(" ", "_")
-
-        acc = %{
-          acc
-          | is_header_present: false,
-            file_path: file_path,
-            section: section,
-            file_number: acc.file_number + 1
-        }
-
-        {"\n" <> content, acc}
+        {"\n" <> content, %{acc | is_header_present: false}}
 
       %{type: :package} = package, acc ->
-        prefix =
-          case package.owner do
-            "membraneframework-labs" -> "[Labs] "
-            "membraneframework" -> ""
-            _other -> "[Maintainer: [#{package.owner}](https://github.com/#{package.owner})] "
-          end
-
-        hex_badge =
-          if package.hex_url,
-            do:
-              "[![Hex.pm](https://img.shields.io/hexpm/v/#{package.name}.svg)](#{package.hex_url})"
-
-        hexdocs_badge =
-          if package.hexdocs_url,
-            do:
-              "[![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](#{package.hexdocs_url})"
-
-        github_badge =
-          "[![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](#{package.url})"
-
-        markdown_link = "[#{package.name}](#{package.url})"
-
         readme_result = """
         #{if acc.is_header_present, do: "", else: header}\
-        | #{markdown_link} | #{prefix}#{package.description} | #{hex_badge} #{hexdocs_badge} |\
+        | [#{package.name}](#{package.url}) | #{package.owner_prefix}#{package.description} | #{package.hex_badge} #{package.hexdocs_badge} |\
         """
-
-        docs_result = """
-        ## #{package.name}
-        #{prefix}#{package.description} 
-
-        #{hex_badge} #{hexdocs_badge} #{github_badge}
-         
-        """
-
-        File.write(acc.file_path, docs_result, [:append])
 
         {readme_result, %{acc | is_header_present: true}}
     end
@@ -375,5 +331,54 @@ File.read!(readme_path)
   packages_md
 )
 |> then(&File.write!(readme_path, &1))
+
+# update packages in docs
+packages_docs_path = "guides/packages"
+
+File.rm_rf!(packages_docs_path)
+File.mkdir_p(packages_docs_path)
+
+packages
+|> Enum.reduce(
+  %{file_path: nil, file_number: 0, section: nil},
+  fn
+    %{type: :markdown, content: content}, acc ->
+      # So that the files have correct order
+      prefix = "#{acc.file_number}_" |> String.pad_leading(3, "0")
+
+      {filename, section} =
+        case content do
+          "### " <> section -> {section, section}
+          "#### " <> subsection -> {"#{acc.section} | #{subsection}", acc.section}
+        end
+
+      file_path =
+        Path.join(packages_docs_path, prefix <> filename <> ".md") |> String.replace(" ", "_")
+
+      if filename != "Plugins" do
+        File.write!(
+          file_path,
+          "<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->\n"
+        )
+      end
+
+      %{acc | file_path: file_path, section: section, file_number: acc.file_number + 1}
+
+    %{type: :package} = package, acc ->
+      github_badge =
+        "[![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](#{package.url})"
+
+      docs_result = """
+      ## #{package.name}
+      #{package.owner_prefix}#{package.description} 
+
+      #{package.hex_badge} #{package.hexdocs_badge} #{github_badge}
+       
+      """
+
+      File.write(acc.file_path, docs_result, [:append])
+      acc
+  end
+)
 
 IO.puts("Packages updated successfully.")

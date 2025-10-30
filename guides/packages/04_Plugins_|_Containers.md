@@ -1,3 +1,4 @@
+<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
 ## membrane_mp4_plugin
 Utilities for MP4 container parsing and serialization and elements for muxing the stream to CMAF 
 

@@ -1,3 +1,4 @@
+<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
 ## unifex
 Tool for generating interfaces between native C code and Elixir 
 

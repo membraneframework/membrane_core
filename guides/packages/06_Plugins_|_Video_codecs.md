@@ -1,3 +1,4 @@
+<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
 ## membrane_h26x_plugin
 Membrane h264 and h265 parsers 
 

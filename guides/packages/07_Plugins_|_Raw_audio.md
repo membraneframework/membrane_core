@@ -1,3 +1,4 @@
+<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
 ## membrane_raw_audio_parser_plugin
 Membrane element for parsing raw audio 
 

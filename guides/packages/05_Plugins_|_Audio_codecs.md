@@ -1,3 +1,4 @@
+<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
 ## membrane_aac_plugin
 AAC parser and complementary elements for AAC codec 
 

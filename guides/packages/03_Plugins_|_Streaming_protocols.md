@@ -1,3 +1,4 @@
+<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
 ## membrane_webrtc_plugin
 Plugin for streaming via WebRTC 
 

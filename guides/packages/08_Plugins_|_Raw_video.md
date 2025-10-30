@@ -1,3 +1,4 @@
+<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
 ## membrane_raw_video_parser_plugin
 Membrane plugin for parsing raw video streams 
 

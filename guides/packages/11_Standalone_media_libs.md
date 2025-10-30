@@ -1,3 +1,4 @@
+<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
 ## ex_webrtc
 [Maintainer: [elixir-webrtc](https://github.com/elixir-webrtc)] An Elixir implementation of the W3C WebRTC API 
 
