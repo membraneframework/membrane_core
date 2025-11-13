@@ -1,4 +1,6 @@
 # Changelog
+## 1.2.5 
+ * Add tutorials [#1007](https://github.com/membraneframework/membrane_core/pull/1007), plugins [#1012](https://github.com/membraneframework/membrane_core/pull/1012) and demos [#1013](https://github.com/membraneframework/membrane_core/pull/1013) to the docs.
 
 ## 1.2.4
  * Add `:handle_end_of_stream` and `:handle_start_of_stream` options to debug elements. [#993](https://github.com/membraneframework/membrane_core/pull/993)

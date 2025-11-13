@@ -59,6 +59,17 @@ defmodule Membrane.Mixfile do
   defp docs do
     [
       main: "readme",
+      search: [
+        %{
+          name: "Ecosystem",
+          help: "Search all packages in our ecosystem - listed in the README or the docs",
+          packages: packages_in_ecosystem()
+        },
+        %{
+          name: "Core",
+          help: "Search only membrane core"
+        }
+      ],
       extras: extras(),
       formatters: ["html"],
       logo: "assets/logo.svg",
@@ -91,6 +102,14 @@ defmodule Membrane.Mixfile do
       groups_for_modules: groups_for_modules(),
       groups_for_extras: groups_for_extras()
     ]
+  end
+
+  defp packages_in_ecosystem do
+    {packages, _bindings} = Code.eval_file("scripts/elixir/packages.exs")
+
+    packages
+    |> Enum.reject(&is_tuple(&1))
+    |> Enum.map(&String.to_atom/1)
   end
 
   defp extras do
