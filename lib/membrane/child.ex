@@ -7,9 +7,20 @@ defmodule Membrane.Child do
 
   alias Membrane.{Bin, Element}
 
-  @type name :: Element.name() | Bin.name()
-  @type group() :: any()
+  @typedoc "Any type except for `nil`"
+  @type non_nil :: any()
 
+  @typedoc "Name of the child"
+  @type name :: Element.name() | Bin.name()
+
+  @typedoc """
+  Specifies the children group name. 
+
+  Can be any type except for `nil`
+  """
+  @type group() :: non_nil()
+
+  @typedoc "Options of the child"
   @type options :: Element.options() | Bin.options()
 
   defguard is_child_name?(arg) when is_element_name?(arg) or is_bin_name?(arg)

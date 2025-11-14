@@ -6,6 +6,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
   alias Membrane.Core.{CallbackHandler, Component, Parent}
   alias Membrane.Core.Parent.{ChildLifeController, ChildrenModel, CrashGroup}
   alias Membrane.Core.Parent.ChildLifeController.LinkUtils
+  require Membrane.Logger
 
   @spec add_crash_group(
           Child.group(),
@@ -15,6 +16,13 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
         ) :: Parent.state()
   def add_crash_group(group_name, mode, children, state)
       when not is_map_key(state.crash_groups, group_name) do
+    if group_name == nil do
+      Membrane.Logger.warning("""
+      Calling a children group `nil` is depracated, please use some other value
+      for `:group` when you specify the children group in `:spec` action options.
+      """)
+    end
+
     put_in(
       state.crash_groups[group_name],
       %CrashGroup{
@@ -52,14 +60,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     end
   end
 
-  def handle_crash_group_member_death(child_name, %CrashGroup{} = group, crash_reason, state) do
-    state =
-      if group.detonating? do
-        state
-      else
-        detonate_crash_group(child_name, group, crash_reason, state)
-      end
-
+  def handle_crash_group_member_death(child_name, %CrashGroup{} = group, _crash_reason, state) do
     all_members_dead? =
       List.delete(group.members, child_name)
       |> Enum.all?(&(not Map.has_key?(state.children, &1)))
@@ -71,7 +72,15 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
     end
   end
 
-  defp detonate_crash_group(crash_initiator, %CrashGroup{} = group, crash_reason, state) do
+  @spec maybe_detonate_crash_group(Child.name(), CrashGroup.t(), any(), Parent.state()) ::
+          Parent.state()
+  def maybe_detonate_crash_group(
+        crash_initiator,
+        %CrashGroup{detonating?: false} = group,
+        reason,
+        state
+      )
+      when reason != :normal do
     state = ChildLifeController.remove_children_from_specs(group.members, state)
     state = LinkUtils.unlink_crash_group(group, state)
 
@@ -87,10 +96,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
         &1
         | detonating?: true,
           crash_initiator: crash_initiator,
-          crash_reason: crash_reason
+          crash_reason: reason
       }
     )
   end
+
+  def maybe_detonate_crash_group(_child_name, %CrashGroup{}, _reason, state), do: state
 
   defp cleanup_crash_group(group_name, state) do
     state = exec_handle_crash_group_down(group_name, state)

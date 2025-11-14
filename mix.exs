@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "1.2.0"
+  @version "1.2.4"
   @source_ref "v#{@version}"
 
   def project do
@@ -59,21 +59,31 @@ defmodule Membrane.Mixfile do
   defp docs do
     [
       main: "readme",
-      extras: [
-        "README.md",
-        "CHANGELOG.md",
-        "CONTRIBUTING.md",
-        "guides/upgrading/v0.11.md",
-        "guides/upgrading/v0.12.md",
-        "guides/upgrading/v1.0.0-rc0.md",
-        "guides/upgrading/v1.0.0-rc1.md",
-        "guides/upgrading/v1.0.0.md",
-        "guides/components_lifecycle.md",
-        "guides/timer.md",
-        LICENSE: [title: "License"]
+      search: [
+        %{
+          name: "Ecosystem",
+          help: "Search all packages in our ecosystem - listed in the README or the docs",
+          packages: packages_in_ecosystem()
+        },
+        %{
+          name: "Core",
+          help: "Search only membrane core"
+        }
       ],
+      extras: extras(),
       formatters: ["html"],
+      logo: "assets/logo.svg",
       source_ref: @source_ref,
+      assets: %{
+        "guides/membrane_tutorials/get_started_with_membrane/assets" => "assets",
+        "guides/membrane_tutorials/basic_pipeline/assets" => "assets",
+        "guides/membrane_tutorials/basic_pipeline_extension/assets" => "assets",
+        "guides/membrane_tutorials/create_new_plugin/assets" => "assets",
+        "guides/membrane_tutorials/digital_video_introduction/assets" => "assets",
+        "guides/membrane_tutorials/h264/assets" => "assets",
+        "guides/membrane_tutorials/broadcasting/assets" => "assets",
+        "guides/membrane_tutorials/glossary/assets" => "assets"
+      },
       nest_modules_by_prefix: [
         Membrane.Bin,
         Membrane.Element,
@@ -89,47 +99,126 @@ defmodule Membrane.Mixfile do
         Membrane.RCPipeline,
         Membrane.RCMessage
       ],
-      groups_for_modules: [
-        Pipeline: [~r/^Membrane\.Pipeline($|\.)/],
-        "RC Pipeline": [
-          ~r/^Membrane\.(RCPipeline)($|\.)/,
-          ~r/^Membrane\.(RCMessage)($|\.)/
-        ],
-        Bin: [~r/^Membrane\.Bin($|\.)/],
-        Element: [
-          ~r/^Membrane\.Filter($|\.)/,
-          ~r/^Membrane\.Endpoint($|\.)/,
-          ~r/^Membrane\.Sink($|\.)/,
-          ~r/^Membrane\.Source($|\.)/,
-          ~r/^Membrane\.Element($|\.)/
-        ],
-        "Helper Elements": [
-          ~r/^Membrane\.Connector($|\.)/,
-          ~r/^Membrane\.Fake($|\.)/,
-          ~r/^Membrane\.Debug($|\.)/,
-          ~r/^Membrane\.Tee($|\.)/,
-          ~r/^Membrane\.Funnel($|\.)/,
-          ~r/^Membrane\.FilterAggregator($|\.)/
-        ],
-        Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
-        Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
-        Communication: [
-          ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
-        ],
-        Logging: [~r/^Membrane\.Logger($|\.)/],
-        Telemetry: [~r/^Membrane\.Telemetry($|\.)/],
-        Testing: [~r/^Membrane\.Testing($|\.)/],
-        Utils: [
-          ~r/^Membrane\.Clock($|\.)/,
-          ~r/^Membrane\.Sync($|\.)/,
-          ~r/^Membrane\.Time($|\.)/,
-          ~r/^Membrane\.Playback($|\.)/,
-          ~r/^Membrane\.ComponentPath($|\.)/,
-          ~r/^Membrane\.ResourceGuard($|\.)/,
-          ~r/^Membrane\.UtilitySupervisor($|\.)/
-        ],
-        Errors: [~r/Error$/]
-      ]
+      groups_for_modules: groups_for_modules(),
+      groups_for_extras: groups_for_extras()
+    ]
+  end
+
+  defp packages_in_ecosystem do
+    {packages, _bindings} = Code.eval_file("scripts/elixir/packages.exs")
+
+    packages
+    |> Enum.reject(&is_tuple(&1))
+    |> Enum.map(&String.to_atom/1)
+  end
+
+  defp extras do
+    [
+      "README.md",
+      "CHANGELOG.md",
+      "CONTRIBUTING.md",
+      Path.wildcard("guides/upgrading/*.md"),
+      Path.wildcard("guides/useful_concepts/*.md"),
+      Path.wildcard("guides/membrane_demo/*")
+      |> Enum.filter(&File.dir?/1)
+      |> Enum.reject(&(Path.basename(&1) == "livebooks"))
+      |> Enum.map(&get_demo_external_extra/1),
+      Path.wildcard("guides/membrane_demo/livebooks/*/*.livemd"),
+      Path.wildcard("guides/membrane_tutorials/**/*.md")
+      |> Enum.reject(&(Path.basename(&1) in ["README.md", "index.md", "1_preface.md"]))
+      |> Enum.map(&{String.to_atom(&1), [title: reformat_tutorial_title(&1)]}),
+      Path.wildcard("guides/packages/*.md")
+      |> Enum.map(&{String.to_atom(&1), [title: reformat_tutorial_title(&1)]}),
+      LICENSE: [title: "License"]
+    ]
+    |> List.flatten()
+  end
+
+  defp get_demo_external_extra(demo_path) do
+    demos_url = "https://github.com/membraneframework/membrane_demo/tree/master"
+
+    demo_title =
+      demo_path
+      |> Path.join("README.md")
+      |> File.read!()
+      |> String.split("\n")
+      |> List.first()
+      |> String.trim_leading("#")
+      |> String.trim_leading()
+      |> String.to_atom()
+
+    demo_url =
+      Path.join(demos_url, Path.basename(demo_path))
+
+    {demo_title, [url: demo_url]}
+  end
+
+  defp reformat_tutorial_title(filename) do
+    filename
+    |> Path.basename()
+    |> String.replace(~r/^\d+_/, "")
+    |> String.replace("_", " ")
+    |> String.trim_trailing(".md")
+    |> :string.titlecase()
+  end
+
+  defp groups_for_modules do
+    [
+      Pipeline: [~r/^Membrane\.Pipeline($|\.)/],
+      "RC Pipeline": [
+        ~r/^Membrane\.(RCPipeline)($|\.)/,
+        ~r/^Membrane\.(RCMessage)($|\.)/
+      ],
+      Bin: [~r/^Membrane\.Bin($|\.)/],
+      Element: [
+        ~r/^Membrane\.Filter($|\.)/,
+        ~r/^Membrane\.Endpoint($|\.)/,
+        ~r/^Membrane\.Sink($|\.)/,
+        ~r/^Membrane\.Source($|\.)/,
+        ~r/^Membrane\.Element($|\.)/
+      ],
+      "Helper Elements": [
+        ~r/^Membrane\.Connector($|\.)/,
+        ~r/^Membrane\.Fake($|\.)/,
+        ~r/^Membrane\.Debug($|\.)/,
+        ~r/^Membrane\.Tee($|\.)/,
+        ~r/^Membrane\.Funnel($|\.)/,
+        ~r/^Membrane\.FilterAggregator($|\.)/
+      ],
+      Parent: [~r/^Membrane\.(Parent|ChildrenSpec)($|\.)/],
+      Child: [~r/^Membrane\.(Child|ChildEntry)($|\.)/],
+      Communication: [
+        ~r/^Membrane\.(Buffer|Payload|StreamFormat|Event|EventProtocol|ChildNotification|ParentNotification|Pad|KeyframeRequestEvent|RemoteStream)($|\.)/
+      ],
+      Logging: [~r/^Membrane\.Logger($|\.)/],
+      Telemetry: [~r/^Membrane\.Telemetry($|\.)/],
+      Testing: [~r/^Membrane\.Testing($|\.)/],
+      Utils: [
+        ~r/^Membrane\.Clock($|\.)/,
+        ~r/^Membrane\.Sync($|\.)/,
+        ~r/^Membrane\.Time($|\.)/,
+        ~r/^Membrane\.Playback($|\.)/,
+        ~r/^Membrane\.ComponentPath($|\.)/,
+        ~r/^Membrane\.ResourceGuard($|\.)/,
+        ~r/^Membrane\.UtilitySupervisor($|\.)/
+      ],
+      Errors: [~r/Error$/]
+    ]
+  end
+
+  defp groups_for_extras do
+    [
+      "Get started with Membrane":
+        Path.wildcard("guides/membrane_tutorials/get_started_with_membrane/*.md"),
+      "Useful concepts": Path.wildcard("guides/useful_concepts/*.md"),
+      "Pipelines 101": Path.wildcard("guides/membrane_tutorials/basic_pipeline/*.md"),
+      "Our demos": ~r"(https://github.com/membraneframework/membrane_demo|.*\.livemd)",
+      "Packages in our ecosystem": Path.wildcard("guides/packages/*.md"),
+      "Creating plugins": Path.wildcard("guides/membrane_tutorials/create_new_plugin/*.md"),
+      Broadcasting: Path.wildcard("guides/membrane_tutorials/broadcasting/*.md"),
+      Glossary: Path.wildcard("guides/membrane_tutorials/glossary/*.md"),
+      H264: Path.wildcard("guides/membrane_tutorials/h264/*.md"),
+      Upgrading: Path.wildcard("guides/upgrading/*.md")
     ]
   end
 
@@ -155,7 +244,7 @@ defmodule Membrane.Mixfile do
       {:bunch, "~> 1.6"},
       {:ratio, "~> 3.0 or ~> 4.0"},
       # Development
-      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.39", only: :dev, runtime: false},
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: :dev, runtime: false},

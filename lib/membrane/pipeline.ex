@@ -47,7 +47,7 @@ defmodule Membrane.Pipeline do
   Use the [Applications tab](https://www.erlang.org/doc/apps/observer/observer_ug#applications-tab) in Erlang's Observer GUI
   (or the `Kino` library in Livebook) to visualize a pipeline's internal supervision tree. Use the following configuration for debugging purposes only:
 
-        config :membrane_core, unsafely_name_processes_for_stalker: [:components]
+        config :membrane_core, unsafely_name_processes_for_observer: [:components]
 
   This improves the readability of the Observer's process tree graph by naming the pipeline descendants, as demonstrated here:
 
@@ -245,9 +245,9 @@ defmodule Membrane.Pipeline do
   @doc """
   Callback invoked after a child terminates.
 
+  Context passed to this callback contains 3 additional fields: `:exit_reason`, `:group_name` and `:crash_initiator`.
   Terminated child won't be present in the context of this callback. It is allowed to spawn a new child
   with the same name.
-
   By default, it does nothing.
   """
   @callback handle_child_terminated(
@@ -267,9 +267,11 @@ defmodule Membrane.Pipeline do
             ) :: {[Action.common_actions()], state()}
 
   @doc """
-  Callback invoked when a crash group crashes.
+  Callback invoked when a crash group crashes, when all children from
+  the crash group are already dead.
 
-  Context passed to this callback contains 2 additional fields: `:members` and `:crash_initiator`.
+  You can use this callback to respawn the children from the failed crashed crash group.
+  Context passed to this callback contains 3 additional fields: `:members`, `:crash_initiator` and `:crash_reason`.
   By default, it does nothing.
   """
   @callback handle_crash_group_down(

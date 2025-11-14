@@ -110,10 +110,11 @@ defmodule Membrane.TelemetryTest do
 
         assert_receive {^ref, :telemetry_ack,
                         {[:membrane, :element, ^span, :stop], results,
-                         %{component_path: [_, ^element_type]}}},
+                         %{component_path: [_, ^element_type]} = metadata}},
                        1000
 
         assert results.duration >= 0
+        assert metadata.component_type == :element
       end
     end
   end

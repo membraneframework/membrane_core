@@ -1,4 +1,22 @@
 # Changelog
+## 1.2.5 
+ * Add tutorials [#1007](https://github.com/membraneframework/membrane_core/pull/1007), plugins [#1012](https://github.com/membraneframework/membrane_core/pull/1012) and demos [#1013](https://github.com/membraneframework/membrane_core/pull/1013) to the docs.
+
+## 1.2.4
+ * Add `:handle_end_of_stream` and `:handle_start_of_stream` options to debug elements. [#993](https://github.com/membraneframework/membrane_core/pull/993)
+
+## 1.2.3
+ * Deprecate calling a children group `nil` in [#964](https://github.com/membraneframework/membrane_core/pull/964)
+ * Adds new fields for the handle_child_terminated context: crash_initiator, exit_reason and group_name in [#964](https://github.com/membraneframework/membrane_core/pull/964)
+ * Makes sure that all handle_child_terminated callbacks for children in crash group are called before handle_crash_group_down of that group in [#962](https://github.com/membraneframework/membrane_core/pull/962)
+ * Telemetry event's metadata `component_type` now correctly refers to the root type and not the implementing module [#958](https://github.com/membraneframework/membrane_core/pull/958)
+
+## 1.2.2
+ * Improve conditions for generating compilation warnings. [#956](https://github.com/membraneframework/membrane_core/pull/956)
+
+## 1.2.1
+ * Improve stream format error. [#950](https://github.com/membraneframework/membrane_core/pull/950)
+ * Minor fixes in `Membrane.Connector`. [#952](https://github.com/membraneframework/membrane_core/pull/952)
 
 ## 1.2.0
  * Add `:max_instances` option for dynamic pads. [#876](https://github.com/membraneframework/membrane_core/pull/876)

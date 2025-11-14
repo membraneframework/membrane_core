@@ -16,7 +16,7 @@ jobs:
           elixir-version: '1.17.2'
       - name: Update packages list
         env:
-          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.MEMBRANEFRAMEWORKADMIN_TOKEN }}
         run: |
           echo "Run script"
           elixir scripts/elixir/update_packages_list.exs > output.txt 2> output.txt || ERROR=$? || true
@@ -29,6 +29,7 @@ jobs:
           git config user.email 'bot@membrane.stream'
           echo "Checkout"
           git checkout -B auto-update-packages-list
+          git submodule foreach git pull
           echo "Commit"
           git add README.md
           git commit -m "auto update packages list in readme" --allow-empty
