@@ -105,11 +105,8 @@ defmodule Membrane.Mixfile do
   end
 
   defp packages_in_ecosystem do
-    {packages, _bindings} = Code.eval_file("scripts/elixir/packages.exs")
-
+    {packages, _bindings} = Code.eval_file("scripts/elixir/hex_packages.exs")
     packages
-    |> Enum.reject(&is_tuple(&1))
-    |> Enum.map(&String.to_atom/1)
   end
 
   defp extras do

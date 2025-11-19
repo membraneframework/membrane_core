@@ -84,6 +84,7 @@
   "membrane_overlay_plugin",
   "membrane_ffmpeg_swscale_plugin",
   "membrane_ffmpeg_video_filter_plugin",
+  "membrane_yolo_plugin",
   "kim-company/membrane_video_mixer_plugin",
   {:subsection, "External APIs"},
   "membrane_aws_plugin",

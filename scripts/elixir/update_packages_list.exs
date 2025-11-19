@@ -149,6 +149,18 @@ packages =
       other
   end)
 
+# save packages that have hexdocs
+
+hex_packages =
+  packages
+  |> Enum.filter(&(&1.type == :package and &1.hexdocs_badge != nil))
+  |> Enum.map(&String.to_atom(&1.name))
+
+File.write(
+  Path.join(__DIR__, "hex_packages.exs"),
+  inspect(hex_packages, limit: :infinity, pretty: true)
+)
+
 # generate packages list in markdown
 
 header = """
