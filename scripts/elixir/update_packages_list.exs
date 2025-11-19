@@ -149,17 +149,25 @@ packages =
       other
   end)
 
+generated_code_comment =
+  "Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`."
+
 # save packages that have hexdocs
 
 hex_packages =
   packages
   |> Enum.filter(&(&1.type == :package and &1.hexdocs_badge != nil))
   |> Enum.map(&String.to_atom(&1.name))
+  |> inspect(limit: :infinity)
+  |> Code.format_string!()
+  |> IO.iodata_to_binary()
 
-File.write(
-  Path.join(__DIR__, "hex_packages.exs"),
-  inspect(hex_packages, limit: :infinity, pretty: true, width: 0)
-)
+hex_packages_text = """
+# #{generated_code_comment}
+#{hex_packages}
+"""
+
+File.write!(Path.join(__DIR__, "hex_packages.exs"), hex_packages_text)
 
 # generate packages list in markdown
 
@@ -170,7 +178,7 @@ header = """
 """
 
 generated_code_comment =
-  "<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->"
+  "<!-- #{generated_code_comment} -->"
 
 packages_md =
   packages
