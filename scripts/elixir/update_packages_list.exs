@@ -158,7 +158,7 @@ hex_packages =
 
 File.write(
   Path.join(__DIR__, "hex_packages.exs"),
-  inspect(hex_packages, limit: :infinity, pretty: true)
+  inspect(hex_packages, limit: :infinity, pretty: true, width: 0)
 )
 
 # generate packages list in markdown
