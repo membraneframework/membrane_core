@@ -49,6 +49,11 @@ FFmpeg-based video filters
 
 [![Hex.pm](https://img.shields.io/hexpm/v/membrane_ffmpeg_video_filter_plugin.svg)](https://hex.pm/api/packages/membrane_ffmpeg_video_filter_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_ffmpeg_video_filter_plugin/) [![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](https://github.com/membraneframework/membrane_ffmpeg_video_filter_plugin)
  
+## membrane_yolo_plugin
+Membrane Plugin for applying YOLO object detection on raw video frames 
+
+  [![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](https://github.com/membraneframework/membrane_yolo_plugin)
+ 
 ## membrane_video_mixer_plugin
 [Maintainer: [kim-company](https://github.com/kim-company)] Membrane.Filter that mixes a variable number of input videos into one output using ffmpeg filters 
 
