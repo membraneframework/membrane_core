@@ -4,6 +4,7 @@ defmodule Membrane.Core.Stalker do
   use GenServer
   alias Membrane.{ComponentPath, Pad, Time}
   require Membrane.Core.Utils, as: Utils
+  require Membrane.Logger
 
   @unsafely_name_processes_for_observer Application.compile_env(
                                           :membrane_core,
@@ -382,8 +383,25 @@ defmodule Membrane.Core.Stalker do
     Process.send_after(self(), :scrape_metrics, @scrape_interval)
     metrics = scrape_metrics(state)
     timestamp = Time.milliseconds(System.monotonic_time(:millisecond) - state.init_time)
-    derivatives = calc_derivatives(metrics, timestamp, state)
-    send_to_subscribers(metrics ++ derivatives, :metrics, &{:metrics, &1, timestamp}, state)
+
+    cond do
+      state.timestamp == nil ->
+        send_to_subscribers(metrics, :metrics, &{:metrics, &1, timestamp}, state)
+
+      timestamp > state.timestamp ->
+        derivatives = calc_derivatives(metrics, timestamp, state)
+        send_to_subscribers(metrics ++ derivatives, :metrics, &{:metrics, &1, timestamp}, state)
+
+      true ->
+        # Since we're scraping metrics more or less every second, this should never
+        # happen - but it does, very rarely, for unknown reasons, and would lead
+        # to division by 0 in calc_derivatives.
+        # In such a weird case, we skip reporting metrics.
+        Membrane.Logger.debug("""
+        Not reporting metrics due to unexpected timestamp: #{timestamp}, previous timestamp: #{state.timestamp}
+        """)
+    end
+
     {:noreply, %{state | metrics: Map.new(metrics), timestamp: timestamp}}
   end
 
@@ -516,10 +534,6 @@ defmodule Membrane.Core.Stalker do
   defp cleanup_metrics(pattern, %{ets: ets}) do
     :ets.match_delete(ets, {pattern, :_})
     :ok
-  end
-
-  defp calc_derivatives(_new_metrics, _new_timestamp, %{timestamp: nil}) do
-    []
   end
 
   defp calc_derivatives(new_metrics, new_timestamp, %{metrics: metrics, timestamp: timestamp}) do
