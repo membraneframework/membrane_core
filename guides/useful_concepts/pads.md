@@ -7,17 +7,24 @@ that with these containers are connected with. There are some constraints
 regarding pads:
 
 * A pad of one element can only connect to a single pad of other element and
-only once two pads are connected communication through them can happen.
+only once two pads are linked communication through them can happen.
 * One pad needs to be an input pad, and the other an output pad.
 * The accepted stream formats of the pads need to match.
 
+There are three types of information that can be exchanged between elements
+through pads - [stream formats](`t:Membrane.StreamFormat.t/0`),
+[events](`t:Membrane.Event.t/0`) and [buffers](`t:Membrane.Buffer.t/0`)
+
 When looking at the insides of elements, the pads are their main way to
-communicate with other elements in the pipeline. When an element receives
-something from another one (e.g. a buffer or stream format), it receives it
-from a pad. The reference to this pad is then also available as an argument
-of the callback that handles the received thing. For example an invocation
-of the [following callback](`c:Membrane.Element.WithInputPads.handle_buffer/4`)
-would mean that a buffer `buffer` has arrived on a pad `some_pad`:
+communicate with other elements in the pipeline. There are three types
+of informations that can be exchanged between elements through pads -
+[stream formats](`t:Membrane.StreamFormat.t/0`),
+[events](`t:Membrane.Event.t/0`) and [buffers](`t:Membrane.Buffer.t/0`).
+When an element receives one of these informations from another one, it receives
+it on a pad. The reference to this pad is then also available as an argument
+of the callback that handles the received information. For example an invocation
+of a [`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`)
+callback would mean that a buffer `buffer` has arrived on a pad `some_pad`:
 
 ```elixir
 @impl true
@@ -26,10 +33,11 @@ def handle_buffer(some_pad, buffer, context, state) do
 end
 ```
 
-When an element wants to send something to another element in the
-pipeline, most likely it should send it on a pad that's connected to it. It
-can do that by using the pad reference in actions that send things, for example
-returning the following [buffer action](`t:Membrane.Element.Action.buffer/0`)
+When an element wants to send an stream format, event or buffer to another
+element in the pipeline, it should send it on a pad that's linked to it. It
+can do that by using the pad reference in actions that send these types of
+information, for example returning a
+[`:buffer`](`t:Membrane.Element.Action.buffer/0`) action
 from a callback would mean that a buffer `buffer` will be sent on a pad `some_pad`:
 
 ```elixir
@@ -48,7 +56,7 @@ and [`def_output_pad/2`](`Membrane.Element.WithOutputPads.def_output_pad/2`) mac
 Input pads can only be defined for Sinks, Filters and Endpoints, and output
 pads can only be defined for Sources, Filters and Endpoints.
 The first argument for these macros is a name, which then will be used to
-identify the pads. The second argument is a `t:Membrane.Pad.element_spec/0`
+identify the pads. The second argument is a [pad spec](`t:Membrane.Pad.element_spec/0`)
 keyword list, which is used to define how this pad will work. An option we'll
 now focus on is [`availability`](`t:Membrane.Pad.availability/0`), which
 determines if the pad is _static_ or _dynamic_.
@@ -67,7 +75,7 @@ output pad. The content of the buffers sent by this element is unknown - the fil
 that's being read can contain anything - so this pad has `:accepted_format` set to
 `%RemoteStream{type: :bytestream}`. That means that any stream format that
 matches on this struct can be sent on the output pad and this fact has to be
-accounted for when connecting an element after the source.
+accounted for when linking an element after the source.
 
 A pipeline spec with a file source passing buffers to a MP4 demuxer could look
 like this:
@@ -85,12 +93,12 @@ def handle_init(_context, state) do
 end
 ```
 
-This spec will connect a pad named `:output` of the source to a pad named
+This spec will link a pad named `:output` of the source to a pad named
 `:input` of the demuxer. However this can be shortened - if an output pad is
 called `:output` or an input pad is called `:input`, their respective
 [`via_in/3`](`Membrane.ChildrenSpec.via_in/3`) and
 [`via_out/3`](`Membrane.ChildrenSpec.via_out/3`) calls can be omitted and
-Membrane will automatically recognize and connect them:
+Membrane will automatically recognize and link them:
 
 ```elixir
 @impl true
@@ -130,7 +138,7 @@ have different numbers and kinds of tracks, so the output pad needs to be dynami
 
 We'll consider the case when we don't have any prior information about the
 tracks in this MP4 container. Because of this, the parent pipeline or bin of this
-demuxer won't initially know how many pads should be connected. To solve this
+demuxer won't initially know how many pads should be linked. To solve this
 problem the demuxer will identify the tracks in the incoming stream and send a
 message to it's parent in the form of
 [`{:new_tracks, [{track_id :: integer(), content :: struct()}]}`](https://hexdocs.pm/membrane_mp4_plugin/Membrane.MP4.Demuxer.ISOM.html#t:new_tracks_t/0).
@@ -154,7 +162,7 @@ end
 
 The source will start providing the demuxer the MP4 container content,
 from which the demuxer will identify tracks and notify it's parent
-about them. The parent now has to connect an output pad of the demuxer for each
+about them. The parent now has to link an output pad of the demuxer for each
 track received, which can look like this:
 
 ```elixir
@@ -176,6 +184,49 @@ format is in `format` variable - different formats require different approaches.
 
 After this spec is returned, the demuxer will now have the
 [`handle_pad_added/3`](`c:Membrane.Element.Base.handle_pad_added/3`) callback
-called for each new connected pad with pad reference of
-`Pad.ref(:output, track_id)`. It will now know that these pads are connected and
+called for each new linked pad:
+
+```elixir
+@impl true
+def handle_pad_added(Pad.ref(:output, track_id), _context, state) do 
+  ...
+end
+```
+
+It will now know that these pads are linked and
 ready to pass buffers forward.
+
+An operation that's less common, but also important, than linking dynamic pads,
+is unlinking them. If the parent removed a child that with
+[`t:remove_children/0`](`t:Membrane.Pipeline.Action.remove_children/0`) action:
+
+```elixir
+@impl true
+def some_callback(...) do
+  ...
+  {[remove_children: :some_child], state}
+end
+```
+
+Then the child with name `:some_child` would be stopped and removed from the
+pipeline, unlinking all it's pads. If an input pad of this child happened to be
+connected to our demuxer, then the
+[`handle_pad_removed/3`](`c:Membrane.Element.Base.handle_pad_removed/3`)
+would be called with a reference to the pad that was unlinked:
+
+```elixir
+@impl true
+def handle_pad_removed(Pad.ref(:output, unlinked_track_id), _context, state) do 
+  ...
+end
+```
+
+The demuxer should react to this information accordingly, for example it should
+now know that it no longer can send buffers on this pad, because it has been
+unlinked and essentially no longer exists.
+
+If a link has dynamic pads on both sides, the parent could also return a
+[`t:remove_link/0`](`t:Membrane.Pipeline.Action.remove_link/0`) action,
+which would only remove the link, resulting in
+[`handle_pad_removed/3`](`c:Membrane.Element.Base.handle_pad_removed/3`)
+being called in children on both sides of it.
