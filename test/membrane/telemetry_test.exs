@@ -103,14 +103,14 @@ defmodule Membrane.TelemetryTest do
 
         assert_receive {^ref, :telemetry_ack,
                         {[:membrane, :element, ^span, :start], results,
-                         %{component_path: [_, ^element_type]}}},
+                         %{component_path: [_pipeline, ^element_type]}}},
                        1000
 
         assert results.monotonic_time
 
         assert_receive {^ref, :telemetry_ack,
                         {[:membrane, :element, ^span, :stop], results,
-                         %{component_path: [_, ^element_type]} = metadata}},
+                         %{component_path: [_pipeline, ^element_type]} = metadata}},
                        1000
 
         assert results.duration >= 0
@@ -215,14 +215,14 @@ defmodule Membrane.TelemetryTest do
                  from: ":filter",
                  pad_from: ":output",
                  pad_to: ":input",
-                 parent_component_path: _,
+                 parent_component_path: _path,
                  to: ":sink"
                },
                %{
                  from: ":source",
                  pad_from: ":output",
                  pad_to: ":input",
-                 parent_component_path: _,
+                 parent_component_path: _path,
                  to: ":filter"
                }
              ] = Enum.sort([link1.value, link2.value])
@@ -241,7 +241,7 @@ defmodule Membrane.TelemetryTest do
     test "Buffer", %{child_spec: child_spec} do
       ref = setup_pipeline_for(:buffer, child_spec)
 
-      for _ <- 1..3 do
+      for _i <- 1..3 do
         assert_receive {^ref, :telemetry_ack,
                         {[:membrane, :datapoint, :buffer], measurement, metadata}}
 

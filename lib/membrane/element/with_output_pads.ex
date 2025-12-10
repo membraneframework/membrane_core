@@ -51,7 +51,7 @@ defmodule Membrane.Element.WithOutputPads do
     PadsSpecs.def_pad(name, :output, spec, element_type)
   end
 
-  defmacro __using__(_) do
+  defmacro __using__(_element) do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 

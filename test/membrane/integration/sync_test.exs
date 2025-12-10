@@ -122,7 +122,7 @@ defmodule Membrane.Integration.SyncTest do
 
     assert {:error, reason} = Testing.Pipeline.start_link_supervised(options)
 
-    assert {%Membrane.ParentError{}, _} = reason
+    assert {%Membrane.ParentError{}, _stacktrace} = reason
   end
 
   test "synchronization inside a bin is possible" do
