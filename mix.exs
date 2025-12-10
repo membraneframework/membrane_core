@@ -225,7 +225,7 @@ defmodule Membrane.Mixfile do
   end
 
   defp copy_assets(_args) do
-    File.cp_r("assets", "doc/assets", fn _source, _destination -> true end)
+    File.cp_r("assets", "doc/assets", on_conflict: fn _source, _destination -> true end)
   end
 
   defp package do
