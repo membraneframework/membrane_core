@@ -1,26 +1,27 @@
 # Everything about pads
 
 When developing intuition about the structure of pipelines pads are
-something that can't be ignored. If you think about elements and bins as some
+something that can't be ignored. If you think about elements and bins (from now
+on referred to as components) as some
 sort of containers or boxes in which processing happens, then pads are the parts
 that with these containers are connected with. There are some constraints
 regarding pads:
 
-* A pad of one element can only connect to a single pad of other element and
+* A pad of one component can only connect to a single pad of other component and
 only once two pads are linked communication through them can happen.
 * One pad needs to be an input pad, and the other an output pad.
 * The accepted stream formats of the pads need to match.
 
-There are three types of information that can be exchanged between elements
+There are three types of information that can be exchanged between components
 through pads - [stream formats](`t:Membrane.StreamFormat.t/0`),
 [events](`t:Membrane.Event.t/0`) and [buffers](`t:Membrane.Buffer.t/0`)
 
-When looking at the insides of elements, the pads are their main way to
-communicate with other elements in the pipeline. There are three types
-of informations that can be exchanged between elements through pads -
+When looking at the insides of components, the pads are their main way to
+communicate with other components in the pipeline. There are three types
+of informations that can be exchanged between components through pads -
 [stream formats](`t:Membrane.StreamFormat.t/0`),
 [events](`t:Membrane.Event.t/0`) and [buffers](`t:Membrane.Buffer.t/0`).
-When an element receives one of these informations from another one, it receives
+When an component receives one of these informations from another one, it receives
 it on a pad. The reference to this pad is then also available as an argument
 of the callback that handles the received information. For example an invocation
 of a [`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`)
@@ -33,8 +34,8 @@ def handle_buffer(some_pad, buffer, context, state) do
 end
 ```
 
-When an element wants to send an stream format, event or buffer to another
-element in the pipeline, it should send it on a pad that's linked to it. It
+When an component wants to send an stream format, event or buffer to another
+component in the pipeline, it should send it on a pad that's linked to it. It
 can do that by using the pad reference in actions that send these types of
 information, for example returning a
 [`:buffer`](`t:Membrane.Element.Action.buffer/0`) action
@@ -50,7 +51,7 @@ end          ^^^^^^^^
 
 ## Defining pads
 
-To define what pads an element will have and how they'll behave we use
+To define what pads an component will have and how they'll behave we use
 [`def_input_pad/2`](`Membrane.Element.WithInputPads.def_input_pad/2`)
 and [`def_output_pad/2`](`Membrane.Element.WithOutputPads.def_output_pad/2`) macros.
 Input pads can only be defined for Sinks, Filters and Endpoints, and output
@@ -75,7 +76,7 @@ output pad. The content of the buffers sent by this element is unknown - the fil
 that's being read can contain anything - so this pad has `:accepted_format` set to
 `%RemoteStream{type: :bytestream}`. That means that any stream format that
 matches on this struct can be sent on the output pad and this fact has to be
-accounted for when linking an element after the source.
+accounted for when linking a component after the source.
 
 A pipeline spec with a file source passing buffers to a MP4 demuxer could look
 like this:
@@ -115,9 +116,9 @@ end
 
 Dynamic pads are a bit more complex. They're used when the amount of pads of
 given type is variable - dependent on the processed stream or external factors.
-The creation of these pads is controlled by the parent of the element - if a
+The creation of these pads is controlled by the parent of the component - if a
 [`:spec`](`t:Membrane.Pipeline.Action.spec/0`) action linking the dynamic pad is
-being executed, then the pad is created dynamically and the element needs to
+being executed, then the pad is created dynamically and the component needs to
 handle this, in most cases with
 [`handle_pad_added/3`](`c:Membrane.Element.Base.handle_pad_added/3`).
 
@@ -230,3 +231,39 @@ If a link has dynamic pads on both sides, the parent could also return a
 which would only remove the link, resulting in
 [`handle_pad_removed/3`](`c:Membrane.Element.Base.handle_pad_removed/3`)
 being called in children on both sides of it.
+
+## Life cycle of a pad
+
+Life cycle of components is explored more broadly in this
+[guide](components_lifecycle.md). Here, we'll take a closer look at a life
+cycle of a pad, mostly focusing on elements.
+
+### Creation
+
+Static pad are essentially created and linked at the same time as the whole
+component and exist alongside it for it's entire lifespan - they have to be
+linked at the same time the component is created.
+
+Dynamic pads can be linked and unlinked throughout their components lifespan.
+There can also be multiple instances of a dynamic pad.
+Because of this, each creation can be handled separately in
+[`handle_pad_added/3`](`c:Membrane.Element.Base.handle_pad_added/3`) callback,
+that's being called every time a new dynamic pad is linked, and therefore
+created.
+
+### Playback
+
+When an element is in `:stopped`
+[playback](`t:Membrane.Playback.t/0`), nothing can be sent on it's pads - the
+pipeline is not ready. Only once an element enters `:playing` playback and
+[`handle_playing/2`](`c:Membrane.Element.Base.handle_playing/2`) callback is
+called, then it can assume that the pipeline is ready for communication and can
+send on and receive information from it's pads.
+
+### Removal
+
+Static pads are removed and unlinked once their component is terminated.
+
+Dynamic pads can be removed during the lifespan of their component. For each removal
+a [`handle_pad_removed/3`](`c:Membrane.Element.Base.handle_pad_removed/3`)
+callback is called.
