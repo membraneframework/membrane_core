@@ -5,7 +5,6 @@ defmodule Membrane.Core.Element.EventController do
 
   use Bunch
 
-  alias Membrane.{Event, Pad, Sync}
   alias Membrane.Core.{CallbackHandler, Events, Message, Telemetry}
   alias Membrane.Core.Child.PadModel
 
@@ -19,6 +18,7 @@ defmodule Membrane.Core.Element.EventController do
   }
 
   alias Membrane.Core.Element.ManualFlowController.InputQueue
+  alias Membrane.{Event, Pad, Sync}
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Message

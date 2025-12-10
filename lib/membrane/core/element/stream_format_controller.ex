@@ -5,7 +5,6 @@ defmodule Membrane.Core.Element.StreamFormatController do
 
   use Bunch
 
-  alias Membrane.{Pad, StreamFormat}
   alias Membrane.Core.{CallbackHandler, Telemetry}
   alias Membrane.Core.Child.PadModel
 
@@ -18,6 +17,7 @@ defmodule Membrane.Core.Element.StreamFormatController do
   }
 
   alias Membrane.Core.Element.ManualFlowController.InputQueue
+  alias Membrane.{Pad, StreamFormat}
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.Telemetry

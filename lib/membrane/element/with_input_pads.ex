@@ -8,8 +8,8 @@ defmodule Membrane.Element.WithInputPads do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
-  alias Membrane.Core.Child.PadsSpecs
   alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.Core.Child.PadsSpecs
   alias Membrane.Element.CallbackContext
 
   @doc """

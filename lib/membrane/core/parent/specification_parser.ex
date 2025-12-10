@@ -2,9 +2,9 @@ defmodule Membrane.Core.Parent.SpecificationParser do
   @moduledoc false
   use Bunch
 
+  alias Membrane.{ChildrenSpec, Element, Pad, ParentError}
   alias Membrane.Core.Parent.Link
   alias Membrane.Core.Parent.Link.Endpoint
-  alias Membrane.{ChildrenSpec, Element, Pad, ParentError}
 
   require Membrane.Logger
 
