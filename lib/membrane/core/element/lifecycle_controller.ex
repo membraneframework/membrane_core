@@ -73,7 +73,7 @@ defmodule Membrane.Core.Element.LifecycleController do
   end
 
   @spec handle_playing(State.t()) :: State.t()
-  def handle_playing(state) do
+  def handle_playing(%State{} = state) do
     Membrane.Logger.debug("Got play request")
 
     state =

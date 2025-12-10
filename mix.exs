@@ -17,12 +17,6 @@ defmodule Membrane.Mixfile do
       source_url: link(),
       docs: docs(),
       aliases: [docs: ["docs", &copy_assets/1]],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.post": :test,
-        "coveralls.html": :test
-      ],
       test_coverage: [tool: ExCoveralls, test_task: "test"],
       deps: deps()
     ]
@@ -30,6 +24,17 @@ defmodule Membrane.Mixfile do
 
   def application do
     [extra_applications: [:logger]]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ]
+    ]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
