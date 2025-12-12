@@ -394,11 +394,16 @@ defmodule Membrane.Core.Stalker do
 
       true ->
         # Since we're scraping metrics more or less every second, this should never
-        # happen - but it does, very rarely, for unknown reasons, and would lead
-        # to division by 0 in calc_derivatives.
+        # happen - but it does, very rarely, probably because of stalls caused by NIFs
+        # running for too long and blocking schedulers.
+        # This would lead to division by 0 in calc_derivatives.
         # In such a weird case, we skip reporting metrics.
         Membrane.Logger.debug("""
-        Not reporting metrics due to unexpected timestamp: #{timestamp}, previous timestamp: #{state.timestamp}
+        [Membrane Stalker] Not reporting metrics due to unexpected timestamp: #{timestamp}, \
+        previous timestamp: #{state.timestamp}. \
+        This may indicate that some NIFs are running too long on regular schedulers \
+        and make BEAM misbehave. Make sure all long-running NIFs are executed on \
+        dirty schedulers.
         """)
     end
 
