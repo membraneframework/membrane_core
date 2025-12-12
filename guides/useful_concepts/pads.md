@@ -8,19 +8,18 @@ that with these containers are connected with. There are some constraints
 regarding pads:
 
 * A pad of one component can only connect to a single pad of other component and
-only once two pads are linked communication through them can happen.
+  only once two pads are linked communication through them can happen.
 * One pad needs to be an input pad, and the other an output pad.
-* The accepted stream formats of the pads need to match.
-
-There are three types of information that can be exchanged between components
-through pads - [stream formats](`t:Membrane.StreamFormat.t/0`),
-[events](`t:Membrane.Event.t/0`) and [buffers](`t:Membrane.Buffer.t/0`)
+* The accepted formats of the pads need to match - stream formats passing
+  between elements through these pads need to match accepted formats of both.
 
 When looking at the insides of components, the pads are their main way to
-communicate with other components in the pipeline. There are three types
+communicate with other components in the pipeline. There are four types
 of informations that can be exchanged between components through pads -
 [stream formats](`t:Membrane.StreamFormat.t/0`),
-[events](`t:Membrane.Event.t/0`) and [buffers](`t:Membrane.Buffer.t/0`).
+[events](`t:Membrane.Event.t/0`), [buffers](`t:Membrane.Buffer.t/0`) and
+`:end_of_stream`s.
+
 When an component receives one of these informations from another one, it receives
 it on a pad. The reference to this pad is then also available as an argument
 of the callback that handles the received information. For example an invocation
@@ -43,7 +42,7 @@ from a callback would mean that a buffer `buffer` will be sent on a pad `some_pa
 
 ```elixir
 @impl true
-def some_callback(...) do
+def handle_something(..., _context, state) do
   ...
   {[buffer: {some_pad, buffer}], state}
 end          ^^^^^^^^
@@ -54,8 +53,8 @@ end          ^^^^^^^^
 To define what pads an component will have and how they'll behave we use
 [`def_input_pad/2`](`Membrane.Element.WithInputPads.def_input_pad/2`)
 and [`def_output_pad/2`](`Membrane.Element.WithOutputPads.def_output_pad/2`) macros.
-Input pads can only be defined for Sinks, Filters and Endpoints, and output
-pads can only be defined for Sources, Filters and Endpoints.
+Input pads can only be defined for Bins, Sinks, Filters and Endpoints, and output
+pads can only be defined for Bins, Sources, Filters and Endpoints.
 The first argument for these macros is a name, which then will be used to
 identify the pads. The second argument is a [pad spec](`t:Membrane.Pad.element_spec/0`)
 keyword list, which is used to define how this pad will work. An option we'll
@@ -120,13 +119,17 @@ The creation of these pads is controlled by the parent of the component - if a
 [`:spec`](`t:Membrane.Pipeline.Action.spec/0`) action linking the dynamic pad is
 being executed, then the pad is created dynamically and the component needs to
 handle this, in most cases with
-[`handle_pad_added/3`](`c:Membrane.Element.Base.handle_pad_added/3`).
+[`handle_pad_added/3`](`c:Membrane.Element.Base.handle_pad_added/3`). This
+callback is called only for dynamic pads.
 
 Another thing that's different are the pad references. The pad's name can't just
 be used as the pad's reference, because it wouldn't be unique. Dynamic pads are
 identified by [`Pad.ref/2`](`Membrane.Pad.ref/2`), that takes the pad's
 name and some unique reference as arguments. The result is a unique pad reference
-that is also associated with a given pad's specification through it's name.
+that is also associated with a given pad's specification through it's name. When
+a new pad is linked, it's reference is made known to the element through the
+first argument of
+[`handle_pad_added/3`](`c:Membrane.Element.Base.handle_pad_added/3`).
 
 #### MP4 Demuxer Example
 
@@ -203,7 +206,7 @@ is unlinking them. If the parent removed a child that with
 
 ```elixir
 @impl true
-def some_callback(...) do
+def handle_something(..., _context, state) do
   ...
   {[remove_children: :some_child], state}
 end
@@ -213,7 +216,7 @@ Then the child with name `:some_child` would be stopped and removed from the
 pipeline, unlinking all it's pads. If an input pad of this child happened to be
 connected to our demuxer, then the
 [`handle_pad_removed/3`](`c:Membrane.Element.Base.handle_pad_removed/3`)
-would be called with a reference to the pad that was unlinked:
+would be called in the demuxer with a reference to the pad that was unlinked:
 
 ```elixir
 @impl true
@@ -262,7 +265,7 @@ send on and receive information from it's pads.
 
 ### Removal
 
-Static pads are removed and unlinked once their component is terminated.
+Static pads are removed and unlinked only once their component is terminated.
 
 Dynamic pads can be removed during the lifespan of their component. For each removal
 a [`handle_pad_removed/3`](`c:Membrane.Element.Base.handle_pad_removed/3`)
