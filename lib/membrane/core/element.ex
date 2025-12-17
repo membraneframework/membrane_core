@@ -102,6 +102,9 @@ defmodule Membrane.Core.Element do
     end
   end
 
+  # Suppress false positive dialyzer warnings
+  # https://github.com/elixir-lang/elixir/issues/14576
+  @dialyzer {:nowarn_function, do_init: 1}
   defp do_init(options) do
     Process.link(options.parent_supervisor)
 
@@ -141,9 +144,9 @@ defmodule Membrane.Core.Element do
     state =
       %State{
         module: options.module,
-        type: options.module.membrane_element_type(),
         name: options.name,
         parent_pid: options.parent,
+        type: options.module.membrane_element_type(),
         synchronization: %{
           parent_clock: options.parent_clock,
           timers: %{},

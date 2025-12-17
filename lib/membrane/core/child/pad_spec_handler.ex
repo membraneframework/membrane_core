@@ -14,6 +14,7 @@ defmodule Membrane.Core.Child.PadSpecHandler do
   Initializes pads info basing on element's or bin's pads specifications.
   """
   @spec init_pads(Element.State.t()) :: Element.State.t()
+  # @spec init_pads(Element.State1.t()) :: Element.State1.t()
   @spec init_pads(Bin.State.t()) :: Bin.State.t()
   def init_pads(state) do
     %{

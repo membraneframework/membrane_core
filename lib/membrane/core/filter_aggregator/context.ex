@@ -15,6 +15,9 @@ defmodule Membrane.Core.FilterAggregator.Context do
   @type action :: Element.Action.t() | Membrane.Core.FilterAggregator.InternalAction.t()
 
   @spec build_context!(Element.name(), module(), t()) :: t()
+  # Suppress false positive dialyzer warnings
+  # https://github.com/elixir-lang/elixir/issues/14576
+  @dialyzer {:nowarn_function, build_context!: 3}
   def build_context!(name, module, agg_ctx) do
     pad_descriptions = module.membrane_pads()
     pads = pad_descriptions |> MapSet.new(fn {k, _v} -> k end)
