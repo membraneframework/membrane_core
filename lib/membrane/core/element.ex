@@ -102,7 +102,8 @@ defmodule Membrane.Core.Element do
     end
   end
 
-  # Suppress false positive dialyzer warnings
+  # Suppress false positive dialyzer warnings resulting from 
+  # broken handling of opaque types
   # https://github.com/elixir-lang/elixir/issues/14576
   @dialyzer {:nowarn_function, do_init: 1}
   defp do_init(options) do

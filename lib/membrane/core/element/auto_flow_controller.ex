@@ -218,7 +218,8 @@ defmodule Membrane.Core.Element.AutoFlowController do
     |> Map.put(:popping_auto_flow_queue?, false)
   end
 
-  # Suppress false positive dialyzer warnings
+  # Suppress false positive dialyzer warnings resulting from 
+  # broken handling of opaque types
   # https://github.com/elixir-lang/elixir/issues/14576
   @dialyzer {:nowarn_function, bump_demand: 1}
   defp bump_demand(state) do
