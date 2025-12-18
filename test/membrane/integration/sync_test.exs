@@ -4,8 +4,8 @@ defmodule Membrane.Integration.SyncTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
-  alias Membrane.{Testing, Time}
   alias Membrane.Support.{Sync, TestBins}
+  alias Membrane.{Testing, Time}
   alias TestBins.TestFilter
 
   @tick_number_error 5
@@ -122,7 +122,7 @@ defmodule Membrane.Integration.SyncTest do
 
     assert {:error, reason} = Testing.Pipeline.start_link_supervised(options)
 
-    assert {%Membrane.ParentError{}, _} = reason
+    assert {%Membrane.ParentError{}, _stacktrace} = reason
   end
 
   test "synchronization inside a bin is possible" do

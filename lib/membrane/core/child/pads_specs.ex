@@ -340,7 +340,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
   def generate_docs_from_pads_specs(pads_specs) do
     pads_docs =
       pads_specs
-      |> Enum.sort_by(fn {_, config} -> config[:direction] end)
+      |> Enum.sort_by(fn {_pad_name, config} -> config[:direction] end)
       |> Enum.map(&generate_docs_from_pad_specs/1)
       |> Enum.reduce(fn x, acc ->
         quote do

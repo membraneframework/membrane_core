@@ -61,7 +61,7 @@ defmodule Membrane.Core.Child.PadController do
           map | no_return
   def parse_pad_options!(pad_name, options, state) do
     {_pad_name, pad_spec} =
-      PadSpecHandler.get_pads(state) |> Enum.find(fn {k, _} -> k == pad_name end)
+      PadSpecHandler.get_pads(state) |> Enum.find(fn {k, _desc} -> k == pad_name end)
 
     bunch_field_specs =
       Bunch.KVList.map_values(pad_spec.options || [], &Keyword.take(&1, [:default]))

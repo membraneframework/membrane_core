@@ -2,9 +2,9 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
   use ExUnit.Case, async: true
 
   alias Membrane.Buffer
-  alias Membrane.Core.Message
   alias Membrane.Core.Element.{AtomicDemand, State}
   alias Membrane.Core.Element.ManualFlowController.InputQueue
+  alias Membrane.Core.Message
   alias Membrane.Core.SubprocessSupervisor
   alias Membrane.StreamFormat.Mock, as: MockStreamFormat
   alias Membrane.Support.DemandsTest.Filter

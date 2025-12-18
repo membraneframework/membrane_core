@@ -75,13 +75,13 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({action, _}, :handle_init, _params, _state)
+  def handle_action({action, _arg}, :handle_init, _params, _state)
       when action not in [:latency, :notify_parent] do
     raise ActionError, action: action, reason: {:invalid_callback, :handle_init}
   end
 
   @impl CallbackHandler
-  def handle_action({action, _}, _cb, _params, %State{playback: playback})
+  def handle_action({action, _arg}, _cb, _params, %State{playback: playback})
       when playback != :playing and
              action in [
                :buffer,
@@ -291,12 +291,13 @@ defmodule Membrane.Core.Element.ActionHandler do
     actions
     |> Bunch.Enum.chunk_by_prev(
       fn
-        {:buffer, {pad, _}}, {:buffer, {pad, _}} -> true
+        {:buffer, {pad, _buffer1}}, {:buffer, {pad, _buffer2}} -> true
         _prev_action, _action -> false
       end,
       fn
-        [{:buffer, {pad, _}} | _] = buffers ->
-          {:buffer, {pad, buffers |> Enum.map(fn {_, {_, b}} -> [b] end) |> List.flatten()}}
+        [{:buffer, {pad, _buffer}} | _rest] = buffers ->
+          {:buffer,
+           {pad, buffers |> Enum.map(fn {:buffer, {_pad, b}} -> [b] end) |> List.flatten()}}
 
         [other] ->
           other

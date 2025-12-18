@@ -256,7 +256,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     end
 
     test "set `size` to 0 when there are not enough buffers", context do
-      {_, %{size: new_size}} = InputQueue.take(context.input_queue, 10)
+      {_output, %{size: new_size}} = InputQueue.take(context.input_queue, 10)
 
       assert new_size == 0
     end

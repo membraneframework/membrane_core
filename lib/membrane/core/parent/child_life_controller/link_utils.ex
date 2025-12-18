@@ -156,12 +156,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     links =
       Enum.map(
         links,
-        &%Link{
-          &1
-          | spec_ref: spec_ref,
-            from: resolve_endpoint(&1.from, state),
-            to: resolve_endpoint(&1.to, state)
-        }
+        fn %Link{} = link ->
+          %Link{
+            link
+            | spec_ref: spec_ref,
+              from: resolve_endpoint(link.from, state),
+              to: resolve_endpoint(link.to, state)
+          }
+        end
       )
 
     :ok = validate_links(links, state)
@@ -235,13 +237,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     end
   end
 
-  defp resolve_endpoint(endpoint, state) do
-    %Endpoint{child: child, pad_spec: pad_spec} = endpoint
-    child_data = Parent.ChildrenModel.get_child_data!(state, child)
-    pad_name = Pad.name_by_ref(pad_spec)
+  defp resolve_endpoint(%Endpoint{} = endpoint, state) do
+    child_data = Parent.ChildrenModel.get_child_data!(state, endpoint.child)
+    pad_name = Pad.name_by_ref(endpoint.pad_spec)
 
     withl pad: {:ok, pad_info} <- Keyword.fetch(child_data.module.membrane_pads(), pad_name),
-          ref: {:ok, ref} <- make_pad_ref(pad_spec, pad_info.availability) do
+          ref: {:ok, ref} <- make_pad_ref(endpoint.pad_spec, pad_info.availability) do
       %Endpoint{
         endpoint
         | pid: child_data.pid,
@@ -251,11 +252,12 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
       }
     else
       pad: :error ->
-        raise LinkError, "Child #{inspect(child)} does not have pad #{inspect(pad_spec)}"
+        raise LinkError,
+              "Child #{inspect(endpoint.child)} does not have pad #{inspect(endpoint.pad_spec)}"
 
       ref: {:error, :invalid_availability} ->
         raise LinkError,
-              "Dynamic pad ref #{inspect(pad_spec)} passed for static pad of child #{inspect(child)}"
+              "Dynamic pad ref #{inspect(endpoint.pad_spec)} passed for static pad of child #{inspect(endpoint.child)}"
     end
   end
 

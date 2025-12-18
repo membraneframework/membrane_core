@@ -323,8 +323,8 @@ defmodule Membrane.Testing.Pipeline do
 
       module when is_atom(module) ->
         case Code.ensure_compiled(module) do
-          {:module, _} -> :ok
-          {:error, _} -> raise "Unknown module: #{inspect(module)}"
+          {:module, _module} -> :ok
+          {:error, _error} -> raise "Unknown module: #{inspect(module)}"
         end
 
         new_state = %State{

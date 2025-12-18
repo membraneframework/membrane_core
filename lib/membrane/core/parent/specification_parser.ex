@@ -2,9 +2,9 @@ defmodule Membrane.Core.Parent.SpecificationParser do
   @moduledoc false
   use Bunch
 
+  alias Membrane.{ChildrenSpec, Element, Pad, ParentError}
   alias Membrane.Core.Parent.Link
   alias Membrane.Core.Parent.Link.Endpoint
-  alias Membrane.{ChildrenSpec, Element, Pad, ParentError}
 
   require Membrane.Logger
 
@@ -28,7 +28,7 @@ defmodule Membrane.Core.Parent.SpecificationParser do
         %ChildrenSpec.Builder{links: links, children: children, status: :done} = builder ->
           if links == [] and children == [] do
             Membrane.Logger.warning(
-              "The specification you have passed: #{builder} has no effect - it doesn't produce any children nor links."
+              "The specification you have passed: #{inspect(builder)} has no effect - it doesn't produce any children nor links."
             )
           end
 

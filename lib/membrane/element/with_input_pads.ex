@@ -8,8 +8,8 @@ defmodule Membrane.Element.WithInputPads do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
-  alias Membrane.Core.Child.PadsSpecs
   alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.Core.Child.PadsSpecs
   alias Membrane.Element.CallbackContext
 
   @doc """
@@ -88,7 +88,7 @@ defmodule Membrane.Element.WithInputPads do
     PadsSpecs.def_pad(name, :input, spec, element_type)
   end
 
-  defmacro __using__(_) do
+  defmacro __using__(_element) do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 

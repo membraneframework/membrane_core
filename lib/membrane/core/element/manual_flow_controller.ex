@@ -80,7 +80,7 @@ defmodule Membrane.Core.Element.ManualFlowController do
     |> handle_delayed_demands()
   end
 
-  defp do_supply_demand(pad_ref, state) do
+  defp do_supply_demand(pad_ref, %State{} = state) do
     # marking is state that actual demand supply has been started (note changing back to false when finished)
     state = %State{state | delay_demands?: true}
 
@@ -90,7 +90,7 @@ defmodule Membrane.Core.Element.ManualFlowController do
       InputQueue.take(pad_data.input_queue, pad_data.manual_demand_size)
 
     state = PadModel.set_data!(state, pad_ref, :input_queue, new_input_queue)
-    state = handle_input_queue_output(pad_ref, popped_data, state)
+    %State{} = state = handle_input_queue_output(pad_ref, popped_data, state)
     %State{state | delay_demands?: false}
   end
 

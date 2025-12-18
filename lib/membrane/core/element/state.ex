@@ -15,15 +15,12 @@ defmodule Membrane.Core.Element.State do
 
   @type t :: %__MODULE__{
           module: module(),
-          type: Element.type(),
           name: Element.name(),
+          parent_pid: pid(),
+          playback: Membrane.Playback.t(),
+          type: Element.type(),
           internal_state: Element.state() | nil,
           pads_info: PadModel.pads_info() | nil,
-          pads_data: PadModel.pads_data() | nil,
-          parent_pid: pid(),
-          delay_demands?: boolean(),
-          delayed_demands: MapSet.t({Pad.ref(), :supply | :redemand}),
-          handle_demand_loop_counter: non_neg_integer(),
           synchronization: %{
             timers: %{Timer.id() => Timer.t()},
             parent_clock: Clock.t(),
@@ -31,22 +28,25 @@ defmodule Membrane.Core.Element.State do
             stream_sync: Sync.t(),
             clock: Clock.t() | nil
           },
-          auto_input_pads: [Pad.ref()],
+          delayed_demands: MapSet.t({Pad.ref(), :supply | :redemand}),
+          effective_flow_control: EffectiveFlowController.effective_flow_control(),
           initialized?: boolean(),
-          playback: Membrane.Playback.t(),
-          playback_queue: Membrane.Core.Element.PlaybackQueue.t(),
-          resource_guard: Membrane.ResourceGuard.t(),
-          subprocess_supervisor: pid(),
           terminating?: boolean(),
           setup_incomplete_returned?: boolean(),
-          effective_flow_control: EffectiveFlowController.effective_flow_control(),
+          delay_demands?: boolean(),
           popping_auto_flow_queue?: boolean(),
-          pads_to_snapshot: MapSet.t(),
           stalker: Membrane.Core.Stalker.t(),
+          resource_guard: Membrane.ResourceGuard.t(),
+          subprocess_supervisor: pid(),
+          handle_demand_loop_counter: non_neg_integer(),
+          pads_to_snapshot: MapSet.t(),
+          playback_queue: Membrane.Core.Element.PlaybackQueue.t(),
+          diamond_detection_state: DiamondDatectionState.t(),
+          pads_data: PadModel.pads_data() | nil,
           satisfied_auto_output_pads: MapSet.t(),
           awaiting_auto_input_pads: MapSet.t(),
-          resume_delayed_demands_loop_in_mailbox?: boolean(),
-          diamond_detection_state: DiamondDatectionState.t()
+          auto_input_pads: [Pad.ref()],
+          resume_delayed_demands_loop_in_mailbox?: boolean()
         }
 
   # READ THIS BEFORE ADDING NEW FIELD!!!
