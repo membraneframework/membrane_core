@@ -143,6 +143,8 @@ container, and output pads, on which it'll send the different tracks
 that were in the container. The input pad can be static, however MP4 containers can
 have different numbers and kinds of tracks, so the output pad needs to be dynamic.
 
+![image](assets/pads3.png)
+
 We'll consider the case when we don't have any prior information about the
 tracks in this MP4 container. Because of this, the parent pipeline or bin of this
 demuxer won't initially know how many pads should be linked. To solve this
