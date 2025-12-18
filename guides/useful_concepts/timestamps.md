@@ -28,17 +28,16 @@ use terms of type `t:Membrane.Time.t/0`:
 ## Carriers of timestamps
 
 We now have a way to represent timestamps, but to be useful they have to refer
-to something, an event of some sort. As you probably know, media streams in
-Membrane are sent between elements packaged in
-[Buffers](`t:Membrane.Buffer.t/0`). As we can see in the specification, a buffer
-is a struct with 4 fields:
+to something, an event of some sort. Media streams in
+Membrane are packaged in [Buffers](`t:Membrane.Buffer.t/0`) when sent
+between elements. A buffer is a struct with 4 fields:
 
 * `:payload` - data contained in the buffer
 * `:pts` and `:dts` - timestamps assigned to the buffer
 * `:metadata` - metadata describing the contents of the buffer
 
-Buffers often correspond to some units which the stream is composed of, for
+A buffer often correspond to some unit which the stream is composed of, for
 example video frames in raw video streams or RTP packets in RTP streams.
-These units are the perfect fits to have timestamps assigned to them - and in
+These units finally can have timestamps assigned to them - and in
 most cases they do. For example, a PTS assigned to a buffer containing a
 raw video frame determines then the frame should be displayed.
