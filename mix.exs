@@ -87,7 +87,8 @@ defmodule Membrane.Mixfile do
         "guides/membrane_tutorials/digital_video_introduction/assets" => "assets",
         "guides/membrane_tutorials/h264/assets" => "assets",
         "guides/membrane_tutorials/broadcasting/assets" => "assets",
-        "guides/membrane_tutorials/glossary/assets" => "assets"
+        "guides/membrane_tutorials/glossary/assets" => "assets",
+        "guides/useful_concepts/assets" => "assets"
       },
       nest_modules_by_prefix: [
         Membrane.Bin,
