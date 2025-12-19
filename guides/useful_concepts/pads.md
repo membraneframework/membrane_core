@@ -23,8 +23,8 @@ of information that can be exchanged between components through pads -
 [events](`t:Membrane.Event.t/0`), [buffers](`t:Membrane.Buffer.t/0`) and
 `:end_of_stream`s.
 
-When a component receives information of one of these types from another one, it receives
-it on a pad. The reference to this pad is then also available as an argument
+When a component receives information of one of these types from another one, it
+receives it on a pad. The reference to this pad is then also available as an argument
 of the callback that handles the received information. For example, an invocation
 of a [`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`)
 callback would mean that a buffer `buffer` has arrived on a pad `some_pad`:
@@ -125,13 +125,13 @@ handle this, in most cases with
 [`handle_pad_added/3`](`c:Membrane.Element.Base.handle_pad_added/3`). This
 callback is called only for dynamic pads.
 
-Another thing that's different is the way the pad are referenced. The pad's name can't just
-be used as the pad's reference, because it wouldn't be unique. Dynamic pads are
-identified by [`Pad.ref/2`](`Membrane.Pad.ref/2`), which takes the pad's
-name and some unique reference as arguments. The result is a unique pad reference
-that is also associated with a given pad's specification through its name. When
-a new pad is linked, its reference is made known to the element through the
-first argument of
+Another thing that's different is the way the pad are referenced. The pad's name
+can't just be used as the pad's reference, because it wouldn't be unique.
+Dynamic pads are identified by [`Pad.ref/2`](`Membrane.Pad.ref/2`), which takes
+the pad's name and some unique reference as arguments. The result is a unique
+pad reference that is also associated with a given pad's specification through
+its name. When a new pad is linked, its reference is made known to the element
+through the first argument of
 [`handle_pad_added/3`](`c:Membrane.Element.Base.handle_pad_added/3`).
 
 #### MP4 Demuxer Example
@@ -286,9 +286,10 @@ don't interact with information moving through their pads directly, they forward
 it to components inside them.
 
 The insides of a bin can be thought of as a pipeline of sorts. The components
-are created with the [`:spec`](`t:Membrane.Bin.Action.spec/0`) action and the bin is
-their parent. The way that these components can send and receive information on the bin's
-pads is by linking with [`bin_input`](`Membrane.ChildrenSpec.bin_input/1`) and
+are created with the [`:spec`](`t:Membrane.Bin.Action.spec/0`) action and the
+bin is their parent. The way that these components can send and receive
+information on the bin's pads is by linking with
+[`bin_input`](`Membrane.ChildrenSpec.bin_input/1`) and
 [`bin_output`](`Membrane.ChildrenSpec.bin_output/2`). These functions can be
 thought of as the "interior" part of the bin's pad.
 
@@ -311,8 +312,8 @@ end
 
 When the bin is being set up, it creates a `SomeComponent` child named `:comp`,
 which connects its output pad to the `bin_output` corresponding to the bin's
-`:output` pad. Now whenever this child sends or receives something on its output pad,
-it's received by or sent to whatever component is connected to the bin's
+`:output` pad. Now whenever this child sends or receives something on its output
+pad, it's received by or sent to whatever component is connected to the bin's
 `:output` pad.
 
 ```elixir
@@ -337,5 +338,5 @@ this child sends or receives something on its input pad, it's received by or
 sent to whatever component is connected to the bin's newly created pad.
 
 It's worth noting that pads of bins are only an abstraction. When a component
-links with a bin, it actually links directly to the components inside of it to
-avoid unnecessary forwarding of messages.
+links with a bin, it actually links directly to one of the components inside of
+it to avoid unnecessary forwarding of messages.
