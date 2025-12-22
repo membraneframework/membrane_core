@@ -1,8 +1,9 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "1.2.5"
+  @version "1.2.6"
   @source_ref "v#{@version}"
+  @hex_packages_path "scripts/elixir/hex_packages.exs"
 
   def project do
     [
@@ -111,7 +112,7 @@ defmodule Membrane.Mixfile do
   end
 
   defp packages_in_ecosystem do
-    {packages, _bindings} = Code.eval_file("scripts/elixir/hex_packages.exs")
+    {packages, _bindings} = Code.eval_file(@hex_packages_path)
     packages
   end
 
@@ -236,7 +237,8 @@ defmodule Membrane.Mixfile do
       links: %{
         "GitHub" => link(),
         "Membrane Framework Homepage" => "https://membrane.stream"
-      }
+      },
+      files: ~w"lib .formatter.exs mix.exs README* LICENSE* CHANGELOG* #{@hex_packages_path}"
     ]
   end
 

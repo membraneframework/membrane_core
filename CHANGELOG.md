@@ -1,7 +1,12 @@
 # Changelog
-## 1.2.5 
+
+## 1.2.6
  * Add tutorials [#1007](https://github.com/membraneframework/membrane_core/pull/1007), plugins [#1012](https://github.com/membraneframework/membrane_core/pull/1012) and demos [#1013](https://github.com/membraneframework/membrane_core/pull/1013) to the docs.
  * Avoid division by 0 in stalker under weird timer behaviour [#1035](https://github.com/membraneframework/membrane_core/pull/1035)
+
+
+## 1.2.5
+_Release retired, please use 1.2.6_
 
 ## 1.2.4
  * Add `:handle_end_of_stream` and `:handle_start_of_stream` options to debug elements. [#993](https://github.com/membraneframework/membrane_core/pull/993)
