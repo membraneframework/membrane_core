@@ -1,10 +1,10 @@
 # Timestamps
 
-In a nutshell, timestamps determine when a given event occurred in time. For
-example, when you take a photo with your phone, the exact time and date the photo
-is taken is recorded - it's a timestamp. When dealing with media we also need a
-way to tell when different things need to happen. In Membrane we use the two most
-common types of timestamps:
+In a nutshell, timestamps determine when a given event occurred (or should occur)
+in time. For example, when you take a photo with your phone, the exact time and
+date the photo is taken is recorded - it's a timestamp. When dealing with media
+we also need a way to tell when different things need to happen. In Membrane we
+use the two most common types of timestamps:
 
 * PTS (Presentation Time Stamp) - determines when the media should be
   displayed.
@@ -42,7 +42,7 @@ These units finally can have timestamps assigned to them - and in
 most cases they do. For example, a PTS assigned to a buffer containing a
 raw video frame determines when the frame should be displayed.
 
-## Presentation Time Stamps
+## Presentation Time Stamps (PTS)
 
 As previously mentioned, PTSs are used to tell when a piece of media should be
 presented to the user. It can mean either displaying a video frame, or playing a
@@ -64,7 +64,7 @@ use Realtimer, then we would read the contents of the file as fast as possible a
 send them over as fast as possible, which is not something we want. We want the receiver
 to get the stream in realtime, so that they can display it as it comes.
 
-## Decoding Time Stamps
+## Decode Time Stamps (DTS)
 
 The purpose of DTSs is to tell a decoder when a frame should be
 decoded. In a lot of codecs the media can be decoded as it comes, but in some
@@ -91,10 +91,47 @@ consisting of four frames. Frames 1 and 4 are I-frames, frame 2 is a P-frame
 depending on frame 1, and frame 3 is a B-frame depending on frames 2 and 4.
 If a decoder receives these frames with the following timestamps:
 
-1) pts: 0ms, dts: 0ms
-2) pts: 200ms, dts: 200ms
-3) pts: 400ms, dts: 600ms
-4) pts: 600ms, dts: 400ms
+* [1] pts: 0ms, dts: 0ms
+* [2] pts: 200ms, dts: 200ms
+* [4] pts: 600ms, dts: 400ms
+* [3] pts: 400ms, dts: 600ms
 
 It will first decode the frames in order (1, 2, 4, 3), according to their DTSs.
 If it hadn't decoded frames 2 and 4 first, it couldn't have decoded frame 3.
+It's also important to note that DTSs should always be monotonic, while PTSs
+for streams with B-frames can be non-monotonic.
+
+## Tips and guidelines
+
+Dealing with timestamps can be complicated and very different depending on the
+use case, so here is some advice on dealing with them:
+
+* Filters should always forward timestamps.
+* If a filter doesn't use timestamps, it should forward them, but not rely on
+them being set.
+* Sources should attach timestamps to buffers whenever they're known.
+* Whenever possible, elements should rely on timestamps instead of
+framerate or audio duration calculated from the stream.
+* If an element queues buffers in its state (or uses a library that does so), it
+should make sure that the timestamps for the output buffers are the same as for
+the corresponding input buffers.
+* You should ensure that calculations on timestamps don't introduce an
+accumulating error. Prefer using rationals (Ratio library) to floats.
+* Elements should generate deterministic output timestamps for better testability.
+* If an element transforms N input buffers into M output buffers, each of the
+output buffers should have either:
+  * the timestamp of the first of the input buffers (even if only a part of it
+  was used to construct the output buffers).
+  * more precise timestamps, if it's possible to calculate them.
+* Timestamps are harder than they seem and are the source of many bugs, including:
+  * Audio/video desynchronization
+  * Stream hanging (due to waiting indefinitely to process/play a buffer because
+  of a wrong timestamp)
+  * Stream stalls (e.g. due to processing a real-time stream slightly faster
+  than real-time)
+  * Memory leaks (e.g. due to processing a real-time stream slightly slower
+  than real-time and indefinite buffering)
+  * Video flickering (due to incorrect handling of B-frames)
+  * Audio cracking
+
+  Therefore, operations on timestamps should be given a lot of care and be well-tested.
