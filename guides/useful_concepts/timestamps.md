@@ -1,4 +1,4 @@
-# Timestamps - the stamps in time
+# Timestamps
 
 In a nutshell, timestamps determine when a given event occurred in time. For
 example when you take a photo with your phone, the exact time and date the photo
@@ -61,36 +61,40 @@ another 200ms pass.
 This element is useful if we have non-realtime input, and realtime output, for
 example we want to stream the contents of a MP4 file with WebRTC. If we didn't
 use Realtimer, then we would read contents of the file as fast as possible and
-send them as fast as possible, which is not what we want, we want the receiver
-to receive the stream in realtime, so that they can display it as it comes.
+send them over as fast as possible, which is not something we want. We want the receiver
+to get the stream in realtime, so that they can display it as it comes.
 
 ## Decoding Time Stamps
 
-The purpose of DTSs is to tell a decoder when a given media chunk should be
+The purpose of DTSs is to tell a decoder when a frame should be
 decoded. In a lot of codecs the media can be decoded as it comes, but in some
 cases, like in [H264](../membrane_tutorials/h264/1_Introduction.md), it's
 not that simple. In a nutshell, in H264 some frames are encoded based on
 information from other frames. There are three main types of frames:
 
 * I-frame (Intra-coded picture) - A frame of this type is encoded without the
-  information from any other frames.
+  information from any other frames. Sometimes referred to as a _keyframe_.
 * P-frame (Predicted picture) - A frame of this type is encoded with the usage
-  of information of previous frames. If we have a static shot, then it takes
+  of information from previous frames. If we have a static scene, then it takes
   much less space to encode a frame by using the fact that it's almost the
-  same as the previous one.
+  same as the previous one and encoding only the things that have changed.
 * B-frame (Bidirectional predicted picture) - A frame of this type is similar
   to a P-frame, as it uses information from other frames for it's encoding.
   However, it not only depends on previous pictures, but also on future ones.
   That's where the DTSs come in, because to decode a B-frame we also need to
-  decode all frames it's encoding is based on, including the future ones.
-  For example, let's assume that we have a slice of a stream consisting of
-  three frames where frame 2 is a B-frame that's encoded based on the
-  frames 1 and 3. If a decoder receives these frames with the following
-  timestamps:
+  decode all frames it's based on, including the future ones.
 
-  1) pts: 0ms, dts: 0ms
-  2) pts: 200ms, dts: 400ms
-  3) pts: 400ms, dts: 200ms
+![image](./assets/frame_types.png)
 
-  It will first decode the frames in order (1, 3, 2). If it hadn't decoded
-  frames 1 and 3 first, it couldn't decode frame 2.
+For example, let's assume that we have a slice of a stream from the diagram,
+consisting of four frames. Frames 1 and 4 are I-frames, frame 2 is a P-frame
+depending on frame 1, and frame 3 is a B-frame depending of frames 2 and 4.
+If a decoder receives these frames with the following timestamps:
+
+1) pts: 0ms, dts: 0ms
+2) pts: 200ms, dts: 200ms
+3) pts: 400ms, dts: 600ms
+4) pts: 600ms, dts: 400ms
+
+It will first decode the frames in order (1, 2, 4, 3), according to their DTS.
+If it hadn't decoded frames 2 and 4 first, it couldn't have decoded frame 3.
