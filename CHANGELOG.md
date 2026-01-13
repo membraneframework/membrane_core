@@ -1,5 +1,8 @@
 # Changelog
 
+## Latest
+* Improve remove_link action docs
+
 ## 1.2.6
  * Add tutorials [#1007](https://github.com/membraneframework/membrane_core/pull/1007), plugins [#1012](https://github.com/membraneframework/membrane_core/pull/1012) and demos [#1013](https://github.com/membraneframework/membrane_core/pull/1013) to the docs.
  * Avoid division by 0 in stalker under weird timer behaviour [#1035](https://github.com/membraneframework/membrane_core/pull/1035)
