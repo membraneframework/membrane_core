@@ -15,22 +15,25 @@ use the two most common types of timestamps:
 
 We know that timestamps represent the time of occurrence of an event, but these
 concepts are pretty abstract. We need to somehow represent them in the context
-of our framework. To represent time - durations, latencies, timestamps, - we
+of our framework. To represent time - durations, latencies, timestamps - we
 use terms of type `t:Membrane.Time.t/0`:
 
 * To create a term representing some amount of time, we use
   `Membrane.Time.<unit>/0` and `Membrane.Time.<unit>s/1` functions. For example,
-  to create a term representing three seconds, we call `Membrane.Time.seconds(3)`.
+  to create a term representing three seconds, we call [`Membrane.Time.seconds(3)`](`Membrane.Time.seconds/1`).
 * To read the amount of time represented, we can use `Membrane.Time.as_<unit>/2`
   functions. For example, to get an amount of milliseconds represented by a time,
-  we call `Membrane.Time.as_milliseconds(some_time)`
+  we call [`Membrane.Time.as_milliseconds(some_time)`](`Membrane.Time.as_milliseconds/1`).
+  This function also allows for rounding the result - you can use `:round` mode
+  to round the result to the nearest integer or `:exact` mode to get the result
+  as a [rational number](https://hexdocs.pm/ratio/Ratio.html#t:t/0).
 
 ## Carriers of timestamps
 
-We now have a way to represent timestamps, but to be useful, they have to refer
-to something, an event of some sort. Media streams in
-Membrane are packaged in [Buffers](`t:Membrane.Buffer.t/0`) when sent
-between elements. A buffer is a struct with 4 fields:
+We now have a way to represent timestamps, but for them to be useful,
+they have to refer to something, an event of some sort. Media stream
+chunks in Membrane are packaged in [Buffers](`t:Membrane.Buffer.t/0`)
+when sent between elements. A buffer is a struct with 4 fields:
 
 * `:payload` - data contained in the buffer
 * `:pts` and `:dts` - timestamps assigned to the buffer
@@ -53,10 +56,10 @@ chunk of audio.
 [Realtimer](https://hexdocs.pm/membrane_realtimer_plugin/Membrane.Realtimer.html)
 is an element from
 [membrane_realtimer_plugin](https://hex.pm/packages/membrane_realtimer_plugin).
-It takes in a stream and limits its flow according to its PTSs. For example, if
-it receives three buffers with `:pts` of 0ms, 200ms and 400ms, then it will send
-the first buffer, the second buffer after 200ms pass, and the third one after
-another 200ms pass.
+It takes in a stream and limits its flow according to its DTSs or PTSs.
+For example, if it receives three buffers with timestamps of 0ms, 200ms
+and 400ms, then it will send the first buffer, the second buffer after
+200ms pass, and the third one after another 200ms pass.
 
 This element is useful if we have non-realtime input, and realtime output, for
 example we want to stream the contents of a MP4 file with WebRTC. If we didn't
@@ -107,8 +110,9 @@ Dealing with timestamps can be complicated and very different depending on the
 use case, so here is some advice on dealing with them:
 
 * Filters should always forward timestamps.
-* If a filter doesn't use timestamps, it should forward them, but not rely on
-them being set.
+* If a filter doesn't use timestamps, it should still forward them.
+* If an element relies on timestamps and they are not set, it should raise a
+meaningful error.
 * Sources should attach timestamps to buffers whenever they're known.
 * Whenever possible, elements should rely on timestamps instead of
 framerate or audio duration calculated from the stream.
@@ -116,7 +120,8 @@ framerate or audio duration calculated from the stream.
 should make sure that the timestamps for the output buffers are the same as for
 the corresponding input buffers.
 * You should ensure that calculations on timestamps don't introduce an
-accumulating error. Prefer using rationals (Ratio library) to floats.
+accumulating error. Prefer using [rationals](https://hexdocs.pm/ratio/Ratio.html#t:t/0)
+over floats.
 * Elements should generate deterministic output timestamps for better testability.
 * If an element transforms N input buffers into M output buffers, each of the
 output buffers should have either:
