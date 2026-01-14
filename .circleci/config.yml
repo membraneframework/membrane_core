@@ -70,6 +70,8 @@ jobs:
 
     steps:
       - checkout
+      - run: git submodule sync
+      - run: git submodule update --init
       - restore_deps_cache
       - run: mix deps.get
       - save_deps_cache
