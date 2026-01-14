@@ -25,8 +25,8 @@ use terms of type `t:Membrane.Time.t/0`:
   functions. For example, to get an amount of milliseconds represented by a time,
   we call [`Membrane.Time.as_milliseconds(some_time)`](`Membrane.Time.as_milliseconds/1`).
   This function also allows for rounding the result - you can use `:round` mode
-  to round the result to the nearest integer or `:exact` mode to get the result
-  as a [rational number](https://hexdocs.pm/ratio/Ratio.html#t:t/0).
+  to round the result to the nearest integer or `:exact` mode (the default)
+  to get the result as a [rational number](https://hexdocs.pm/ratio/Ratio.html#t:t/0).
 
 ## Carriers of timestamps
 
