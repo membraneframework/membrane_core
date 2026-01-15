@@ -117,10 +117,10 @@ If you don't know Elixir, try [this tutorial](https://elixir-lang.org/getting-st
 
 ## Supported platforms
 
-Membrane was created and is being worked mainly with UNIX-based operating
+Membrane was created and is being worked on mainly with UNIX-based operating
 systems in mind - in most cases that means MacOS and Linux. When it comes to
 Windows, if a project uses any native code, not just pure Elixir, we can't
-guarantee it working correctly. To use Membrane on Windows we strongly
+guarantee it works correctly. To use Membrane on Windows we strongly
 recommend using WSL (Windows Subsystem for Linux), which allows for running a
 Linux environment on a Windows machine. If you wish to get more insight into
 direct support for Windows, see this
