@@ -5,6 +5,7 @@
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_core.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_core)
 
 Membrane is a versatile multimedia streaming & processing framework. You can use it to build a media server of your need, that can:
+
 - stream via WebRTC, RTSP, RTMP, HLS, HTTP and other protocols,
 - transcode, mix and apply custom processing of video & audio,
 - accept and generate / record to MP4, MKV, FLV and other containers,
@@ -53,6 +54,7 @@ Membrane.Pipeline.start_link(MyPipeline, mp3_url)
 ```
 
 This is an [Elixir](elixir-lang.org) snippet, that streams an mp3 via HTTP and plays it on your speaker. Here's how to run it:
+
 - Option 1: Click the button below:
 
   [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fmembraneframework%2Fmembrane_core%2Fblob%2Fmaster%2Fexample.livemd)
@@ -77,7 +79,7 @@ Elements can be organized into a pipeline - a sequence of linked elements that p
 
 ### Membrane packages
 
-To embrace modularity, Membrane is delivered to you in multiple packages, including plugins, formats, core and standalone libraries. The complete list of all the Membrane packages maintained by the Membrane team is available [here](#Membrane-packages).
+To embrace modularity, Membrane is delivered to you in multiple packages, including plugins, formats, core and standalone libraries. The complete list of all the Membrane packages maintained by the Membrane team is available [here](#membrane-packages).
 
 **Plugins**
 
@@ -102,6 +104,7 @@ Last but not least, Membrane provides tools and libraries that can be used stand
 ## Goals
 
 The main goals of Membrane are:
+
 - To make work with multimedia a more pleasant experience than it is now.
 - To provide a welcoming ecosystem for learning multimedia development.
 - To power resilient, maintainable and scalable systems.
@@ -112,9 +115,21 @@ We chose Elixir for Membrane because it's a modern, high-level, easy-to-learn la
 
 If you don't know Elixir, try [this tutorial](https://elixir-lang.org/getting-started) - it shouldn't take long and you'll know more than enough to get started with Membrane.
 
+## Supported platforms
+
+Membrane was created and is being worked on mainly with UNIX-based operating
+systems in mind - in most cases that means MacOS and Linux. When it comes to
+Windows, if a project uses any native code, not just pure Elixir, we can't
+guarantee it works correctly. To use Membrane on Windows we strongly
+recommend using WSL (Windows Subsystem for Linux), which allows for running a
+Linux environment on a Windows machine. If you wish to get more insight into
+direct support for Windows, see this
+[discussion](https://github.com/orgs/membraneframework/discussions/857).
+
 ## Contributing
 
 We welcome everyone to contribute to Membrane. Here are some ways to contribute:
+
 - Spread the word about Membrane! Even though multimedia are present everywhere today, media dev is still quite niche. Let it be no longer!
 - Create learning materials. We try our best but can cover only a limited number of Membrane use cases.
 - Improve docs. We know it's not the most exciting part, but if you had a hard time understanding the docs, you're the best person to fix them ;)
@@ -128,7 +143,6 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 
 <!-- packages-list-start -->
 <!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
-
 
 ### General
 
