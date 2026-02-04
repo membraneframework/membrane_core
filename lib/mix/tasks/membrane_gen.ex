@@ -6,7 +6,7 @@
     """
     use Mix.Task
 
-    @switches [ path: :string ]
+    @switches [path: :string]
 
     @impl true
     def run(argv) do

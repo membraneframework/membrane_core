@@ -12,6 +12,7 @@ defmodule Membrane.Pad do
 
   use Bunch
 
+  alias Membrane.Core.OptionsSpecs
   alias Membrane.Buffer
 
   @availability_values [:always, :on_request]
@@ -120,6 +121,8 @@ defmodule Membrane.Pad do
 
   Demand unit is derived from the first element inside the bin linked to the
   given input.
+
+  #{OptionsSpecs.pad_options_doc()}
   """
   @type bin_spec ::
           {name(),
@@ -130,6 +133,8 @@ defmodule Membrane.Pad do
 
   @typedoc """
   Describes how a pad should be declared inside an element.
+
+  #{OptionsSpecs.pad_options_doc()}
   """
   @type element_spec ::
           {name(),
