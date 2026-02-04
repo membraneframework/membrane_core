@@ -2,6 +2,7 @@
 
 ## Latest
 * Improve remove_link action docs
+* Add Mix tasks for easier initialization of components [#1059](https://github.com/membraneframework/membrane_core/pull/1059)
 
 ## 1.2.6
  * Add tutorials [#1007](https://github.com/membraneframework/membrane_core/pull/1007), plugins [#1012](https://github.com/membraneframework/membrane_core/pull/1012) and demos [#1013](https://github.com/membraneframework/membrane_core/pull/1013) to the docs.
