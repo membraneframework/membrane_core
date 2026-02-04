@@ -7,17 +7,17 @@ defmodule Membrane.Core.OptionsSpecs do
   alias Membrane.Pad
 
   @spec options_doc() :: String.t()
-  def options_doc do
+  def options_doc() do
     """
     Options are defined by a keyword list, where each key is an option name and
     is described by another keyword list with following fields:
 
-      * `spec:` typespec for value in struct
-      * `default:` default value for option. If not present, value for this option
-        will have to be provided each time options struct is created
-      * `inspector:` function converting fields' value to a string. Used when
-        creating documentation instead of `inspect/1`, eg. `inspector: &Membrane.Time.inspect/1`
-      * `description:` string describing an option. It will be used for generating the docs
+      * `spec:` Specification of the type the values of this option can have.
+      * `default:` Default value for option. If not present, value for this option
+        will have to be provided each time options struct is created.
+      * `inspector:` Function converting fields' value to a string. Used when
+        creating documentation instead of `inspect/1`, eg. `inspector: &Membrane.Time.inspect/1`.
+      * `description:` String describing the option. It will be used for generating the docs.
     """
   end
 
@@ -53,6 +53,21 @@ defmodule Membrane.Core.OptionsSpecs do
       defstruct unquote(escaped_opts)
                 |> Enum.map(fn {k, v} -> {k, v[:default]} end)
     end
+  end
+
+  @spec pad_options_doc() :: String.t()
+  def pad_options_doc() do
+    """
+    Pad options are defined by a keyword list, where each key is an option name and
+    is described by another keyword list with following fields:
+
+      * `spec:` Specification of the type the values of this option can have.
+      * `default:` Default value for option. If not present, value for this option
+        will have to be provided each time options the pad is created.
+      * `inspector:` Function converting fields' value to a string. Used when
+        creating documentation instead of `inspect/1`, eg. `inspector: &Membrane.Time.inspect/1`.
+      * `description:` String describing the option. It will be used for generating the docs.
+    """
   end
 
   @spec def_pad_options(Pad.name(), nil | Keyword.t()) :: {Macro.t(), Macro.t()}
