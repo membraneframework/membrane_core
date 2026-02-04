@@ -12,8 +12,8 @@ defmodule Membrane.Pad do
 
   use Bunch
 
-  alias Membrane.Core.OptionsSpecs
   alias Membrane.Buffer
+  alias Membrane.Core.OptionsSpecs
 
   @availability_values [:always, :on_request]
 
