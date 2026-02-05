@@ -23,7 +23,7 @@ defmodule Membrane.TemplatePipeline do
   # Note: by default this callback will return with state set to an empty map %{},
   # however we recommend using a dedicated State struct.
   @impl true
-  def handle_init(_ctx, opts) do
+  def handle_init(_ctx, _opts) do
     {[], %State{}}
   end
 
