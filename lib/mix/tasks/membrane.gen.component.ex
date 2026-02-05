@@ -7,7 +7,7 @@
     @moduledoc """
     Generates a template for a Membrane #{component_name} with the provided module name.
 
-        $ mix membrane.gen.#{String.downcase(component_name)} module_name [-l target_location]
+      $ mix membrane.gen.#{String.downcase(component_name)} module_name [-l target_location]
 
     ## Options
     * `-l, --location` - If a target location is provided, the #{component_name} will be created there, relative to the `lib` directory.

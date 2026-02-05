@@ -4,21 +4,21 @@ defmodule Membrane.TemplateFilter do
   """
   use Membrane.Filter
 
-  # def_input_pad :input,
-  #   accepted_format: _any,
+  def_input_pad :input,
+    accepted_format: _any,
+    flow_control: :auto # | :manual | :push,
   #   availability: :on_request | :always,
   #   max_instances: positive integer,
-  #   flow_control: :manual | :auto | :push,
   #   demand_unit: :buffers | :bytes,
   #   options: [
   #      Same structure as in def_options/1
   #   ]
 
-  # def_output_pad :output,
-  #   accepted_format: _any,
+  def_output_pad :output,
+    accepted_format: _any,
+    flow_control: :auto # | :manual | :push,
   #   availability: :on_request | :always,
   #   max_instances: positive integer,
-  #   flow_control: :manual | :auto | :push,
   #   demand_unit: :buffers | :bytes,
   #   options: [
   #      Same structure as in def_options/1
@@ -56,6 +56,11 @@ defmodule Membrane.TemplateFilter do
   #   ...
   # end
 
+  @impl true
+  def handle_buffer(_pad, buffer, _ctx, state) do
+    {[forward: buffer], state}
+  end
+
   # ----------------------------------------------
   # --- CALLBACKS WITH DEFAULT IMPLEMENTATIONS ---
   # ----------------------------------------------
@@ -63,7 +68,7 @@ defmodule Membrane.TemplateFilter do
   # Note: by default this callback will return with state set to an empty map %{},
   # however we recommend using a dedicated State struct.
   @impl true
-  def handle_init(_ctx, opts) do
+  def handle_init(_ctx, _opts) do
     {[], %State{}}
   end
 
