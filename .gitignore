@@ -1,3 +1,5 @@
+tmp/
+
 .elixir_ls
 /priv/plts/*
 !/priv/plts/.gitkeep
