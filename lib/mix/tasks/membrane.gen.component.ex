@@ -26,6 +26,7 @@
     end
 
     @doc false
+    @spec do_run(binary(), [binary()]) :: any()
     def do_run(base_dir, argv) do
       {path_option, argv} = OptionParser.parse!(argv, aliases: @aliases, strict: @switches)
 
