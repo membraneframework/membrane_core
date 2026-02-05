@@ -239,7 +239,8 @@ defmodule Membrane.Mixfile do
         "GitHub" => link(),
         "Membrane Framework Homepage" => "https://membrane.stream"
       },
-      files: ~w"lib .formatter.exs mix.exs README* LICENSE* CHANGELOG* #{@hex_packages_path}"
+      files:
+        ~w"lib .formatter.exs mix.exs README* LICENSE* CHANGELOG* #{@hex_packages_path} templates"
     ]
   end
 
