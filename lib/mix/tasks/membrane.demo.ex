@@ -1,15 +1,33 @@
 defmodule Mix.Tasks.Membrane.Demo do
   @shortdoc "Generate Membrane demos and examples"
   @moduledoc """
-  Generate Membrane demos and examples
+  Generate Membrane demos and examples. Requires `git` installed.
 
-    $ mix membrane.demo [-a] [-l] demos ...
+    $ mix membrane.demo [-a] [-l] [-d <repo_dir>] <demos> ...
 
-
+  ## Options
+  * `-l, --list` - List all demos available and their brief descriptions.
+  * `-a, --all` - Pull the repository with all demos. 
+  * `-d, --directory` - Directory where the demos should be placed in.
   """
+  use Mix.Task
+
+  @switches [
+    list: :boolean,
+    all: :boolean,
+    directory: :string
+  ]
+
+  @aliases [
+    l: :list,
+    a: :all,
+    d: :directory
+  ]
+
+  @demos_search_list [".", "livebooks"]
 
   @demos_readme_url "https://raw.githubusercontent.com/membraneframework/membrane_demo/refs/heads/master/README.md"
-  use Mix.Task
+  @demos_clone_url "https://github.com/membraneframework/membrane_demo.git"
 
   @impl true
   def run([]) do
@@ -17,7 +35,23 @@ defmodule Mix.Tasks.Membrane.Demo do
   end
 
   def run(argv) do
-    {:ok, _} = Application.ensure_all_started(:req)
+    {opts, demos_names} = OptionParser.parse!(argv, aliases: @aliases, switches: @switches)
+
+    if opts[:list] do
+      list_available_demos()
+    end
+
+    repo_dir = Path.join(Path.expand(opts[:directory] || "."), "membrane_demo")
+
+    cond do
+      opts[:all] -> copy_all_demos(repo_dir)
+      demos_names != [] -> copy_specific_demos(repo_dir, demos_names)
+      true -> :ok
+    end
+  end
+
+  defp list_available_demos() do
+    {:ok, _apps} = Application.ensure_all_started(:req)
     response = Req.get!(@demos_readme_url)
 
     demos_info =
@@ -43,7 +77,39 @@ defmodule Mix.Tasks.Membrane.Demo do
       dots_line = String.duplicate(".", max_name_length - String.length(name) + 3)
       Mix.shell().info(" | #{name} #{dots_line} | #{description}")
     end)
+  end
 
-    # |> Enum.each(&Mix.shell().info("#{&1["package"]} - #{&1["description"]}"))
+  defp copy_all_demos(repo_dir) do
+    System.cmd("git", ["clone", "-q", "--depth", "1", @demos_clone_url, repo_dir])
+  end
+
+  defp copy_specific_demos(repo_dir, demos_names) do
+    System.cmd("git", ["clone", "-q", "--depth", "1", "-n", @demos_clone_url, repo_dir])
+
+    File.cd!(repo_dir)
+
+    Enum.each(demos_names, fn demo_name ->
+      if copy_demo(demo_name) == :error do
+        Mix.shell().error(
+          "No demo named #{demo_name}, run this task with -l to list all available demos"
+        )
+      end
+    end)
+
+    File.rm_rf!(repo_dir)
+  end
+
+  defp copy_demo(demo_name) do
+    Enum.reduce_while(@demos_search_list, :error, fn demo_dir, _status ->
+      demo_path = Path.join(demo_dir, demo_name)
+
+      System.cmd("git", ["sparse-checkout", "set", demo_path])
+      System.cmd("git", ["checkout"])
+
+      case File.cp_r(demo_path, Path.join("..", Path.basename(demo_path))) do
+        {:ok, _files} -> {:halt, :ok}
+        {:error, :enoent, _dir} -> {:cont, :error}
+      end
+    end)
   end
 end
