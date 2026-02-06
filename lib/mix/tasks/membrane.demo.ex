@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.Membrane.Demo do
-  @shortdoc "Generate Membrane demos and examples"
+  @shortdoc "Download Membrane demos and examples"
   @moduledoc """
-  Generate Membrane demos and examples. Requires `git` installed.
+  Download Membrane demos and examples. Requires `git` installed.
 
     $ mix membrane.demo [-a] [-l] [-d <repo_dir>] <demos> ...
 
@@ -80,19 +80,26 @@ defmodule Mix.Tasks.Membrane.Demo do
   end
 
   defp copy_all_demos(repo_dir) do
-    System.cmd("git", ["clone", "-q", "--depth", "1", @demos_clone_url, repo_dir])
+    {_output, 0} = System.cmd("git", ["clone", "-q", "--depth", "1", @demos_clone_url, repo_dir])
   end
 
   defp copy_specific_demos(repo_dir, demos_names) do
-    System.cmd("git", ["clone", "-q", "--depth", "1", "-n", @demos_clone_url, repo_dir])
+    {_output, 0} =
+      System.cmd("git", ["clone", "-q", "--depth", "1", "-n", @demos_clone_url, repo_dir])
 
     File.cd!(repo_dir)
 
     Enum.each(demos_names, fn demo_name ->
-      if copy_demo(demo_name) == :error do
-        Mix.shell().error(
-          "No demo named #{demo_name}, run this task with -l to list all available demos"
-        )
+      case copy_demo(demo_name) do
+        :error ->
+          Mix.shell().error(
+            "No demo named #{demo_name}, run this task with -l to list all available demos"
+          )
+
+        :ok ->
+          Mix.shell().info(
+            "`#{demo_name}` demo created at #{Path.join(Path.dirname(repo_dir), demo_name)}"
+          )
       end
     end)
 
@@ -103,8 +110,8 @@ defmodule Mix.Tasks.Membrane.Demo do
     Enum.reduce_while(@demos_search_list, :error, fn demo_dir, _status ->
       demo_path = Path.join(demo_dir, demo_name)
 
-      System.cmd("git", ["sparse-checkout", "set", demo_path])
-      System.cmd("git", ["checkout"])
+      {_output, 0} = System.cmd("git", ["sparse-checkout", "set", demo_path])
+      {_output, 0} = System.cmd("git", ["checkout"])
 
       case File.cp_r(demo_path, Path.join("..", Path.basename(demo_path))) do
         {:ok, _files} -> {:halt, :ok}
