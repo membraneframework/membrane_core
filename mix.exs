@@ -46,7 +46,7 @@ defmodule Membrane.Mixfile do
     opts = [
       plt_local_path: "priv/plts",
       flags: [:error_handling, :unmatched_returns],
-      plt_add_apps: [:mix]
+      plt_add_apps: [:mix, :req]
     ]
 
     if System.get_env("CI") == "true" do
