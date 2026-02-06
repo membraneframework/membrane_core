@@ -251,11 +251,11 @@ defmodule Membrane.Mixfile do
       {:bunch, "~> 1.6"},
       {:ratio, "~> 3.0 or ~> 4.0"},
       # Development
-      {:req, "~> 0.5.17", only: :dev, runtime: false},
       {:ex_doc, "~> 0.39", only: :dev, runtime: false},
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: :dev, runtime: false},
+      {:req, "~> 0.5.17", only: [:dev, :test], runtime: false},
       # Testing
       {:mox, "~> 1.0", only: :test},
       {:mock, "~> 0.3.8", only: :test},
