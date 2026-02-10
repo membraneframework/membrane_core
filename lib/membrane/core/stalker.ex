@@ -200,27 +200,21 @@ defmodule Membrane.Core.Stalker do
   end
 
   if :components in @unsafely_name_processes_for_observer do
-    IO.warn(
-      """
-      Deprecated `:components` value for :unsafely_name_processes_for_observer` configuration.
-      Now the processes are always labeled so there is no need to use this option anymore.
-      """,
-      __STACKTRACE__
-    )
+    IO.warn("""
+    Deprecated `:components` value for :unsafely_name_processes_for_observer` configuration.
+    Now the processes are always labeled so there is no need to use this option anymore.
+    """)
   end
 
   if :links in @unsafely_name_processes_for_observer do
-    IO.warn(
-      """
-      Deprecated `:links` value for `:unsafely_name_processes_for_observer` configuration.
-      Use the following configuration:
-      ```
-      config :membrane_core, report_links_to_observer: true
-      ```
-      instead
-      """,
-      __STACKTRACE__
-    )
+    IO.warn("""
+    Deprecated `:links` value for `:unsafely_name_processes_for_observer` configuration.
+    Use the following configuration:
+    ```
+    config :membrane_core, report_links_to_observer: true
+    ```
+    instead
+    """)
 
     generate_run_link_dbg_process()
   end
