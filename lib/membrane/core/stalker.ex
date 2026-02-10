@@ -12,6 +12,12 @@ defmodule Membrane.Core.Stalker do
                                           []
                                         )
 
+  @report_links_to_stalker Application.compile_env(
+                             :membrane_core,
+                             :report_links_to_stalker,
+                             false
+                           )
+
   @metrics_enabled Application.compile_env(:membrane_core, :enable_metrics, true)
 
   @scrape_interval 1000
@@ -180,7 +186,7 @@ defmodule Membrane.Core.Stalker do
   @doc """
   Generates observability data needed for reporting links and their metrics.
 
-  If optionally turned on by setting `unsafely_name_processes_for_observer: :links` in
+  If optionally turned on by setting `report_links_to_stalker: true` in
   config.exs, starts processes to reflect pads structure in the process tree for visibility
   in Erlang observer.
   """
@@ -196,31 +202,53 @@ defmodule Membrane.Core.Stalker do
   if :components in @unsafely_name_processes_for_observer do
     IO.warn(
       """
-      Deprecated `:components` value for :unsafely_name_processes_for_observer option.
-      Now the processes are always labeled so there is no need to use this option.
+      Deprecated `:components` value for :unsafely_name_processes_for_observer` configuration.
+      Now the processes are always labeled so there is no need to use this option anymore.
       """,
       __STACKTRACE__
     )
   end
 
   if :links in @unsafely_name_processes_for_observer do
-    defp run_link_dbg_process(pad_ref, observability_data) do
-      {:ok, observer_dbg_process} =
-        Task.start_link(fn ->
-          Process.flag(:trap_exit, true)
-          Process.label(self(), :"pad #{inspect(pad_ref)} #{:erlang.pid_to_list(self())}")
-          process_to_link = Map.get(observability_data, :observer_dbg_process)
-          if process_to_link, do: Process.link(process_to_link)
+    IO.warn(
+      """
+      Deprecated `:links` value for `:unsafely_name_processes_for_observer` configuration.
+      Use the following configuration:
+      ```
+      config :membrane_core, report_links_to_stalker: true
+      ```
+      instead
+      """,
+      __STACKTRACE__
+    )
 
-          receive do
-            {:EXIT, _pid, _reason} -> :ok
-          end
-        end)
+    generate_run_link_dbg_process()
+  end
 
-      observer_dbg_process
+  if @report_links_to_stalker do
+    generate_run_link_dbg_process()
+  end
+
+  defmacrop generate_run_link_dbg_process() do
+    quote do
+      defp run_link_dbg_process(pad_ref, observability_data) do
+        {:ok, observer_dbg_process} =
+          Task.start_link(fn ->
+            Process.flag(:trap_exit, true)
+            Process.label(self(), :"pad #{inspect(pad_ref)} #{:erlang.pid_to_list(self())}")
+            process_to_link = Map.get(observability_data, :observer_dbg_process)
+            if process_to_link, do: Process.link(process_to_link)
+
+            receive do
+              {:EXIT, _pid, _reason} -> :ok
+            end
+          end)
+
+        observer_dbg_process
+      end
+    else
+      defp run_link_dbg_process(_pad_ref, _observability_data), do: nil
     end
-  else
-    defp run_link_dbg_process(_pad_ref, _observability_data), do: nil
   end
 
   @doc """
