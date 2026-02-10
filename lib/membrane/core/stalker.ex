@@ -209,40 +209,31 @@ defmodule Membrane.Core.Stalker do
   if :links in @unsafely_name_processes_for_observer do
     IO.warn("""
     Deprecated `:links` value for `:unsafely_name_processes_for_observer` configuration.
-    Use the following configuration:
+    Instead please use the following configuration:
     ```
     config :membrane_core, report_links_to_observer: true
     ```
-    instead
     """)
-
-    generate_run_link_dbg_process()
   end
 
   if @report_links_to_observer do
-    generate_run_link_dbg_process()
-  end
+    defp run_link_dbg_process(pad_ref, observability_data) do
+      {:ok, observer_dbg_process} =
+        Task.start_link(fn ->
+          Process.flag(:trap_exit, true)
+          Process.label(self(), :"pad #{inspect(pad_ref)} #{:erlang.pid_to_list(self())}")
+          process_to_link = Map.get(observability_data, :observer_dbg_process)
+          if process_to_link, do: Process.link(process_to_link)
 
-  defmacrop generate_run_link_dbg_process() do
-    quote do
-      defp run_link_dbg_process(pad_ref, observability_data) do
-        {:ok, observer_dbg_process} =
-          Task.start_link(fn ->
-            Process.flag(:trap_exit, true)
-            Process.label(self(), :"pad #{inspect(pad_ref)} #{:erlang.pid_to_list(self())}")
-            process_to_link = Map.get(observability_data, :observer_dbg_process)
-            if process_to_link, do: Process.link(process_to_link)
+          receive do
+            {:EXIT, _pid, _reason} -> :ok
+          end
+        end)
 
-            receive do
-              {:EXIT, _pid, _reason} -> :ok
-            end
-          end)
-
-        observer_dbg_process
-      end
-    else
-      defp run_link_dbg_process(_pad_ref, _observability_data), do: nil
+      observer_dbg_process
     end
+  else
+    defp run_link_dbg_process(_pad_ref, _observability_data), do: nil
   end
 
   @doc """
