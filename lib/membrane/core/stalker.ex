@@ -117,9 +117,7 @@ defmodule Membrane.Core.Stalker do
   end
 
   # Sets component path, logger metadata and adds necessary entries to the process dictionary
-  # Also registers the process with a meaningful name for easier introspection with
-  # stalker if enabled by setting `unsafely_name_processes_for_observer: :components`
-  # in config.exs.
+  # and labels the process with a meaningful name for easier introspection with stalker
   defp setup_process_local_observability(config, opts) do
     config = parse_observability_config(config, opts)
 
@@ -169,23 +167,14 @@ defmodule Membrane.Core.Stalker do
     }
   end
 
-  if :components in @unsafely_name_processes_for_observer do
-    defp register_name_for_stalker(config) do
-      if Process.info(self(), :registered_name) == {:registered_name, []} do
-        Process.register(
-          self(),
-          """
-          ##{config.pid_string} #{if config.is_name_provided, do: config.name_string}\
-          #{unless config.is_name_provided, do: " (#{config.component_type})"}#{config.utility_name}"\
-          """
-          |> String.to_atom()
-        )
-      end
+  defp register_name_for_stalker(config) do
+    label =
+      """
+      ##{config.pid_string} #{if config.is_name_provided, do: config.name_string}\
+      #{unless config.is_name_provided, do: " (#{config.component_type})"}#{config.utility_name}"\
+      """
 
-      :ok
-    end
-  else
-    defp register_name_for_stalker(_config), do: :ok
+    Process.set_label(label)
   end
 
   @doc """
@@ -204,12 +193,22 @@ defmodule Membrane.Core.Stalker do
     }
   end
 
+  if :components in @unsafely_name_processes_for_observer do
+    IO.warn(
+      """
+      Deprecated `:components` value for :unsafely_name_processes_for_observer option.
+      Now the processes are always labeled so there is no need to use this option.
+      """,
+      __STACKTRACE__
+    )
+  end
+
   if :links in @unsafely_name_processes_for_observer do
     defp run_link_dbg_process(pad_ref, observability_data) do
       {:ok, observer_dbg_process} =
         Task.start_link(fn ->
           Process.flag(:trap_exit, true)
-          Process.register(self(), :"pad #{inspect(pad_ref)} #{:erlang.pid_to_list(self())}")
+          Process.label(self(), :"pad #{inspect(pad_ref)} #{:erlang.pid_to_list(self())}")
           process_to_link = Map.get(observability_data, :observer_dbg_process)
           if process_to_link, do: Process.link(process_to_link)
 
