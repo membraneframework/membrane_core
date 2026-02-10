@@ -12,11 +12,11 @@ defmodule Membrane.Core.Stalker do
                                           []
                                         )
 
-  @report_links_to_stalker Application.compile_env(
-                             :membrane_core,
-                             :report_links_to_stalker,
-                             false
-                           )
+  @report_links_to_observer Application.compile_env(
+                              :membrane_core,
+                              :report_links_to_observer,
+                              false
+                            )
 
   @metrics_enabled Application.compile_env(:membrane_core, :enable_metrics, true)
 
@@ -136,7 +136,7 @@ defmodule Membrane.Core.Stalker do
       do: Process.put(:__membrane_pipeline__, true)
 
     Logger.metadata(config.log_metadata)
-    register_name_for_stalker(config)
+    label_name(config)
 
     ComponentPath.set(config.component_path)
 
@@ -173,7 +173,7 @@ defmodule Membrane.Core.Stalker do
     }
   end
 
-  defp register_name_for_stalker(config) do
+  defp label_name(config) do
     label =
       """
       ##{config.pid_string} #{if config.is_name_provided, do: config.name_string}\
@@ -186,7 +186,7 @@ defmodule Membrane.Core.Stalker do
   @doc """
   Generates observability data needed for reporting links and their metrics.
 
-  If optionally turned on by setting `report_links_to_stalker: true` in
+  If optionally turned on by setting `report_links_to_observer: true` in
   config.exs, starts processes to reflect pads structure in the process tree for visibility
   in Erlang observer.
   """
@@ -215,7 +215,7 @@ defmodule Membrane.Core.Stalker do
       Deprecated `:links` value for `:unsafely_name_processes_for_observer` configuration.
       Use the following configuration:
       ```
-      config :membrane_core, report_links_to_stalker: true
+      config :membrane_core, report_links_to_observer: true
       ```
       instead
       """,
@@ -225,7 +225,7 @@ defmodule Membrane.Core.Stalker do
     generate_run_link_dbg_process()
   end
 
-  if @report_links_to_stalker do
+  if @report_links_to_observer do
     generate_run_link_dbg_process()
   end
 
