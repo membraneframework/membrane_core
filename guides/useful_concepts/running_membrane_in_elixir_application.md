@@ -19,7 +19,7 @@ Batch processing is applicable in a scenario where you are performing some "offl
 Let's assume that we want to transcode and transmux H.264 in MP4 container into VP8 in Matrioska container.
 To do so, we need to build the pipeline like this:
 
-```
+```elixir
 defmodule TranscodePipeline do
   use Membrane.Pipeline
 
@@ -48,7 +48,7 @@ end
 
 Next let's create an Oban worker. Using it will ensure that the transcoding is restarted if it fails.
 
-```
+```elixir
 defmodule VideoTranscoderWorker do
   @timeout_sec :time
     
@@ -71,7 +71,7 @@ end
 
 Now we can run the Oban worker:
 
-```
+```elixir
 %{
   "input_path" => "uploads/raw_video.mp4",
   "output_path" => "processed/optimized_video.mkv"
@@ -84,7 +84,7 @@ Now we can run the Oban worker:
 
 You can create a dedicated supervisor to manage the pipeline and any "side-car" processes (like a metrics reporter) as a single unit.
 
-```
+```elixir
 defmodule MyProject.InfrastructureSupervisor do
   use Supervisor
 
@@ -108,7 +108,7 @@ Usage of `:one_for_all` strategy ensures that the `MetricsReporter` get restarte
 
 To launch this when your app boots, add the InfrastructureSupervisor to the children list in your `application.ex`:
 
-```
+```elixir
 defmodule MyProject.Application do
   use Application
 
@@ -129,7 +129,7 @@ end
 Since we already have the InfrastructureSupervisor, implementation is straightforward.
 Instead of starting the `InfrastructureSupervisor` directly in the application, you start a `DynamicSupervisor` there.
 
-```
+```elixir
 defmodule MyProject.Application do
   use Application
 
@@ -148,7 +148,7 @@ end
 Then, whenever a new pipeline is needed, you use `DynamicSupervisor.start_child()` to spawn a new instance of the `InfrastructureSupervisor`.
 It could happen e.g. inside `mount/3` callback of your LiveView:
 
-```
+```elixir
 def mount(_params, _session, socket) do
   ...
   if connected?(socket) do
