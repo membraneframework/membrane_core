@@ -220,7 +220,7 @@ defmodule Membrane.Core.Stalker do
       {:ok, observer_dbg_process} =
         Task.start_link(fn ->
           Process.flag(:trap_exit, true)
-          Process.label(self(), :"pad #{inspect(pad_ref)} #{:erlang.pid_to_list(self())}")
+          Process.set_label(self(), :"pad #{inspect(pad_ref)} #{:erlang.pid_to_list(self())}")
           process_to_link = Map.get(observability_data, :observer_dbg_process)
           if process_to_link, do: Process.link(process_to_link)
 
