@@ -25,12 +25,11 @@
       do_run("lib", argv)
     end
 
-    @doc false
     @spec do_run(binary(), [binary()]) :: any()
     def do_run(base_dir, argv) do
       {path_option, argv} = OptionParser.parse!(argv, aliases: @aliases, strict: @switches)
 
-      module =
+      module_name =
         case argv do
           [] ->
             Mix.raise("""
@@ -42,34 +41,38 @@
               
             """)
 
-            Mix.Tasks.Help
-
           [module_name | _rest] ->
-            Module.concat([module_name])
+            Module.concat([module_name]) |> inspect()
         end
+
+      if String.starts_with?(module_name, ":\"Elixir.") do
+        Mix.raise("""
+        Invalid module name, please provide a valid one.
+        (no other special characters than dots are allowed and the module name as well as dot-separated segments in it must start with uppercase letters).
+        """)
+      end
 
       component_path =
         case path_option do
-          [] -> infer_path_from_module(module)
+          [] -> infer_path_from_module(module_name)
           [{:location, path} | _rest] -> path
         end
         |> then(&Path.join(base_dir, &1))
 
       File.mkdir_p!(Path.dirname(component_path))
 
-      File.write!(component_path, get_component(module))
+      File.write!(component_path, get_component(module_name))
     end
 
-    defp infer_path_from_module(module) do
-      module
-      |> inspect()
-      |> String.downcase()
+    defp infer_path_from_module(module_name) do
+      module_name
       |> String.split(".")
+      |> Enum.map(&(Regex.replace(~r/(?<=[^A-Z])([A-Z])/, &1, "_\\1") |> String.downcase()))
       |> List.update_at(-1, &"#{&1}.ex")
       |> Path.join()
     end
 
-    defp get_component(module) do
+    defp get_component(module_name) do
       template =
         "../../../templates"
         |> Path.expand(__DIR__)
@@ -78,7 +81,7 @@
 
       template
       |> String.split("\n")
-      |> List.replace_at(0, "defmodule #{inspect(module)} do")
+      |> List.replace_at(0, "defmodule #{module_name} do")
       |> Enum.join("\n")
     end
   end
