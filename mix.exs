@@ -45,7 +45,8 @@ defmodule Membrane.Mixfile do
   defp dialyzer() do
     opts = [
       plt_local_path: "priv/plts",
-      flags: [:error_handling, :unmatched_returns]
+      flags: [:error_handling, :unmatched_returns],
+      plt_add_apps: [:mix]
     ]
 
     if System.get_env("CI") == "true" do
@@ -238,7 +239,8 @@ defmodule Membrane.Mixfile do
         "GitHub" => link(),
         "Membrane Framework Homepage" => "https://membrane.stream"
       },
-      files: ~w"lib .formatter.exs mix.exs README* LICENSE* CHANGELOG* #{@hex_packages_path}"
+      files:
+        ~w"lib .formatter.exs mix.exs README* LICENSE* CHANGELOG* #{@hex_packages_path} templates"
     ]
   end
 

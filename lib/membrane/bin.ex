@@ -99,8 +99,9 @@ defmodule Membrane.Bin do
 
   The callback won't be invoked, when you have initiated the pad removal,
   eg. when you have returned `t:Membrane.Bin.Action.remove_link()` action
-  which made one of your children's pads be removed.
-  By default, it does nothing.
+  which made one of your children's pads be removed. Not having the 
+  callback implemented when a child removes its pad will result in the 
+  bin crashing.
   """
   @callback handle_child_pad_removed(
               child :: Child.name(),
