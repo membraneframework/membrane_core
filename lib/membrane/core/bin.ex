@@ -112,10 +112,7 @@ defmodule Membrane.Core.Bin do
 
     Membrane.Core.Stalker.register_component(options.stalker, observability_config)
 
-    SubprocessSupervisor.set_parent_component(options.subprocess_supervisor, %{
-      observability_config
-      | pid: options.subprocess_supervisor
-    })
+    SubprocessSupervisor.set_parent_component(options.subprocess_supervisor, observability_config)
 
     {:ok, clock_proxy} =
       SubprocessSupervisor.start_utility(
