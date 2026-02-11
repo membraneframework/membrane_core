@@ -167,7 +167,7 @@ defmodule Membrane.Core.Stalker do
 
   defp set_label(config) do
     utility_str = if config.is_utility, do: "'s #{config.utility_name}", else: ""
-    component_path_str = Enum.join(config.component_path, "/")
+    component_path_str = ComponentPath.format(config.component_path)
 
     label =
       """
