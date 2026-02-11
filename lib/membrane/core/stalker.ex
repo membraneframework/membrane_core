@@ -153,12 +153,6 @@ defmodule Membrane.Core.Stalker do
 
     name_string = if is_binary(name) and String.valid?(name), do: name, else: inspect(name)
 
-    component_path =
-      case Map.get(config, :parent_path, []) do
-        [] -> [name_string]
-        path -> path ++ ["/#{name_string}"]
-      end
-
     %{
       stalker: stalker,
       name: name,
@@ -166,17 +160,18 @@ defmodule Membrane.Core.Stalker do
       component_type: component_type,
       is_utility: is_utility,
       utility_name: if(is_utility, do: " #{utility_name}", else: ""),
-      component_path: component_path,
+      component_path: Map.get(config, :parent_path, []) ++ ["#{name_string}"],
       log_metadata: Map.get(config, :log_metadata, [])
     }
   end
 
   defp set_label(config) do
     utility_str = if config.is_utility, do: "'s #{config.utility_name}", else: ""
+    component_path_str = Enum.join(config.component_path, "/")
 
     label =
       """
-      #{config.component_path}#{utility_str}
+      #{component_path_str}#{utility_str}
       """
 
     Process.set_label(label)
