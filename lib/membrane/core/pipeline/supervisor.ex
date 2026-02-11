@@ -42,7 +42,7 @@ defmodule Membrane.Core.Pipeline.Supervisor do
     subprocess_supervisor = SubprocessSupervisor.start_link!()
 
     with {:ok, pipeline} <- start_fun.(subprocess_supervisor) do
-      name = name || "[Pipeline: #{inspect(pipeline)}]"
+      name = name || "Pipeline#{:erlang.pid_to_list(pipeline)}"
 
       Membrane.Core.Stalker.setup_component_utility(
         %{name: name, component_type: :pipeline, pid: pipeline},

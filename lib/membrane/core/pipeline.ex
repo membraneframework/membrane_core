@@ -31,7 +31,7 @@ defmodule Membrane.Core.Pipeline do
 
   defp do_init(params) do
     observability_config = %{
-      name: params.name || "[Pipeline: #{inspect(self())}]",
+      name: params.name || "Pipeline#{:erlang.pid_to_list(self())}",
       component_type: :pipeline
     }
 
