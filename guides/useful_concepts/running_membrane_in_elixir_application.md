@@ -1,23 +1,19 @@
 # Using Membrane in Elixir Application
-
-This guide provides tips for using Membrane Pipelines in your Elixir application.
-We will cover topics like attaching pipelines to application's supervision tree.
-
-## Configuring Telemetry
+This guide outlines best practices for integrating Membrane Pipelines into your Elixir application, specifically focusing on how to attach pipelines to your application's supervision tree.
 
 ## Running the pipeline
 
-In most cases, pipelines are used in the following scenarios:
+In most cases, pipelines are used in one of the following scenarios:
 
-- Batch Processing: Handling "offline" tasks that have a clear start and end. For example, transcoding stream inside an MP4 container file.
-- Static Orchestration: when you need to have a single pipeline always running in your application. For instance you might want to take an input from a bunch of IP cameras and mix their output into a single stream which you distribute over HLS.
-- Dynamic Orchestration: Spawning pipelines on demand based on user actions. It happens when e.g. you need to start a unique pipeline for every user who joins a videoconferencing room.
+- Batch Processing: Handling "offline" tasks with a clear start and end (e.g., transcoding a stream inside an MP4 file).
+
+- Static Orchestration: Maintaining a single, permanent pipeline that always runs with your application (e.g., mixing output from multiple IP cameras into a single HLS stream).
+
+- Dynamic Orchestration: Spawning pipelines on-demand based on user actions (e.g., starting a unique pipeline for every user joining a conference room).
 
 ### Batch Processing
-
-Batch processing is applicable in a scenario where you are performing some "offline task". It's good to be sure that the task has finished sucessfully.
-Let's assume that we want to transcode and transmux H.264 in MP4 container into VP8 in Matrioska container.
-To do so, we need to build the pipeline like this:
+Batch processing is ideal for "offline tasks" where you need to ensure the job completes successfully.
+For example, let's assume we want to transcode video from H.264 (in MP4) to VP8 (in Matroska). To achieve this, we build the pipeline as follows:
 
 ```elixir
 defmodule TranscodePipeline do
@@ -46,7 +42,10 @@ defmodule TranscodePipeline do
 end
 ```
 
-Next let's create an Oban worker. Using it will ensure that the transcoding is restarted if it fails.
+To ensure reliability, we might wrap this execution in an Oban worker.
+Oban is the standard library for background job processing in Elixir. It persists jobs to your database, ensuring that your long-running transcoding tasks are fault-tolerant.
+If the pipeline crashes or the server restarts, Oban will automatically retry the job until it succeeds.
+Let's define an Oban worker:
 
 ```elixir
 defmodule VideoTranscoderWorker do
@@ -79,10 +78,14 @@ Now we can run the Oban worker:
 |> VideoTranscoderWorker.new()
 |> Oban.insert()
 ```
+### Static Orchestration: Supervisor on Startup
+This approach is ideal when your pipeline architecture is fixed and needs to run continuously from the moment your application starts.
+Imagine an application that monitors a security camera feed to detect people or vehicles in real-time. Such an application could consist of two components:
+* The Membrane Pipeline, which connects to an RTSP stream, decodes the video, and extracts raw frames. It sends these frames to the external process via a Unix socket or standard input.
+* The OS Process being a Python script running a machine learning model (like YOLO). It reads the raw frames, performs object detection, and outputs metadata (bounding boxes, class labels).
 
-### Static Orchestration with the pipeline spawned under Supervisor upon system startup
-
-You can create a dedicated supervisor to manage the pipeline and any "side-car" processes (like a metrics reporter) as a single unit.
+To handle this scenario, you could create a dedicated supervisor to manage the pipeline alongside any necessary "side-car" processes—such as a `MuonTrap.Daemon` wrapping an external OS command.
+This allows you to treat the pipeline and its dependencies as a single  unit.
 
 ```elixir
 defmodule MyProject.InfrastructureSupervisor do
@@ -93,10 +96,10 @@ defmodule MyProject.InfrastructureSupervisor do
   end
 
   @impl true
-  def init(_init_arg) do
+  def init(rtmp_url) do
     children = [
-      {MyProject.MetricsReporter, name: MetricsReporter},
-      {MyProject.Pipeline, [input_url: "rtmp://127.0.0.1:1935/app/key"]}
+      {MuonTrap.Daemon, ["run_model", ["yolo.pth"], [log_output: :debug]], restart: :transient]}
+      {MyProject.Pipeline, [input_url: rtmp_url], restart: :transient}
     ]
 
     Supervisor.init(children, strategy: :one_for_all)
@@ -104,9 +107,9 @@ defmodule MyProject.InfrastructureSupervisor do
 end
 ```
 
-Usage of `:one_for_all` strategy ensures that the `MetricsReporter` get restarted each time the pipeline restarts.
+Usage of `:one_for_all` strategy ensures that the `MuonTrap.Deamon` get restarted each time the pipeline restarts.
 
-To launch this when your app boots, add the InfrastructureSupervisor to the children list in your `application.ex`:
+To launch this when your app boots, add the `InfrastructureSupervisor` to the children list in your `application.ex`:
 
 ```elixir
 defmodule MyProject.Application do
@@ -115,7 +118,7 @@ defmodule MyProject.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      MyProject.InfrastructureSupervisor
+      {MyProject.InfrastructureSupervisor, [rtmp_url: "rtmp://127.0.0.1:1935/app/key"]}
     ]
 
     opts = [strategy: :one_for_one, name: MyProject.Supervisor]
