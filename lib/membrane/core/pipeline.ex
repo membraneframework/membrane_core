@@ -37,7 +37,12 @@ defmodule Membrane.Core.Pipeline do
     }
 
     %{subprocess_supervisor: subprocess_supervisor} = params
-    SubprocessSupervisor.set_parent_component(subprocess_supervisor, observability_config)
+
+    SubprocessSupervisor.set_parent_component(subprocess_supervisor, %{
+      observability_config
+      | pid: subprocess_supervisor
+    })
+
     stalker = Stalker.new(observability_config, subprocess_supervisor)
 
     {:ok, resource_guard} =

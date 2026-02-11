@@ -176,8 +176,7 @@ defmodule Membrane.Core.Stalker do
   defp label_name(config) do
     label =
       """
-      ##{config.pid_string} #{if config.is_name_provided, do: config.name_string}\
-      #{unless config.is_name_provided, do: " (#{config.component_type})"}#{config.utility_name}"\
+      #{config.pid_string} #{component_path} #{if config.is_utility, do: config.utility_name} 
       """
 
     Process.set_label(label)

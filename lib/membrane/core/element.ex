@@ -118,7 +118,11 @@ defmodule Membrane.Core.Element do
     }
 
     Membrane.Core.Stalker.register_component(options.stalker, observability_config)
-    SubprocessSupervisor.set_parent_component(options.subprocess_supervisor, observability_config)
+
+    SubprocessSupervisor.set_parent_component(options.subprocess_supervisor, %{
+      observability_config
+      | pid: options.subprocess_supervisor
+    })
 
     {:ok, resource_guard} =
       SubprocessSupervisor.start_utility(options.subprocess_supervisor, {ResourceGuard, self()})
