@@ -30,7 +30,6 @@ defmodule Membrane.Core.Stalker do
   @type component_config :: %{
           optional(:parent_path) => ComponentPath.path(),
           optional(:log_metadata) => Logger.metadata(),
-          optional(:pid) => pid(),
           name: Membrane.Child.name(),
           component_type: :element | :bin | :pipeline
         }

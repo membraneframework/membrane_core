@@ -45,7 +45,7 @@ defmodule Membrane.Core.Pipeline.Supervisor do
       name = name || "Pipeline#{:erlang.pid_to_list(pipeline)}"
 
       Membrane.Core.Stalker.setup_component_utility(
-        %{name: name, component_type: :pipeline, pid: pipeline},
+        %{name: name, component_type: :pipeline},
         "Pipeline supervisor"
       )
 
