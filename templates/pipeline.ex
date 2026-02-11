@@ -1,6 +1,6 @@
 defmodule Membrane.TemplatePipeline do
   @moduledoc """
-  This is a generated template for a Pipeline. Uncomment the snippets as necessary.
+  This is a generated template for a Membrane.Pipeline. Uncomment the snippets as necessary.
   """
   use Membrane.Pipeline
 
@@ -16,11 +16,15 @@ defmodule Membrane.TemplatePipeline do
     defstruct []
   end
 
-  # ----------------------------------------------
-  # --- CALLBACKS WITH DEFAULT IMPLEMENTATIONS ---
-  # ----------------------------------------------
+  # -----------------
+  # --- CALLBACKS ---
+  # -----------------
+  # These callbacks have been ordered as they are usually being executed in the lifecycle
+  # of a typical Membrane component - see https://hexdocs.pm/membrane_core/components_lifecycle.html.
+  # Most of them are optional and have default implementations, which are present here as commented out code.
+  # Any exceptions to this rule are mentioned above the relevant callbacks.
 
-  # Note: by default this callback will return with state set to an empty map %{},
+  # By default this callback will return with state set to an empty map %{},
   # however we recommend using a dedicated State struct.
   @impl true
   def handle_init(_ctx, _opts) do
@@ -92,15 +96,16 @@ defmodule Membrane.TemplatePipeline do
   #   {[terminate: :normal], state}
   # end
 
-  # --------------------------
-  # --- OPTIONAL CALLBACKS ---
-  # --------------------------
-
+  # This callback doesn't have a default implementation, but will be called only 
+  # if a `:start_timer` action has been executed. For more information and examples 
+  # of timer usage see https://hexdocs.pm/membrane_core/timer.html.
   # @impl true
   # def handle_tick(timer_id, context, state) do
   #   ...
   # end
 
+  # This callback doesn't have a default implementation and will be called only if 
+  # a child removes it's own dynamic pad. If not implemented, the bin will crash. 
   # @impl true
   # handle_child_pad_removed(element, pad, ctx, state) do
   #   ...
