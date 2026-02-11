@@ -136,7 +136,7 @@ defmodule Membrane.Core.Stalker do
       do: Process.put(:__membrane_pipeline__, true)
 
     Logger.metadata(config.log_metadata)
-    label_name(config)
+    set_label(config)
 
     ComponentPath.set(config.component_path)
 
@@ -148,35 +148,35 @@ defmodule Membrane.Core.Stalker do
   defp parse_observability_config(config, opts) do
     utility_name = Map.get(opts, :utility_name)
     stalker = Map.get(opts, :stalker)
-    %{name: name, component_type: component_type, pid: pid} = config
-    is_name_provided = name != nil
-    pid_string = pid |> :erlang.pid_to_list() |> to_string()
-    name = if is_name_provided, do: name, else: pid_string
+    %{name: name, component_type: component_type} = config
     is_utility = utility_name != nil
 
-    name_string = """
-    #{if is_binary(name) and String.valid?(name), do: name, else: inspect(name)}\
-    #{if component_type == :element, do: "", else: "/"}\
-    """
+    name_string = if is_binary(name) and String.valid?(name), do: name, else: inspect(name)
+
+    component_path =
+      case Map.get(config, :parent_path, []) do
+        [] -> [name_string]
+        path -> path ++ ["/#{name_string}"]
+      end
 
     %{
       stalker: stalker,
       name: name,
       name_string: name_string,
-      pid_string: pid_string,
       component_type: component_type,
-      is_name_provided: is_name_provided,
       is_utility: is_utility,
       utility_name: if(is_utility, do: " #{utility_name}", else: ""),
-      component_path: Map.get(config, :parent_path, []) ++ [name_string],
+      component_path: component_path,
       log_metadata: Map.get(config, :log_metadata, [])
     }
   end
 
-  defp label_name(config) do
+  defp set_label(config) do
+    utility_str = if config.is_utility, do: "'s #{config.utility_name}", else: ""
+
     label =
       """
-      #{config.pid_string} #{component_path} #{if config.is_utility, do: config.utility_name} 
+      #{config.component_path}#{utility_str}
       """
 
     Process.set_label(label)

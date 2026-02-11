@@ -106,7 +106,6 @@ defmodule Membrane.Core.Bin do
     observability_config = %{
       name: name,
       component_type: :bin,
-      pid: self(),
       parent_path: options.parent_path,
       log_metadata: options.log_metadata
     }
