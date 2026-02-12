@@ -168,10 +168,7 @@ defmodule Membrane.Core.Stalker do
     utility_str = if config.is_utility, do: "'s #{config.utility_name}", else: ""
     component_path_str = ComponentPath.format(config.component_path)
 
-    label =
-      """
-      #{component_path_str}#{utility_str}
-      """
+    label = "#{component_path_str}#{utility_str}"
 
     Process.set_label(label)
   end
