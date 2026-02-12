@@ -19,7 +19,7 @@ Imagine an application that monitors a security camera feed to detect people or 
 
 - The Membrane Pipeline which connects to an RTSP stream, decodes the video, and extracts raw frames. It sends these frames to the external process (via a Unix socket or standard input), receives the transformed video back, re-encodes it, and broadcasts the final stream using HLS.
 
-- The OS Process being a Python script running a machine learning model (like YOLO). It reads the raw frames, performs object detection, and outputs metadata (bounding boxes, class labels).
+- The OS Process being a Python script running a machine learning model like [RF-DETR](https://github.com/roboflow/rf-detr). It reads raw video frames and performs object segmentation, coloring the pixels that correspond to detected objects.
 
 The pipeline could look similar to this one:
 
@@ -56,7 +56,7 @@ defmodule MyProject.Pipeline do
       |> child(:depayloader, Membrane.H264.RTP.Depayloader)
       |> child(:parser, Membrane.H264.Parser)
       |> child(:decoder, Membrane.H264.FFmpeg.Decoder)
-      |> child(:yolo_filter, MyProject.YoloFilter) # filter talking with the side-car Python OS process running YOLO model
+      |> child(:segmentation_filter, MyProject.ObjectSegmentationFilter) # filter talking with the side-car Python OS process running RF-DETR model
       |> child(:encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})
       |> via_in(:input, options: [encoding: :H264, segment_duration: @segment_duration])
       |> child(:hls, hls_config)
@@ -84,7 +84,7 @@ defmodule MyProject.InfrastructureSupervisor do
   @impl true
   def init(rtsp_url) do
     children = [
-      {MuonTrap.Daemon, ["python", ["run_model.py", "yolo.pth"], [log_output: :debug]], restart: :transient]}
+      {MuonTrap.Daemon, ["python", ["run_model.py", "rf-detr-large-2026.pth"], [log_output: :debug]], restart: :transient]}
       {MyProject.Pipeline, [input_url: rtsp_url], restart: :transient}
     ]
 
