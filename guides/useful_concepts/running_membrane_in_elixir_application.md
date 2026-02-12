@@ -21,8 +21,8 @@ Imagine an application that monitors a security camera feed to detect people or 
 
 - The OS Process being a Python script running a machine learning model (like YOLO). It reads the raw frames, performs object detection, and outputs metadata (bounding boxes, class labels).
 
-
 The pipeline could look similar to this one:
+
 ```elixir
 defmodule MyProject.Pipeline do
   use Membrane.Pipeline
@@ -210,8 +210,9 @@ To ensure reliability, we might wrap this execution in an [Oban](https://hexdocs
 
 Oban is the standard library for background job processing in Elixir. It persists jobs to your database, ensuring that your long-running transcoding tasks are fault-tolerant.
 If the pipeline crashes or the server restarts, Oban will automatically retry the job until it succeeds.
+To install Oban in your project, you can follow this [installation guide](https://hexdocs.pm/oban/installation.html).
 
-Let's define an Oban worker:
+Assuming that Oban is installed in your project we can define an Oban worker:
 
 ```elixir
 defmodule VideoTranscoderWorker do
