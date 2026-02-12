@@ -112,7 +112,6 @@ defmodule Membrane.Core.Element do
     observability_config = %{
       name: options.name,
       component_type: :element,
-      pid: self(),
       parent_path: options.parent_path,
       log_metadata: options.log_metadata
     }

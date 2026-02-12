@@ -12,6 +12,12 @@ defmodule Membrane.Core.Stalker do
                                           []
                                         )
 
+  @report_links_to_observer Application.compile_env(
+                              :membrane_core,
+                              :report_links_to_observer,
+                              false
+                            )
+
   @metrics_enabled Application.compile_env(:membrane_core, :enable_metrics, true)
 
   @scrape_interval 1000
@@ -25,8 +31,7 @@ defmodule Membrane.Core.Stalker do
           optional(:parent_path) => ComponentPath.path(),
           optional(:log_metadata) => Logger.metadata(),
           name: Membrane.Child.name(),
-          component_type: :element | :bin | :pipeline,
-          pid: pid()
+          component_type: :element | :bin | :pipeline
         }
 
   @type link_observability_data :: %{
@@ -117,9 +122,7 @@ defmodule Membrane.Core.Stalker do
   end
 
   # Sets component path, logger metadata and adds necessary entries to the process dictionary
-  # Also registers the process with a meaningful name for easier introspection with
-  # stalker if enabled by setting `unsafely_name_processes_for_observer: :components`
-  # in config.exs.
+  # and labels the process with a meaningful name for easier introspection with stalker
   defp setup_process_local_observability(config, opts) do
     config = parse_observability_config(config, opts)
 
@@ -132,7 +135,7 @@ defmodule Membrane.Core.Stalker do
       do: Process.put(:__membrane_pipeline__, true)
 
     Logger.metadata(config.log_metadata)
-    register_name_for_stalker(config)
+    set_label(config)
 
     ComponentPath.set(config.component_path)
 
@@ -144,24 +147,16 @@ defmodule Membrane.Core.Stalker do
   defp parse_observability_config(config, opts) do
     utility_name = Map.get(opts, :utility_name)
     stalker = Map.get(opts, :stalker)
-    %{name: name, component_type: component_type, pid: pid} = config
-    is_name_provided = name != nil
-    pid_string = pid |> :erlang.pid_to_list() |> to_string()
-    name = if is_name_provided, do: name, else: pid_string
+    %{name: name, component_type: component_type} = config
     is_utility = utility_name != nil
 
-    name_string = """
-    #{if is_binary(name) and String.valid?(name), do: name, else: inspect(name)}\
-    #{if component_type == :element, do: "", else: "/"}\
-    """
+    name_string = if is_binary(name) and String.valid?(name), do: name, else: inspect(name)
 
     %{
       stalker: stalker,
       name: name,
       name_string: name_string,
-      pid_string: pid_string,
       component_type: component_type,
-      is_name_provided: is_name_provided,
       is_utility: is_utility,
       utility_name: if(is_utility, do: " #{utility_name}", else: ""),
       component_path: Map.get(config, :parent_path, []) ++ [name_string],
@@ -169,29 +164,19 @@ defmodule Membrane.Core.Stalker do
     }
   end
 
-  if :components in @unsafely_name_processes_for_observer do
-    defp register_name_for_stalker(config) do
-      if Process.info(self(), :registered_name) == {:registered_name, []} do
-        Process.register(
-          self(),
-          """
-          ##{config.pid_string} #{if config.is_name_provided, do: config.name_string}\
-          #{unless config.is_name_provided, do: " (#{config.component_type})"}#{config.utility_name}"\
-          """
-          |> String.to_atom()
-        )
-      end
+  defp set_label(config) do
+    utility_str = if config.is_utility, do: "'s #{config.utility_name}", else: ""
+    component_path_str = ComponentPath.format(config.component_path)
 
-      :ok
-    end
-  else
-    defp register_name_for_stalker(_config), do: :ok
+    label = "#{component_path_str}#{utility_str}"
+
+    Process.set_label(label)
   end
 
   @doc """
   Generates observability data needed for reporting links and their metrics.
 
-  If optionally turned on by setting `unsafely_name_processes_for_observer: :links` in
+  If optionally turned on by setting `report_links_to_observer: true` in
   config.exs, starts processes to reflect pads structure in the process tree for visibility
   in Erlang observer.
   """
@@ -204,12 +189,29 @@ defmodule Membrane.Core.Stalker do
     }
   end
 
+  if :components in @unsafely_name_processes_for_observer do
+    IO.warn("""
+    Deprecated `:components` value for :unsafely_name_processes_for_observer` configuration.
+    Now the processes are always labeled so there is no need to use this option anymore.
+    """)
+  end
+
   if :links in @unsafely_name_processes_for_observer do
+    IO.warn("""
+    Deprecated `:links` value for `:unsafely_name_processes_for_observer` configuration.
+    Instead please use the following configuration:
+    ```
+    config :membrane_core, report_links_to_observer: true
+    ```
+    """)
+  end
+
+  if @report_links_to_observer do
     defp run_link_dbg_process(pad_ref, observability_data) do
       {:ok, observer_dbg_process} =
         Task.start_link(fn ->
           Process.flag(:trap_exit, true)
-          Process.register(self(), :"pad #{inspect(pad_ref)} #{:erlang.pid_to_list(self())}")
+          Process.set_label(self(), "pad #{inspect(pad_ref)} #{:erlang.pid_to_list(self())}")
           process_to_link = Map.get(observability_data, :observer_dbg_process)
           if process_to_link, do: Process.link(process_to_link)
 
