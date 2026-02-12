@@ -17,10 +17,60 @@ In most cases, pipelines are used in one of the following scenarios:
 This approach is ideal when your pipeline architecture is fixed and needs to run continuously from the moment your application starts.
 Imagine an application that monitors a security camera feed to detect people or vehicles in real-time. Such an application could consist of two components:
 
-- The Membrane Pipeline, which connects to an RTSP stream, decodes the video, and extracts raw frames. It sends these frames to the external process via a Unix socket or standard input.
+- The Membrane Pipeline which connects to an RTSP stream, decodes the video, and extracts raw frames. It sends these frames to the external process (via a Unix socket or standard input), receives the transformed video back, re-encodes it, and broadcasts the final stream using HLS.
+
 - The OS Process being a Python script running a machine learning model (like YOLO). It reads the raw frames, performs object detection, and outputs metadata (bounding boxes, class labels).
 
-To handle this scenario, you could create a dedicated supervisor to manage the pipeline alongside any necessary "side-car" processes—such as a [`MuonTrap.Daemon`](https://hexdocs.pm/muontrap/readme.html) wrapping an external OS command.
+
+The pipeline could look similar to this one:
+```elixir
+defmodule MyProject.Pipeline do
+  use Membrane.Pipeline
+
+  @impl true
+  def handle_init(_ctx, rtsp_url) do
+    spec = [
+      child(:source, %Membrane.RTSP.Source{
+        transport: :tcp,
+        allowed_media_types: [:video],
+        stream_uri: rtsp_url,
+        on_connection_closed: :send_eos
+      })
+    ]
+
+    {[spec: spec], %{}}
+  end
+
+  @impl true
+  def handle_child_pad_added(:source, :output, _ctx, state) do
+    hls_config = %Membrane.HTTPAdaptiveStream.SinkBin{
+      manifest_module: Membrane.HTTPAdaptiveStream.HLS,
+      target_window_duration: Membrane.Time.seconds(120),
+      storage: %Membrane.HTTPAdaptiveStream.Storages.FileStorage{
+        directory: "output_hls"
+      }
+    }
+
+    spec = [
+      get_child(:source)
+      |> child(:depayloader, Membrane.H264.RTP.Depayloader)
+      |> child(:parser, Membrane.H264.Parser)
+      |> child(:decoder, Membrane.H264.FFmpeg.Decoder)
+      |> child(:yolo_filter, MyProject.YoloFilter) # filter talking with the side-car Python OS process running YOLO model
+      |> child(:encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})
+      |> via_in(:input, options: [encoding: :H264, segment_duration: @segment_duration])
+      |> child(:hls, hls_config)
+    ]
+
+    {[spec: structure], state}
+  end
+
+  @impl true
+  def handle_child_pad_added(_child, _pad, _ctx, state), do: {:ok, state}
+end
+```
+
+Then you could create a dedicated supervisor to manage the pipeline alongside any necessary "side-car" processes such as a [`MuonTrap.Daemon`](https://hexdocs.pm/muontrap/readme.html) wrapping an external OS command.
 This allows you to treat the pipeline and its dependencies as a single unit.
 
 ```elixir
