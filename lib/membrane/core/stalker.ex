@@ -159,7 +159,7 @@ defmodule Membrane.Core.Stalker do
       component_type: component_type,
       is_utility: is_utility,
       utility_name: if(is_utility, do: " #{utility_name}", else: ""),
-      component_path: Map.get(config, :parent_path, []) ++ ["#{name_string}"],
+      component_path: Map.get(config, :parent_path, []) ++ [name_string],
       log_metadata: Map.get(config, :log_metadata, [])
     }
   end
