@@ -6,85 +6,11 @@ This guide outlines best practices for integrating Membrane Pipelines into your 
 
 In most cases, pipelines are used in one of the following scenarios:
 
-- Batch Processing: Handling "offline" tasks with a clear start and end (e.g. transcoding a stream inside an MP4 file).
-
 - Static Orchestration: Maintaining a single, permanent pipeline that always runs with your application (e.g. mixing output from multiple IP cameras into a single HLS stream).
 
 - Dynamic Orchestration: Spawning pipelines on-demand based on user actions (e.g. starting a unique pipeline for every user joining a conference room).
 
-### Batch Processing
-
-Batch processing is ideal for "offline tasks" where you need to ensure the job completes successfully.
-
-For example, let's assume we want to transcode video from H.264 (in MP4) to VP8 (in Matroska). To achieve this, we build the pipeline as follows:
-
-```elixir
-defmodule TranscodePipeline do
-  use Membrane.Pipeline
-
-  alias Membrane.File.{Source, Sink}
-  alias Membrane.H264.FFmpeg.Parser
-  alias Membrane.FFmpeg.SWScale.PixelFormatConverter
-
-  @impl true
-  def handle_init(_ctx, opts) do
-    structure = [
-      child(:source, %Source{location: opts[:input_path]})
-      |> child(:demuxer, Membrane.MP4.Demuxer.ISOM)
-      |> via_out(:video)
-      |> child(:parser, %Parser{generate_best_effort_timestamps: true})
-      |> child(:decoder, Membrane.H264.FFmpeg.Decoder)
-      |> child(:converter, %PixelFormatConverter{format: :I420})
-      |> child(:encoder, Membrane.VP8.Encoder)
-      |> child(:muxer, Membrane.Matroska.Muxer)
-      |> child(:sink, %Sink{location: opts[:output_path]})
-    ]
-
-    {[spec: structure], %{}}
-  end
-end
-```
-
-To ensure reliability, we might wrap this execution in an [Oban](https://hexdocs.pm/oban/Oban.html) worker.
-
-Oban is the standard library for background job processing in Elixir. It persists jobs to your database, ensuring that your long-running transcoding tasks are fault-tolerant.
-If the pipeline crashes or the server restarts, Oban will automatically retry the job until it succeeds.
-
-Let's define an Oban worker:
-
-```elixir
-defmodule VideoTranscoderWorker do
-  @timeout_sec :time
-    
-  use Oban.Worker, queue: :media, unique: [period: 60], timeout: :timer.seconds(10)
-
-  @impl true
-  def perform(%Oban.Job{args: %{"input_path" => input, "output_path" => output}}) do
-    {:ok, _supervisor_pid, pipeline_pid} = Membrane.Pipeline.start_link(
-      TranscodePipeline, 
-      [input_path: input, output_path: output]
-    )
-
-    case Membrane.Pipeline.wait_for_termination(pipeline_pid, 100_000) do
-      :ok -> :ok
-      {:error, reason} -> {:error, reason}
-    end
-  end
-end
-```
-
-Now we can run the Oban worker:
-
-```elixir
-%{
-  "input_path" => "uploads/input_video.mp4",
-  "output_path" => "processed/transcoded_video.mkv"
-}
-|> VideoTranscoderWorker.new()
-|> Oban.insert()
-```
-
-When the job terminates successfully, you will see the output `.mkv` file with transcoded video.
+- Batch Processing: Handling "offline" tasks with a clear start and end (e.g. transcoding a stream inside an MP4 file).
 
 ### Static Orchestration: Supervisor on Startup
 
@@ -167,17 +93,106 @@ defmodule MyProject.Application do
 end
 ```
 
-Now, whenever a new pipeline is needed you can spawn a new instance of your infrastructure using `DynamicSupervisor.start_child/2`.
+Now, whenever a new pipeline is needed you can spawn a new instance of your infrastructure using [`DynamicSupervisor.start_child/2`](https://hexdocs.pm/elixir/1.12/DynamicSupervisor.html#start_child/2).
 It could happen e.g. inside `mount/3` callback of your LiveView:
 
 ```elixir
 def mount(params, _session, socket) do
   if connected?(socket) do
-    {:ok, _pid} = DynamicSupervisor.start_child(
+    {:ok, infrastructure_supervisor_pid} = DynamicSupervisor.start_child(
       MyProject.PipelineDynamicSupervisor,
       {MyProject.InfrastructureSupervisor, params["rtsp_url"]}
     )
+    {:ok, assign(socket, :infrastructure_supervisor_pid, infrastructure_supervisor_pid)}
+  else
+    {:ok, socket}
   end
-  {:ok, socket}
 end
 ```
+
+When you need to stop the pipeline, you can use [`DynamicSupervisor.terminate_child/2`](https://hexdocs.pm/elixir/1.12/DynamicSupervisor.html#terminate_child/2).
+
+In case of your LiveView commponent it could happen in its `terminate/2` callback:
+
+```elixir
+def terminate(_reason, socket) do
+  if pid = socket.assigns[:infrastructure_supervisor_pid] do
+    DynamicSupervisor.terminate_child(MyProject.PipelineDynamicSupervisor, pid)
+  end
+  :ok
+end
+```
+
+### Batch Processing
+
+Batch processing is ideal for "offline tasks" where you need to ensure the job completes successfully.
+
+For example, let's assume we want to transcode video from H.264 (in MP4) to VP8 (in Matroska). To achieve this, we build the pipeline as follows:
+
+```elixir
+defmodule TranscodePipeline do
+  use Membrane.Pipeline
+
+  alias Membrane.File.{Source, Sink}
+  alias Membrane.H264.Parser
+  alias Membrane.FFmpeg.SWScale.PixelFormatConverter
+
+  @impl true
+  def handle_init(_ctx, opts) do
+    structure = [
+      child(:source, %Source{location: opts[:input_path]})
+      |> child(:demuxer, Membrane.MP4.Demuxer.ISOM)
+      |> via_out(:video)
+      |> child(:parser, Parser)
+      |> child(:decoder, Membrane.H264.FFmpeg.Decoder)
+      |> child(:converter, %PixelFormatConverter{format: :I420})
+      |> child(:encoder, Membrane.VP8.Encoder)
+      |> child(:muxer, Membrane.Matroska.Muxer)
+      |> child(:sink, %Sink{location: opts[:output_path]})
+    ]
+
+    {[spec: structure], %{}}
+  end
+end
+```
+
+To ensure reliability, we might wrap this execution in an [Oban](https://hexdocs.pm/oban/Oban.html) worker.
+
+Oban is the standard library for background job processing in Elixir. It persists jobs to your database, ensuring that your long-running transcoding tasks are fault-tolerant.
+If the pipeline crashes or the server restarts, Oban will automatically retry the job until it succeeds.
+
+Let's define an Oban worker:
+
+```elixir
+defmodule VideoTranscoderWorker do
+  @timeout_sec :time
+    
+  use Oban.Worker, queue: :media, unique: [period: 60], timeout: :timer.seconds(10)
+
+  @impl true
+  def perform(%Oban.Job{args: %{"input_path" => input, "output_path" => output}}) do
+    {:ok, _supervisor_pid, pipeline_pid} = Membrane.Pipeline.start_link(
+      TranscodePipeline, 
+      [input_path: input, output_path: output]
+    )
+
+    case Membrane.Pipeline.wait_for_termination(pipeline_pid, 100_000) do
+      :ok -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+end
+```
+
+Now we can run the Oban worker:
+
+```elixir
+%{
+  "input_path" => "uploads/input_video.mp4",
+  "output_path" => "processed/transcoded_video.mkv"
+}
+|> VideoTranscoderWorker.new()
+|> Oban.insert()
+```
+
+When the job terminates successfully, you will see the output `.mkv` file with transcoded video.
