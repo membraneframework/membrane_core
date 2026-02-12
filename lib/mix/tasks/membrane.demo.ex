@@ -1,14 +1,14 @@
 defmodule Mix.Tasks.Membrane.Demo do
   @shortdoc "Download Membrane demos and examples"
   @moduledoc """
-  Download Membrane demos and examples. Requires `git` installed.
+  Download Membrane demos and examples into the current directory. Requires `git` installed.
 
-    $ mix membrane.demo [-a] [-l] [-d <repo_dir>] <demos> ...
+    $ mix membrane.demo [-a] [-l] [-d <repo_dir>] [<demos> ...]
 
   ## Options
   * `-l, --list` - List all demos available and their brief descriptions.
   * `-a, --all` - Pull the repository with all demos. 
-  * `-d, --directory` - Directory where the demos should be placed in.
+  * `-d, --directory` - Specify a directory where the demos should be placed in.
   """
   use Mix.Task
 
@@ -80,12 +80,11 @@ defmodule Mix.Tasks.Membrane.Demo do
   end
 
   defp copy_all_demos(repo_dir) do
-    {_output, 0} = System.cmd("git", ["clone", "-q", "--depth", "1", @demos_clone_url, repo_dir])
+    execute_git_command(["clone", "-q", "--depth", "1", @demos_clone_url, repo_dir])
   end
 
   defp copy_specific_demos(repo_dir, demos_names) do
-    {_output, 0} =
-      System.cmd("git", ["clone", "-q", "--depth", "1", "-n", @demos_clone_url, repo_dir])
+    execute_git_command(["clone", "-q", "--depth", "1", "-n", @demos_clone_url, repo_dir])
 
     File.cd!(repo_dir)
 
@@ -110,13 +109,26 @@ defmodule Mix.Tasks.Membrane.Demo do
     Enum.reduce_while(@demos_search_list, :error, fn demo_dir, _status ->
       demo_path = Path.join(demo_dir, demo_name)
 
-      {_output, 0} = System.cmd("git", ["sparse-checkout", "set", demo_path])
-      {_output, 0} = System.cmd("git", ["checkout"])
+      execute_git_command(["sparse-checkout", "set", demo_path])
+      execute_git_command(["checkout"])
 
       case File.cp_r(demo_path, Path.join("..", Path.basename(demo_path))) do
         {:ok, _files} -> {:halt, :ok}
         {:error, :enoent, _dir} -> {:cont, :error}
       end
     end)
+  end
+
+  defp execute_git_command(argv) do
+    case System.cmd("git", argv, stderr_to_stdout: true) do
+      {0, _output} ->
+        :ok
+
+      {exit_code, output} ->
+        Mix.shell().error("""
+        Git command `git #{Enum.join(argv, " ")} exited with code #{exit_code}. Output:
+        #{output}
+        """)
+    end
   end
 end
