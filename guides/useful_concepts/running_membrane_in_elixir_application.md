@@ -2,7 +2,7 @@
 
 This guide outlines best practices for integrating Membrane Pipelines into your Elixir application, specifically focusing on how to attach pipelines to your application's supervision tree.
 
-## Running the pipeline
+## Running the pipelines reliably
 
 In most cases, pipelines are used in one of the following scenarios:
 
@@ -15,6 +15,7 @@ In most cases, pipelines are used in one of the following scenarios:
 ### Batch Processing
 
 Batch processing is ideal for "offline tasks" where you need to ensure the job completes successfully.
+
 For example, let's assume we want to transcode video from H.264 (in MP4) to VP8 (in Matroska). To achieve this, we build the pipeline as follows:
 
 ```elixir
@@ -45,8 +46,10 @@ end
 ```
 
 To ensure reliability, we might wrap this execution in an [Oban](https://hexdocs.pm/oban/Oban.html) worker.
+
 Oban is the standard library for background job processing in Elixir. It persists jobs to your database, ensuring that your long-running transcoding tasks are fault-tolerant.
 If the pipeline crashes or the server restarts, Oban will automatically retry the job until it succeeds.
+
 Let's define an Oban worker:
 
 ```elixir
@@ -117,6 +120,7 @@ end
 Usage of `:one_for_all` strategy ensures that the `MuonTrap.Deamon` get restarted each time the pipeline restarts and another way around.
 In your specific scenario, you may need to adjust the [`:restart`](https://hexdocs.pm/elixir/1.12/Supervisor.html#module-restart-values-restart) and [`:strategy`](https://hexdocs.pm/elixir/1.12/Supervisor.html#module-start_link-2-init-2-and-strategies)
 options to reflect the dependencies between supervised processes.
+
 To launch this when your app boots, add the `InfrastructureSupervisor` to the children list in your `application.ex`:
 
 ```elixir
@@ -140,7 +144,9 @@ end
 
 While the static approach works perfectly for fixed infrastructure, many applications require more flexibility.
 Consider a scenario where you need to spawn a new pipeline on demand to ingest an RTSP stream from a camera provided by a user.
+
 Since we have already defined the `InfrastructureSupervisor`, scaling to multiple dynamic pipelines is straightforward.
+
 Instead of starting the `InfrastructureSupervisor` directly in your application tree, we add a [`DynamicSupervisor`](https://hexdocs.pm/elixir/DynamicSupervisor.html).
 This allows us to spawn new infrastructure "units" (the pipeline + sidecars) on demand.
 
