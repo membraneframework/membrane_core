@@ -2,7 +2,7 @@
 
 This guide outlines best practices for integrating Membrane Pipelines into your Elixir application, specifically focusing on how to attach pipelines to your application's supervision tree.
 
-## Running the pipelines reliably
+
 
 In most cases, pipelines are used in one of the following scenarios:
 
@@ -12,7 +12,7 @@ In most cases, pipelines are used in one of the following scenarios:
 
 - Batch Processing: Handling "offline" tasks with a clear start and end (e.g. transcoding a stream inside an MP4 file).
 
-### Static Orchestration: Supervisor on Startup
+## Static Orchestration: Supervisor on Startup
 
 This approach is ideal when your pipeline architecture is fixed and needs to run continuously from the moment your application starts.
 Imagine an application that monitors a security camera feed to detect people or vehicles in real-time. Such an application could consist of two components:
@@ -116,7 +116,7 @@ defmodule MyProject.Application do
 end
 ```
 
-### Dynamically spawning the pipelines under the DynamicSupervisor
+## Dynamically spawning the pipelines under the DynamicSupervisor
 
 While the static approach works perfectly for fixed infrastructure, many applications require more flexibility.
 Consider a scenario where you need to spawn a new pipeline on demand to ingest an RTSP stream from a camera provided by a user.
@@ -173,7 +173,7 @@ def terminate(_reason, socket) do
 end
 ```
 
-### Batch Processing
+## Batch Processing
 
 Batch processing is ideal for "offline tasks" where you need to ensure the job completes successfully.
 
