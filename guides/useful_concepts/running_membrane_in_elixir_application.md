@@ -40,7 +40,7 @@ defmodule MyProject.Pipeline do
   end
 
   @impl true
-  def handle_child_pad_added(:source, :output, _ctx, state) do
+  def handle_child_notification({:set_up_tracks, tracks}, _child, _ctx, state) do
     hls_config = %Membrane.HTTPAdaptiveStream.SinkBin{
       manifest_module: Membrane.HTTPAdaptiveStream.HLS,
       target_window_duration: Membrane.Time.seconds(120),
@@ -49,22 +49,26 @@ defmodule MyProject.Pipeline do
       }
     }
 
+    video_track = Enum.find(tracks, &(&1.type == :video))
+
     spec = [
       get_child(:source)
+      |> via_out(Pad.ref(:output, video_track.control_path))
       |> child(:depayloader, Membrane.H264.RTP.Depayloader)
       |> child(:parser, Membrane.H264.Parser)
       |> child(:decoder, Membrane.H264.FFmpeg.Decoder)
-      |> child(:segmentation_filter, MyProject.ObjectSegmentationFilter) # filter talking with the side-car Python OS process running RF-DETR model
+      # filter talking with the side-car Python OS process running RF-DETR model
+      |> child(:segmentation_filter, MyProject.ObjectSegmentationFilter)
       |> child(:encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})
       |> via_in(:input, options: [encoding: :H264, segment_duration: Membrane.Time.seconds(10)])
       |> child(:hls, hls_config)
     ]
 
-    {[spec: structure], state}
+    {[spec: spec], state}
   end
 
   @impl true
-  def handle_child_pad_added(_child, _pad, _ctx, state), do: {:ok, state}
+  def handle_child_notification(_notificaiton, _child, _ctx, state), do: {[], state}
 end
 ```
 
@@ -75,15 +79,25 @@ This allows you to treat the pipeline and its dependencies as a single unit.
 defmodule MyProject.InfrastructureSupervisor do
   use Supervisor
 
-  def start_link(init_arg) do
-    Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
+  def start_link(args) do
+    Supervisor.start_link(__MODULE__, args, name: __MODULE__)
   end
 
   @impl true
-  def init(rtsp_url) do
+  def init(args) do
     children = [
-      {MuonTrap.Daemon, ["python", ["run_model.py", "rf-detr-large-2026.pth"], [log_output: :debug]], restart: :transient]}
-      {MyProject.Pipeline, [input_url: rtsp_url], restart: :transient}
+      %{
+        id: Pipeline,
+        start: {Membrane.Pipeline, :start_link, [MyProject.Pipeline, args[:rtsp_url]]},
+        restart: :transient
+      },
+      %{
+        id: SideCar,
+        start:
+          {MuonTrap.Daemon, :start_link,
+           ["python", ["run_model.py", "rf-detr-large-2026.pth"], [log_output: :debug]]},
+        restart: :transient
+      }
     ]
 
     Supervisor.init(children, strategy: :one_for_all)
