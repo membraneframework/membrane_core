@@ -47,7 +47,7 @@ defmodule MyProject.Pipeline do
       |> child(:decoder, Membrane.H264.FFmpeg.Decoder)
       |> child(:segmentation_filter, MyProject.ObjectSegmentationFilter) # filter talking with the side-car Python OS process running RF-DETR model
       |> child(:encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})
-      |> via_in(:input, options: [encoding: :H264, segment_duration: @segment_duration])
+      |> via_in(:input, options: [encoding: :H264, segment_duration: Membrane.Time.seconds(10)])
       |> child(:hls, hls_config)
     ]
 
