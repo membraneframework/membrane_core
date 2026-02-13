@@ -185,6 +185,7 @@ defmodule TranscodePipeline do
       |> child(:converter, %Converter{output_width: 1080, output_height: 720})
       |> child(:encoder, Encoder)
       |> child(:out_parser, %Parser{output_stream_structure: :avc1})
+      |> child(:muxer, Membrane.MP4.Muxer.ISOM)
       |> child(:sink, %Sink{location: opts[:output_path]})
     ]
 
@@ -208,7 +209,6 @@ To install Oban in your project, you can follow this [installation guide](https:
 Assuming that Oban is installed in your project and the `:default` queue is configured we can define the Oban worker:
 
 ```elixir
-
 defmodule VideoTranscoderWorker do
   use Oban.Worker, queue: :default, unique: [period: 60]
 
