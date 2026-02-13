@@ -15,7 +15,7 @@ In most cases, pipelines are used in one of the following scenarios:
 This approach is ideal when your pipeline architecture is fixed and needs to run continuously from the moment your application starts.
 Imagine an application that monitors a security camera feed to detect people or vehicles in real-time. Such an application could consist of two components:
 
-- The Membrane Pipeline which connects to an SRT stream, decodes the video, and extracts raw frames. It sends these frames to the external process (via a Unix socket or standard input), receives the transformed video back, re-encodes it, and broadcasts the final stream using HLS.
+- The Membrane Pipeline which connects to an RTSP stream, decodes the video, and extracts raw frames. It sends these frames to the external process (via a Unix socket or standard input), receives the transformed video back, re-encodes it, and broadcasts the final stream using HLS.
 
 - The OS Process being a Python script running a machine learning model like [RF-DETR](https://github.com/roboflow/rf-detr). It reads raw video frames and performs object segmentation, coloring the pixels that correspond to detected objects.
 
@@ -26,7 +26,7 @@ defmodule MyProject.Pipeline do
   use Membrane.Pipeline
 
   @impl true
-  def handle_init(_ctx, srt_url) do
+  def handle_init(_ctx, rtsp_url) do
     hls_config = %Membrane.HTTPAdaptiveStream.SinkBin{
       manifest_module: Membrane.HTTPAdaptiveStream.HLS,
       target_window_duration: Membrane.Time.seconds(120),
@@ -36,10 +36,10 @@ defmodule MyProject.Pipeline do
     }
 
     spec = [
-      child(:source, %Membrane.SRT.Source{
+      child(:source, %Membrane.RTSP.Source{
         transport: :tcp,
         allowed_media_types: [:video],
-        stream_uri: srt_url,
+        stream_uri: rtsp_url,
         on_connection_closed: :send_eos
       })
       |> child(:depayloader, Membrane.H264.RTP.Depayloader)
@@ -68,10 +68,10 @@ defmodule MyProject.InfrastructureSupervisor do
   end
 
   @impl true
-  def init(srt_url) do
+  def init(rtsp_url) do
     children = [
       {MuonTrap.Daemon, ["python", ["run_model.py", "rf-detr-large-2026.pth"], [log_output: :debug]], restart: :transient]}
-      {MyProject.Pipeline, [input_url: srt_url], restart: :transient}
+      {MyProject.Pipeline, [input_url: rtsp_url], restart: :transient}
     ]
 
     Supervisor.init(children, strategy: :one_for_all)
@@ -92,7 +92,7 @@ defmodule MyProject.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {MyProject.InfrastructureSupervisor, [srt_url: "srt://127.0.0.1:9710"]}
+      {MyProject.InfrastructureSupervisor, [rtsp_url: "rtsp://user:pass@127.0.0.1:554"]}
       # ... other children required by your application
     ]
 
@@ -105,7 +105,7 @@ end
 ## Dynamically spawning the pipelines under the DynamicSupervisor
 
 While the static approach works perfectly for fixed infrastructure, many applications require more flexibility.
-Consider a scenario where you need to spawn a new pipeline on demand to ingest an SRT stream from a camera provided by a user.
+Consider a scenario where you need to spawn a new pipeline on demand to ingest an RTSP stream from a camera provided by a user.
 
 Since we have already defined the `InfrastructureSupervisor`, scaling to multiple dynamic pipelines is straightforward.
 
@@ -137,7 +137,7 @@ def mount(params, _session, socket) do
   if connected?(socket) do
     {:ok, infrastructure_supervisor_pid} = DynamicSupervisor.start_child(
       MyProject.PipelineDynamicSupervisor,
-      {MyProject.InfrastructureSupervisor, params["srt_url"]}
+      {MyProject.InfrastructureSupervisor, params["rtsp_url"]}
     )
     {:ok, assign(socket, :infrastructure_supervisor_pid, infrastructure_supervisor_pid)}
   else
