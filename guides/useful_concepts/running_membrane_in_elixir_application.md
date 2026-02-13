@@ -27,6 +27,20 @@ defmodule MyProject.Pipeline do
 
   @impl true
   def handle_init(_ctx, rtsp_url) do
+    spec = [
+      child(:source, %Membrane.RTSP.Source{
+        transport: :tcp,
+        allowed_media_types: [:video],
+        stream_uri: rtsp_url,
+        on_connection_closed: :send_eos
+      })
+    ]
+
+    {[spec: spec], %{}}
+  end
+
+  @impl true
+  def handle_child_pad_added(:source, :output, _ctx, state) do
     hls_config = %Membrane.HTTPAdaptiveStream.SinkBin{
       manifest_module: Membrane.HTTPAdaptiveStream.HLS,
       target_window_duration: Membrane.Time.seconds(120),
@@ -36,12 +50,7 @@ defmodule MyProject.Pipeline do
     }
 
     spec = [
-      child(:source, %Membrane.RTSP.Source{
-        transport: :tcp,
-        allowed_media_types: [:video],
-        stream_uri: rtsp_url,
-        on_connection_closed: :send_eos
-      })
+      get_child(:source)
       |> child(:depayloader, Membrane.H264.RTP.Depayloader)
       |> child(:parser, Membrane.H264.Parser)
       |> child(:decoder, Membrane.H264.FFmpeg.Decoder)
@@ -51,8 +60,11 @@ defmodule MyProject.Pipeline do
       |> child(:hls, hls_config)
     ]
 
-    {[spec: spec], %{}}
+    {[spec: structure], state}
   end
+
+  @impl true
+  def handle_child_pad_added(_child, _pad, _ctx, state), do: {:ok, state}
 end
 ```
 
