@@ -61,6 +61,12 @@ defmodule Membrane.Connector do
   end
 
   @impl true
+  def handle_pad_removed(Pad.ref(direction, _ref), ctx, state) do
+    state = state |> Map.put(direction, nil)
+    maybe_pause_auto_demand(ctx, state)
+  end
+
+  @impl true
   def handle_start_of_stream(_input_pad, ctx, state), do: maybe_pause_auto_demand(ctx, state)
 
   [handle_buffer: :buffer, handle_event: :event, handle_stream_format: :stream_format]
