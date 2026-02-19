@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "1.2.6"
+  @version "1.2.7"
   @source_ref "v#{@version}"
   @hex_packages_path "scripts/elixir/hex_packages.exs"
 
