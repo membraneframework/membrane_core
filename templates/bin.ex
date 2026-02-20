@@ -7,7 +7,7 @@ defmodule Membrane.TemplateBin do
   # def_input_pad :input,
   #   accepted_format: _any
   #   availability: :on_request | :always, # default - :always
-  #   max_instances: pos_integer() | :infinity, # relevant only for dynamic pads, default - :infinity
+  #   max_instances: pos_integer() | :infinity, # relevant only for pads with `availability: :on_request`, default - :infinity
   #   options: [
   #      Same structure as in def_options/1
   #   ]
@@ -15,7 +15,7 @@ defmodule Membrane.TemplateBin do
   # def_output_pad :output,
   #   accepted_format: _any
   #   availability: :on_request | :always, # default - :always
-  #   max_instances: pos_integer() | :infinity, # relevant only for dynamic pads, default - :infinity
+  #   max_instances: pos_integer() | :infinity, # relevant only for pads with `availability: :on_request`, default - :infinity
   #   options: [
   #      Same structure as in def_options/1
   #   ]
@@ -58,13 +58,13 @@ defmodule Membrane.TemplateBin do
     {[], %State{}}
   end
 
-  # This callback will be executed only for dynamic pads.
+  # This callback will be executed only for pads with `availability: :on_request`.
   # @impl true
   # def handle_pad_added(_pad, _context, state) do
   #   {[], state}
   # end
 
-  # This callback will be executed only for dynamic pads.
+  # This callback will be executed only for pads with `availability: :on_request`.
   # @impl true
   # def handle_pad_removed(_pad, _context, state) do
   #   {[], state}

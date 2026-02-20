@@ -12,7 +12,7 @@ defmodule Membrane.Core.OptionsSpecs do
     Options are defined by a keyword list, where each key is an option name and
     is described by another keyword list with following fields:
 
-      * `spec:` Typespec of the values this option can have.
+      * `spec:` Typespec of the values this option can have. Will be used in t() type.
       * `default:` Default value for option. If not present, value for this option
         will have to be provided each time options struct is created.
       * `inspector:` Function converting fields' value to a string. Used when
@@ -61,7 +61,7 @@ defmodule Membrane.Core.OptionsSpecs do
     Pad options are defined by a keyword list, where each key is an option name and
     is described by another keyword list with following fields:
 
-      * `spec:` Typespec of the values this option can have.
+      * `spec:` Typespec of the values this option can have. Will be used in the type definition of pad options for a given pad.
       * `default:` Default value for option. If not present, value for this option
         will have to be provided each time options the pad is created.
       * `inspector:` Function converting fields' value to a string. Used when
