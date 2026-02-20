@@ -46,7 +46,7 @@ defmodule Membrane.Mixfile do
     opts = [
       plt_local_path: "priv/plts",
       flags: [:error_handling, :unmatched_returns],
-      plt_add_apps: [:mix]
+      plt_add_apps: [:mix, :req]
     ]
 
     if System.get_env("CI") == "true" do
@@ -255,6 +255,7 @@ defmodule Membrane.Mixfile do
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: :dev, runtime: false},
+      {:req, "~> 0.5.17", only: [:dev, :test], runtime: false},
       # Testing
       {:mox, "~> 1.0", only: :test},
       {:mock, "~> 0.3.8", only: :test},
