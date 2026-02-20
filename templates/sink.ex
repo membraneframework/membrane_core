@@ -8,7 +8,7 @@ defmodule Membrane.TemplateSink do
     accepted_format: _any,
     flow_control: :auto # | :manual | :push,
   #   availability: :on_request | :always, # default - :always
-  #   max_instances: pos_integer() | :infinity, # relevant only for dynamic pads, default - :infinity
+  #   max_instances: pos_integer() | :infinity, # relevant only for pads with `availability: :on_request`, default - :infinity
   #   demand_unit: :buffers | :bytes, # When using :manual flow control, this needs to be provided
   #   options: [
   #      Same structure as in def_options/1
@@ -72,13 +72,13 @@ defmodule Membrane.TemplateSink do
   #   {[], state}
   # end
 
-  # This callback will be executed only for dynamic pads.
+  # This callback will be executed only for pads with `availability: :on_request`.
   # @impl true
   # def handle_pad_added(_pad, _context, state) do
   #   {[], state}
   # end
 
-  # This callback will be executed only for dynamic pads.
+  # This callback will be executed only for pads with `availability: :on_request`.
   # @impl true
   # def handle_pad_removed(_pad, _context, state) do
   #   {[], state}

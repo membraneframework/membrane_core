@@ -54,29 +54,21 @@
 
       component_path =
         case path_option do
-          [] -> infer_path_from_module(module_name)
+          [] -> Macro.underscore(module_name) <> ".ex"
           [{:location, path} | _rest] -> path
         end
         |> then(&Path.join(base_dir, &1))
 
-      File.mkdir_p!(Path.dirname(component_path))
+      component_path |> Path.dirname() |> File.mkdir_p!()
 
       File.write!(component_path, get_component(module_name))
-    end
-
-    defp infer_path_from_module(module_name) do
-      module_name
-      |> String.split(".")
-      |> Enum.map(&(Regex.replace(~r/(?<=[^A-Z])([A-Z])/, &1, "_\\1") |> String.downcase()))
-      |> List.update_at(-1, &"#{&1}.ex")
-      |> Path.join()
     end
 
     defp get_component(module_name) do
       template =
         "../../../templates"
         |> Path.expand(__DIR__)
-        |> Path.join(String.downcase(inspect(unquote(component_type))) <> ".ex")
+        |> Path.join(Macro.underscore(unquote(component_type)) <> ".ex")
         |> File.read!()
 
       template
