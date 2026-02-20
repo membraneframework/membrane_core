@@ -41,11 +41,11 @@ defmodule Mix.Tasks.Membrane.Demo do
       list_available_demos()
     end
 
-    repo_dir = Path.join(Path.expand(opts[:directory] || "."), "membrane_demo")
+    target_dir = Path.expand(opts[:directory] || ".")
 
     cond do
-      opts[:all] -> copy_all_demos(repo_dir)
-      demos_names != [] -> copy_specific_demos(repo_dir, demos_names)
+      opts[:all] -> copy_all_demos(target_dir)
+      demos_names != [] -> copy_specific_demos(target_dir, demos_names)
       true -> :ok
     end
   end
@@ -72,59 +72,62 @@ defmodule Mix.Tasks.Membrane.Demo do
       |> Enum.map(&String.length(&1["name"]))
       |> Enum.max()
 
-    demos_info
-    |> Enum.each(fn %{"name" => name, "description" => description} ->
-      dots_line = String.duplicate(".", max_name_length - String.length(name) + 3)
-      Mix.shell().info(" | #{name} #{dots_line} | #{description}")
-    end)
+    demos_table =
+      demos_info
+      |> Enum.map_join("\n", fn %{"name" => name, "description" => description} ->
+        dots_line = String.duplicate(".", max_name_length - String.length(name) + 3)
+        " | #{name} #{dots_line} | #{description}"
+      end)
+
+    Mix.shell().info(demos_table)
   end
 
-  defp copy_all_demos(repo_dir) do
+  defp copy_all_demos(target_dir) do
+    repo_dir = Path.join(target_dir, "membrane_demo")
     execute_git_command(["clone", "-q", "--depth", "1", @demos_clone_url, repo_dir])
   end
 
-  defp copy_specific_demos(repo_dir, demos_names) do
+  defp copy_specific_demos(target_dir, demos_names) do
+    repo_dir = Path.join(target_dir, "membrane_demo")
     execute_git_command(["clone", "-q", "--depth", "1", "-n", @demos_clone_url, repo_dir])
 
-    File.cd!(repo_dir)
-
     Enum.each(demos_names, fn demo_name ->
-      case copy_demo(demo_name) do
+      case copy_demo(target_dir, demo_name) do
         :error ->
           Mix.shell().error(
             "No demo named #{demo_name}, run this task with -l to list all available demos"
           )
 
         :ok ->
-          Mix.shell().info(
-            "`#{demo_name}` demo created at #{Path.join(Path.dirname(repo_dir), demo_name)}"
-          )
+          Mix.shell().info("`#{demo_name}` demo created at #{Path.join(target_dir, demo_name)}")
       end
     end)
 
     File.rm_rf!(repo_dir)
   end
 
-  defp copy_demo(demo_name) do
+  defp copy_demo(target_dir, demo_name) do
+    repo_dir = Path.join(target_dir, "membrane_demo")
+
     Enum.reduce_while(@demos_search_list, :error, fn demo_dir, _status ->
-      demo_path = Path.join(demo_dir, demo_name)
+      demo_path = Path.join([repo_dir, demo_dir, demo_name])
 
-      execute_git_command(["sparse-checkout", "set", demo_path])
-      execute_git_command(["checkout"])
+      execute_git_command(["sparse-checkout", "set", Path.join(demo_dir, demo_name)], repo_dir)
+      execute_git_command(["checkout"], repo_dir)
 
-      case File.cp_r(demo_path, Path.join("..", Path.basename(demo_path))) do
+      case File.cp_r(demo_path, Path.join(target_dir, Path.basename(demo_path))) do
         {:ok, _files} -> {:halt, :ok}
         {:error, :enoent, _dir} -> {:cont, :error}
       end
     end)
   end
 
-  defp execute_git_command(argv) do
-    case System.cmd("git", argv, stderr_to_stdout: true) do
-      {0, _output} ->
+  defp execute_git_command(argv, dir \\ ".") do
+    case System.cmd("git", argv, stderr_to_stdout: true, cd: dir) do
+      {_output, 0} ->
         :ok
 
-      {exit_code, output} ->
+      {output, exit_code} ->
         Mix.shell().error("""
         Git command `git #{Enum.join(argv, " ")} exited with code #{exit_code}. Output:
         #{output}
