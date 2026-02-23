@@ -123,4 +123,41 @@ defmodule Membrane.Integration.ConnectorTest do
 
     [stream_format: %Format{field: 0}] ++ data
   end
+
+  test "Membrane.Connector doesn't raise after removing its pad" do
+    crash_group_spec = {
+      for i <- 2..5 do
+        child({:connector, i}, Membrane.Connector)
+      end,
+      group: :my_group, crash_group_mode: :temporary
+    }
+
+    children_beyond_crash_group = [
+      child(:source, Testing.Source)
+      |> child({:connector, 1}, Membrane.Connector),
+      child({:connector, 6}, Membrane.Connector)
+      |> child(:sink, Testing.Sink)
+    ]
+
+    connector_links =
+      for i <- 1..5 do
+        get_child({:connector, i})
+        |> get_child({:connector, i + 1})
+      end
+
+    spec = [crash_group_spec, children_beyond_crash_group, connector_links]
+    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+
+    Process.sleep(200)
+
+    {:ok, connector_pid} = Testing.Pipeline.get_child_pid(pipeline, {:connector, 3})
+    Process.exit(connector_pid, :kill)
+
+    Process.sleep(200)
+
+    assert Process.alive?(connector_pid) == false
+    assert Process.alive?(pipeline)
+
+    Testing.Pipeline.terminate(pipeline)
+  end
 end

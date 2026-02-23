@@ -1,6 +1,7 @@
 # Changelog
 
 ## Latest
+* Handle removed pads properly in `Membrane.Connector` [#1075](https://github.com/membraneframework/membrane_core/pull/1075)/
 * Improve remove_link action docs
 * Deprecate `:components` option for `:unsafely_name_processes_for_observer`
 * Deprecate `:links` option for `:unsafely_name_processes_for_observer` in favour of `:report_links_to_observer` configuration entry
