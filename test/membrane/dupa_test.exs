@@ -18,17 +18,33 @@ defmodule Membrane.DupaTest do
       flow_control: :push
   end
 
+  defmodule MockFilter do
+    use Membrane.Filter
+
+    def_input_pad :input,
+      accepted_format: _any
+
+    def_output_pad :output,
+      accepted_format: _any
+
+    @impl true
+    def handle_buffer(_pad, _buffer, _ctx, state), do: {[], state}
+
+    @impl true
+    def handle_parent_notification(:dupa, _ctx, state), do: raise("internal error")
+  end
+
   defmodule MyPipeline do
     use Membrane.Pipeline
 
     alias Membrane.Testing
-    alias Membrane.DupaTest.MockSource
-
+    alias Membrane.DupaTest.{MockFilter, MockSource}
     @impl true
     def handle_init(_ctx, _opts) do
       crash_group_spec = {
         for i <- 2..5 do
-          child({:connector, i}, Membrane.Connector)
+          child_def = if i == 3, do: MockFilter, else: Membrane.Connector
+          child({:connector, i}, child_def)
         end,
         group: :my_group, crash_group_mode: :temporary
       }
@@ -75,8 +91,10 @@ defmodule Membrane.DupaTest do
 
     Process.sleep(1500)
 
-    {:ok, connector_pid} = Testing.Pipeline.get_child_pid(pipeline, {:connector, 3})
-    Process.exit(connector_pid, :kill)
+    # {:ok, connector_pid} = Testing.Pipeline.get_child_pid(pipeline, {:connector, 3})
+    # Process.exit(connector_pid, :kill)
+
+    Testing.Pipeline.notify_child(pipeline, {:connector, 3}, :dupa)
 
     Process.sleep(1500)
     Testing.Pipeline.terminate(pipeline)

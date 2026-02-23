@@ -10,7 +10,7 @@ The most fundamental functionality of crash groups is to separate the crash of a
 
 ## Defining Crash Groups
 
-Crash groups are defined in the `spec` within your pipeline or bin. You assign a crash group ID to a set of children.
+Crash groups are defined in the `spec` within your pipeline or bin. To create a crash group, you have to define a group name and set `crash_group_mode` to `:temporary`, like in the example below:
 
 ```elixir
 defmodule MyPipeline do
@@ -23,12 +23,10 @@ defmodule MyPipeline do
       |> child(:filter, MyFilter)
       |> child(:sink, MySink)
 
-    {[spec: {spec, crash_group: :audio_processing}], %{}}
+    {[spec: {spec, group: :my_group, crash_group_mode: :temporary}], %{}}
   end
 end
 ```
-
-In the case above, the crash group ID is `:audio_processing`.
 
 ## Behavior
 
@@ -45,14 +43,71 @@ To react to a crash group failure, implement the `handle_crash_group_down/3` cal
 @impl true
 def handle_crash_group_down(crash_group_id, context, state) do
   # Logic to restart the group or handle the error
-  {[], state}
 end
 ```
 
-`context` passed to `handle_crash_group_down/3` callback contiains 3 additional fields, that usually don't occur in contexts of other callbacks:
- - `context.crash_initiator` - name or reference of the child that crashed, what caused crash group to explode.
+## Flow of all callbacks reated to a crash within a crash group.
+
+Let's assume, that in `:filter` spawned in `MyPipeline` raised with message `"internal error"`.
+
+### Handling termination of the crash itiator
+
+The first callback, that will be executed in `MyPipeline`, is
+
+```elixir
+@impl true
+def handle_child_terminated(:filter, context, state) do
+  # ...
+end
+```
+
+`context` passed to this callback will contain few extra fileds:
+  * `context.exit_reason` - in this case equals `{%RuntimeError{message: "internal error"}, _stacktrace}`. 
+  * `context.group_name` - because `:filter` was spawned inside `:my_group` group, it equals `:my_group`. If a child is spawned beyond any crash group and is terminated gracefully, value of this field is `nil`.
+  * `context.crash_initiator` - the same as child's reference, that is `:filter`.
+  
+`:filter` won't be present in `context.children`, so you could respawn it here, however it is suggested to do it in `handle_crash_group_down/3` later.
+
+### Terminating other children within the crash group that explodes 
+
+Because one of children from crash group `:my_group` ungracefully crashed, the rest of children from this group will be terminated as well. 
+
+Therefore, Membrane will terminate `:source` and `:sink` in random order. After each termination, `MyPipeline` will execute 
+
+```elixir
+@impl true
+def handle_child_terminated(child, context, state) do
+  # ...
+end
+```
+
+callback. Each time, `context` will contain following extra fields: 
+  * `context.exit_reason` - for these terminations, equals `{:shutdown, :membrane_crash_group_kill}`.
+  * `context.group_name` - equals `:my_group`.
+  * `context.crash_initiator` - TODO: continue
+
+
+Note, that `context.children` map always contains only children that are still alive. E.g. if `:source` is terminated first, `hanlde_child_terminated(:source, context, state)` will contain only `:sink` in `context.children` map and for `hanlde_child_terminated(:sink, context, state)` `context.children` will be empty.
+
+Of course, `MyPipeline` could possibly spawn another children beyond `:source`, `:filter` and `:sink`, inside different crash groups or beyond any crash group. In such a case, `context.children` would contain all of them normally and these children wouldn't be interrupted by the crash of `:my_group` members. The main goal of crash groups is to limit the consequences of the child's crash only to children with the same crash group.
+
+### Handling the crash group down
+
+Then, when all members of a crash group are terminated, `MyPipeline` will execute 
+
+```elixir 
+@impl true
+def handle_crash_group_down(:my_group, context, state) do
+  # ...
+end
+```
+
+`context` passed as a third argument to `handle_crash_group_down/3` callback contains 3 additional fields, that usually don't occur in contexts of other callbacks:
+ - `context.crash_initiator` - name or reference of the child that crashed first and caused the crash group to explode.
  - `context.crash_reason` - the reason with which `context.crash_initiator` crashed.
  - `context.members` - names/references of all children that were in the crash group.
+TODO: continue
+
 
 Question marks:
   - is crash group initiator in context.members?
