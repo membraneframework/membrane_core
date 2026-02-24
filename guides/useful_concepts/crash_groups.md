@@ -28,7 +28,7 @@ defmodule MyPipeline do
 end
 ```
 
-## Behavior
+## Behaviour
 
 When an element belonging to a crash group crashes:
 1. All other elements in the same crash group are terminated by the pipeline.
@@ -55,7 +55,7 @@ The `context` passed to this callback will contain a few extra fields:
   * `context.group_name` - because `:filter` was spawned inside the `:my_group` group, this equals `:my_group`. If a child is spawned outside any crash group and terminates gracefully, the value of this field is `nil`.
   * `context.crash_initiator` - the same as the child's reference, which is `:filter`.
   
-Since `:filter` won't be present in `context.children`, you could potentially respawn it here. However, it is recommended to do so later in `c:Membrane.Pipeline.handle_crash_group_down/3`.
+Since `:filter` is no longer present in `context.children`, you could potentially respawn it here. However, it is recommended to do so later in `c:Membrane.Pipeline.handle_crash_group_down/3`.
 
 ### Terminating other children within the failing crash group
 
@@ -79,7 +79,7 @@ Note that the `context.children` map always contains only the children that are 
 
 `MyPipeline` could potentially spawn other children outside `:source`, `:filter`, and `:sink`—either in different crash groups or outside any crash group. In such cases, `context.children` would contain all of them normally, and these children would not be interrupted by the crash of `:my_group` members. The main goal of crash groups is to limit the consequences of a child's crash to only those children within the same group.
 
-### Handling the crash group down
+### Recovering from a crash group failure
 
 Finally, when all members of the crash group are terminated, `MyPipeline` will execute:
 
@@ -95,11 +95,13 @@ The `context` passed as the third argument to the `handle_crash_group_down/3` ca
  - `context.crash_reason` - the reason with which `context.crash_initiator` crashed. In this case, it equals `{%RuntimeError{message: "internal error"}, _stacktrace}`.
  - `context.members` - names/references of all children that were in the crash group. In this case, it equals `[:source, :filter, :sink]`.
 
-When `handle_crash_group_down/3` is executed, you can be sure that all group members have already been terminated. This is the suggested place to respawn the crash group. Doing so in `handle_child_terminated/3` might lead to issues because the termination order of group members can vary. Moreover, if a pipeline or bin terminates its children gracefully (using the `t:Membrane.Pipeline.Action.remove_children()` action), the `c:Membrane.Pipeline.handle_child_terminated/3` callback will also be executed, but with `context.exit_reason` set to `normal`.
+When `handle_crash_group_down/3` is executed, you can be sure that all group members have already been terminated. This is the suggested place to recover from a group failer, e.g. by respawning all crash group members. Doing so in `handle_child_terminated/3` might lead to issues because the termination order of group members can vary. Moreover, if a pipeline or bin terminates its children gracefully (using the `t:Membrane.Pipeline.Action.remove_children()` action), the `c:Membrane.Pipeline.handle_child_terminated/3` callback will also be executed, but with `context.exit_reason` set to `normal`.
 
 
 ## Callback Contexts
-For more info about callback contexts, see `t:Membrane.Pipeline.CallbackContext.t()`, `t:Membrane.Bin.CallbackContext.t()` and `t:Membrane.Element.CallbackContext.t()` docs.
+
+For more information about callback contexts, refer to the documentation for `t:Membrane.Pipeline.CallbackContext.t()`, `t:Membrane.Bin.CallbackContext.t()`, and `t:Membrane.Element.CallbackContext.t()`.
 
 ## Bins
-Although the example above mentioned crash groups used from the `Membrane.Pipeline` level, they work the same in way in `Membrane.Bin`.
+
+Although the example above demonstrates using crash groups within a `Membrane.Pipeline`, they function in the same way within a `Membrane.Bin`.
