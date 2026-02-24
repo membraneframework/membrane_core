@@ -33,18 +33,7 @@ end
 When an element belonging to a crash group crashes:
 1. All other elements in the same crash group are terminated by the pipeline.
 2. The pipeline's `handle_crash_group_down/3` callback is invoked.
-3. You can decide whether to restart the group, ignore the failure, or terminate the pipeline.
-
-## Handling Failures
-
-To react to a crash group failure, implement the `handle_crash_group_down/3` callback:
-
-```elixir
-@impl true
-def handle_crash_group_down(crash_group_id, context, state) do
-  # Logic to restart the group or handle the error
-end
-```
+3. You can decide whether to restart the group, ignore the failure, or handle this situation any other way.
 
 ## Flow of all callbacks reated to a crash within a crash group.
 
@@ -64,7 +53,7 @@ end
 `context` passed to this callback will contain few extra fileds:
   * `context.exit_reason` - in this case equals `{%RuntimeError{message: "internal error"}, _stacktrace}`. 
   * `context.group_name` - because `:filter` was spawned inside `:my_group` group, it equals `:my_group`. If a child is spawned beyond any crash group and is terminated gracefully, value of this field is `nil`.
-  * `context.crash_initiator` - the same as child's reference, that is `:filter`.
+  * `context.crash_initiator` - the same as child's reference, which is `:filter`.
   
 `:filter` won't be present in `context.children`, so you could respawn it here, however it is suggested to do it in `handle_crash_group_down/3` later.
 
@@ -82,10 +71,9 @@ end
 ```
 
 callback. Each time, `context` will contain following extra fields: 
-  * `context.exit_reason` - for these terminations, equals `{:shutdown, :membrane_crash_group_kill}`.
+  * `context.exit_reason` - equals `{:shutdown, :membrane_crash_group_kill}`.
   * `context.group_name` - equals `:my_group`.
-  * `context.crash_initiator` - TODO: continue
-
+  * `context.crash_initiator` - equals `:filter`.
 
 Note, that `context.children` map always contains only children that are still alive. E.g. if `:source` is terminated first, `hanlde_child_terminated(:source, context, state)` will contain only `:sink` in `context.children` map and for `hanlde_child_terminated(:sink, context, state)` `context.children` will be empty.
 
@@ -102,27 +90,9 @@ def handle_crash_group_down(:my_group, context, state) do
 end
 ```
 
-`context` passed as a third argument to `handle_crash_group_down/3` callback contains 3 additional fields, that usually don't occur in contexts of other callbacks:
- - `context.crash_initiator` - name or reference of the child that crashed first and caused the crash group to explode.
- - `context.crash_reason` - the reason with which `context.crash_initiator` crashed.
- - `context.members` - names/references of all children that were in the crash group.
-TODO: continue
+`context` passed as a third argument to `handle_crash_group_down/3` callback contains 3 additional fields:
+ - `context.crash_initiator` - name or reference of the child that crashed first and caused the crash group to explode. In this case, equals `:filter`
+ - `context.crash_reason` - the reason with which `context.crash_initiator` crashed. In this case, equals `{%RuntimeError{message: "internal error"}, _stacktrace}`.
+ - `context.members` - names/references of all children that were in the crash group. In this case, equals `[:source, :filter, :sink]`
 
-
-Question marks:
-  - is crash group initiator in context.members?
-  - what is the order in of: 
-    * `handle_crash_group_down`
-    * `handle_child_terminated`
-    * removing children from `context.children`, so that it becames possible to respawn new children with the same names?
-  - what is the relation between `handle_child_pad_removed` and `handle_crash_group_down`?
-
-
-
-## Use Cases
-## tutaj poniej mamy AI BS, no chodzi o to ze jak mamy element co sie wydupca, to nie chcemy zeby wszystko poszlo w piach, wiec wrzucamy go (i byc moze cos co i tak bysmy chcieli razem z nim zrestartowac) do crash groupy
-
-- **Atomic logical units:** When a group of elements (like an encoder and its associated parser) cannot function independently.
-- **Resource Cleanup:** Ensuring that if a consumer crashes, the producer is also stopped to prevent buffered data from leaking memory.
-- **Error Recovery:** Grouping elements that require a specific initialization sequence that must be repeated upon failure.
-
+When `handle_crash_group_down/3` is executed, you can be sure that all group members are already terminated. It is a suggested place, to e.g. respawn crash group. Doing so in `handle_child_terminated/3` might lead to some problems, because the order of group members termination might vary. Moreover, if pipeline or bin terminates its children gracefully, using `t:Membrane.Pipline.Action.remove_children()` action, `handle_child_terminated/3` callback will be also executed with `context.exit_reason` set to `normal`. 
