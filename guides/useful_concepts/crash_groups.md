@@ -77,7 +77,7 @@ Each time, the `context` will contain the following extra fields:
 
 Note that the `context.children` map always contains only the children that are still alive. For example, if `:source` is terminated first, `handle_child_terminated(:source, context, state)` will contain only `:sink` in the `context.children` map. Subsequently, for `handle_child_terminated(:sink, context, state)`, `context.children` will be empty.
 
-`MyPipeline` could potentially spawn other children outside `:source`, `:filter`, and `:sink`—either in different crash groups or outside any crash group. In such cases, `context.children` would contain all of them normally, and these children would not be interrupted by the crash of `:my_group` members. The main goal of crash groups is to limit the consequences of a child's crash to only those children within the same group.
+`MyPipeline` could potentially spawn children other than  `:source`, `:filter`, and `:sink` - either in different crash groups or outside any crash group. In such cases, `context.children` would contain all of them normally, and these children would not be interrupted by the crash of `:my_group` members. The main goal of crash groups is to limit the consequences of a child's crash to only those children within the same group.
 
 ### Recovering from a crash group failure
 
