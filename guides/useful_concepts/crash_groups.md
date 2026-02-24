@@ -4,7 +4,7 @@ Crash groups provide a mechanism to manage the lifecycle of elements within a pi
 
 ## Overview
 
-In Membrane, elements and bins are Elixir processes. By default, if an element that is not inside a crash group crashes, it leads to the crash of the whole pipeline.
+In Membrane, elements and bins are Elixir processes. By default, if a child (element or bin) that is not inside a crash group crashes, it leads to the crash of the whole pipeline.
 
 The fundamental purpose of crash groups is to isolate the crash of a specific element from the rest of the pipeline. If an element is likely to crash (e.g., it interacts with unstable external resources), it is usually assigned to a crash group containing all elements inextricably linked to its operation. This prevents a localized failure from bringing down the entire system and allows for the controlled recovery of specific logical units. This approach also ensures that components generally needing a restart or termination are cleaned up correctly.
 
