@@ -6,11 +6,13 @@ Crash groups provide a mechanism to manage the lifecycle of elements within a pi
 
 In Membrane, elements and bins are Elixir processes. By default, if an element that is not inside a crash group crashes, it leads to the crash of the whole pipeline.
 
-The fundamental purpose of crash groups is to isolate the crash of a specific element from the rest of the pipeline. If an element is likely to crash (e.g., it interacts with unstable external resources), it is usually placed in a crash group along with other elements whose operation is inextricably connected to it. This prevents a localized failure from bringing down the entire system and allows for the controlled recovery of specific logical units. This approach also ensures that components generally needing a restart or termination are cleaned up correctly.
+The fundamental purpose of crash groups is to isolate the crash of a specific element from the rest of the pipeline. If an element is likely to crash (e.g., it interacts with unstable external resources), it is usually assigned to a crash group containing all elements inextricably linked to its operation. This prevents a localized failure from bringing down the entire system and allows for the controlled recovery of specific logical units. This approach also ensures that components generally needing a restart or termination are cleaned up correctly.
 
 ## Defining Crash Groups
 
-Crash groups are defined in the `spec` within your pipeline or bin. To create a crash group, you must define a group name and set the `crash_group_mode` to `:temporary`, as shown in the example below:
+Crash groups are defined in the `spec` within your pipeline or bin. They are built upon the concept of **Children Groups**, which allow aggregating spawned children into easily identifiable groups.
+
+To create a crash group, you must assign children to a group using the `group` option and set the `crash_group_mode` to `:temporary`. This turns a regular group into a crash group, enabling the crash handling behavior.
 
 ```elixir
 defmodule MyPipeline do
@@ -27,6 +29,8 @@ defmodule MyPipeline do
   end
 end
 ```
+
+In the example above, `:source`, `:filter`, and `:sink` are all assigned to the same group `:my_group`. Because `crash_group_mode` is set to `:temporary`, this group functions as a crash group.
 
 ## Behaviour
 
