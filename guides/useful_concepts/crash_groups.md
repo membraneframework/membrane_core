@@ -1,12 +1,12 @@
 # Crash Groups
 
-Crash groups provide a mechanism to manage the lifecycle of elements within a pipeline when one of them fails. By grouping elements together, you can ensure that a crash in one part of the pipeline triggers a coordinated restart or termination of related elements, maintaining system consistency.
+Crash groups provide a mechanism to manage the lifecycle of children (elements or bins) within a pipeline when one of them fails. By grouping children together, you can ensure that a crash in one part of the pipeline triggers a coordinated restart or termination of related elements and bins, maintaining system consistency.
 
 ## Overview
 
 In Membrane, elements and bins are Elixir processes. By default, if a child (element or bin) that is not inside a crash group crashes, it leads to the crash of the whole pipeline.
 
-The fundamental purpose of crash groups is to isolate the crash of a specific element from the rest of the pipeline. If an element is likely to crash (e.g., it interacts with unstable external resources), it is usually assigned to a crash group containing all elements inextricably linked to its operation. This prevents a localized failure from bringing down the entire system and allows for the controlled recovery of specific logical units. This approach also ensures that components generally needing a restart or termination are cleaned up correctly.
+The fundamental purpose of crash groups is to isolate the crash of a specific child from the rest of the pipeline. If an child is likely to crash (e.g., it interacts with unstable external resources), it is usually assigned to a crash group containing all children inextricably linked to its operation. This prevents a localized failure from bringing down the entire system and allows for the controlled recovery of specific logical units. This approach also ensures that components generally needing a restart or termination are cleaned up correctly.
 
 ## Defining Crash Groups
 
@@ -34,8 +34,8 @@ In the example above, `:source`, `:filter`, and `:sink` are all assigned to the 
 
 ## Behaviour
 
-When an element belonging to a crash group crashes:
-1. All other elements in the same crash group are terminated by the pipeline.
+When an child belonging to a crash group crashes:
+1. All other children in the same crash group are terminated by the pipeline.
 2. The pipeline's `c:Membrane.Pipeline.handle_crash_group_down/3` callback is invoked.
 3. You can decide whether to restart the group, ignore the failure, or handle the situation in another way.
 
