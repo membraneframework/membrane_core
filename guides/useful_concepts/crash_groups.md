@@ -34,7 +34,7 @@ In the example above, `:source`, `:filter`, and `:sink` are all assigned to the 
 
 ## Behaviour
 
-When an child belonging to a crash group crashes:
+When a child belonging to a crash group crashes:
 1. All other children in the same crash group are terminated by the pipeline.
 2. The pipeline's `c:Membrane.Pipeline.handle_crash_group_down/3` callback is invoked.
 3. You can decide whether to restart the group, ignore the failure, or handle the situation in another way.
