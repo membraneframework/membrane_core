@@ -87,7 +87,7 @@ Plugins provide elements that you can use in your pipeline. Each plugin lives in
 
 **Formats**
 
-Apart from plugins, Membrane has stream formats, which live in `membrane_X_format` repositories, where X is usually a codec or container, for example [mebrane_opus_format](https://github.com/membraneframework/mebrane_opus_format). Stream formats are published the same way as packages and are used by elements to define what kind of stream can be sent or received. They also provide utility functions to deal with a given codec/container.
+Apart from plugins, Membrane has stream formats, which live in `membrane_X_format` repositories, where X is usually a codec or container, for example [membrane_opus_format](https://github.com/membraneframework/membrane_opus_format). Stream formats are published the same way as packages and are used by elements to define what kind of stream can be sent or received. They also provide utility functions to deal with a given codec/container.
 
 **Core**
 
