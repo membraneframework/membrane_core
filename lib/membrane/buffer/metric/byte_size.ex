@@ -11,11 +11,15 @@ defmodule Membrane.Buffer.Metric.ByteSize do
   def buffer_size_approximation, do: 1500
 
   @impl true
-  def buffers_size(buffers),
-    do: buffers |> Enum.reduce(0, fn %Buffer{payload: p}, acc -> acc + Payload.size(p) end)
+  def buffers_size(buffers) do
+    buffers
+    |> Enum.reduce(0, fn %Buffer{payload: p}, acc -> acc + Payload.size(p) end)
+    |> then(&{:ok, &1})
+  end
 
   @impl true
-  def split_buffers(buffers, count), do: do_split_buffers(buffers, count, [])
+  def split_buffers(buffers, count, _last_buffer_metric_value),
+    do: do_split_buffers(buffers, count, [])
 
   defp do_split_buffers(buffers, at_pos, acc) when at_pos == 0 or buffers == [] do
     {acc |> Enum.reverse(), buffers}
@@ -31,4 +35,7 @@ defmodule Membrane.Buffer.Metric.ByteSize do
       do_split_buffers(rest, at_pos - Payload.size(p), [buf | acc])
     end
   end
+
+  @impl true
+  def get_metric_value(_buffer), do: nil
 end

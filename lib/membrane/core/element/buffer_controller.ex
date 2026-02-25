@@ -71,7 +71,7 @@ defmodule Membrane.Core.Element.BufferController do
           State.t()
   defp do_handle_incoming_buffers(pad_ref, %{flow_control: :auto} = data, buffers, state) do
     %{demand: demand, demand_unit: demand_unit, stalker_metrics: stalker_metrics} = data
-    buf_size = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
+    {:ok, buf_size} = Buffer.Metric.from_unit(demand_unit).buffers_size(buffers)
 
     state = PadModel.set_data!(state, pad_ref, :demand, demand - buf_size)
     :atomics.put(stalker_metrics.demand, 1, demand - buf_size)
