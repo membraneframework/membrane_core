@@ -12,8 +12,6 @@ defmodule Membrane.Buffer.Metric.Count do
   def buffers_size(buffers), do: {:ok, length(buffers)}
 
   @impl true
-  def split_buffers(buffers, count, _last_buffer_metric_value), do: buffers |> Enum.split(count)
-
-  @impl true
-  def get_metric_value(_buffer), do: nil
+  def split_buffers(buffers, count, _last_consumed_buffer),
+    do: buffers |> Enum.split(count)
 end

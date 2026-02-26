@@ -18,7 +18,7 @@ defmodule Membrane.Buffer.Metric.ByteSize do
   end
 
   @impl true
-  def split_buffers(buffers, count, _last_buffer_metric_value),
+  def split_buffers(buffers, count, _last_consumed_buffer),
     do: do_split_buffers(buffers, count, [])
 
   defp do_split_buffers(buffers, at_pos, acc) when at_pos == 0 or buffers == [] do
@@ -35,7 +35,4 @@ defmodule Membrane.Buffer.Metric.ByteSize do
       do_split_buffers(rest, at_pos - Payload.size(p), [buf | acc])
     end
   end
-
-  @impl true
-  def get_metric_value(_buffer), do: nil
 end

@@ -18,16 +18,12 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
     def buffers_size(_buffers), do: {:error, :operation_not_supported}
 
     @impl true
-    def split_buffers(buffers, demand_timestamp, last_consumed_timestamp) do
-      if demand_timestamp <= last_consumed_timestamp do
-        inspected_timestamp_type =
-          unquote(timestamp_type)
-          |> Atom.to_string()
-          |> String.replace("_", " ")
-
+    def split_buffers(buffers, demand_timestamp, last_consumed_buffer) do
+      with {:ok, last_consumed_timestamp} when demand_timestamp <= last_consumed_timestamp <-
+             get_timestamp(last_consumed_buffer) do
         Membrane.Logger.warning("""
         Demanded timestamp should greater than the last consumed timestamp. Got :demand with timestamp \
-        #{demand_timestamp}, while the last consumed #{inspected_timestamp_type} equals \
+        #{demand_timestamp}, while the last consumed #{inspected_timestamp_type()} equals \
         #{last_consumed_timestamp}. Demanding timestamp that is not greater than the last consumed one \
         won't result in handling any further buffers, until the Element demands a timestamp greater than \
         the last consumed one. \
@@ -35,14 +31,14 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
 
         {[], buffers}
       else
-        split_buffers_recursion(buffers, [], demand_timestamp)
+        _timestamp -> split_buffers_recursion(buffers, [], demand_timestamp)
       end
     end
 
     defp split_buffers_recursion([buffer | rest], buffers_to_consume, timestamp) do
       buffers_to_consume = [buffer | buffers_to_consume]
 
-      if get_metric_value(buffer) >= timestamp,
+      if get_timestamp(buffer) >= timestamp,
         do: {Enum.reverse(buffers_to_consume), rest},
         else: split_buffers_recursion(rest, buffers_to_consume, timestamp)
     end
@@ -50,11 +46,18 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
     defp split_buffers_recursion([], buffers_to_consume, _timestamp),
       do: {Enum.reverse(buffers_to_consume), []}
 
-    @impl true
+    defp get_timestamp(nil), do: :error
+
     case timestamp_type do
-      :pts -> def get_metric_value(%Buffer{pts: pts}), do: pts
-      :dts -> def get_metric_value(%Buffer{dts: dts}), do: dts
-      :dts_or_pts -> def get_metric_value(buffer), do: Buffer.get_dts_or_pts(buffer)
+      :pts -> defp get_timestamp(%Buffer{pts: pts}), do: {:ok, pts}
+      :dts -> defp get_timestamp(%Buffer{dts: dts}), do: {:ok, dts}
+      :dts_or_pts -> defp get_timestamp(buffer), do: {:ok, Buffer.get_dts_or_pts(buffer)}
+    end
+
+    case timestamp_type do
+      :pts -> defp inspected_timestamp_type(), do: "PTS"
+      :dts -> defp inspected_timestamp_type(), do: "DTS"
+      :dts_or_pts -> defp inspected_timestamp_type(), do: "<DTS or PTS>"
     end
   end
 end

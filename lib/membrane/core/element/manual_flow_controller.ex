@@ -203,6 +203,8 @@ defmodule Membrane.Core.Element.ManualFlowController do
     state =
       PadModel.update_data!(state, pad_ref, :manual_demand_size, &(&1 - outbound_metric_buf_size))
 
+    # TODO: tutaj trzeba zachowywac sie inaczej przy timestampach
+
     BufferController.exec_buffer_callback(pad_ref, buffers, state)
   end
 end
