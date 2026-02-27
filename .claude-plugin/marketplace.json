@@ -12,7 +12,7 @@
       "version": "1.0.0",
       "source": "./",
       "category": "development",
-      "homepage": "https://github.com/membraneframework/membrane_core"
+      "homepage": "https://github.com/membraneframework/membrane_core",
       "skills": [
         "./skills/membrane-core"
       ]
