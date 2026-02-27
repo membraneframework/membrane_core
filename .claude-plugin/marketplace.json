@@ -7,12 +7,15 @@
   },
   "plugins": [
     {
-      "name": "membrane-framework",
+      "name": "membrane-core",
       "description": "Work with the Membrane multimedia streaming framework in Elixir. Provides architectural guidance, callback/action references, and code patterns for pipelines, elements, and bins.",
       "version": "1.0.0",
-      "source": "./skills/membrane-framework",
+      "source": "./",
       "category": "development",
       "homepage": "https://github.com/membraneframework/membrane_core"
+      "skills": [
+        "./skills/membrane-core"
+      ]
     }
   ]
 }
