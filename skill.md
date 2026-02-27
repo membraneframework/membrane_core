@@ -352,14 +352,15 @@ end
 ## Testing
 
 ```elixir
+import Membrane.ChildrenSpec
 alias Membrane.Testing
 
-{:ok, pipeline} = Testing.Pipeline.start_link(%Testing.Pipeline.Options{
-  elements: [
-    source: %Testing.Source{output: [<<1, 2, 3>>, <<4, 5, 6>>]},
-    sink: Testing.Sink
-  ]
-})
+spec = [
+  child(:source, %Testing.Source{output: [<<1, 2, 3>>, <<4, 5, 6>>]})
+  |> child(:sink, Testing.Sink)
+]
+
+pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
 Testing.Assertions.assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: <<1, 2, 3>>})
 ```
