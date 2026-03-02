@@ -22,7 +22,7 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
       with {:ok, last_consumed_timestamp} when demand_timestamp <= last_consumed_timestamp <-
              get_timestamp(last_consumed_buffer) do
         Membrane.Logger.warning("""
-        Demanded timestamp should greater than the last consumed timestamp. Got :demand with timestamp \
+        Demanded timestamp should greater be than the last consumed timestamp. Got :demand with timestamp \
         #{demand_timestamp}, while the last consumed #{inspected_timestamp_type()} equals \
         #{last_consumed_timestamp}. Demanding timestamp that is not greater than the last consumed one \
         won't result in handling any further buffers, until the Element demands a timestamp greater than \
