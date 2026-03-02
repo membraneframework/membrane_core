@@ -196,7 +196,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
          count
        ) do
     {out, nq, new_size} =
-      q |> q_pop(count, inbound_metric, outbound_metric, size, last_outbound_buffer)
+      q |> q_pop(count, inbound_metric, outbound_metric, size, last_outbound_buffer, [])
 
     input_queue = %{input_queue | q: nq, size: new_size}
     {out, input_queue}
@@ -209,7 +209,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
          outbound_metric,
          queue_size,
          last_outbound_buffer,
-         acc \\ []
+         acc
        )
 
   defp q_pop(
@@ -244,6 +244,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
               inbound_metric,
               outbound_metric,
               queue_size - inbound_metric_buf_size,
+              last_outbound_buffer,
               [
                 {:buffers, buffers, buffers_size_inbound_metric, buffers_size_outbound_metric}
                 | acc

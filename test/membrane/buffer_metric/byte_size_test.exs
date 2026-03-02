@@ -20,25 +20,25 @@ defmodule Membrane.Buffer.Metric.ByteSizeTest do
 
   describe ".split_buffers/2" do
     test "when split position matches size of first buffer, extract only first buffer" do
-      {buf, rest} = ByteSize.split_buffers(@buffers, byte_size(@pay1))
+      {buf, rest} = ByteSize.split_buffers(@buffers, byte_size(@pay1), nil)
       assert buf == [@buf1]
       assert rest == [@buf2]
     end
 
     test "when there is only one buffer where split position is greater than buffer size \
       returns the buffer and an empty list" do
-      {buf, []} = ByteSize.split_buffers(@single_buffer, byte_size(@pay1) + 10)
+      {buf, []} = ByteSize.split_buffers(@single_buffer, byte_size(@pay1) + 10, nil)
       assert buf == [@buf1]
     end
 
     test "when there is only one buffer where split position is 0, it returns an empty \
       list and a list with the buffer" do
-      {[], rest} = ByteSize.split_buffers(@single_buffer, 0)
+      {[], rest} = ByteSize.split_buffers(@single_buffer, 0, nil)
       assert rest == [@buf1]
     end
 
     test "when splitting is necessary it extracts the first buffer and splits the second into two" do
-      {extracted, rest} = ByteSize.split_buffers(@buffers, byte_size(@pay1) + 1)
+      {extracted, rest} = ByteSize.split_buffers(@buffers, byte_size(@pay1) + 1, nil)
       <<one_byte::binary-size(1), expected_rest::binary>> = @pay2
       assert extracted == [@buf1, %Membrane.Buffer{payload: one_byte}]
       assert rest == [%Membrane.Buffer{payload: expected_rest}]
