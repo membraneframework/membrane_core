@@ -15,6 +15,11 @@ description: Work with the Membrane multimedia streaming framework in Elixir. Us
 - **Debugging** — check pad `accepted_format` compatibility, lifecycle ordering (`handle_setup` vs `handle_playing`), flow control mode mismatches
 - **Full callback reference** — `references/callbacks.md`
 - **Full actions reference** — `references/actions.md`
+- **Never modify code in `deps/`**
+- **Use `mix hex.info <plugin name>` when you need to check the newest version of a plugin**
+- **Search for appropriate plugins in `README.md`, in `all-packages` section**
+- **Check input and output pad definitions of elements in `deps/` to make sure output pad's `accepted_stream_format` is compatible with `accepted_stream_format` of the input pad which it is linked to.**
+- **If the `accepted_stream_format` doesn't match, search for an element which can act as an adapter** 
 
 ---
 
@@ -133,6 +138,7 @@ end
 
 ```elixir
 import Membrane.ChildrenSpec
+import Membrane.Testing.Assertions
 alias Membrane.Testing
 
 pipeline = Testing.Pipeline.start_link_supervised!(spec: [
@@ -140,7 +146,7 @@ pipeline = Testing.Pipeline.start_link_supervised!(spec: [
   |> child(:sink, Testing.Sink)
 ])
 
-Testing.Assertions.assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: <<1, 2, 3>>})
+assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: <<1, 2, 3>>})
 ```
 
 ---
