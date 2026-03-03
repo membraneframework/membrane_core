@@ -150,8 +150,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
          } = input_queue,
          v
        ) do
-    {:ok, inbound_metric_buffer_size} = inbound_metric.buffers_size(v)
-    {:ok, outbound_metric_buffer_size} = outbound_metric.buffers_size(v)
+    inbound_metric_buffer_size = size(v, inbound_metric)
+    outbound_metric_buffer_size = size(v, outbound_metric)
 
     "Storing #{inspect(inbound_metric_buffer_size)} buffers"
     |> mk_log(input_queue)
@@ -233,14 +233,21 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
             last_outbound_buffer
           )
 
-        {:ok, buffers_size_inbound_metric} = inbound_metric.buffers_size(buffers)
-        {:ok, buffers_size_outbound_metric} = outbound_metric.buffers_size(buffers)
+        buffers_size_inbound_metric = size(buffers, inbound_metric)
+        buffers_size_outbound_metric = size(buffers, outbound_metric)
+
+        new_size_to_take_in_outbound_metric =
+          if Buffer.Metric.is_timestamp_metric?(outbound_metric) do
+            size_to_take_in_outbound_metric
+          else
+            size_to_take_in_outbound_metric - buffers_size_outbound_metric
+          end
 
         case excess_buffers do
           [] ->
             q_pop(
               nq,
-              size_to_take_in_outbound_metric - buffers_size_outbound_metric,
+              new_size_to_take_in_outbound_metric,
               inbound_metric,
               outbound_metric,
               queue_size - inbound_metric_buf_size,
@@ -252,11 +259,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
             )
 
           non_empty_excess_buffers ->
-            {:ok, excess_buffers_inbound_metric_size} =
-              inbound_metric.buffers_size(non_empty_excess_buffers)
-
-            {:ok, excess_buffers_outbound_metric_size} =
-              outbound_metric.buffers_size(non_empty_excess_buffers)
+            excess_buffers_inbound_metric_size = size(non_empty_excess_buffers, inbound_metric)
+            excess_buffers_outbound_metric_size = size(non_empty_excess_buffers, outbound_metric)
 
             nq =
               @qe.push_front(
@@ -334,8 +338,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
     buffers =
       outputs
       |> Enum.flat_map(fn
-        {:value, {:buffers, buffers, _in_buf_size, _out_buf_size}} -> buffers
-        _other_output -> []
+        {:buffers, buffers, _in_buf_size, _out_buf_size} -> buffers
+        other_output -> []
       end)
 
     input_queue
@@ -361,4 +365,11 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   @spec empty?(t()) :: boolean()
   def empty?(%__MODULE__{size: size}), do: size == 0
+
+  defp size(buffers, metric) do
+    case metric.buffers_size(buffers) do
+      {:ok, size} -> size
+      {:error, :operation_not_supported} -> nil
+    end
+  end
 end

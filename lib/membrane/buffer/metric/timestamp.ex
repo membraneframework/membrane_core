@@ -35,15 +35,16 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
       end
     end
 
-    defp split_buffers_recursion([buffer | rest], buffers_to_consume, timestamp) do
+    defp split_buffers_recursion([buffer | rest], buffers_to_consume, demand_timestamp) do
       buffers_to_consume = [buffer | buffers_to_consume]
+      {:ok, buffer_timestamp} = get_timestamp(buffer)
 
-      if get_timestamp(buffer) >= timestamp,
+      if buffer_timestamp >= demand_timestamp,
         do: {Enum.reverse(buffers_to_consume), rest},
-        else: split_buffers_recursion(rest, buffers_to_consume, timestamp)
+        else: split_buffers_recursion(rest, buffers_to_consume, demand_timestamp)
     end
 
-    defp split_buffers_recursion([], buffers_to_consume, _timestamp),
+    defp split_buffers_recursion([], buffers_to_consume, _demand_timestamp),
       do: {Enum.reverse(buffers_to_consume), []}
 
     defp get_timestamp(nil), do: :error

@@ -260,7 +260,6 @@ defmodule Membrane.Integration.ElementsCompatibilityTest do
     )
   end
 
-  @tag :xd
   test "if sink demanding in buffers receives all the data" do
     Enum.each(
       [PushSource, PullBytesSource, PullBuffersSource],
