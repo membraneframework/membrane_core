@@ -394,10 +394,14 @@ defmodule Membrane.Core.Element.PadController do
         target_size: pad_props.target_queue_size
       })
 
+    manual_demand_size =
+      Membrane.Buffer.Metric.from_unit(this_demand_unit).init_manual_demand_size_value()
+
     pad_data
     |> Map.merge(%{
       input_queue: input_queue,
-      demand: 0
+      demand: 0,
+      manual_demand_size: manual_demand_size
     })
   end
 

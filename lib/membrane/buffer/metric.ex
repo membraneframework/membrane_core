@@ -22,6 +22,8 @@ defmodule Membrane.Buffer.Metric do
               last_consumed_buffer :: Buffer.t() | nil
             ) :: {[%Buffer{}] | [], [%Buffer{}] | []}
 
+  @callback init_manual_demand_size_value() :: non_neg_integer() | Membrane.Time.t()
+
   @spec from_unit(unit()) :: t()
   def from_unit(:buffers), do: Metric.Count
   def from_unit(:bytes), do: Metric.ByteSize

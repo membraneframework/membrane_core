@@ -6,7 +6,10 @@ defmodule Membrane.Buffer.Metric.Count do
   @behaviour Membrane.Buffer.Metric
 
   @impl true
-  def buffer_size_approximation, do: 1
+  def buffer_size_approximation(), do: 1
+
+  @impl true
+  def init_manual_demand_size_value(), do: 0
 
   @impl true
   def buffers_size(buffers), do: {:ok, length(buffers)}

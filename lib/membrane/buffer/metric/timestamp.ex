@@ -11,11 +11,26 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
 
     @behaviour Membrane.Buffer.Metric
 
+    @initial_manual_demand_size_value -1
+
     @impl true
     def buffer_size_approximation, do: 1
 
     @impl true
     def buffers_size(_buffers), do: {:error, :operation_not_supported}
+
+    @impl true
+    def init_manual_demand_size_value(), do: @initial_manual_demand_size_value
+
+    @impl true
+    def split_buffers(
+          buffers,
+          @initial_manual_demand_size_value,
+          _first_consumed_buffer,
+          _last_consumed_buffer
+        ) do
+      {[], buffers}
+    end
 
     @impl true
     def split_buffers(buffers, demand_timestamp, first_consumed_buffer, last_consumed_buffer) do
