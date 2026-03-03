@@ -18,7 +18,8 @@ defmodule Membrane.Buffer.Metric do
   @callback split_buffers(
               [%Buffer{}] | [],
               non_neg_integer | Membrane.Time.t(),
-              last_consumed_buffer :: Buffer.t()
+              first_consumed_buffer :: Buffer.t() | nil,
+              last_consumed_buffer :: Buffer.t() | nil
             ) :: {[%Buffer{}] | [], [%Buffer{}] | []}
 
   @spec from_unit(unit()) :: t()

@@ -18,7 +18,7 @@ defmodule Membrane.Buffer.Metric.ByteSize do
   end
 
   @impl true
-  def split_buffers(buffers, count, _last_consumed_buffer),
+  def split_buffers(buffers, count, _first_consumed_buffer, _last_consumed_buffer),
     do: do_split_buffers(buffers, count, [])
 
   defp do_split_buffers(buffers, at_pos, acc) when at_pos == 0 or buffers == [] do

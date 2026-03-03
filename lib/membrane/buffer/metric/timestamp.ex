@@ -18,8 +18,10 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
     def buffers_size(_buffers), do: {:error, :operation_not_supported}
 
     @impl true
-    def split_buffers(buffers, demand_timestamp, last_consumed_buffer) do
-      with {:ok, last_consumed_timestamp} when demand_timestamp <= last_consumed_timestamp <-
+    def split_buffers(buffers, demand_timestamp, first_consumed_buffer, last_consumed_buffer) do
+      with {:ok, first_consumed_timestamp} <- get_timestamp(first_consumed_buffer),
+           {:ok, last_consumed_timestamp}
+           when last_consumed_timestamp - first_consumed_timestamp >= demand_timestamp <-
              get_timestamp(last_consumed_buffer) do
         Membrane.Logger.warning("""
         Demanded timestamp should greater be than the last consumed timestamp. Got :demand with timestamp \
@@ -31,20 +33,33 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
 
         {[], buffers}
       else
-        _timestamp -> split_buffers_recursion(buffers, [], demand_timestamp)
+        _timestamp when first_consumed_buffer == nil and buffers != [] ->
+          {:ok, first_buffer_timestamp} = List.first(buffers) |> get_timestamp()
+          split_buffers_recursion(buffers, [], demand_timestamp, first_buffer_timestamp)
+
+        _timestamp ->
+          {:ok, first_buffer_timestamp} = get_timestamp(first_consumed_buffer)
+          split_buffers_recursion(buffers, [], demand_timestamp, first_buffer_timestamp)
       end
+
+      # |> IO.inspect(
+      #   label:
+      #     "SPLIT_BUFFERS RESULT FOR DEMAND OF TIMESTAMP #{demand_timestamp}, FIRST CONSUMED #{inspect(first_consumed_buffer)}, LAST CONSUMED #{inspect(last_consumed_buffer)}"
+      # )
     end
 
-    defp split_buffers_recursion([buffer | rest], buffers_to_consume, demand_timestamp) do
+    defp split_buffers_recursion([buffer | rest], buffers_to_consume, demand_timestamp, offset) do
       buffers_to_consume = [buffer | buffers_to_consume]
       {:ok, buffer_timestamp} = get_timestamp(buffer)
 
-      if buffer_timestamp >= demand_timestamp,
+      # IO.inspect({buffer_timestamp, offset, demand_timestamp}, label: "A B C")
+
+      if buffer_timestamp - offset >= demand_timestamp,
         do: {Enum.reverse(buffers_to_consume), rest},
-        else: split_buffers_recursion(rest, buffers_to_consume, demand_timestamp)
+        else: split_buffers_recursion(rest, buffers_to_consume, demand_timestamp, offset)
     end
 
-    defp split_buffers_recursion([], buffers_to_consume, _demand_timestamp),
+    defp split_buffers_recursion([], buffers_to_consume, _demand_timestamp, _offset),
       do: {Enum.reverse(buffers_to_consume), []}
 
     defp get_timestamp(nil), do: :error

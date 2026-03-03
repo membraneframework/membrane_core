@@ -311,14 +311,15 @@ defmodule Membrane.Integration.DemandsTest do
     end
   end
 
-  [
+  @timestamp_demand_units_with_sink_names [
     {:timestamp, Sink.Timestamp},
     {{:timestamp, :pts}, Sink.Timestamp.PTS},
     {{:timestamp, :dts}, Sink.Timestamp.DTS},
     {{:timestamp, :dts_or_pts}, Sink.Timestamp.DTSOrPTS}
   ]
-  |> Enum.map(fn {demand_unit, module} ->
-    defmodule module do
+
+  for {demand_unit, sink_name} <- @timestamp_demand_units_with_sink_names do
+    defmodule sink_name do
       use Membrane.Sink
 
       def_input_pad :input,
@@ -331,6 +332,7 @@ defmodule Membrane.Integration.DemandsTest do
 
       @impl true
       def handle_buffer(:input, buffer, _ctx, state) do
+        # IO.inspect(buffer, label: "RECEIVED BUFFER IN #{inspect(unquote(sink_name))}")
         {[notify_parent: {:buffer, buffer}], state}
       end
 
@@ -339,32 +341,41 @@ defmodule Membrane.Integration.DemandsTest do
         {[demand: {:input, value}], state}
       end
     end
+  end
 
-    if demand_unit == :timestamp do
+  @timestamp_offsets [0, 5, 1421, -9329]
+
+  for {demand_unit, sink_name} <- @timestamp_demand_units_with_sink_names,
+      timestamp_offset <- @timestamp_offsets do
+    if demand_unit == :timestamp and timestamp_offset == 0 do
       @tag :xd
     end
 
-    test "demands with unit set to #{inspect(demand_unit)}" do
+    test "demands with demand unit set to #{inspect(demand_unit)} and timestamp offset #{timestamp_offset}" do
+      timestamp_offset = unquote(timestamp_offset)
+
       buffers =
         0..100
-        |> Enum.map(fn i ->
-          %Membrane.Buffer{payload: "", pts: 10 * i, dts: 10 * i}
-        end)
+        |> Enum.map(fn i -> buffer(i, timestamp_offset) end)
 
       spec =
         child(:source, %Testing.Source{output: buffers})
-        |> child(:sink, unquote(module))
+        |> child(:sink, unquote(sink_name))
 
       pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
 
       assert_pipeline_notified(pipeline, :sink, :playing)
 
       [
-        {271, 0..28},
+        {0, [0]},
+        {1, [1]},
+        {11, [2]},
+        {271, 3..28},
         {277, []},
         {341, 29..35},
         {460, 36..46},
-        {571, 47..58},
+        {461, [47]},
+        {571, 48..58},
         {680, 59..68},
         {791, 69..80},
         {901, 81..91},
@@ -377,13 +388,11 @@ defmodule Membrane.Integration.DemandsTest do
 
         expected_buffers
         |> Enum.each(fn i ->
-          timestamp = i * 10
+          timestamp = timestamp(i, timestamp_offset)
+          payload = inspect(i)
 
-          assert_pipeline_notified(
-            pipeline,
-            :sink,
-            {:buffer, %Membrane.Buffer{payload: "", pts: ^timestamp, dts: ^timestamp}}
-          )
+          assert_pipeline_notified(pipeline, :sink, {:buffer, buffer})
+          assert buffer == buffer(i, timestamp_offset)
         end)
 
         refute_pipeline_notified(pipeline, :sink, {:buffer, _buffer}, 100)
@@ -392,5 +401,15 @@ defmodule Membrane.Integration.DemandsTest do
       assert_end_of_stream(pipeline, :sink)
       Testing.Pipeline.terminate(pipeline)
     end
-  end)
+  end
+
+  defp buffer(idx, timestamp_offset) do
+    %Membrane.Buffer{
+      payload: inspect(idx),
+      pts: timestamp(idx, timestamp_offset),
+      dts: timestamp(idx, timestamp_offset)
+    }
+  end
+
+  defp timestamp(buffer_idx, offset), do: 10 * buffer_idx + offset
 end
