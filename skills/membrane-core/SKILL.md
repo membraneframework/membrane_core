@@ -18,7 +18,7 @@ description: Work with the Membrane multimedia streaming framework in Elixir. Us
 - **Never modify code in `deps/`**
 - **Use `mix hex.info <plugin name>` when you need to check the newest version of a plugin**
 - **Search for appropriate plugins in `README.md`, in `all-packages` section**
-- **Check input and output pad definitions of elements in `deps/` to make sure output pad's `accepted_stream_format` is compatible with `accepted_stream_format` of the input pad which it is linked to.**
+- **Check input and output pad definitions of elements in `deps/` (use `cat <filename> | grep def_input_pad` and `cat <filename> | grep def_output pad`) to make sure output pad's `accepted_stream_format` is compatible with `accepted_stream_format` of the input pad which it is linked to.**
 - **If the `accepted_stream_format` doesn't match, search for an element which can act as an adapter** 
 
 ---
