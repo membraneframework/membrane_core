@@ -24,6 +24,8 @@ defmodule Membrane.Buffer.Metric do
 
   @callback init_manual_demand_size_value() :: non_neg_integer() | Membrane.Time.t()
 
+  @callback generate_metric_specific_warnings([Buffer.t()]) :: :ok
+
   @spec from_unit(unit()) :: t()
   def from_unit(:buffers), do: Metric.Count
   def from_unit(:bytes), do: Metric.ByteSize

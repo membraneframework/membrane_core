@@ -40,6 +40,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
                atomic_demand: context.atomic_demand,
                inbound_metric: context.expected_metric,
                outbound_metric: context.expected_metric,
+               outbound_metric_demand_init_size:
+                 context.expected_metric.init_manual_demand_size_value(),
                pad_ref: context.pad_ref,
                size: 0,
                demand: context.target_queue_size,

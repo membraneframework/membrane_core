@@ -38,4 +38,8 @@ defmodule Membrane.Buffer.Metric.ByteSize do
       do_split_buffers(rest, at_pos - Payload.size(p), [buf | acc])
     end
   end
+
+  @impl true
+  @spec generate_metric_specific_warnings(any()) :: :ok
+  def generate_metric_specific_warnings(_buffers), do: :ok
 end

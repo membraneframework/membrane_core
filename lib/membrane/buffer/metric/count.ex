@@ -17,4 +17,7 @@ defmodule Membrane.Buffer.Metric.Count do
   @impl true
   def split_buffers(buffers, count, _first_consumed_buffer, _last_consumed_buffer),
     do: buffers |> Enum.split(count)
+
+  @impl true
+  def generate_metric_specific_warnings(_buffers), do: :ok
 end

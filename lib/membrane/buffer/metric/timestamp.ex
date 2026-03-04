@@ -63,6 +63,33 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
       # )
     end
 
+    @impl true
+    def generate_metric_specific_warnings([]), do: :ok
+
+    def generate_metric_specific_warnings(buffers) do
+      [first | rest] = buffers
+
+      rest
+      |> Enum.reduce(first, fn curr_buffer, prev_buffer ->
+        with {:ok, curr_timestamp} <- get_timestamp(curr_buffer),
+             {:ok, prev_timestamp} when curr_timestamp < prev_timestamp <-
+               get_timestamp(prev_buffer) do
+          if curr_timestamp < prev_timestamp do
+            Membrane.Logger.warning("""
+            Received buffers with non-monotonic #{inspected_timestamp_type()}s. Current buffer's timestamp is \
+            #{curr_timestamp}, while the previous buffer's timestamp is #{prev_timestamp}. This may lead to \
+            unexpected behavior in Elements that rely on monotonicity of timestamps, such as decoders or \
+            muxers.
+            """)
+          end
+
+          curr_buffer
+        else
+          _ -> curr_buffer
+        end
+      end)
+    end
+
     defp split_buffers_recursion([buffer | rest], buffers_to_consume, demand_timestamp, offset) do
       buffers_to_consume = [buffer | buffers_to_consume]
       {:ok, buffer_timestamp} = get_timestamp(buffer)

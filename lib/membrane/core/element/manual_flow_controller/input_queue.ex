@@ -36,6 +36,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
           demand: non_neg_integer(),
           inbound_metric: module(),
           outbound_metric: module(),
+          outbound_metric_demand_init_size: non_neg_integer() | Membrane.Time.t(),
           pad_ref: Pad.ref(),
           atomic_demand: AtomicDemand.t(),
           stalker_metrics: %{atom() => any()},
@@ -50,6 +51,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
     :atomic_demand,
     :inbound_metric,
     :outbound_metric,
+    :outbound_metric_demand_init_size,
     :pad_ref,
     :stalker_metrics
   ]
@@ -94,12 +96,16 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
       pad: pad_ref
     )
 
+    outbound_metric_demand_init_size =
+      Buffer.Metric.from_unit(outbound_demand_unit).init_manual_demand_size_value()
+
     %__MODULE__{
       q: @qe.new(),
       log_tag: log_tag,
       target_size: target_size,
       inbound_metric: inbound_metric,
       outbound_metric: outbound_metric,
+      outbound_metric_demand_init_size: outbound_metric_demand_init_size,
       atomic_demand: atomic_demand,
       pad_ref: pad_ref,
       stalker_metrics: %{size: size_metric}
@@ -192,6 +198,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
            size: size,
            inbound_metric: inbound_metric,
            outbound_metric: outbound_metric,
+           outbound_metric_demand_init_size: outbound_metric_demand_init_size,
            first_outbound_buffer: first_outbound_buffer,
            last_outbound_buffer: last_outbound_buffer
          } = input_queue,
@@ -206,6 +213,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
         size,
         first_outbound_buffer,
         last_outbound_buffer,
+        outbound_metric_demand_init_size,
         []
       )
 
@@ -221,6 +229,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
          queue_size,
          first_outbound_buffer,
          last_outbound_buffer,
+         outbound_metric_demand_init_size,
          acc
        )
 
@@ -232,9 +241,10 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
          queue_size,
          first_outbound_buffer,
          last_outbound_buffer,
+         outbound_metric_demand_init_size,
          acc
        )
-       when size_to_take_in_outbound_metric > 0 do
+       when size_to_take_in_outbound_metric > outbound_metric_demand_init_size do
     q
     |> @qe.pop
     |> case do
@@ -267,6 +277,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
               queue_size - inbound_metric_buf_size,
               first_outbound_buffer,
               last_outbound_buffer,
+              outbound_metric_demand_init_size,
               [
                 {:buffers, buffers, buffers_size_inbound_metric, buffers_size_outbound_metric}
                 | acc
@@ -305,6 +316,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
           queue_size,
           first_outbound_buffer,
           last_outbound_buffer,
+          outbound_metric_demand_init_size,
           [
             {type, e} | acc
           ]
@@ -314,14 +326,16 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   defp q_pop(
          q,
-         0,
+         size_to_take_in_outbound_metric,
          inbound_metric,
          outbound_metric,
          queue_size,
          first_outbound_buffer,
          last_outbound_buffer,
+         outbound_metric_demand_init_size,
          acc
-       ) do
+       )
+       when size_to_take_in_outbound_metric == outbound_metric_demand_init_size do
     q
     |> @qe.pop
     |> case do
@@ -334,6 +348,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
           queue_size,
           first_outbound_buffer,
           last_outbound_buffer,
+          outbound_metric_demand_init_size,
           [
             {type, e} | acc
           ]
@@ -375,6 +390,9 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
         {:buffers, buffers, _in_buf_size, _out_buf_size} -> buffers
         _other_output -> []
       end)
+
+    [input_queue.last_outbound_buffer | buffers]
+    |> input_queue.outbound_metric.generate_metric_specific_warnings()
 
     input_queue
     |> Map.update!(:first_outbound_buffer, &(&1 || List.first(buffers)))
