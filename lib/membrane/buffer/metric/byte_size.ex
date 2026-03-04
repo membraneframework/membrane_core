@@ -40,6 +40,8 @@ defmodule Membrane.Buffer.Metric.ByteSize do
   end
 
   @impl true
-  @spec generate_metric_specific_warnings(any()) :: :ok
   def generate_metric_specific_warnings(_buffers), do: :ok
+
+  @impl true
+  def reduce_demand(demand, consumed), do: demand - consumed
 end

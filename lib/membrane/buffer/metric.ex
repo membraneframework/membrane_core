@@ -26,6 +26,18 @@ defmodule Membrane.Buffer.Metric do
 
   @callback generate_metric_specific_warnings([Buffer.t()]) :: :ok
 
+  @doc """
+  Updates the remaining demand after consuming buffers.
+
+  For count/byte metrics, subtracts `consumed_size` from `demand`.
+  For timestamp metrics, the demand is a duration that does not change as buffers are consumed —
+  the recursion instead terminates when `split_buffers/4` signals that the demand is satisfied.
+  """
+  @callback reduce_demand(
+              demand :: non_neg_integer() | Membrane.Time.t(),
+              consumed_size :: non_neg_integer() | nil
+            ) :: non_neg_integer() | Membrane.Time.t()
+
   @spec from_unit(unit()) :: t()
   def from_unit(:buffers), do: Metric.Count
   def from_unit(:bytes), do: Metric.ByteSize
@@ -33,20 +45,4 @@ defmodule Membrane.Buffer.Metric do
   def from_unit({:timestamp, :pts}), do: PTS
   def from_unit({:timestamp, :dts}), do: DTS
   def from_unit({:timestamp, :dts_or_pts}), do: DTSOrPTS
-
-  @spec is_timestamp_unit?(unit()) :: boolean()
-  def is_timestamp_unit?(unit) do
-    unit
-    |> from_unit()
-    |> is_timestamp_metric?()
-  end
-
-  @spec is_timestamp_metric?(t()) :: boolean()
-  def is_timestamp_metric?(metric)
-      when metric in [DTSOrPTS, PTS, DTS],
-      do: true
-
-  def is_timestamp_metric?(metric)
-      when metric in [Metric.Count, Metric.ByteSize],
-      do: false
 end

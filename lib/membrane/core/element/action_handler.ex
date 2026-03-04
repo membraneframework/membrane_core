@@ -397,11 +397,6 @@ defmodule Membrane.Core.Element.ActionHandler do
           Action.demand_size(),
           State.t()
         ) :: State.t()
-  # defp delay_supplying_demand(pad_ref, 0, state) do
-  #   Membrane.Logger.debug_verbose("Ignoring demand of size of 0 on pad #{inspect(pad_ref)}")
-  #   state
-  # end
-
   defp delay_supplying_demand(pad_ref, size, _state)
        when is_integer(size) and size < 0 do
     raise ElementError,

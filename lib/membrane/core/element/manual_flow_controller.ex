@@ -200,17 +200,17 @@ defmodule Membrane.Core.Element.ManualFlowController do
          {:buffers, buffers, _inbound_metric_buf_size, outbound_metric_buf_size},
          state
        ) do
-    timestamp_demand_unit? =
+    outbound_metric =
       PadModel.get_data!(state, pad_ref, :demand_unit)
-      |> Membrane.Buffer.Metric.is_timestamp_unit?()
+      |> Membrane.Buffer.Metric.from_unit()
 
     state =
-      if timestamp_demand_unit? do
-        state
-      else
-        state
-        |> PadModel.update_data!(pad_ref, :manual_demand_size, &(&1 - outbound_metric_buf_size))
-      end
+      PadModel.update_data!(
+        state,
+        pad_ref,
+        :manual_demand_size,
+        &outbound_metric.reduce_demand(&1, outbound_metric_buf_size)
+      )
 
     BufferController.exec_buffer_callback(pad_ref, buffers, state)
   end

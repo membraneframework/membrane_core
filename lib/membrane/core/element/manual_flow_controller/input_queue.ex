@@ -204,47 +204,30 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
          } = input_queue,
          demand
        ) do
-    {out, nq, new_size} =
-      q
-      |> q_pop(
-        demand,
-        inbound_metric,
-        outbound_metric,
-        size,
-        first_outbound_buffer,
-        last_outbound_buffer,
-        outbound_metric_demand_init_size,
-        []
-      )
+    ctx = %{
+      inbound_metric: inbound_metric,
+      outbound_metric: outbound_metric,
+      first_outbound_buffer: first_outbound_buffer,
+      last_outbound_buffer: last_outbound_buffer,
+      zero_demand: outbound_metric_demand_init_size
+    }
 
+    {out, nq, new_size} = q_pop(q, demand, size, [], ctx)
     input_queue = %{input_queue | q: nq, size: new_size}
     {out, input_queue}
   end
 
-  defp q_pop(
-         q,
-         size_to_take_in_outbound_metric,
-         inbound_metric,
-         outbound_metric,
-         queue_size,
-         first_outbound_buffer,
-         last_outbound_buffer,
-         outbound_metric_demand_init_size,
-         acc
-       )
+  defp q_pop(q, demand, queue_size, acc, ctx)
 
-  defp q_pop(
-         q,
-         size_to_take_in_outbound_metric,
-         inbound_metric,
-         outbound_metric,
-         queue_size,
-         first_outbound_buffer,
-         last_outbound_buffer,
-         outbound_metric_demand_init_size,
-         acc
-       )
-       when size_to_take_in_outbound_metric > outbound_metric_demand_init_size do
+  defp q_pop(q, demand, queue_size, acc, %{zero_demand: zero_demand} = ctx)
+       when demand > zero_demand do
+    %{
+      inbound_metric: inbound_metric,
+      outbound_metric: outbound_metric,
+      first_outbound_buffer: first_outbound_buffer,
+      last_outbound_buffer: last_outbound_buffer
+    } = ctx
+
     q
     |> @qe.pop
     |> case do
@@ -252,36 +235,26 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
         {buffers, excess_buffers} =
           outbound_metric.split_buffers(
             buffers,
-            size_to_take_in_outbound_metric,
+            demand,
             first_outbound_buffer,
             last_outbound_buffer
           )
 
         buffers_size_inbound_metric = size(buffers, inbound_metric)
         buffers_size_outbound_metric = size(buffers, outbound_metric)
-
-        new_size_to_take_in_outbound_metric =
-          if Buffer.Metric.is_timestamp_metric?(outbound_metric) do
-            size_to_take_in_outbound_metric
-          else
-            size_to_take_in_outbound_metric - buffers_size_outbound_metric
-          end
+        new_demand = outbound_metric.reduce_demand(demand, buffers_size_outbound_metric)
 
         case excess_buffers do
           [] ->
             q_pop(
               nq,
-              new_size_to_take_in_outbound_metric,
-              inbound_metric,
-              outbound_metric,
+              new_demand,
               queue_size - inbound_metric_buf_size,
-              first_outbound_buffer,
-              last_outbound_buffer,
-              outbound_metric_demand_init_size,
               [
                 {:buffers, buffers, buffers_size_inbound_metric, buffers_size_outbound_metric}
                 | acc
-              ]
+              ],
+              ctx
             )
 
           non_empty_excess_buffers ->
@@ -308,51 +281,17 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
         {{:empty, acc |> Enum.reverse()}, nq, queue_size}
 
       {{:value, {:non_buffer, type, e}}, nq} ->
-        q_pop(
-          nq,
-          size_to_take_in_outbound_metric,
-          inbound_metric,
-          outbound_metric,
-          queue_size,
-          first_outbound_buffer,
-          last_outbound_buffer,
-          outbound_metric_demand_init_size,
-          [
-            {type, e} | acc
-          ]
-        )
+        q_pop(nq, demand, queue_size, [{type, e} | acc], ctx)
     end
   end
 
-  defp q_pop(
-         q,
-         size_to_take_in_outbound_metric,
-         inbound_metric,
-         outbound_metric,
-         queue_size,
-         first_outbound_buffer,
-         last_outbound_buffer,
-         outbound_metric_demand_init_size,
-         acc
-       )
-       when size_to_take_in_outbound_metric == outbound_metric_demand_init_size do
+  defp q_pop(q, demand, queue_size, acc, %{zero_demand: zero_demand} = ctx)
+       when demand == zero_demand do
     q
     |> @qe.pop
     |> case do
       {{:value, {:non_buffer, type, e}}, nq} ->
-        q_pop(
-          nq,
-          0,
-          inbound_metric,
-          outbound_metric,
-          queue_size,
-          first_outbound_buffer,
-          last_outbound_buffer,
-          outbound_metric_demand_init_size,
-          [
-            {type, e} | acc
-          ]
-        )
+        q_pop(nq, zero_demand, queue_size, [{type, e} | acc], ctx)
 
       _empty_or_buffer ->
         {{:value, acc |> Enum.reverse()}, q, queue_size}

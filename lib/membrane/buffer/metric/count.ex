@@ -20,4 +20,7 @@ defmodule Membrane.Buffer.Metric.Count do
 
   @impl true
   def generate_metric_specific_warnings(_buffers), do: :ok
+
+  @impl true
+  def reduce_demand(demand, consumed), do: demand - consumed
 end
