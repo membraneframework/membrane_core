@@ -130,6 +130,9 @@ defmodule Membrane.Pad do
 
   @typedoc """
   Describes how a pad should be declared inside an element.
+
+  For details on `demand_unit` and how the different units affect demand
+  behaviour, see the [Manual demands](manual_demands.md) guide.
   """
   @type element_spec ::
           {name(),

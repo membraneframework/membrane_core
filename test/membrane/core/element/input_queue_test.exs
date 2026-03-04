@@ -359,15 +359,10 @@ defmodule Membrane.Core.Element.InputQueueTest do
     queue = InputQueue.store(queue, buffers)
     assert queue.size == 5
 
-    # Demand 300ms: consume buffers until dts - first_dts >= 300ms
-    # dts values: 0, 100, 250, 350ms → 350 - 0 = 350ms >= 300ms, stops there
     {out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
     assert bufs_size(out, :buffers) == 4
     assert queue.size == 1
 
-    # The demand value does not decrement for timestamp metrics. Taking again with
-    # the same demand (300ms) triggers a warning since 350ms already elapsed, and
-    # returns no buffers — the element must demand a larger timestamp to proceed.
     {out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
     assert bufs_size(out, :buffers) == 0
     assert queue.size == 1
