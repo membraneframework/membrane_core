@@ -43,4 +43,8 @@ defmodule Membrane.Buffer.Metric.ByteSizeTest do
       assert rest == [%Membrane.Buffer{payload: expected_rest}]
     end
   end
+
+  test ".reduce_demand/2 should subtract the consumed byte count from the remaining demand" do
+    assert ByteSize.reduce_demand(1000, 400) == 600
+  end
 end

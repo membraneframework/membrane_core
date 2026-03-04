@@ -23,4 +23,8 @@ defmodule Membrane.Buffer.Metric.CountTest do
       assert rest == [@buf2]
     end
   end
+
+  test ".reduce_demand/2 should subtract the consumed count from the remaining demand" do
+    assert Count.reduce_demand(10, 3) == 7
+  end
 end

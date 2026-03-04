@@ -12,6 +12,8 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
   @t3 350 |> Membrane.Time.milliseconds()
   @t4 500 |> Membrane.Time.milliseconds()
 
+  @demand 300 |> Membrane.Time.milliseconds()
+
   defp buf(ts_field, ts), do: struct(%Buffer{payload: <<>>}, [{ts_field, ts}])
 
   test ".init_manual_demand_size_value/0 returns -1 as the no-demand sentinel" do
@@ -43,8 +45,8 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
 
       test "uses first buffer's #{name} as offset when no buffers have been consumed yet" do
         buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &buf(unquote(ts_field), &1))
-        # offset = @t0 = 0; demand = 300 ns → consume until ts - 0 >= 300 → stops at @t3 = 350
-        {consumed, remaining} = unquote(module).split_buffers(buffers, 300, nil, nil)
+
+        {consumed, remaining} = unquote(module).split_buffers(buffers, @demand, nil, nil)
         assert Enum.map(consumed, &Map.get(&1, unquote(ts_field))) == [@t0, @t1, @t2, @t3]
         assert Enum.map(remaining, &Map.get(&1, unquote(ts_field))) == [@t4]
       end
@@ -56,7 +58,7 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
         last_consumed = buf(unquote(ts_field), @t1)
 
         {consumed, remaining} =
-          unquote(module).split_buffers(buffers, 300, first_consumed, last_consumed)
+          unquote(module).split_buffers(buffers, @demand, first_consumed, last_consumed)
 
         assert Enum.map(consumed, &Map.get(&1, unquote(ts_field))) == [@t0, @t1, @t2, @t3]
         assert Enum.map(remaining, &Map.get(&1, unquote(ts_field))) == [@t4]
@@ -64,24 +66,24 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
 
       test "returns all buffers for #{name} when demand exceeds the available timestamp range" do
         buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &buf(unquote(ts_field), &1))
-        {consumed, remaining} = unquote(module).split_buffers(buffers, 10_000, nil, nil)
+        {consumed, remaining} = unquote(module).split_buffers(buffers, @t4 * 10, nil, nil)
         assert consumed == buffers
         assert remaining == []
       end
 
       test "emits a warning and returns {[], buffers} for #{name} when elapsed duration already meets demand" do
         buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &buf(unquote(ts_field), &1))
-        # last_consumed - first_consumed = @t4 - @t0 = 500 >= demand = 300
         first_consumed = buf(unquote(ts_field), @t0)
         last_consumed = buf(unquote(ts_field), @t4)
 
         log =
           capture_log(fn ->
-            assert unquote(module).split_buffers(buffers, 300, first_consumed, last_consumed) ==
+            assert unquote(module).split_buffers(buffers, @demand, first_consumed, last_consumed) ==
                      {[], buffers}
           end)
 
         assert log =~ "warning"
+        assert log =~ unquote(name)
       end
     end
 
@@ -90,9 +92,9 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
       buf_with_dts = %Buffer{payload: <<>>, dts: @t0, pts: @t4}
       buf_pts_only = %Buffer{payload: <<>>, pts: @t3}
 
-      # offset = dts=@t0=0; buf_with_dts: 0-0=0 < 300 → include
-      # buf_pts_only uses pts=@t3=350: 350-0=350 >= 300 → include, stop
-      {consumed, remaining} = DTSOrPTS.split_buffers([buf_with_dts, buf_pts_only], 300, nil, nil)
+      {consumed, remaining} =
+        DTSOrPTS.split_buffers([buf_with_dts, buf_pts_only], @demand, nil, nil)
+
       assert consumed == [buf_with_dts, buf_pts_only]
       assert remaining == []
     end
@@ -126,6 +128,7 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
           end)
 
         assert log =~ "warning"
+        assert log =~ unquote(name)
       end
     end
 
@@ -138,6 +141,7 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
         end)
 
       assert log =~ "warning"
+      assert log =~ "DTS or PTS"
     end
   end
 end

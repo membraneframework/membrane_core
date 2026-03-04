@@ -337,6 +337,42 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert queue.demand >= 2
   end
 
+  test "if the queue works properly for :buffers input metric and :timestamp output metric" do
+    atomic_demand = new_atomic_demand()
+
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: {:timestamp, :dts},
+        atomic_demand: atomic_demand,
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: 10
+      })
+
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
+
+    buffers =
+      [0, 100, 250, 350, 500]
+      |> Enum.map(&%Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(&1)})
+
+    queue = InputQueue.store(queue, buffers)
+    assert queue.size == 5
+
+    # Demand 300ms: consume buffers until dts - first_dts >= 300ms
+    # dts values: 0, 100, 250, 350ms → 350 - 0 = 350ms >= 300ms, stops there
+    {out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+    assert bufs_size(out, :buffers) == 4
+    assert queue.size == 1
+
+    # The demand value does not decrement for timestamp metrics. Taking again with
+    # the same demand (300ms) triggers a warning since 350ms already elapsed, and
+    # returns no buffers — the element must demand a larger timestamp to proceed.
+    {out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+    assert bufs_size(out, :buffers) == 0
+    assert queue.size == 1
+  end
+
   test "if the queue works properly for :buffers input metric and :bytes output metric" do
     atomic_demand = new_atomic_demand()
 
