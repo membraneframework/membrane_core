@@ -373,7 +373,15 @@ defmodule Membrane.Core.Element.InputQueueTest do
   end
 
   defp prepare_input_queue(fields) do
-    struct(InputQueue, [stalker_metrics: %{size: :atomics.new(1, [])}] ++ fields)
+    outbound_metric = Keyword.get(fields, :outbound_metric)
+
+    defaults = [
+      stalker_metrics: %{size: :atomics.new(1, [])},
+      outbound_metric_demand_init_size:
+        if(outbound_metric, do: outbound_metric.init_manual_demand_size_value(), else: 0)
+    ]
+
+    struct(InputQueue, defaults ++ fields)
   end
 
   defp new_atomic_demand(),
@@ -390,10 +398,13 @@ defmodule Membrane.Core.Element.InputQueueTest do
   defp bufs_size(output, unit) do
     {_state, bufs} = output
 
-    Enum.flat_map(bufs, fn {:buffers, bufs_list, _inbound_metric_size, _outbound_metric_size} ->
-      bufs_list
-    end)
-    |> Membrane.Buffer.Metric.from_unit(unit).buffers_size()
+    {:ok, size} =
+      Enum.flat_map(bufs, fn {:buffers, bufs_list, _inbound_metric_size, _outbound_metric_size} ->
+        bufs_list
+      end)
+      |> Membrane.Buffer.Metric.from_unit(unit).buffers_size()
+
+    size
   end
 
   defp bufs(n), do: Enum.to_list(1..n)
