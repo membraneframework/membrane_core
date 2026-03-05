@@ -4,6 +4,8 @@ defmodule Membrane.TemplateFilter do
   """
   use Membrane.Filter
 
+  require Membrane.Logger
+
   def_input_pad :input,
     accepted_format: _any,
     flow_control: :auto # | :manual | :push,

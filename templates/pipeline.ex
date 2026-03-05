@@ -4,6 +4,8 @@ defmodule Membrane.TemplatePipeline do
   """
   use Membrane.Pipeline
 
+  require Membrane.Logger
+
   defmodule State do
     # Using this struct is not strictly necessary, but it's considered a good practice
     # and is strongly encouraged. Having a state with static fields with defined

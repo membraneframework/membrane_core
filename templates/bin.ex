@@ -4,6 +4,8 @@ defmodule Membrane.TemplateBin do
   """
   use Membrane.Bin
 
+  require Membrane.Logger
+
   # def_input_pad :input,
   #   accepted_format: _any
   #   availability: :on_request | :always, # default - :always
