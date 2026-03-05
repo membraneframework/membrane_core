@@ -16,7 +16,9 @@ defmodule Mix.Tasks.Membrane.DemoTest do
         Demo.run(["-d", tmp, demo])
 
         receive do
-          msg -> assert {:mix_shell, :info, _message} = msg
+          msg ->
+            assert {:mix_shell, :info, _message} = msg
+            assert File.exists?(Path.join(tmp, demo))
         end
       end)
     end
@@ -26,9 +28,11 @@ defmodule Mix.Tasks.Membrane.DemoTest do
       demos_list = get_available_demos_list()
       Demo.run(["-d", tmp] ++ demos_list)
 
-      Enum.each(demos_list, fn _demo ->
+      Enum.each(demos_list, fn demo ->
         receive do
-          msg -> assert {:mix_shell, :info, _message} = msg
+          msg ->
+            assert {:mix_shell, :info, _message} = msg
+            assert File.exists?(Path.join(tmp, demo))
         end
       end)
     end
