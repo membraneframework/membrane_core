@@ -40,7 +40,7 @@ Pipeline
 | **Bin** | yes | yes | yes |
 | **Element** | no | yes | yes |
 
-Element subtypes: **Source** (output only) · **Filter** (in + out) · **Sink** (input only) · **Endpoint** (in + out, stateful e.g. WebRTC)
+Element subtypes: **Source** (output only) · **Filter** (in + out, output is transformed input) · **Sink** (input only) · **Endpoint** (in + out, but output might be not related to input)
 
 ---
 
