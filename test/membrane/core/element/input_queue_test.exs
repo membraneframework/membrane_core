@@ -40,6 +40,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
                atomic_demand: context.atomic_demand,
                inbound_metric: context.expected_metric,
                outbound_metric: context.expected_metric,
+               outbound_metric_demand_init_size:
+                 context.expected_metric.init_manual_demand_size_value(),
                pad_ref: context.pad_ref,
                size: 0,
                demand: context.target_queue_size,
@@ -335,6 +337,37 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert queue.demand >= 2
   end
 
+  test "if the queue works properly for :buffers input metric and :timestamp output metric" do
+    atomic_demand = new_atomic_demand()
+
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: {:timestamp, :dts},
+        atomic_demand: atomic_demand,
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: 10
+      })
+
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
+
+    buffers =
+      [0, 100, 250, 350, 500]
+      |> Enum.map(&%Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(&1)})
+
+    queue = InputQueue.store(queue, buffers)
+    assert queue.size == 5
+
+    {out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+    assert bufs_size(out, :buffers) == 4
+    assert queue.size == 1
+
+    {out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+    assert bufs_size(out, :buffers) == 0
+    assert queue.size == 1
+  end
+
   test "if the queue works properly for :buffers input metric and :bytes output metric" do
     atomic_demand = new_atomic_demand()
 
@@ -371,7 +404,15 @@ defmodule Membrane.Core.Element.InputQueueTest do
   end
 
   defp prepare_input_queue(fields) do
-    struct(InputQueue, [stalker_metrics: %{size: :atomics.new(1, [])}] ++ fields)
+    outbound_metric = Keyword.get(fields, :outbound_metric)
+
+    defaults = [
+      stalker_metrics: %{size: :atomics.new(1, [])},
+      outbound_metric_demand_init_size:
+        if(outbound_metric, do: outbound_metric.init_manual_demand_size_value(), else: 0)
+    ]
+
+    struct(InputQueue, defaults ++ fields)
   end
 
   defp new_atomic_demand(),
@@ -388,10 +429,13 @@ defmodule Membrane.Core.Element.InputQueueTest do
   defp bufs_size(output, unit) do
     {_state, bufs} = output
 
-    Enum.flat_map(bufs, fn {:buffers, bufs_list, _inbound_metric_size, _outbound_metric_size} ->
-      bufs_list
-    end)
-    |> Membrane.Buffer.Metric.from_unit(unit).buffers_size()
+    {:ok, size} =
+      Enum.flat_map(bufs, fn {:buffers, bufs_list, _inbound_metric_size, _outbound_metric_size} ->
+        bufs_list
+      end)
+      |> Membrane.Buffer.Metric.from_unit(unit).buffers_size()
+
+    size
   end
 
   defp bufs(n), do: Enum.to_list(1..n)

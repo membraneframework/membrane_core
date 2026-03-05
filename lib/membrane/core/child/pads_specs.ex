@@ -295,7 +295,16 @@ defmodule Membrane.Core.Child.PadsSpecs do
                       nil
 
                     direction == :input ->
-                      [in: [:buffers, :bytes]]
+                      [
+                        in: [
+                          :buffers,
+                          :bytes,
+                          :timestamp,
+                          {:timestamp, :pts},
+                          {:timestamp, :dts},
+                          {:timestamp, :dts_or_pts}
+                        ]
+                      ]
 
                     direction == :output ->
                       [in: [:buffers, :bytes, nil], default: nil]

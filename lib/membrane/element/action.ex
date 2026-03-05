@@ -81,14 +81,31 @@ defmodule Membrane.Element.Action do
   `c:Membrane.WithInputPads.handle_buffer/4` callback. Invoked callback is
   guaranteed not to receive more data than demanded.
 
-  Demand size can be either a non-negative integer, that overrides existing demand,
-  or a function that is passed current demand, and is to return the new demand. In case only pad
+  ## `:buffers` and `:bytes` demand units
+
+  When the pad's `demand_unit` is `:buffers` or `:bytes`, the demand size is a
+  non-negative integer that overrides the existing demand, or a function that
+  receives the current demand and returns the new demand. If only the pad ref
   is specified, the demand size defaults to 1.
+
+  ## Timestamp demand units
+
+  When the pad's `demand_unit` is `:timestamp`, `{:timestamp, :pts}`,
+  `{:timestamp, :dts}`, or `{:timestamp, :dts_or_pts}`, the demand size is a
+  `t:Membrane.Time.t/0` duration (in nanoseconds). The queue will deliver
+  buffers until the elapsed timestamp span (last consumed timestamp minus
+  first consumed timestamp) reaches the demanded duration.
+
+  Unlike `:buffers`/`:bytes` demands, **timestamp demand does not decrement** as buffers
+  are consumed. To make progress after the demanded window has elapsed, the
+  element must re-issue a larger demand (e.g. advancing the window by the
+  desired step). Issuing the same demand again after the window has been
+  satisfied will result in a warning and no buffers being delivered.
 
   Allowed only when playback is playing.
   """
   @type demand :: {:demand, {Pad.ref(), demand_size} | Pad.ref()}
-  @type demand_size :: pos_integer | (pos_integer() -> non_neg_integer())
+  @type demand_size :: pos_integer | Membrane.Time.t() | (pos_integer() -> non_neg_integer())
 
   @typedoc """
   Pauses auto-demanding on the specific pad.

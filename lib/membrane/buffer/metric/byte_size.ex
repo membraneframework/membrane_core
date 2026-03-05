@@ -8,14 +8,21 @@ defmodule Membrane.Buffer.Metric.ByteSize do
   alias Membrane.{Buffer, Payload}
 
   @impl true
-  def buffer_size_approximation, do: 1500
+  def buffer_size_approximation(), do: 1500
 
   @impl true
-  def buffers_size(buffers),
-    do: buffers |> Enum.reduce(0, fn %Buffer{payload: p}, acc -> acc + Payload.size(p) end)
+  def init_manual_demand_size_value(), do: 0
 
   @impl true
-  def split_buffers(buffers, count), do: do_split_buffers(buffers, count, [])
+  def buffers_size(buffers) do
+    buffers
+    |> Enum.reduce(0, fn %Buffer{payload: p}, acc -> acc + Payload.size(p) end)
+    |> then(&{:ok, &1})
+  end
+
+  @impl true
+  def split_buffers(buffers, count, _first_consumed_buffer, _last_consumed_buffer),
+    do: do_split_buffers(buffers, count, [])
 
   defp do_split_buffers(buffers, at_pos, acc) when at_pos == 0 or buffers == [] do
     {acc |> Enum.reverse(), buffers}
@@ -31,4 +38,10 @@ defmodule Membrane.Buffer.Metric.ByteSize do
       do_split_buffers(rest, at_pos - Payload.size(p), [buf | acc])
     end
   end
+
+  @impl true
+  def generate_metric_specific_warnings(_buffers), do: :ok
+
+  @impl true
+  def reduce_demand(demand, consumed), do: demand - consumed
 end
