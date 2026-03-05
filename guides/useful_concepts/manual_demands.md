@@ -1,6 +1,6 @@
 # Manual demands
 
-Elements with `:manual` flow control pads have two responsibilities:
+Elements with pads using manual flow control have two responsibilities:
 
 - **Output pads**: produce exactly the amount of data requested in the
   [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)
@@ -12,9 +12,9 @@ Elements with `:manual` flow control pads have two responsibilities:
 ## Output pads and `handle_demand`
 
 When downstream requests data, Membrane invokes `handle_demand/5` on the
-element whose output pad is connected to that downstream. The callback receives
-the pad name, the demanded amount, and the demand unit. The element is expected
-to produce and send that amount of data.
+element whose output pad with manual flow control is connected to that
+downstream. The callback receives the pad name, the demanded amount, and the
+demand unit. The element is expected to produce and send that amount of data.
 
 The unit in which `demand_size` is expressed is resolved as follows:
 
@@ -79,9 +79,9 @@ downstream.
 
 ## Input pads and the demand action
 
-To receive data on a `:manual` input pad, the element must issue a
-[`:demand`](`t:Membrane.Element.Action.demand/0`) action. The demand unit
-is declared in the input pad spec.
+To receive data on an input pad with manual flow control, the element must
+issue a [`:demand`](`t:Membrane.Element.Action.demand/0`) action. The demand
+unit is declared in the input pad spec.
 
 ### `:buffers` and `:bytes`
 
@@ -141,6 +141,10 @@ timestamps as the original buffer.
 
 #### Declarative nature of demands
 
+This section applies to `:buffers` and `:bytes` demand units. Timestamp demand
+units behave differently — see the [timestamp section](#timestamp-demand-units)
+below.
+
 The `:demand` action **overwrites** the current demand — it does not add to it.
 Issuing `demand: {:input, 5}` sets the demand to 5 regardless of how much
 demand was already pending.
@@ -179,37 +183,57 @@ Timestamp demand units let an element request buffers by specifying a
 all buffers up to and including the first one whose timestamp meets or exceeds
 the demanded value.
 
-Timestamp demand units are only applicable to **input pads**. Output pads do
-not support them. If an input pad uses a timestamp demand unit and the linked
-upstream element's output pad does not specify a `demand_unit`, that element
-will receive `handle_demand/5` with demand expressed in `:buffers`.
+Timestamp demand units are only applicable to **input pads with manual flow
+control**. Output pads do not support them. If an input pad uses a timestamp
+demand unit and the linked upstream output pad does not specify a `demand_unit`,
+that element will receive `handle_demand/5` with demand expressed in `:buffers`.
 
 #### Available variants
 
-- `{:timestamp, :pts}` — demand is expressed in terms of each buffer's PTS.
-- `{:timestamp, :dts}` — demand is expressed in terms of each buffer's DTS.
-- `:timestamp` or `{:timestamp, :dts_or_pts}` — uses DTS if present on a
-  buffer, falls back to PTS.
+- `{:timestamp, :pts}` — uses each buffer's `:pts` field.
+- `{:timestamp, :dts}` — uses each buffer's `:dts` field.
+- `:timestamp` or `{:timestamp, :dts_or_pts}` — uses `buffer.dts || buffer.pts`.
+
+#### Timestamp requirements
+
+All buffers passing through an input pad with a timestamp demand unit must have
+their relevant timestamp field set to a non-`nil` value — Membrane will raise
+an error if a buffer is missing its timestamp. Additionally, timestamps must be
+**monotonically non-decreasing**; non-monotonic timestamps will cause a warning.
+
+For `{:timestamp, :pts}`, note that PTS can be non-monotonic in streams with
+B-frames (see the [timestamps guide](timestamps.md)). Prefer
+`{:timestamp, :dts}` when DTS is available.
 
 #### How timestamp demands work
 
-The demand value is a `t:Membrane.Time.t/0` duration (in nanoseconds),
-interpreted relative to an **offset** — the timestamp of the very first buffer
-ever received on the pad. You never need to know the actual starting timestamp;
-all demand values are expressed as durations from that origin.
+The demand value is a `t:Membrane.Time.t/0` value. Use `Membrane.Time`
+functions to construct it, for example `Membrane.Time.seconds(1)`.
+
+Timestamps are interpreted relative to an **offset** — the timestamp of the
+very first buffer ever received on the pad. This means you never need to know
+the absolute starting timestamp of the stream; you only work with durations
+from that origin.
+
+For example, if the first buffer arrives with `pts: Membrane.Time.seconds(100)`
+and you issue `demand: {:input, Membrane.Time.seconds(1)}`, Membrane will
+deliver buffers until it reaches the first one with
+`pts >= Membrane.Time.seconds(100) + Membrane.Time.seconds(1)`, i.e.
+`pts >= Membrane.Time.seconds(101)`.
 
 When you issue `demand: {:input, t}`, Membrane delivers all buffered buffers
 whose timestamp (minus the offset) is strictly less than `t`, plus the first
 buffer whose timestamp (minus the offset) equals or exceeds `t`. This means
-that **if you demand a value greater than the last received buffer's timestamp,
-you are guaranteed to receive at least one new buffer**.
+that **if you demand a value strictly greater than the last received buffer's
+timestamp (minus the offset), you are guaranteed to receive at least one new
+buffer**.
 
 #### Incrementing demands
 
 To receive a continuous stream in time-based chunks, always demand a value
-larger than the timestamp of the last received buffer. Issuing a demand at or
-below the last received timestamp will result in a warning and no buffers being
-delivered.
+larger than the timestamp (minus the offset) of the last received buffer.
+Issuing a demand at or below that value will result in a warning and no buffers
+being delivered.
 
 #### Example: a sink consuming one second of data per second
 
@@ -250,25 +274,18 @@ Each timer tick advances the demanded threshold by one second: `1s`, `2s`,
 on `:input`, so each demand naturally covers the next one-second slice of the
 stream.
 
-> #### Buffers must carry timestamps {: .warning}
->
-> Every buffer must have its relevant timestamp field (`:pts` or `:dts`) set to
-> a non-`nil` value. Missing timestamps will cause incorrect behavior.
+## Filters with manual flow control
 
-> #### Prefer DTS for encoded video {: .warning}
->
-> PTS can be non-monotonic in streams with B-frames. Prefer
-> `{:timestamp, :dts}` when DTS is available and monotonic, to avoid warnings.
-
-## Filters: manual input and output
-
-A filter with both a manual input and a manual output is the most common case
-for manual flow control. The canonical pattern is:
+The canonical pattern for a filter with both pads using manual flow control is:
 
 - **`handle_demand`** — propagate the demand upstream by returning a `:demand`
   action on the input pad.
 - **`handle_buffer`** — process the incoming buffer and forward it (possibly
   modified) downstream via a `:buffer` action.
+
+The following example doubles each buffer's payload, so one input buffer
+produces one output buffer. To satisfy a demand of `n` output buffers, the
+filter demands `n` input buffers.
 
 ```elixir
 defmodule MyFilter do
@@ -285,21 +302,35 @@ defmodule MyFilter do
 
   @impl true
   def handle_demand(:output, demand_size, :buffers, _ctx, state) do
-    {[demand: {:input, demand_size}], state}
+    # Each output buffer requires 2 input buffers to produce
+    {[demand: {:input, demand_size * 2}], state}
   end
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, state) do
-    processed = %{buffer | payload: process(buffer.payload)}
-    {[buffer: {:output, processed}], state}
+    # Combine every two input buffers into one output buffer
+    buffers = [buffer | state.pending]
+
+    case buffers do
+      [second, first] ->
+        output = %Membrane.Buffer{payload: first.payload <> second.payload}
+        {[buffer: {:output, output}], %{state | pending: []}}
+
+      [_one] ->
+        {[], %{state | pending: buffers}}
+    end
   end
 
-  defp process(payload), do: payload
+  @impl true
+  def handle_init(_ctx, _opts) do
+    {[], %{pending: []}}
+  end
 end
 ```
 
-> #### Do not use redemand in a filter's `handle_demand` {: .warning}
+> #### Do not use redemand in `handle_demand` of a pad with manual flow control that has a corresponding input pad {: .warning}
 >
-> Returning `:redemand` from `handle_demand` in a filter is illegal.
-> `handle_demand` should propagate the demand to the input pad and return.
-> Processing happens in `handle_buffer` when the data actually arrives.
+> Returning `:redemand` from `handle_demand` is illegal when the element also
+> has an input pad it relies on for data. `handle_demand` should propagate the
+> demand upstream and return. Processing happens in `handle_buffer` when the
+> data actually arrives.
