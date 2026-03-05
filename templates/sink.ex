@@ -4,6 +4,8 @@ defmodule Membrane.TemplateSink do
   """
   use Membrane.Sink
 
+  require Membrane.Logger
+
   def_input_pad :input,
     accepted_format: _any,
     flow_control: :auto # | :manual | :push,

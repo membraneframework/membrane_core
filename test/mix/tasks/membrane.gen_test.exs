@@ -8,7 +8,8 @@ defmodule Mix.Tasks.Membrane.GenTest do
       Module.concat(Gen, unquote(component_type)).do_run(tmp, [inspect(unquote(component_type))])
 
       {{:module, module, _contents, __result}, []} =
-        Code.eval_file(Path.join(tmp, Macro.underscore(unquote(component_type)) <> ".ex"))
+        Path.join(tmp, Macro.underscore(unquote(component_type)) <> ".ex")
+        |> Code.eval_file()
 
       attributes = module.__info__(:attributes)
       functions = module.__info__(:functions)

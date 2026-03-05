@@ -11,7 +11,7 @@
 
     ## Options
     * `-l, --location` - If a target location is provided, the #{component_name} will be created there, relative to the `lib` directory.
-      The filename must also be present and most likely have an `.ex` extension. If location is not provided, then it will be
+      The filename must also be present and have an `.ex` extension. If location is not provided, then it will be
       inferred from the provided module name - it will be converted to lowercase and `.` separators will be interpreted
       as directory separators. For example, a #{component_name} with module name `Foo.Bar` will be created at `lib/foo/bar.ex`. 
     """
@@ -27,7 +27,7 @@
 
     @spec do_run(binary(), [binary()]) :: any()
     def do_run(base_dir, argv) do
-      {path_option, argv} = OptionParser.parse!(argv, aliases: @aliases, strict: @switches)
+      {option, argv} = OptionParser.parse!(argv, aliases: @aliases, strict: @switches)
 
       module_name =
         case argv do
@@ -35,7 +35,7 @@
             Mix.raise("""
             Module name not provided.
 
-            This task expects a module name, which the created #{unquote(component_type)} will have:
+            This task expects a module name for the newly created #{unquote(component_type)}:
 
               $ mix membrane.gen.#{String.downcase(unquote(component_name))} My#{unquote(component_name)}
               
@@ -53,7 +53,7 @@
       end
 
       component_path =
-        case path_option do
+        case option do
           [] -> Macro.underscore(module_name) <> ".ex"
           [{:location, path} | _rest] -> path
         end

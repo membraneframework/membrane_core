@@ -4,6 +4,8 @@ defmodule Membrane.TemplateSource do
   """
   use Membrane.Source
 
+  require Membrane.Logger
+
   def_output_pad :output,
     accepted_format: _any,
     flow_control: :push # | :manual | :auto,
