@@ -337,6 +337,101 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert queue.demand >= 2
   end
 
+  test "raises when storing a buffer with nil PTS on a {:timestamp, :pts} pad" do
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: {:timestamp, :pts},
+        atomic_demand: new_atomic_demand(),
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: 10
+      })
+
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
+
+    assert_raise RuntimeError, ~r/PTS/, fn ->
+      InputQueue.store(queue, [%Buffer{payload: <<>>, pts: nil}])
+    end
+  end
+
+  test "raises when storing a buffer with nil DTS on a {:timestamp, :dts} pad" do
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: {:timestamp, :dts},
+        atomic_demand: new_atomic_demand(),
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: 10
+      })
+
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
+
+    assert_raise RuntimeError, ~r/DTS/, fn ->
+      InputQueue.store(queue, [%Buffer{payload: <<>>, dts: nil}])
+    end
+  end
+
+  test "raises when storing a buffer with both nil DTS and PTS on a {:timestamp, :dts_or_pts} pad" do
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: {:timestamp, :dts_or_pts},
+        atomic_demand: new_atomic_demand(),
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: 10
+      })
+
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
+
+    assert_raise RuntimeError, ~r/DTS or PTS/, fn ->
+      InputQueue.store(queue, [%Buffer{payload: <<>>, pts: nil, dts: nil}])
+    end
+  end
+
+  test "first_outbound_buffer and last_outbound_buffer are tracked correctly across multiple takes" do
+    atomic_demand = new_atomic_demand()
+
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: {:timestamp, :dts},
+        atomic_demand: atomic_demand,
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: 10
+      })
+
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
+
+    b0 = %Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(0)}
+    b1 = %Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(100)}
+    b2 = %Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(250)}
+    b3 = %Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(350)}
+    b4 = %Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(500)}
+
+    queue = InputQueue.store(queue, [b0, b1, b2, b3, b4])
+
+    assert queue.first_outbound_buffer == nil
+    assert queue.last_outbound_buffer == nil
+
+    # First take: demand 300ms — consumes b0..b3
+    {_out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+
+    assert queue.first_outbound_buffer == b0
+    assert queue.last_outbound_buffer == b3
+
+    # Second take: demand still ≤ elapsed from b0, so no buffers consumed
+    {_out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+
+    # first_outbound_buffer must remain b0 (the very first ever consumed)
+    assert queue.first_outbound_buffer == b0
+    # last_outbound_buffer unchanged when no new buffers are delivered
+    assert queue.last_outbound_buffer == b3
+  end
+
   test "if the queue works properly for :buffers input metric and :timestamp output metric" do
     atomic_demand = new_atomic_demand()
 

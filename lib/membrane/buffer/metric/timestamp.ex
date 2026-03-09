@@ -2,28 +2,53 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
   module_name = Module.concat(Membrane.Buffer.Metric.Timestamp, module_suffix)
 
   defmodule module_name do
-    @moduledoc """
-    todo
-    """
+    @moduledoc (case timestamp_type do
+                  :pts ->
+                    """
+                    Implements `Membrane.Buffer.Metric` for PTS-based (Presentation Timestamp) demand.
+
+                    Used when an input pad's `demand_unit` is set to `{:timestamp, :pts}`.
+                    All buffers must have `:pts` set to a non-`nil` value.
+                    """
+
+                  :dts ->
+                    """
+                    Implements `Membrane.Buffer.Metric` for DTS-based (Decode Timestamp) demand.
+
+                    Used when an input pad's `demand_unit` is set to `{:timestamp, :dts}`.
+                    All buffers must have `:dts` set to a non-`nil` value.
+                    """
+
+                  :dts_or_pts ->
+                    """
+                    Implements `Membrane.Buffer.Metric` for timestamp-based demand using `buffer.dts || buffer.pts`.
+
+                    Used when an input pad's `demand_unit` is set to `:timestamp` or `{:timestamp, :dts_or_pts}`.
+                    All buffers must have at least one of `:dts` or `:pts` set to a non-`nil` value.
+                    """
+                end)
 
     @behaviour Membrane.Buffer.Metric
+    @behaviour Membrane.Buffer.Metric.TimestampMetric
 
     alias Membrane.Buffer
+    alias Membrane.Buffer.Metric
+    alias Membrane.Buffer.Metric.TimestampMetric
 
     require Membrane.Logger
 
     @initial_manual_demand_size_value -1
 
-    @impl true
+    @impl Metric
     def buffer_size_approximation, do: 1
 
-    @impl true
+    @impl Metric
     def buffers_size(_buffers), do: {:error, :operation_not_supported}
 
-    @impl true
+    @impl Metric
     def init_manual_demand_size_value(), do: @initial_manual_demand_size_value
 
-    @impl true
+    @impl Metric
     def split_buffers(
           buffers,
           @initial_manual_demand_size_value,
@@ -33,7 +58,7 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
       {[], buffers}
     end
 
-    @impl true
+    @impl Metric
     def split_buffers(buffers, demand_timestamp, first_consumed_buffer, last_consumed_buffer) do
       with {:ok, first_consumed_timestamp} <- get_timestamp(first_consumed_buffer),
            {:ok, last_consumed_timestamp}
@@ -50,6 +75,9 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
 
         {[], buffers}
       else
+        _other when is_nil(first_consumed_buffer) and buffers == [] ->
+          {[], []}
+
         _other when is_nil(first_consumed_buffer) ->
           {:ok, offset} = List.first(buffers) |> get_timestamp()
           split_buffers_recursion(buffers, [], demand_timestamp, offset)
@@ -60,7 +88,7 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
       end
     end
 
-    @impl true
+    @impl Metric
     def generate_metric_specific_warnings([]), do: :ok
 
     def generate_metric_specific_warnings(buffers) do
@@ -90,7 +118,7 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
       :ok
     end
 
-    @impl true
+    @impl Metric
     def reduce_demand(demand, _consumed), do: demand
 
     defp split_buffers_recursion([buffer | rest], buffers_to_consume, demand_timestamp, offset) do
@@ -108,15 +136,40 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
     defp get_timestamp(nil), do: :error
 
     case timestamp_type do
-      :pts -> defp get_timestamp(%Buffer{pts: pts}), do: {:ok, pts}
-      :dts -> defp get_timestamp(%Buffer{dts: dts}), do: {:ok, dts}
-      :dts_or_pts -> defp get_timestamp(buffer), do: {:ok, Buffer.get_dts_or_pts(buffer)}
-    end
+      :pts ->
+        defp get_timestamp(%Buffer{pts: pts}), do: {:ok, pts}
 
-    case timestamp_type do
-      :pts -> defp inspected_timestamp_type(), do: "PTS"
-      :dts -> defp inspected_timestamp_type(), do: "DTS"
-      :dts_or_pts -> defp inspected_timestamp_type(), do: "<DTS or PTS>"
+        @impl TimestampMetric
+        def nil_timestamp?(%Buffer{pts: nil}), do: true
+        def nil_timestamp?(%Buffer{}), do: false
+
+        @impl TimestampMetric
+        def timestamp_name(), do: "PTS"
+
+        defp inspected_timestamp_type(), do: "PTS"
+
+      :dts ->
+        defp get_timestamp(%Buffer{dts: dts}), do: {:ok, dts}
+
+        @impl TimestampMetric
+        def nil_timestamp?(%Buffer{dts: nil}), do: true
+        def nil_timestamp?(%Buffer{}), do: false
+
+        @impl TimestampMetric
+        def timestamp_name(), do: "DTS"
+
+        defp inspected_timestamp_type(), do: "DTS"
+
+      :dts_or_pts ->
+        defp get_timestamp(buffer), do: {:ok, Buffer.get_dts_or_pts(buffer)}
+
+        @impl TimestampMetric
+        def nil_timestamp?(buffer), do: is_nil(Buffer.get_dts_or_pts(buffer))
+
+        @impl TimestampMetric
+        def timestamp_name(), do: "DTS or PTS"
+
+        defp inspected_timestamp_type(), do: "<DTS or PTS>"
     end
   end
 end

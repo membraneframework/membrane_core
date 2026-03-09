@@ -9,6 +9,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
   use Bunch
 
   alias Membrane.Buffer
+  alias Membrane.Buffer.Metric.{ByteSize, Count}
   alias Membrane.Core.Element.AtomicDemand
   alias Membrane.Core.Telemetry
   alias Membrane.Event
@@ -23,7 +24,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
   @non_buf_types [:event, :stream_format]
 
   @type output_value ::
-          {:event | :stream_format, any} | {:buffers, list, pos_integer, pos_integer}
+          {:event | :stream_format, any}
+          | {:buffers, list, non_neg_integer() | nil, non_neg_integer() | nil}
   @type output :: {:empty | :value, [output_value]}
 
   @type queue_item() :: Buffer.t() | Event.t() | StreamFormat.t() | atom()
@@ -153,14 +155,19 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
            size: size,
            demand: demand,
            inbound_metric: inbound_metric,
-           outbound_metric: outbound_metric
+           outbound_metric: outbound_metric,
+           pad_ref: pad_ref
          } = input_queue,
          v
        ) do
+    maybe_assert_timestamps_present!(v, outbound_metric, pad_ref)
+
     inbound_metric_buffer_size = size(v, inbound_metric)
     outbound_metric_buffer_size = size(v, outbound_metric)
 
-    "Storing #{inspect(inbound_metric_buffer_size)} buffers"
+    unit = if inbound_metric == Buffer.Metric.ByteSize, do: "bytes", else: "buffers"
+
+    "Storing #{inspect(inbound_metric_buffer_size)} #{unit}"
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 
@@ -357,6 +364,21 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   @spec empty?(t()) :: boolean()
   def empty?(%__MODULE__{size: size}), do: size == 0
+
+  defp maybe_assert_timestamps_present!(_buffers, metric, _pad_ref)
+       when metric in [ByteSize, Count],
+       do: :ok
+
+  defp maybe_assert_timestamps_present!(buffers, outbound_metric, pad_ref) do
+    Enum.each(buffers, fn buffer ->
+      if outbound_metric.nil_timestamp?(buffer) do
+        raise """
+        Received #{inspect(buffer)} on pad #{inspect(pad_ref)}, but the pad's demand unit \
+        requires #{outbound_metric.timestamp_name()} to be set to a non-nil value on all buffers.\
+        """
+      end
+    end)
+  end
 
   defp size(buffers, metric) do
     case metric.buffers_size(buffers) do

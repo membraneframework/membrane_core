@@ -1,6 +1,8 @@
 defmodule Membrane.Buffer.Metric.TimestampTest do
   use ExUnit.Case, async: true
 
+  # This module was vibe-coded
+
   import ExUnit.CaptureLog
 
   alias Membrane.Buffer
@@ -97,6 +99,20 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
 
       assert consumed == [buf_with_dts, buf_pts_only]
       assert remaining == []
+    end
+
+    test "returns {[], []} when buffers is empty and no buffers have been consumed yet" do
+      for module <- [PTS, DTS, DTSOrPTS] do
+        assert module.split_buffers([], @demand, nil, nil) == {[], []}
+      end
+    end
+
+    test "DTSOrPTS uses first buffer's DTS-or-PTS as offset when no buffers have been consumed yet" do
+      buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &%Buffer{payload: <<>>, dts: &1})
+
+      {consumed, remaining} = DTSOrPTS.split_buffers(buffers, @demand, nil, nil)
+      assert Enum.map(consumed, & &1.dts) == [@t0, @t1, @t2, @t3]
+      assert Enum.map(remaining, & &1.dts) == [@t4]
     end
   end
 
