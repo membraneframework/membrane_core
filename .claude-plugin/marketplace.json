@@ -1,0 +1,21 @@
+{
+  "name": "membrane-framework",
+  "description": "Membrane multimedia streaming framework skill for Elixir — provides architectural guidance, callback and action references, and code patterns for building pipelines, elements, and bins with membrane_core.",
+  "owner": {
+    "name": "Software Mansion",
+    "url": "https://github.com/membraneframework"
+  },
+  "plugins": [
+    {
+      "name": "membrane-core",
+      "description": "Work with the Membrane multimedia streaming framework in Elixir. Provides architectural guidance, callback/action references, and code patterns for pipelines, elements, and bins.",
+      "version": "1.0.0",
+      "source": "./",
+      "category": "development",
+      "homepage": "https://github.com/membraneframework/membrane_core",
+      "skills": [
+        "./skills/membrane-core"
+      ]
+    }
+  ]
+}
