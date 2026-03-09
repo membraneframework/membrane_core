@@ -337,6 +337,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert queue.demand >= 2
   end
 
+  # this test was vibe coded
   test "raises when storing a buffer with nil PTS on a {:timestamp, :pts} pad" do
     queue =
       InputQueue.new(%{
@@ -355,6 +356,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     end
   end
 
+  # this test was vibe coded
   test "raises when storing a buffer with nil DTS on a {:timestamp, :dts} pad" do
     queue =
       InputQueue.new(%{
@@ -373,6 +375,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     end
   end
 
+  # this test was vibe coded
   test "raises when storing a buffer with both nil DTS and PTS on a {:timestamp, :dts_or_pts} pad" do
     queue =
       InputQueue.new(%{
@@ -391,6 +394,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     end
   end
 
+  # this test was vibe coded
   test "first_outbound_buffer and last_outbound_buffer are tracked correctly across multiple takes" do
     atomic_demand = new_atomic_demand()
 
