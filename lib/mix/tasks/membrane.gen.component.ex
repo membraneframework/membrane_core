@@ -42,10 +42,10 @@
             """)
 
           [module_name | _rest] ->
-            Module.concat([module_name]) |> inspect()
+            module_name
         end
 
-      if String.starts_with?(module_name, ":\"Elixir.") do
+      if not valid_module_name?(module_name) do
         Mix.raise("""
         Invalid module name, please provide a valid one.
         (no other special characters than dots are allowed and the module name as well as dot-separated segments in it must start with uppercase letters).
@@ -75,6 +75,14 @@
       |> String.split("\n")
       |> List.replace_at(0, "defmodule #{module_name} do")
       |> Enum.join("\n")
+    end
+
+    @spec valid_module_name?(String.t()) :: boolean()
+    defp valid_module_name?(name) do
+      case Code.string_to_quoted(name) do
+        {:ok, {:__aliases__, _metadata, _name}} -> true
+        _other -> false
+      end
     end
   end
 end)
