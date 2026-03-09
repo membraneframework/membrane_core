@@ -53,9 +53,11 @@ defmodule MySource do
 
   @impl true
   def handle_demand(:output, demand_size, :buffers, _ctx, state) do
-    buffers = Enum.map(1..demand_size, fn _ ->
-      %Membrane.Buffer{payload: :crypto.strong_rand_bytes(256)}
-    end)
+    buffers =
+      Enum.map(1..demand_size, fn _ ->
+        %Membrane.Buffer{payload: :crypto.strong_rand_bytes(256)}
+      end)
+
     {[buffer: {:output, buffers}], state}
   end
 end
@@ -133,8 +135,7 @@ defmodule MyDemoSink do
 
   @impl true
   def handle_playing(_ctx, state) do
-    {[start_timer: {:demand_timer, Membrane.Time.seconds(1)},
-      demand: {:input, 5}], state}
+    {[start_timer: {:demand_timer, Membrane.Time.seconds(1)}, demand: {:input, 5}], state}
   end
 
   @impl true
@@ -165,8 +166,7 @@ defmodule MyBytesDemoSink do
 
   @impl true
   def handle_playing(_ctx, state) do
-    {[start_timer: {:demand_timer, Membrane.Time.seconds(1)},
-      demand: {:input, 100}], state}
+    {[start_timer: {:demand_timer, Membrane.Time.seconds(1)}, demand: {:input, 100}], state}
   end
 
   @impl true
@@ -297,9 +297,10 @@ defmodule MyTimestampSink do
 
   @impl true
   def handle_playing(_ctx, state) do
-    {[start_timer: {:demand_timer, Membrane.Time.seconds(1)},
-      demand: {:input, Membrane.Time.seconds(1)}],
-     %{state | next_demand: Membrane.Time.seconds(2)}}
+    {[
+       start_timer: {:demand_timer, Membrane.Time.seconds(1)},
+       demand: {:input, Membrane.Time.seconds(1)}
+     ], %{state | next_demand: Membrane.Time.seconds(2)}}
   end
 
   @impl true
@@ -368,6 +369,7 @@ defmodule MyFilter do
       dts: first.dts,
       metadata: first.metadata
     }
+
     {[buffer: {:output, output}], %{state | pending: nil}}
   end
 end
