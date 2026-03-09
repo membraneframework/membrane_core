@@ -332,7 +332,6 @@ defmodule Membrane.Integration.DemandsTest do
 
       @impl true
       def handle_buffer(:input, buffer, _ctx, state) do
-        # IO.inspect(buffer, label: "RECEIVED BUFFER IN #{inspect(unquote(sink_name))}")
         {[notify_parent: {:buffer, buffer}], state}
       end
 
@@ -347,10 +346,6 @@ defmodule Membrane.Integration.DemandsTest do
 
   for {demand_unit, sink_name} <- @timestamp_demand_units_with_sink_names,
       timestamp_offset <- @timestamp_offsets do
-    if demand_unit == :timestamp and timestamp_offset == 0 do
-      @tag :xd
-    end
-
     test "demands with demand unit set to #{inspect(demand_unit)} and timestamp offset #{timestamp_offset}" do
       timestamp_offset = unquote(timestamp_offset)
 
