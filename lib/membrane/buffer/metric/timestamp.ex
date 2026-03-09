@@ -6,10 +6,11 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
     todo
     """
 
-    require Membrane.Logger
+    @behaviour Membrane.Buffer.Metric
+
     alias Membrane.Buffer
 
-    @behaviour Membrane.Buffer.Metric
+    require Membrane.Logger
 
     @initial_manual_demand_size_value -1
 
@@ -65,24 +66,26 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
     def generate_metric_specific_warnings(buffers) do
       [first | rest] = buffers
 
-      Enum.reduce(rest, first, fn curr_buffer, prev_buffer ->
-        with {:ok, curr_timestamp} <- get_timestamp(curr_buffer),
-             {:ok, prev_timestamp} when curr_timestamp < prev_timestamp <-
-               get_timestamp(prev_buffer) do
-          Membrane.Logger.warning("""
-          Received buffers with non-monotonic #{inspected_timestamp_type()}s. \
-          Current buffer's #{inspected_timestamp_type()} is #{curr_timestamp}, \
-          while the previous buffer's #{inspected_timestamp_type()} is #{prev_timestamp}. \
-          This may lead to unexpected behavior in elements that have input pad with flow \
-          control set to `:manual` and demand unit set to `:timestamp`, `{:timestamp, :dts}` \
-          `{:timestamp, :pts}` or `{:timestamp, :dts_or_pts}`.
-          """)
+      _last =
+        rest
+        |> Enum.reduce(first, fn curr_buffer, prev_buffer ->
+          with {:ok, curr_timestamp} <- get_timestamp(curr_buffer),
+               {:ok, prev_timestamp} when curr_timestamp < prev_timestamp <-
+                 get_timestamp(prev_buffer) do
+            Membrane.Logger.warning("""
+            Received buffers with non-monotonic #{inspected_timestamp_type()}s. \
+            Current buffer's #{inspected_timestamp_type()} is #{curr_timestamp}, \
+            while the previous buffer's #{inspected_timestamp_type()} is #{prev_timestamp}. \
+            This may lead to unexpected behavior in elements that have input pad with flow \
+            control set to `:manual` and demand unit set to `:timestamp`, `{:timestamp, :dts}` \
+            `{:timestamp, :pts}` or `{:timestamp, :dts_or_pts}`.
+            """)
 
-          curr_buffer
-        else
-          _other -> curr_buffer
-        end
-      end)
+            curr_buffer
+          else
+            _other -> curr_buffer
+          end
+        end)
 
       :ok
     end
