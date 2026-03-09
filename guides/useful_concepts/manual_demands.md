@@ -35,8 +35,8 @@ timestamp units are not available on output pads.
 
 [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`) always
 receives the **total current outstanding demand** from downstream, not a delta.
-There is no need to accumulate demand values across multiple callback invocations — each
-call tells you the full amount still expected.
+There is no need to accumulate demand values across multiple callback invocations 
+— each call tells you the full amount still expected.
 
 ### Producing buffers on demand
 

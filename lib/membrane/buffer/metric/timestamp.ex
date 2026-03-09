@@ -73,8 +73,9 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
           Received buffers with non-monotonic #{inspected_timestamp_type()}s. \
           Current buffer's #{inspected_timestamp_type()} is #{curr_timestamp}, \
           while the previous buffer's #{inspected_timestamp_type()} is #{prev_timestamp}. \
-          This may lead to unexpected behavior in elements that rely on \
-          monotonicity of #{inspected_timestamp_type()}s, such as decoders or muxers.
+          This may lead to unexpected behavior in elements that have input pad with flow \
+          control set to `:manual` and demand unit set to `:timestamp`, `{:timestamp, :dts}` \
+          `{:timestamp, :pts}` or `{:timestamp, :dts_or_pts}`.
           """)
 
           curr_buffer
