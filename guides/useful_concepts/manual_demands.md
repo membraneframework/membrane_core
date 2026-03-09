@@ -2,9 +2,10 @@
 
 Elements with pads using manual flow control have two responsibilities:
 
-- **Output pads**: produce exactly the amount of data requested in the
+- **Output pads**: produce the amount of data requested in the
   [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)
-  callback.
+  callback, or less if the stream ends (by returning an
+  [`:end_of_stream`](`t:Membrane.Element.Action.end_of_stream/0`) action).
 - **Input pads**: explicitly request data using the
   [`:demand`](`t:Membrane.Element.Action.demand/0`) action — data only arrives
   after demand has been issued.
@@ -14,7 +15,8 @@ Elements with pads using manual flow control have two responsibilities:
 When downstream requests data, Membrane invokes `handle_demand/5` on the
 element whose output pad with manual flow control is connected to that
 downstream. The callback receives the pad name, the demanded amount, and the
-demand unit. The element is expected to produce and send that amount of data.
+demand unit. The element is expected to produce and send that amount of data,
+or less if the stream ends.
 
 The unit in which `demand_size` is expressed is resolved as follows:
 
@@ -22,15 +24,22 @@ The unit in which `demand_size` is expressed is resolved as follows:
    is used.
 2. Otherwise, if the linked **input pad** uses `:buffers` or `:bytes`, that
    unit is inherited.
-3. Otherwise (e.g. the input pad uses a timestamp unit), the output pad
-   inherits `:buffers`.
+3. Otherwise — when the input pad uses a timestamp demand unit or has auto
+   flow control — the output pad inherits `:buffers`.
 
 So the output pad can explicitly control the unit it receives demand in, but
 timestamp units are not available on output pads.
 
+### Declarative nature of `handle_demand`
+
+`handle_demand` always receives the **total current outstanding demand** from
+downstream, not a delta. There is no need to accumulate demand values across
+multiple `handle_demand` invocations — each call tells you the full amount
+still expected.
+
 ### Producing buffers on demand
 
-A source generating random data:
+A source generating random buffers:
 
 ```elixir
 defmodule MySource do
@@ -38,6 +47,7 @@ defmodule MySource do
 
   def_output_pad :output,
     flow_control: :manual,
+    demand_unit: :buffers,
     accepted_format: _any
 
   @impl true
@@ -47,6 +57,19 @@ defmodule MySource do
     end)
     {[buffer: {:output, buffers}], state}
   end
+end
+```
+
+A source generating random bytes:
+
+```elixir
+defmodule MyBytesSource do
+  use Membrane.Source
+
+  def_output_pad :output,
+    flow_control: :manual,
+    demand_unit: :bytes,
+    accepted_format: _any
 
   @impl true
   def handle_demand(:output, demand_size, :bytes, _ctx, state) do
@@ -72,10 +95,16 @@ def handle_demand(:output, _demand_size, :buffers, _ctx, state) do
 end
 ```
 
-Each invocation produces one buffer and returns `:redemand`. This repeats,
-with demand shrinking by 1 on each call, until demand reaches 0 — at which
-point `handle_demand` is not called again until new demand arrives from
-downstream.
+If demand starts at 5, the call sequence looks like this:
+
+```
+handle_demand(:output, 5, :buffers, ctx, state)  # → sends 1 buffer, redemands
+handle_demand(:output, 4, :buffers, ctx, state)  # → sends 1 buffer, redemands
+handle_demand(:output, 3, :buffers, ctx, state)  # → sends 1 buffer, redemands
+handle_demand(:output, 2, :buffers, ctx, state)  # → sends 1 buffer, redemands
+handle_demand(:output, 1, :buffers, ctx, state)  # → sends 1 buffer, redemands
+# demand reaches 0 — handle_demand is not called again until new demand arrives
+```
 
 ## Input pads and the demand action
 
@@ -124,14 +153,30 @@ end
 The same sink, but demanding 100 bytes at a time instead of 5 buffers:
 
 ```elixir
-def_input_pad :input,
-  flow_control: :manual,
-  demand_unit: :bytes,
-  accepted_format: _any
+defmodule MyBytesDemoSink do
+  use Membrane.Sink
 
-@impl true
-def handle_tick(:demand_timer, _ctx, state) do
-  {[demand: {:input, 100}], state}
+  def_input_pad :input,
+    flow_control: :manual,
+    demand_unit: :bytes,
+    accepted_format: _any
+
+  @impl true
+  def handle_playing(_ctx, state) do
+    {[start_timer: {:demand_timer, Membrane.Time.seconds(1)},
+      demand: {:input, 100}], state}
+  end
+
+  @impl true
+  def handle_tick(:demand_timer, _ctx, state) do
+    {[demand: {:input, 100}], state}
+  end
+
+  @impl true
+  def handle_buffer(:input, buffer, _ctx, state) do
+    File.write!("output.bin", buffer.payload, [:append])
+    {[], state}
+  end
 end
 ```
 
@@ -203,7 +248,7 @@ an error if a buffer is missing its timestamp. Additionally, timestamps must be
 
 For `{:timestamp, :pts}`, note that PTS can be non-monotonic in streams with
 B-frames (see the [timestamps guide](timestamps.md)). Prefer
-`{:timestamp, :dts}` when DTS is available.
+`{:timestamp, :dts}` or `{:timestamp, :dts_or_pts}` when DTS is available.
 
 #### How timestamp demands work
 
@@ -283,9 +328,9 @@ The canonical pattern for a filter with both pads using manual flow control is:
 - **`handle_buffer`** — process the incoming buffer and forward it (possibly
   modified) downstream via a `:buffer` action.
 
-The following example doubles each buffer's payload, so one input buffer
-produces one output buffer. To satisfy a demand of `n` output buffers, the
-filter demands `n` input buffers.
+The following example combines every two input buffers into one output buffer,
+so to satisfy a demand of `n` output buffers, the filter needs `n * 2` input
+buffers. 
 
 ```elixir
 defmodule MyFilter do
@@ -298,39 +343,75 @@ defmodule MyFilter do
 
   def_output_pad :output,
     flow_control: :manual,
+    demand_unit: :buffers,
     accepted_format: _any
 
   @impl true
+  def handle_init(_ctx, _opts) do
+    {[], %{pending: nil}}
+  end
+
+  @impl true
   def handle_demand(:output, demand_size, :buffers, _ctx, state) do
-    # Each output buffer requires 2 input buffers to produce
     {[demand: {:input, demand_size * 2}], state}
   end
 
   @impl true
-  def handle_buffer(:input, buffer, _ctx, state) do
-    # Combine every two input buffers into one output buffer
-    buffers = [buffer | state.pending]
-
-    case buffers do
-      [second, first] ->
-        output = %Membrane.Buffer{payload: first.payload <> second.payload}
-        {[buffer: {:output, output}], %{state | pending: []}}
-
-      [_one] ->
-        {[], %{state | pending: buffers}}
-    end
+  def handle_buffer(:input, buffer, _ctx, %{pending: nil} = state) do
+    {[], %{state | pending: buffer}}
   end
 
-  @impl true
-  def handle_init(_ctx, _opts) do
-    {[], %{pending: []}}
+  def handle_buffer(:input, buffer, _ctx, %{pending: first} = state) do
+    output = %Membrane.Buffer{
+      payload: first.payload <> buffer.payload,
+      pts: first.pts,
+      dts: first.dts,
+      metadata: first.metadata
+    }
+    {[buffer: {:output, output}], %{state | pending: nil}}
   end
 end
 ```
 
-> #### Do not use redemand in `handle_demand` of a pad with manual flow control that has a corresponding input pad {: .warning}
+> #### Do not use redemand in a filter's `handle_demand` {: .warning}
 >
-> Returning `:redemand` from `handle_demand` is illegal when the element also
-> has an input pad it relies on for data. `handle_demand` should propagate the
-> demand upstream and return. Processing happens in `handle_buffer` when the
-> data actually arrives.
+> Returning `:redemand` from `handle_demand` in a filter is illegal.
+> `handle_demand` should propagate the demand upstream and return. Processing
+> happens in `handle_buffer` when the data actually arrives.
+
+## Auto flow control
+
+If you are writing a filter that processes buffers one by one without needing
+to control the timing or quantity of incoming data, consider auto flow control
+instead. With auto flow control, Membrane manages demands automatically: when
+all auto output pads have positive demand, it issues demand on all auto input
+pads. The element only needs to implement `handle_buffer`.
+
+```elixir
+defmodule MyAutoFilter do
+  use Membrane.Filter
+
+  def_input_pad :input,
+    flow_control: :auto,
+    accepted_format: _any
+
+  def_output_pad :output,
+    flow_control: :auto,
+    accepted_format: _any
+
+  @impl true
+  def handle_buffer(:input, buffer, _ctx, state) do
+    processed = %{buffer | payload: process(buffer.payload)}
+    {[buffer: {:output, processed}], state}
+  end
+
+  defp process(payload) do
+    for <<byte <- payload>>, into: <<>>, do: <<Bitwise.bxor(byte, 0xFF)>>
+  end
+end
+```
+
+Use manual flow control when the element needs to control the timing or
+quantity of incoming data explicitly — for example when producing a fixed time
+window of buffers, or when the ratio between input and output buffers is not
+fixed.
