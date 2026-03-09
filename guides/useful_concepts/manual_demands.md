@@ -12,7 +12,8 @@ Elements with pads using manual flow control have two responsibilities:
 
 ## Output pads and `handle_demand`
 
-When downstream requests data, Membrane invokes `handle_demand/5` on the
+When downstream requests data, Membrane invokes
+[`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`) on the
 element whose output pad with manual flow control is connected to that
 downstream. The callback receives the pad name, the demanded amount, and the
 demand unit. The element is expected to produce and send that amount of data,
@@ -32,10 +33,10 @@ timestamp units are not available on output pads.
 
 ### Declarative nature of `handle_demand`
 
-`handle_demand` always receives the **total current outstanding demand** from
-downstream, not a delta. There is no need to accumulate demand values across
-multiple `handle_demand` invocations — each call tells you the full amount
-still expected.
+[`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`) always
+receives the **total current outstanding demand** from downstream, not a delta.
+There is no need to accumulate demand values across multiple callback invocations — each
+call tells you the full amount still expected.
 
 ### Producing buffers on demand
 
@@ -84,8 +85,9 @@ end
 Sometimes producing all demanded buffers at once is not possible or not
 desired — for example when the element generates one buffer at a time. In that
 case, return the [`:redemand`](`t:Membrane.Element.Action.redemand/0`) action
-alongside the buffer. Membrane will then invoke `handle_demand` again with the
-demand reduced by the size of what was just sent.
+alongside the buffer. Membrane will then invoke
+[`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`) again
+with the demand reduced by the size of what was just sent.
 
 ```elixir
 @impl true
@@ -231,7 +233,7 @@ the demanded value.
 Timestamp demand units are only applicable to **input pads with manual flow
 control**. Output pads do not support them. If an input pad uses a timestamp
 demand unit and the linked upstream output pad does not specify a `demand_unit`,
-that element will receive `handle_demand/5` with demand expressed in `:buffers`.
+that element will receive [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`) with demand expressed in `:buffers`.
 
 #### Available variants
 
@@ -323,10 +325,8 @@ stream.
 
 The canonical pattern for a filter with both pads using manual flow control is:
 
-- **`handle_demand`** — propagate the demand upstream by returning a `:demand`
-  action on the input pad.
-- **`handle_buffer`** — process the incoming buffer and forward it (possibly
-  modified) downstream via a `:buffer` action.
+- **[`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)** — propagate the demand upstream by returning a [`:demand`](`t:Membrane.Element.Action.demand/0`) action on the input pad.
+- **[`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`)** — process the incoming buffer and forward it (possibly modified) downstream via a [`:buffer`](`t:Membrane.Element.Action.buffer/0`) action.
 
 The following example combines every two input buffers into one output buffer,
 so to satisfy a demand of `n` output buffers, the filter needs `n * 2` input
@@ -375,9 +375,12 @@ end
 
 > #### Do not use redemand in a filter's `handle_demand` {: .warning}
 >
-> Returning `:redemand` from `handle_demand` in a filter is illegal.
-> `handle_demand` should propagate the demand upstream and return. Processing
-> happens in `handle_buffer` when the data actually arrives.
+> Returning [`:redemand`](`t:Membrane.Element.Action.redemand/0`) from
+> [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`) in a
+> filter is illegal. [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)
+> should propagate the demand upstream and return. Processing happens in
+> [`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`) when
+> the data actually arrives.
 
 ## Auto flow control
 
@@ -385,7 +388,7 @@ If you are writing a filter that processes buffers one by one without needing
 to control the timing or quantity of incoming data, consider auto flow control
 instead. With auto flow control, Membrane manages demands automatically: when
 all auto output pads have positive demand, it issues demand on all auto input
-pads. The element only needs to implement `handle_buffer`.
+pads. The element only needs to implement [`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`).
 
 ```elixir
 defmodule MyAutoFilter do
