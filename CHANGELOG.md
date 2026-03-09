@@ -7,6 +7,7 @@
 * Deprecate `:links` option for `:unsafely_name_processes_for_observer` in favour of `:report_links_to_observer` configuration entry
 * [Set label](https://hexdocs.pm/elixir/Process.html#set_label/1) for all the Membrane processes (i.e. for both Membrane components like pipelines, elements and bins and for utility components like subprocess supervisors)
 * Update required Elixir version to `~> 1.17`
+* Add a Mix task for generating demos [#1067](https://github.com/membraneframework/membrane_core/pull/1067)
 * Add Mix tasks for easier initialization of components [#1059](https://github.com/membraneframework/membrane_core/pull/1059)
 
 ## 1.2.6
