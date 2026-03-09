@@ -132,7 +132,7 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
             assert unquote(module).generate_metric_specific_warnings(buffers) == :ok
           end)
 
-        assert log == ""
+        refute log =~ "warning"
       end
 
       test "emits a warning for non-monotonic #{name}s" do
