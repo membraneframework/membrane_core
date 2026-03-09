@@ -1,14 +1,14 @@
 defmodule Mix.Tasks.Membrane.Demo do
   @shortdoc "Download Membrane demos and examples"
   @moduledoc """
-  Download Membrane demos and examples into the current directory. Requires `git` installed.
+  Download Membrane demos and examples. Requires `git` installed.
 
     $ mix membrane.demo [-a] [-l] [-d <repo_dir>] [<demos> ...]
 
   ## Options
   * `-l, --list` - List all demos available and their brief descriptions.
   * `-a, --all` - Pull the repository with all demos. 
-  * `-d, --directory` - Specify a directory where the demos should be placed in.
+  * `-d, --directory` - Specify a directory where the demos should be placed in. By default they're placed in the current working directory 
   """
   use Mix.Task
 
