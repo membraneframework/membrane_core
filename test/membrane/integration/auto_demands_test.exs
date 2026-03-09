@@ -88,10 +88,9 @@ defmodule Membrane.Integration.AutoDemandsTest do
         Enum.flat_map(payloads, &Enum.map(1..Integer.pow(factor, filters), fn _i -> &1 end))
 
       {in_payloads, out_payloads} =
-        case direction do
-          :up -> {payloads, mult_payloads}
-          :down -> {mult_payloads, payloads}
-        end
+        if direction == :up,
+          do: {payloads, mult_payloads},
+          else: {mult_payloads, payloads}
 
       filter = %ExponentialAutoFilter{factor: factor, direction: direction}
 
