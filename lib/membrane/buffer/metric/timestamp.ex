@@ -65,11 +65,11 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
            when last_consumed_timestamp - first_consumed_timestamp >= demand_timestamp <-
              get_timestamp(last_consumed_buffer) do
         Membrane.Logger.warning("""
-        Demanded #{inspected_timestamp_type()} should be greater than the elapsed #{inspected_timestamp_type()} \
+        Demanded #{timestamp_name()} should be greater than the elapsed #{timestamp_name()} \
         since the first consumed buffer. Got :demand of #{demand_timestamp}, while the elapsed \
-        #{inspected_timestamp_type()} equals #{last_consumed_timestamp - first_consumed_timestamp}. \
-        Demanding a #{inspected_timestamp_type()} that is not greater than the elapsed one \
-        won't result in handling any further buffers, until the element demands a #{inspected_timestamp_type()} \
+        #{timestamp_name()} equals #{last_consumed_timestamp - first_consumed_timestamp}. \
+        Demanding a #{timestamp_name()} that is not greater than the elapsed one \
+        won't result in handling any further buffers, until the element demands a #{timestamp_name()} \
         greater than the elapsed one. \
         """)
 
@@ -101,9 +101,9 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
                {:ok, prev_timestamp} when curr_timestamp < prev_timestamp <-
                  get_timestamp(prev_buffer) do
             Membrane.Logger.warning("""
-            Received buffers with non-monotonic #{inspected_timestamp_type()}s. \
-            Current buffer's #{inspected_timestamp_type()} is #{curr_timestamp}, \
-            while the previous buffer's #{inspected_timestamp_type()} is #{prev_timestamp}. \
+            Received buffers with non-monotonic #{timestamp_name()}s. \
+            Current buffer's #{timestamp_name()} is #{curr_timestamp}, \
+            while the previous buffer's #{timestamp_name()} is #{prev_timestamp}. \
             This may lead to unexpected behavior in elements that have input pad with flow \
             control set to `:manual` and demand unit set to `:timestamp`, `{:timestamp, :dts}` \
             `{:timestamp, :pts}` or `{:timestamp, :dts_or_pts}`.
@@ -146,8 +146,6 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
         @impl TimestampMetric
         def timestamp_name(), do: "PTS"
 
-        defp inspected_timestamp_type(), do: "PTS"
-
       :dts ->
         defp get_timestamp(%Buffer{dts: dts}), do: {:ok, dts}
 
@@ -158,8 +156,6 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
         @impl TimestampMetric
         def timestamp_name(), do: "DTS"
 
-        defp inspected_timestamp_type(), do: "DTS"
-
       :dts_or_pts ->
         defp get_timestamp(buffer), do: {:ok, Buffer.get_dts_or_pts(buffer)}
 
@@ -167,9 +163,7 @@ for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS
         def nil_timestamp?(buffer), do: is_nil(Buffer.get_dts_or_pts(buffer))
 
         @impl TimestampMetric
-        def timestamp_name(), do: "DTS or PTS"
-
-        defp inspected_timestamp_type(), do: "<DTS or PTS>"
+        def timestamp_name(), do: "<DTS || PTS>"
     end
   end
 end

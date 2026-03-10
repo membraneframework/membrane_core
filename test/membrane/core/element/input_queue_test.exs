@@ -389,7 +389,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
     assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
 
-    assert_raise RuntimeError, ~r/DTS or PTS/, fn ->
+    assert_raise RuntimeError, ~r/DTS \|\| PTS/, fn ->
       InputQueue.store(queue, [%Buffer{payload: <<>>, pts: nil, dts: nil}])
     end
   end

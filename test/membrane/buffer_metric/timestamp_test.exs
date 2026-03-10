@@ -157,7 +157,7 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
         end)
 
       assert log =~ "warning"
-      assert log =~ "DTS or PTS"
+      assert log =~ "<DTS || PTS>"
     end
   end
 end
