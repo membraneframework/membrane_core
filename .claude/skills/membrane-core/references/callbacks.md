@@ -1,6 +1,6 @@
 # Membrane Framework — Callback Reference
 
-## Every Component (Pipeline, Bin, Element)
+## Every Component ([Pipeline](https://hexdocs.pm/membrane_core/Membrane.Pipeline.md), [Bin](https://hexdocs.pm/membrane_core/Membrane.Bin.md), [Element](https://hexdocs.pm/membrane_core/Membrane.Element.Base.md))
 
 | Callback | When called | Default |
 |----------|-------------|---------|
@@ -13,7 +13,7 @@
 
 ---
 
-## Parent Components Only (Pipeline and Bin)
+## Parent Components Only ([Pipeline](https://hexdocs.pm/membrane_core/Membrane.Pipeline.md) and [Bin](https://hexdocs.pm/membrane_core/Membrane.Bin.md))
 
 | Callback | When called | Default |
 |----------|-------------|---------|
@@ -28,7 +28,7 @@
 
 ---
 
-## Child Components Only (Bin and all Elements)
+## Child Components Only ([Bin](https://hexdocs.pm/membrane_core/Membrane.Bin.md) and all Elements)
 
 | Callback | When called | Default |
 |----------|-------------|---------|
@@ -42,15 +42,15 @@
 
 ---
 
-## Pipeline Only
+## Pipeline Only ([Membrane.Pipeline](https://hexdocs.pm/membrane_core/Membrane.Pipeline.md))
 
 | Callback | When called | Default |
 |----------|-------------|---------|
-| `handle_call/3` | Synchronous call from an external process | no-op |
+| `handle_call/3` | Synchronous call from an external process via `Membrane.Pipeline.call/3` | no-op |
 
 ---
 
-## Elements with Input Pads (Filter, Sink, Endpoint)
+## Elements with Input Pads ([Filter](https://hexdocs.pm/membrane_core/Membrane.Filter.md), [Sink](https://hexdocs.pm/membrane_core/Membrane.Sink.md), [Endpoint](https://hexdocs.pm/membrane_core/Membrane.Endpoint.md)) — [Membrane.Element.WithInputPads](https://hexdocs.pm/membrane_core/Membrane.Element.WithInputPads.md)
 
 | Callback | When called | Default |
 |----------|-------------|---------|
@@ -61,7 +61,7 @@
 
 ---
 
-## Elements with Output Pads (Source, Filter, Endpoint)
+## Elements with Output Pads ([Source](https://hexdocs.pm/membrane_core/Membrane.Source.md), [Filter](https://hexdocs.pm/membrane_core/Membrane.Filter.md), [Endpoint](https://hexdocs.pm/membrane_core/Membrane.Endpoint.md)) — [Membrane.Element.WithOutputPads](https://hexdocs.pm/membrane_core/Membrane.Element.WithOutputPads.md)
 
 | Callback | When called | Default |
 |----------|-------------|---------|
@@ -69,7 +69,7 @@
 
 ---
 
-## Events (All Elements)
+## Events (All Elements) — [Membrane.Event](https://hexdocs.pm/membrane_core/Membrane.Event.md)
 
 | Callback | When called | Default |
 |----------|-------------|---------|
