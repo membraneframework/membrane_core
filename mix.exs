@@ -78,7 +78,6 @@ defmodule Membrane.Mixfile do
         }
       ],
       extras: extras(),
-      formatters: ["html", "markdown"],
       logo: "assets/logo.svg",
       source_ref: @source_ref,
       assets: %{

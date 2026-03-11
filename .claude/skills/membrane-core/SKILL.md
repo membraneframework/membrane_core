@@ -5,23 +5,44 @@ description: Work with the Membrane multimedia streaming framework in Elixir. Us
 
 # Membrane Framework
 
-**Package**: `membrane_core` ~> 1.2 | **Docs**: https://hexdocs.pm/membrane_core/ | **Demos**: https://github.com/membraneframework/membrane_demo
+**Package**: `membrane_core` ~> 1.2 | **Docs**: https://hexdocs.pm/membrane_core/ | **Module index**: https://hexdocs.pm/membrane_core/llms.txt | **Demos**: https://github.com/membraneframework/membrane_demo
 
 ## How to Approach Tasks
 
 - **New component** — identify subtype (Source/Filter/Sink/Endpoint/Bin), define pads, implement required callbacks (`handle_buffer/4` for filters/sinks, `handle_demand/5` for manual-flow sources)
 - **Generating boilerplate** — use `mix membrane.gen.filter MyApp.MyFilter`, `mix membrane.gen.source`, `mix membrane.gen.sink`, `mix membrane.gen.endpoint`, `mix membrane.gen.bin` instead of writing element skeletons by hand
-- **Pipeline topology** — use the ChildrenSpec DSL (`child/2`, `get_child/1`, `via_in/2`, `via_out/2`)
+- **Choosing element subtype** — prefer `Filter` for transformations (has sensible defaults for stream_format forwarding); use `Endpoint` only when output is unrelated to input (e.g. a UDP Endpoint); use `Source`/`Sink` for pure producers/consumers
+- **Flow control** — default to `:auto` on all pads; only use `:manual` when you need fine-grained backpressure control; Almost the only use case of `:push` are output pads of Sources/Endpoints that cannot control when they produce data, e.g. UDP Source/Endpoint.
+- **Pipeline topology** — use the ChildrenSpec DSL (`child/2`, `get_child/1`, `via_in/2`, `via_out/2`) (more info: TODO)
+- **Static vs dynamic topology** — return `spec:` from `handle_init/2` for static pipelines; return additional `spec:` actions from any callback (e.g. `handle_child_notification/4`) to grow the topology at runtime
+- **Naming children** — use atoms (`:source`) for singletons, tuples (`{:decoder, track_id}`) for multi-instance children of the same type
+- **Detecting pipeline completion** — implement `handle_element_end_of_stream/4` in the pipeline to know when a sink's input pad received EOS; then return `{[terminate: :normal], state}` (doesn't work if sink is a Membrane.Bin)
 - **Dynamic tracks** (demuxers, variable inputs) — use the Dynamic Pads Pattern below
-- **Crash isolation** — group children with `{spec, group: :name, crash_group_mode: :temporary}`; handle recovery in `handle_crash_group_down/3`; see [Crash Groups guide](https://hexdocs.pm/membrane_core/crash_groups.md)
-- **Debugging** — check pad `accepted_format` compatibility, lifecycle ordering (`handle_setup` vs `handle_playing`), flow control mode mismatches
-- **Callback context** — every callback receives `ctx`; key fields: `ctx.children` (all current children), `ctx.pads` (pad states), `ctx.playback`; crash callbacks also carry `ctx.crash_initiator`, `ctx.exit_reason`, `ctx.group_name`; see `Membrane.Pipeline.CallbackContext`, `Membrane.Element.CallbackContext`
+- **Crash isolation** — group children with `{spec, group: <name>, crash_group_mode: :temporary}`; handle recovery in `handle_crash_group_down/3`; see [Crash Groups guide](https://hexdocs.pm/membrane_core/crash_groups.md)
+- **Inserting debug probes** — add `child(:probe, %Membrane.Debug.Filter{handle_buffer: &IO.inspect(&1, label: :buffer)})` between any two elements to log buffers without changing pipeline logic. You can use different logging functions than `IO.inspect/2`. More info: link TODO.
+- **Linking children** - linked children pads accepted formats must have non-empty intersections
+- **Debugging** — check pad `accepted_format` compatibility
+- **Callback context** — every callback receives `ctx`; key fields: link callback context docs TODO
 - **Full callback reference** — `references/callbacks.md`
 - **Never modify code in `deps/`**
 - **Use `mix hex.info <plugin name>` when you need to check the newest version of a plugin**
 - **Search for appropriate plugins in `README.md`, in `all-packages` section**
 - **Check input and output pad definitions of elements in `deps/` (use `cat <filename> | grep def_input_pad` and `cat <filename> | grep def_output pad`) to make sure output pad's `accepted_stream_format` is compatible with `accepted_stream_format` of the input pad which it is linked to.**
 - **If the `accepted_stream_format` doesn't match, search for an element which can act as an adapter**
+- **When constructing Membrane Pipeline, lean towards using most powerful Membrane Components, which are Boombox.Bin (todo: link) and Membrane.Transcoder (todo: link), instead of using many smaller plugins**
+
+---
+
+## Common Pitfalls
+
+- **Modifying code in `deps/` directory** - never do that
+- **Using `child/2` for an already-spawned child** — `child/2` always spawns a new process; use `get_child/1` to reference an existing one; duplicating a name raises an error
+- **Linking static pads outside the spawning spec** — static pads must be linked in the same `spec` that spawns the component; linking them later raises a `LinkError`
+- **Not wiring a dynamic bin pad in `handle_pad_added/3`** — a dynamic bin input pad must be connected to an internal child within 5 seconds or a `LinkError` is raised
+- **Heavy work in `handle_init/2`** — `handle_init` is synchronous and blocks the parent; move file I/O, network connections, etc. to `handle_setup/2`
+- **Producing data before `handle_playing/2`** — pads are not ready until `:playing`; don't send buffers from `handle_setup/2`
+- **Using `:push` flow control carelessly** — whenever it is possible use `:auto` instead (eventually `:manual`). Source/Endpoint output pads are the exception.
+- **Returning non-spec actions from `handle_init/2`** — we recommend to return only `:spec` action from this callback.
 
 ---
 
@@ -147,11 +168,11 @@ end
 | `Membrane.Funnel` | Multiple inputs → one output |
 | `Membrane.Tee` | One input → multiple outputs |
 | `Membrane.Connector` | Connect dynamic pads with internal buffering |
-| `Membrane.FilterAggregator` | Run multiple filters in a single process |
 | `Membrane.Testing.Source` | Inject buffers into a pipeline in tests |
 | `Membrane.Testing.Sink` | Capture and assert on buffers in tests |
 | `Membrane.Debug.Filter` | Log/inspect buffers flowing through pipeline |
 | `Membrane.Debug.Sink` | Log/inspect buffers at pipeline end |
+| `Membrane.FilterAggregator` | It is deprecated, just don't use it |
 
 ---
 
@@ -178,7 +199,9 @@ assert_end_of_stream(pipeline, :sink)
 
 ## Timing
 
-All timestamps are `Membrane.Time.t()` (integer nanoseconds). Helpers: `Membrane.Time.seconds/1`, `Membrane.Time.milliseconds/1`, `Membrane.Time.microseconds/1`, etc. Timers started with `:start_timer` action fire `handle_tick/3`.
+All timestamps are `Membrane.Time.t()`. It is integer nanoseconds under the hood, but don't use this information, because it is a part of the private API. However, keep in mind you can perform operations on `Membrane.Time.t()` using `+` or `-` operators. Helpers: `Membrane.Time.seconds/1`, `Membrane.Time.milliseconds/1`, `Membrane.Time.microseconds/1`, etc. Timers started with `:start_timer` action fire `handle_tick/3`.
+
+more info: link to time docs TODO
 
 ---
 
@@ -239,3 +262,4 @@ Actions are returned from callbacks as `{[action_list], state}`.
 ## Callback Reference
 
 See `references/callbacks.md`.
+TODO: delete callbacks.md and paste here links to Pipeline, Bin, Source etc. docs, callbacks are expalined there
