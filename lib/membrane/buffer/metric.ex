@@ -30,7 +30,7 @@ defmodule Membrane.Buffer.Metric do
   Updates the remaining demand after consuming buffers.
 
   For count/byte metrics, subtracts `consumed_size` from `demand`.
-  For timestamp metrics, the demand is a duration that does not change as buffers are consumed —
+  For timestamp metrics, the demand is a duration that does not change as buffers are consumed -
   the recursion instead terminates when `split_buffers/4` signals that the demand is satisfied.
   """
   @callback reduce_demand(

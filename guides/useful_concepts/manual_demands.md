@@ -12,10 +12,10 @@ Elements with pads using manual flow control have two responsibilities:
 
 ## Output pads and `handle_demand`
 
-When downstream requests data, Membrane invokes
+When downstream element requests data, Membrane invokes
 [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`) on the
 element whose output pad with manual flow control is connected to that
-downstream. The callback receives the pad name, the demanded amount, and the
+downstream element. The callback receives the pad name, the demanded amount, and the
 demand unit. The element is expected to produce and send that amount of data,
 or less if the stream ends.
 
@@ -23,7 +23,7 @@ The unit in which `demand_size` is expressed is resolved as follows:
 
 1. If the **output pad** declares `demand_unit: :buffers | :bytes`, that unit
    is used.
-2. Otherwise, if the linked **input pad** uses `:buffers` or `:bytes`, that
+2. Otherwise, if the linked **input pad** declares `:buffers` or `:bytes` :demand_unit, that
    unit is inherited.
 3. Otherwise — when the input pad uses a timestamp demand unit or has auto
    flow control — the output pad inherits `:buffers`.
@@ -246,7 +246,7 @@ that element will receive [`handle_demand/5`](`c:Membrane.Element.WithOutputPads
 All buffers passing through an input pad with a timestamp demand unit must have
 their relevant timestamp field set to a non-`nil` value — Membrane will raise
 an error if a buffer is missing its timestamp. Additionally, timestamps must be
-**monotonically non-decreasing**; non-monotonic timestamps will cause a warning.
+**monotonically non-decreasing**; non-monotonic timestamps will cause a warning and undefined behaviour.
 
 For `{:timestamp, :pts}`, note that PTS can be non-monotonic in streams with
 B-frames (see the [timestamps guide](timestamps.md)). Prefer
@@ -268,7 +268,7 @@ deliver buffers until it reaches the first one with
 `pts >= Membrane.Time.seconds(100) + Membrane.Time.seconds(1)`, i.e.
 `pts >= Membrane.Time.seconds(101)`.
 
-When you issue `demand: {:input, t}`, Membrane delivers all buffered buffers
+When you issue `demand: {:input, t}`, Membrane delivers all buffers
 whose timestamp (minus the offset) is strictly less than `t`, plus the first
 buffer whose timestamp (minus the offset) equals or exceeds `t`. This means
 that **if you demand a value strictly greater than the last received buffer's
