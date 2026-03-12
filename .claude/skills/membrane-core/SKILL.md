@@ -13,23 +13,23 @@ description: Work with the Membrane multimedia streaming framework in Elixir. Us
 - **Generating boilerplate** — use `mix membrane.gen.filter MyApp.MyFilter`, `mix membrane.gen.source`, `mix membrane.gen.sink`, `mix membrane.gen.endpoint`, `mix membrane.gen.bin` instead of writing element skeletons by hand
 - **Choosing element subtype** — prefer `Filter` for transformations (has sensible defaults for stream_format forwarding); use `Endpoint` only when output is unrelated to input (e.g. a UDP Endpoint); use `Source`/`Sink` for pure producers/consumers
 - **Flow control** — default to `:auto` on all pads; only use `:manual` when you need fine-grained backpressure control; Almost the only use case of `:push` are output pads of Sources/Endpoints that cannot control when they produce data, e.g. UDP Source/Endpoint.
-- **Pipeline topology** — use the ChildrenSpec DSL (`child/2`, `get_child/1`, `via_in/2`, `via_out/2`) (more info: TODO)
+- **Pipeline topology** — use the ChildrenSpec DSL (`child/2`, `get_child/1`, `via_in/2`, `via_out/2`) (more info: [Membrane.ChildrenSpec](https://hexdocs.pm/membrane_core/Membrane.ChildrenSpec.md))
 - **Static vs dynamic topology** — return `spec:` from `handle_init/2` for static pipelines; return additional `spec:` actions from any callback (e.g. `handle_child_notification/4`) to grow the topology at runtime
 - **Naming children** — use atoms (`:source`) for singletons, tuples (`{:decoder, track_id}`) for multi-instance children of the same type
 - **Detecting pipeline completion** — implement `handle_element_end_of_stream/4` in the pipeline to know when a sink's input pad received EOS; then return `{[terminate: :normal], state}` (doesn't work if sink is a Membrane.Bin)
 - **Dynamic tracks** (demuxers, variable inputs) — use the Dynamic Pads Pattern below
 - **Crash isolation** — group children with `{spec, group: <name>, crash_group_mode: :temporary}`; handle recovery in `handle_crash_group_down/3`; see [Crash Groups guide](https://hexdocs.pm/membrane_core/crash_groups.md)
-- **Inserting debug probes** — add `child(:probe, %Membrane.Debug.Filter{handle_buffer: &IO.inspect(&1, label: :buffer)})` between any two elements to log buffers without changing pipeline logic. You can use different logging functions than `IO.inspect/2`. More info: link TODO.
+- **Inserting debug probes** — add `child(:probe, %Membrane.Debug.Filter{handle_buffer: &IO.inspect(&1, label: :buffer)})` between any two elements to log buffers without changing pipeline logic. You can use different logging functions than `IO.inspect/2`. More info: [Membrane.Debug.Filter](https://hexdocs.pm/membrane_core/Membrane.Debug.Filter.md).
 - **Linking children** - linked children pads accepted formats must have non-empty intersections
 - **Debugging** — check pad `accepted_format` compatibility
-- **Callback context** — every callback receives `ctx`; key fields: link callback context docs TODO
-- **Full callback reference** — `references/callbacks.md`
+- **Callback context** — every callback receives `ctx`; key fields: `ctx.children`, `ctx.pads`, `ctx.playback`; crash callbacks also have `ctx.crash_initiator`, `ctx.exit_reason`, `ctx.group_name`; see [Pipeline.CallbackContext](https://hexdocs.pm/membrane_core/Membrane.Pipeline.CallbackContext.md), [Bin.CallbackContext](https://hexdocs.pm/membrane_core/Membrane.Bin.CallbackContext.md), [Element.CallbackContext](https://hexdocs.pm/membrane_core/Membrane.Element.CallbackContext.md)
+
 - **Never modify code in `deps/`**
 - **Use `mix hex.info <plugin name>` when you need to check the newest version of a plugin**
 - **Search for appropriate plugins in `README.md`, in `all-packages` section**
 - **Check input and output pad definitions of elements in `deps/` (use `cat <filename> | grep def_input_pad` and `cat <filename> | grep def_output pad`) to make sure output pad's `accepted_stream_format` is compatible with `accepted_stream_format` of the input pad which it is linked to.**
 - **If the `accepted_stream_format` doesn't match, search for an element which can act as an adapter**
-- **When constructing Membrane Pipeline, lean towards using most powerful Membrane Components, which are Boombox.Bin (todo: link) and Membrane.Transcoder (todo: link), instead of using many smaller plugins**
+- **When constructing Membrane Pipeline, lean towards using most powerful Membrane Components, which are [Boombox.Bin](https://hexdocs.pm/boombox/llms.txt) and [Membrane.Transcoder](https://hexdocs.pm/membrane_transcoder_plugin/llms.txt), instead of using many smaller plugins**
 
 ---
 
@@ -201,7 +201,7 @@ assert_end_of_stream(pipeline, :sink)
 
 All timestamps are `Membrane.Time.t()`. It is integer nanoseconds under the hood, but don't use this information, because it is a part of the private API. However, keep in mind you can perform operations on `Membrane.Time.t()` using `+` or `-` operators. Helpers: `Membrane.Time.seconds/1`, `Membrane.Time.milliseconds/1`, `Membrane.Time.microseconds/1`, etc. Timers started with `:start_timer` action fire `handle_tick/3`.
 
-more info: link to time docs TODO
+More info: [Membrane.Time](https://hexdocs.pm/membrane_core/Membrane.Time.md), [Timestamps guide](https://hexdocs.pm/membrane_core/timestamps.md).
 
 ---
 
@@ -261,5 +261,11 @@ Actions are returned from callbacks as `{[action_list], state}`.
 
 ## Callback Reference
 
-See `references/callbacks.md`.
-TODO: delete callbacks.md and paste here links to Pipeline, Bin, Source etc. docs, callbacks are expalined there
+Callbacks are documented in the relevant behaviour modules:
+
+- [Membrane.Pipeline](https://hexdocs.pm/membrane_core/Membrane.Pipeline.md) — `handle_init`, `handle_setup`, `handle_playing`, `handle_call`, `handle_child_notification`, `handle_child_terminated`, `handle_crash_group_down`, `handle_element_end_of_stream`, etc.
+- [Membrane.Bin](https://hexdocs.pm/membrane_core/Membrane.Bin.md) — same as Pipeline plus `handle_pad_added`, `handle_pad_removed`, `handle_parent_notification`
+- [Membrane.Element.Base](https://hexdocs.pm/membrane_core/Membrane.Element.Base.md) — callbacks common to all elements: `handle_init`, `handle_setup`, `handle_playing`, `handle_pad_added`, `handle_pad_removed`, `handle_parent_notification`, `handle_info`, `handle_tick`
+- [Membrane.Element.WithInputPads](https://hexdocs.pm/membrane_core/Membrane.Element.WithInputPads.md) — `handle_buffer`, `handle_stream_format`, `handle_start_of_stream`, `handle_end_of_stream`
+- [Membrane.Element.WithOutputPads](https://hexdocs.pm/membrane_core/Membrane.Element.WithOutputPads.md) — `handle_demand`
+- [Membrane.Source](https://hexdocs.pm/membrane_core/Membrane.Source.md), [Membrane.Filter](https://hexdocs.pm/membrane_core/Membrane.Filter.md), [Membrane.Sink](https://hexdocs.pm/membrane_core/Membrane.Sink.md), [Membrane.Endpoint](https://hexdocs.pm/membrane_core/Membrane.Endpoint.md) — combine the above with default implementations
