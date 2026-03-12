@@ -78,7 +78,6 @@ defmodule Membrane.Mixfile do
         }
       ],
       extras: extras(),
-      formatters: ["html"],
       logo: "assets/logo.svg",
       source_ref: @source_ref,
       assets: %{
@@ -119,6 +118,8 @@ defmodule Membrane.Mixfile do
 
   defp extras do
     [
+      {"skills/membrane-framework/SKILL.md",
+       [title: "Membrane Framework AI Skill", hidden: true]},
       "README.md",
       "CHANGELOG.md",
       "CONTRIBUTING.md",
@@ -251,7 +252,7 @@ defmodule Membrane.Mixfile do
       {:bunch, "~> 1.6"},
       {:ratio, "~> 3.0 or ~> 4.0"},
       # Development
-      {:ex_doc, "~> 0.39", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: :dev, runtime: false},
