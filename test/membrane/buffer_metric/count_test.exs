@@ -11,16 +11,20 @@ defmodule Membrane.Buffer.Metric.CountTest do
 
   describe ".buffers_size/1" do
     test "should return count of all buffers" do
-      assert Count.buffers_size(@buffers) == 2
+      assert Count.buffers_size(@buffers) == {:ok, 2}
     end
   end
 
-  describe ".split_buffers/2" do
+  describe ".split_buffers/4" do
     test "should return split buffers" do
-      {extracted, rest} = Count.split_buffers(@buffers, @count)
+      {extracted, rest} = Count.split_buffers(@buffers, @count, nil, nil)
 
       assert extracted == [@buf1]
       assert rest == [@buf2]
     end
+  end
+
+  test ".reduce_demand/2 should subtract the consumed count from the remaining demand" do
+    assert Count.reduce_demand(10, 3) == 7
   end
 end

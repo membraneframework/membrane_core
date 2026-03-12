@@ -45,6 +45,7 @@ defmodule Membrane.Integration.DemandsTest do
 
     pid = Pipeline.start_link_supervised!(spec: links)
     test_pipeline(pid)
+    Pipeline.terminate(pid)
   end
 
   test "Pipeline with filter underestimating demand" do
@@ -57,6 +58,7 @@ defmodule Membrane.Integration.DemandsTest do
 
     pid = Pipeline.start_link_supervised!(spec: links)
     test_pipeline(pid)
+    Pipeline.terminate(pid)
   end
 
   test "Pipeline with source not generating enough buffers" do
@@ -80,6 +82,7 @@ defmodule Membrane.Integration.DemandsTest do
 
     pid = Pipeline.start_link_supervised!(spec: spec)
     test_pipeline(pid)
+    Pipeline.terminate(pid)
   end
 
   test "handle_demand is not called for pad with end of stream" do
@@ -307,4 +310,101 @@ defmodule Membrane.Integration.DemandsTest do
       Testing.Pipeline.terminate(pipeline)
     end
   end
+
+  @timestamp_demand_units_with_sink_names [
+    {:timestamp, Sink.Timestamp},
+    {{:timestamp, :pts}, Sink.Timestamp.PTS},
+    {{:timestamp, :dts}, Sink.Timestamp.DTS},
+    {{:timestamp, :dts_or_pts}, Sink.Timestamp.DTSOrPTS}
+  ]
+
+  for {demand_unit, sink_name} <- @timestamp_demand_units_with_sink_names do
+    defmodule sink_name do
+      use Membrane.Sink
+
+      def_input_pad :input,
+        accepted_format: _any,
+        flow_control: :manual,
+        demand_unit: demand_unit
+
+      @impl true
+      def handle_playing(_ctx, state), do: {[notify_parent: :playing], state}
+
+      @impl true
+      def handle_buffer(:input, buffer, _ctx, state) do
+        {[notify_parent: {:buffer, buffer}], state}
+      end
+
+      @impl true
+      def handle_parent_notification({:make_demand, value}, _ctx, state) do
+        {[demand: {:input, value}], state}
+      end
+    end
+  end
+
+  @timestamp_offsets [0, 5, 1421, -9329]
+
+  for {demand_unit, sink_name} <- @timestamp_demand_units_with_sink_names,
+      timestamp_offset <- @timestamp_offsets do
+    test "demands with demand unit set to #{inspect(demand_unit)} and timestamp offset #{timestamp_offset}" do
+      timestamp_offset = unquote(timestamp_offset)
+
+      buffers =
+        0..100
+        |> Enum.map(fn i -> buffer(i, timestamp_offset) end)
+
+      spec =
+        child(:source, %Testing.Source{output: buffers})
+        |> child(:sink, unquote(sink_name))
+
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+
+      assert_pipeline_notified(pipeline, :sink, :playing)
+
+      [
+        {0, [0]},
+        {1, [1]},
+        {11, [2]},
+        {271, 3..28},
+        {277, []},
+        {341, 29..35},
+        {460, 36..46},
+        {461, [47]},
+        {571, 48..58},
+        {680, 59..68},
+        {791, 69..80},
+        {901, 81..91},
+        {1012, 92..100}
+      ]
+      |> Enum.each(fn {demand_value, expected_buffers} ->
+        refute_pipeline_notified(pipeline, :sink, {:buffer, _buffer}, 100)
+
+        Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, demand_value})
+
+        expected_buffers
+        |> Enum.each(fn i ->
+          timestamp = timestamp(i, timestamp_offset)
+          payload = inspect(i)
+
+          assert_pipeline_notified(pipeline, :sink, {:buffer, buffer})
+          assert buffer == buffer(i, timestamp_offset)
+        end)
+
+        refute_pipeline_notified(pipeline, :sink, {:buffer, _buffer}, 100)
+      end)
+
+      assert_end_of_stream(pipeline, :sink)
+      Testing.Pipeline.terminate(pipeline)
+    end
+  end
+
+  defp buffer(idx, timestamp_offset) do
+    %Membrane.Buffer{
+      payload: inspect(idx),
+      pts: timestamp(idx, timestamp_offset),
+      dts: timestamp(idx, timestamp_offset)
+    }
+  end
+
+  defp timestamp(buffer_idx, offset), do: 10 * buffer_idx + offset
 end
