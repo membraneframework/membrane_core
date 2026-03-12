@@ -118,6 +118,7 @@ defmodule Membrane.Mixfile do
 
   defp extras do
     [
+      {"skills/membrane-framework/SKILL.md", [title: "Membrane Framework AI Skill", hidden: true]},
       "README.md",
       "CHANGELOG.md",
       "CONTRIBUTING.md",
