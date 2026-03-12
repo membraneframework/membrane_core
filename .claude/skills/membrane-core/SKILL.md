@@ -1,6 +1,6 @@
 ---
 name: membrane-core
-description: Work with the Membrane multimedia streaming framework in Elixir. Use this skill whenever the user is building or debugging Membrane pipelines, writing custom Elements, Bins, or Filters, connecting pads, implementing callbacks, handling stream formats or EOS, or asking about Membrane architecture. Trigger on any mention of membrane_core, Membrane.Pipeline, Membrane.Element, Membrane.Bin, Membrane.Pad, or multimedia streaming in an Elixir context — even if the user doesn't say "Membrane" explicitly but is clearly working on this codebase.
+description: Work with the Membrane multimedia streaming framework in Elixir. Use this skill whenever the user is building or debugging Membrane pipelines, writing custom Elements, Bins, or Filters, connecting pads, implementing callbacks, handling stream formats or EOS, or asking about Membrane architecture. Trigger on any mention of membrane_core, membrane, membrane framework, Membrane.Pipeline, Membrane.Sink, Membrane.Source, Membrane.Filter, Membrane.Endpoint, Membrane.Bin, Membrane.Pad, or multimedia streaming in an Elixir context — even if the user doesn't say "Membrane" explicitly but is clearly working on this codebase.
 ---
 
 # Membrane Framework
