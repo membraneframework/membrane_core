@@ -70,7 +70,8 @@ packages_blacklist = [
   "membraneframework.github.io",
   "membrane_rtc_engine_timescaledb",
   "github_actions_test",
-  "membrane_ice_plugin"
+  "membrane_ice_plugin",
+  "membrane_webrtc_live"
 ]
 
 lacking_repos =
@@ -87,6 +88,7 @@ unless Enum.empty?(lacking_repos) do
   raise """
   The following repositories aren't mentioned in the package list:
   #{Enum.map_join(lacking_repos, ",\n", & &1.name)}
+  Put them in scripts/elixir/packages.exs, or if they aren't packages, add them to the blacklist in this script.
   """
 end
 
@@ -180,7 +182,7 @@ header = """
 generated_code_comment =
   "<!-- #{generated_code_comment} -->"
 
-packages_md =
+generate_packages_md = fn packages, header ->
   packages
   |> Enum.map_reduce(
     %{is_header_present: false},
@@ -202,6 +204,9 @@ packages_md =
   )
   |> elem(0)
   |> Enum.join("\n")
+end
+
+packages_md = generate_packages_md.(packages, header)
 
 packages_md =
   """
@@ -237,10 +242,10 @@ packages
     %{type: :package} = package, acc ->
       package_info = """
       ## #{package.name}
-      #{package.owner_prefix}#{package.description} 
+      #{package.owner_prefix}#{package.description}
 
       #{package.hex_badge} #{package.hexdocs_badge} #{package.github_badge}
-       
+
       """
 
       files =
@@ -278,5 +283,16 @@ packages
 |> Enum.each(fn {file_path, file_content} ->
   if file_content != "", do: File.write!(file_path, "#{generated_code_comment}\n#{file_content}")
 end)
+
+# replace packages list for LLMs
+
+llms_header = """
+| Package | Description |
+| --- | --- |
+"""
+
+llms_packages_md = generate_packages_md.(packages, llms_header)
+llms_packages_list_path = "guides/llms/packages_list.md"
+File.write!(llms_packages_list_path, llms_packages_md)
 
 IO.puts("Packages updated successfully.")

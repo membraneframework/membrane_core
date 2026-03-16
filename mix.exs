@@ -121,6 +121,8 @@ defmodule Membrane.Mixfile do
       {"skills/membrane-framework/SKILL.md",
        [title: "Membrane Framework AI Skill", hidden: true]},
       "README.md",
+      {"guides/llms/packages_list.md",
+       [title: "Packages in the Membrane ecosystem", hidden: true]},
       "CHANGELOG.md",
       "CONTRIBUTING.md",
       Path.wildcard("guides/upgrading/*.md"),
