@@ -5,11 +5,11 @@ description: Work with the Membrane multimedia streaming framework in Elixir. Us
 
 # Membrane Framework
 
-**Package**: `membrane_core` ~> 1.2 | **Docs**: https://hexdocs.pm/membrane_core/ | **Module index**: https://hexdocs.pm/membrane_core/llms.txt | **Demos**: https://github.com/membraneframework/membrane_demo
+**Package**: `membrane_core` ~> 1.2 | **Docs**: https://hexdocs.pm/membrane_core/ | **Module index**: https://hexdocs.pm/membrane_core/llms.txt | **Demos**: https://github.com/membraneframework/membrane_demo | **All packages**: [packages_list.md](../../guides/llms/packages_list.md)
 
 ## How to Approach Tasks
 
-- **New component** — identify subtype (Source/Filter/Sink/Endpoint/Bin), define pads, implement required callbacks (`handle_buffer/4` for filters/sinks, `handle_demand/5` for manual-flow sources)
+- **New component** — before writing a new element, check [packages_list.md](../../guides/llms/packages_list.md) to see if it already exists in an existing plugin; if not, identify subtype (Source/Filter/Sink/Endpoint/Bin), define pads, implement required callbacks (`handle_buffer/4` for filters/sinks, `handle_demand/5` for manual-flow sources)
 - **Generating boilerplate** — use `mix membrane.gen.filter MyApp.MyFilter`, `mix membrane.gen.source`, `mix membrane.gen.sink`, `mix membrane.gen.endpoint`, `mix membrane.gen.bin` instead of writing element skeletons by hand
 - **Choosing element subtype** — prefer `Filter` for transformations (has sensible defaults for stream_format forwarding); use `Endpoint` only when output is unrelated to input (e.g. a UDP Endpoint); use `Source`/`Sink` for pure producers/consumers
 - **Flow control** — default to `:auto` on all pads; only use `:manual` when you need fine-grained backpressure control; Almost the only use case of `:push` are output pads of Sources/Endpoints that cannot control when they produce data, e.g. UDP Source/Endpoint.
