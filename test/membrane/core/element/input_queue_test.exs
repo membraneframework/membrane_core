@@ -41,7 +41,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
                inbound_metric: context.expected_metric,
                outbound_metric: context.expected_metric,
                outbound_metric_demand_init_size:
-                 context.expected_metric.init_manual_demand_size_value(),
+                 context.expected_metric.init_manual_demand_size(),
                pad_ref: context.pad_ref,
                size: 0,
                demand: context.target_queue_size,
@@ -508,7 +508,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     defaults = [
       stalker_metrics: %{size: :atomics.new(1, [])},
       outbound_metric_demand_init_size:
-        if(outbound_metric, do: outbound_metric.init_manual_demand_size_value(), else: 0)
+        if(outbound_metric, do: outbound_metric.init_manual_demand_size(), else: 0)
     ]
 
     struct(InputQueue, defaults ++ fields)

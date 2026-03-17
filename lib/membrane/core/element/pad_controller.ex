@@ -395,7 +395,7 @@ defmodule Membrane.Core.Element.PadController do
       })
 
     manual_demand_size =
-      Membrane.Buffer.Metric.from_unit(this_demand_unit).init_manual_demand_size_value()
+      Membrane.Buffer.Metric.from_unit(this_demand_unit).init_manual_demand_size()
 
     pad_data
     |> Map.merge(%{

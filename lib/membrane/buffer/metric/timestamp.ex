@@ -1,169 +1,73 @@
-for {timestamp_type, module_suffix} <- [pts: PTS, dts: DTS, dts_or_pts: DTSOrPTS] do
-  module_name = Module.concat(Membrane.Buffer.Metric.Timestamp, module_suffix)
+defmodule Membrane.Buffer.Metric.Timestamp do
+  @moduledoc false
 
-  defmodule module_name do
-    @moduledoc (case timestamp_type do
-                  :pts ->
-                    """
-                    Implements `Membrane.Buffer.Metric` for PTS-based (Presentation Timestamp) demand.
+  alias Membrane.Buffer
+  alias Membrane.Pad
+  require Membrane.Logger
 
-                    Used when an input pad's `demand_unit` is set to `{:timestamp, :pts}`.
-                    All buffers must have `:pts` set to a non-`nil` value.
-                    """
+  @doc """
+  Returns the timestamp value used for demand calculation for the given buffer.
+  """
+  @callback get_timestamp(Buffer.t()) :: Membrane.Time.t()
 
-                  :dts ->
-                    """
-                    Implements `Membrane.Buffer.Metric` for DTS-based (Decode Timestamp) demand.
+  @doc """
+  Returns a human-readable name for the timestamp field used by this metric.
+  """
+  @callback timestamp_name() :: String.t()
 
-                    Used when an input pad's `demand_unit` is set to `{:timestamp, :dts}`.
-                    All buffers must have `:dts` set to a non-`nil` value.
-                    """
+  defguard is_timestamp_metric?(module)
+           when module in [
+                  __MODULE__.PTS,
+                  __MODULE__.DTS,
+                  __MODULE__.DTSorPTS
+                ]
 
-                  :dts_or_pts ->
-                    """
-                    Implements `Membrane.Buffer.Metric` for timestamp-based demand using `buffer.dts || buffer.pts`.
+  @spec generate_metric_specific_warnings(Pad.ref(), [Buffer.t()], module()) :: :ok
+  def generate_metric_specific_warnings(_pad_ref, [], _timestamp_metric), do: :ok
 
-                    Used when an input pad's `demand_unit` is set to `:timestamp` or `{:timestamp, :dts_or_pts}`.
-                    All buffers must have at least one of `:dts` or `:pts` set to a non-`nil` value.
-                    """
-                end)
+  def generate_metric_specific_warnings(pad_ref, buffers, timestamp_metric) do
+    [first | rest] = buffers
 
-    @behaviour Membrane.Buffer.Metric
-    @behaviour Membrane.Buffer.Metric.TimestampMetric
+    _last =
+      rest
+      |> Enum.reduce(first, fn
+        curr_buffer, nil ->
+          curr_buffer
 
-    alias Membrane.Buffer
-    alias Membrane.Buffer.Metric
-    alias Membrane.Buffer.Metric.TimestampMetric
+        curr_buffer, prev_buffer ->
+          prev_timestamp = timestamp_metric.get_timestamp(prev_buffer)
+          curr_timestamp = timestamp_metric.get_timestamp(curr_buffer)
 
-    require Membrane.Logger
-
-    @initial_manual_demand_size_value -1
-
-    @impl Metric
-    def buffer_size_approximation, do: 1
-
-    @impl Metric
-    def buffers_size(_buffers), do: {:error, :operation_not_supported}
-
-    @impl Metric
-    def init_manual_demand_size_value(), do: @initial_manual_demand_size_value
-
-    @impl Metric
-    def split_buffers(
-          buffers,
-          @initial_manual_demand_size_value,
-          _first_consumed_buffer,
-          _last_consumed_buffer
-        ) do
-      {[], buffers}
-    end
-
-    @impl Metric
-    def split_buffers(buffers, demand_timestamp, first_consumed_buffer, last_consumed_buffer) do
-      with {:ok, first_consumed_timestamp} <- get_timestamp(first_consumed_buffer),
-           {:ok, last_consumed_timestamp}
-           when last_consumed_timestamp - first_consumed_timestamp >= demand_timestamp <-
-             get_timestamp(last_consumed_buffer) do
-        Membrane.Logger.warning("""
-        Demanded #{timestamp_name()} should be greater than the elapsed #{timestamp_name()} \
-        since the first consumed buffer. Got :demand of #{demand_timestamp}, while the elapsed \
-        #{timestamp_name()} equals #{last_consumed_timestamp - first_consumed_timestamp}. \
-        Demanding a #{timestamp_name()} that is not greater than the elapsed one \
-        won't result in handling any further buffers, until the element demands a #{timestamp_name()} \
-        greater than the elapsed one. \
-        """)
-
-        {[], buffers}
-      else
-        _other when is_nil(first_consumed_buffer) and buffers == [] ->
-          {[], []}
-
-        _other when is_nil(first_consumed_buffer) ->
-          {:ok, offset} = List.first(buffers) |> get_timestamp()
-          split_buffers_recursion(buffers, [], demand_timestamp, offset)
-
-        _other ->
-          {:ok, offset} = get_timestamp(first_consumed_buffer)
-          split_buffers_recursion(buffers, [], demand_timestamp, offset)
-      end
-    end
-
-    @impl Metric
-    def generate_metric_specific_warnings([]), do: :ok
-
-    def generate_metric_specific_warnings(buffers) do
-      [first | rest] = buffers
-
-      _last =
-        rest
-        |> Enum.reduce(first, fn curr_buffer, prev_buffer ->
-          with {:ok, curr_timestamp} <- get_timestamp(curr_buffer),
-               {:ok, prev_timestamp} when curr_timestamp < prev_timestamp <-
-                 get_timestamp(prev_buffer) do
+          if curr_timestamp < prev_timestamp do
             Membrane.Logger.warning("""
-            Received buffers with non-monotonic #{timestamp_name()}s. \
-            Current buffer's #{timestamp_name()} is #{curr_timestamp}, \
-            while the previous buffer's #{timestamp_name()} is #{prev_timestamp}. \
+            Received buffers with non-monotonic #{timestamp_metric.timestamp_name()}s. \
+            Current buffer's #{timestamp_metric.timestamp_name()} is #{curr_timestamp}, \
+            while the previous buffer's #{timestamp_metric.timestamp_name()} is #{prev_timestamp}. \
             This may lead to unexpected behavior in elements that have input pad with flow \
             control set to `:manual` and demand unit set to `:timestamp`, `{:timestamp, :dts}` \
             `{:timestamp, :pts}` or `{:timestamp, :dts_or_pts}`.
+            Pad reference: #{inspect(pad_ref)}
             """)
-
-            curr_buffer
-          else
-            _other -> curr_buffer
           end
-        end)
 
-      :ok
-    end
+          curr_buffer
+      end)
 
-    @impl Metric
-    def reduce_demand(demand, _consumed), do: demand
+    :ok
+  end
 
-    defp split_buffers_recursion([buffer | rest], buffers_to_consume, demand_timestamp, offset) do
-      buffers_to_consume = [buffer | buffers_to_consume]
-      {:ok, buffer_timestamp} = get_timestamp(buffer)
-
-      if buffer_timestamp - offset >= demand_timestamp,
-        do: {Enum.reverse(buffers_to_consume), rest},
-        else: split_buffers_recursion(rest, buffers_to_consume, demand_timestamp, offset)
-    end
-
-    defp split_buffers_recursion([], buffers_to_consume, _demand_timestamp, _offset),
-      do: {Enum.reverse(buffers_to_consume), []}
-
-    defp get_timestamp(nil), do: :error
-
-    case timestamp_type do
-      :pts ->
-        defp get_timestamp(%Buffer{pts: pts}), do: {:ok, pts}
-
-        @impl TimestampMetric
-        def nil_timestamp?(%Buffer{pts: nil}), do: true
-        def nil_timestamp?(%Buffer{}), do: false
-
-        @impl TimestampMetric
-        def timestamp_name(), do: "PTS"
-
-      :dts ->
-        defp get_timestamp(%Buffer{dts: dts}), do: {:ok, dts}
-
-        @impl TimestampMetric
-        def nil_timestamp?(%Buffer{dts: nil}), do: true
-        def nil_timestamp?(%Buffer{}), do: false
-
-        @impl TimestampMetric
-        def timestamp_name(), do: "DTS"
-
-      :dts_or_pts ->
-        defp get_timestamp(buffer), do: {:ok, Buffer.get_dts_or_pts(buffer)}
-
-        @impl TimestampMetric
-        def nil_timestamp?(buffer), do: is_nil(Buffer.get_dts_or_pts(buffer))
-
-        @impl TimestampMetric
-        def timestamp_name(), do: "<DTS || PTS>"
-    end
+  @spec assert_non_nil_timestamps!(Pad.ref(), [Buffer.t()], module()) :: :ok | no_return()
+  def assert_non_nil_timestamps!(pad_ref, buffers, timestamp_metric) do
+    buffers
+    |> Enum.each(fn buffer ->
+      if timestamp_metric.get_timestamp(buffer) == nil do
+        raise """
+        All buffers must have a non-nil #{timestamp_metric.timestamp_name()} when using \
+        #{timestamp_metric} as a demand unit for input pads with manual flow control.
+        Pad reference: #{inspect(pad_ref)}
+        Buffer: #{inspect(buffer)}
+        """
+      end
+    end)
   end
 end

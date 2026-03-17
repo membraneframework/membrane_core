@@ -6,7 +6,7 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
   import ExUnit.CaptureLog
 
   alias Membrane.Buffer
-  alias Membrane.Buffer.Metric.Timestamp.{DTS, DTSOrPTS, PTS}
+  alias Membrane.Buffer.Metric.Timestamp.{DTS, DTSorPTS, PTS}
 
   @t0 0 |> Membrane.Time.milliseconds()
   @t1 100 |> Membrane.Time.milliseconds()
@@ -18,21 +18,21 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
 
   defp buf(ts_field, ts), do: struct(%Buffer{payload: <<>>}, [{ts_field, ts}])
 
-  test ".init_manual_demand_size_value/0 returns -1 as the no-demand sentinel" do
-    assert PTS.init_manual_demand_size_value() == -1
-    assert DTS.init_manual_demand_size_value() == -1
-    assert DTSOrPTS.init_manual_demand_size_value() == -1
+  test ".init_manual_demand_size/0 returns -1 as the no-demand sentinel" do
+    assert PTS.init_manual_demand_size() == -1
+    assert DTS.init_manual_demand_size() == -1
+    assert DTSorPTS.init_manual_demand_size() == -1
   end
 
   test ".reduce_demand/2 always returns the demand unchanged regardless of consumed size" do
-    for module <- [PTS, DTS, DTSOrPTS] do
+    for module <- [PTS, DTS, DTSorPTS] do
       assert module.reduce_demand(1_000, 5) == 1_000
       assert module.reduce_demand(1_000, nil) == 1_000
     end
   end
 
   test ".buffers_size/1 returns {:error, :operation_not_supported}" do
-    for module <- [PTS, DTS, DTSOrPTS] do
+    for module <- [PTS, DTS, DTSorPTS] do
       assert module.buffers_size([]) == {:error, :operation_not_supported}
       assert module.buffers_size([%Buffer{payload: <<>>}]) == {:error, :operation_not_supported}
     end
@@ -89,28 +89,28 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
       end
     end
 
-    test "DTSOrPTS prefers DTS when present, falls back to PTS" do
+    test "DTSorPTS prefers DTS when present, falls back to PTS" do
       # first buffer has dts=@t0 and pts=@t4: metric should use dts
       buf_with_dts = %Buffer{payload: <<>>, dts: @t0, pts: @t4}
       buf_pts_only = %Buffer{payload: <<>>, pts: @t3}
 
       {consumed, remaining} =
-        DTSOrPTS.split_buffers([buf_with_dts, buf_pts_only], @demand, nil, nil)
+        DTSorPTS.split_buffers([buf_with_dts, buf_pts_only], @demand, nil, nil)
 
       assert consumed == [buf_with_dts, buf_pts_only]
       assert remaining == []
     end
 
     test "returns {[], []} when buffers is empty and no buffers have been consumed yet" do
-      for module <- [PTS, DTS, DTSOrPTS] do
+      for module <- [PTS, DTS, DTSorPTS] do
         assert module.split_buffers([], @demand, nil, nil) == {[], []}
       end
     end
 
-    test "DTSOrPTS uses first buffer's DTS-or-PTS as offset when no buffers have been consumed yet" do
+    test "DTSorPTS uses first buffer's DTS-or-PTS as offset when no buffers have been consumed yet" do
       buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &%Buffer{payload: <<>>, dts: &1})
 
-      {consumed, remaining} = DTSOrPTS.split_buffers(buffers, @demand, nil, nil)
+      {consumed, remaining} = DTSorPTS.split_buffers(buffers, @demand, nil, nil)
       assert Enum.map(consumed, & &1.dts) == [@t0, @t1, @t2, @t3]
       assert Enum.map(remaining, & &1.dts) == [@t4]
     end
@@ -120,7 +120,7 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
     test "returns :ok for an empty list" do
       assert PTS.generate_metric_specific_warnings([]) == :ok
       assert DTS.generate_metric_specific_warnings([]) == :ok
-      assert DTSOrPTS.generate_metric_specific_warnings([]) == :ok
+      assert DTSorPTS.generate_metric_specific_warnings([]) == :ok
     end
 
     for {module, name, ts_field} <- [{PTS, "PTS", :pts}, {DTS, "DTS", :dts}] do
@@ -148,12 +148,12 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
       end
     end
 
-    test "DTSOrPTS emits a warning for non-monotonic DTS-or-PTS values" do
+    test "DTSorPTS emits a warning for non-monotonic DTS-or-PTS values" do
       buffers = Enum.map([@t0, @t3, @t1, @t4], &%Buffer{payload: <<>>, dts: &1})
 
       log =
         capture_log(fn ->
-          assert DTSOrPTS.generate_metric_specific_warnings(buffers) == :ok
+          assert DTSorPTS.generate_metric_specific_warnings(buffers) == :ok
         end)
 
       assert log =~ "warning"

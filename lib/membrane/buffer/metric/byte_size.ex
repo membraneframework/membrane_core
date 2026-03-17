@@ -11,7 +11,7 @@ defmodule Membrane.Buffer.Metric.ByteSize do
   def buffer_size_approximation(), do: 1500
 
   @impl true
-  def init_manual_demand_size_value(), do: 0
+  def init_manual_demand_size(), do: 0
 
   @impl true
   def buffers_size(buffers) do
@@ -38,9 +38,6 @@ defmodule Membrane.Buffer.Metric.ByteSize do
       do_split_buffers(rest, at_pos - Payload.size(p), [buf | acc])
     end
   end
-
-  @impl true
-  def generate_metric_specific_warnings(_buffers), do: :ok
 
   @impl true
   def reduce_demand(demand, consumed), do: demand - consumed

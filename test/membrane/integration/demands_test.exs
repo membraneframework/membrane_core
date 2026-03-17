@@ -315,7 +315,7 @@ defmodule Membrane.Integration.DemandsTest do
     {:timestamp, Sink.Timestamp},
     {{:timestamp, :pts}, Sink.Timestamp.PTS},
     {{:timestamp, :dts}, Sink.Timestamp.DTS},
-    {{:timestamp, :dts_or_pts}, Sink.Timestamp.DTSOrPTS}
+    {{:timestamp, :dts_or_pts}, Sink.Timestamp.DTSorPTS}
   ]
 
   for {demand_unit, sink_name} <- @timestamp_demand_units_with_sink_names do

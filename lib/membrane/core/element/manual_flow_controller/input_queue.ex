@@ -8,8 +8,9 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   use Bunch
 
+  require Membrane.Buffer.Metric.Timestamp
   alias Membrane.Buffer
-  alias Membrane.Buffer.Metric.{ByteSize, Count}
+  alias Membrane.Buffer.Metric
   alias Membrane.Core.Element.AtomicDemand
   alias Membrane.Core.Telemetry
   alias Membrane.Event
@@ -99,7 +100,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
     )
 
     outbound_metric_demand_init_size =
-      Buffer.Metric.from_unit(outbound_demand_unit).init_manual_demand_size_value()
+      Buffer.Metric.from_unit(outbound_demand_unit).init_manual_demand_size()
 
     %__MODULE__{
       q: @qe.new(),
@@ -160,7 +161,9 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
          } = input_queue,
          v
        ) do
-    maybe_assert_timestamps_present!(v, outbound_metric, pad_ref)
+    if Metric.Timestamp.is_timestamp_metric?(outbound_metric) do
+      :ok = Metric.Timestamp.assert_non_nil_timestamps!(pad_ref, v, outbound_metric)
+    end
 
     inbound_metric_buffer_size = size(v, inbound_metric)
     outbound_metric_buffer_size = size(v, outbound_metric)
@@ -337,8 +340,13 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
         _other_output -> []
       end)
 
-    [input_queue.last_outbound_buffer | buffers]
-    |> input_queue.outbound_metric.generate_metric_specific_warnings()
+    if Metric.Timestamp.is_timestamp_metric?(input_queue.outbound_metric) do
+      Metric.Timestamp.generate_metric_specific_warnings(
+        input_queue.pad_ref,
+        [input_queue.last_outbound_buffer | buffers],
+        input_queue.outbound_metric
+      )
+    end
 
     input_queue
     |> Map.update!(:first_outbound_buffer, &(&1 || List.first(buffers)))
@@ -364,21 +372,6 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   @spec empty?(t()) :: boolean()
   def empty?(%__MODULE__{size: size}), do: size == 0
-
-  defp maybe_assert_timestamps_present!(_buffers, metric, _pad_ref)
-       when metric in [ByteSize, Count],
-       do: :ok
-
-  defp maybe_assert_timestamps_present!(buffers, outbound_metric, pad_ref) do
-    Enum.each(buffers, fn buffer ->
-      if outbound_metric.nil_timestamp?(buffer) do
-        raise """
-        Received #{inspect(buffer)} on pad #{inspect(pad_ref)}, but the pad's demand unit \
-        requires #{outbound_metric.timestamp_name()} to be set to a non-nil value on all buffers.\
-        """
-      end
-    end)
-  end
 
   defp size(buffers, metric) do
     case metric.buffers_size(buffers) do
