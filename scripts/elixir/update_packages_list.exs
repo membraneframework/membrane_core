@@ -173,16 +173,23 @@ File.write!(Path.join(__DIR__, "hex_packages.exs"), hex_packages_text)
 
 # generate packages list in markdown
 
-header = """
-
-| Package | Description | Links |
-| --- | --- | --- |
-"""
-
 generated_code_comment =
   "<!-- #{generated_code_comment} -->"
 
-generate_packages_md = fn packages, header ->
+generate_packages_md = fn packages, links_column? ->
+  header =
+    if links_column? do
+      """
+      | Package | Description | Links |
+      | --- | --- | --- |
+      """
+    else
+      """
+      | Package | Description |
+      | --- | --- |
+      """
+    end
+
   packages
   |> Enum.map_reduce(
     %{is_header_present: false},
@@ -194,9 +201,13 @@ generate_packages_md = fn packages, header ->
         {"\n#### " <> name, %{acc | is_header_present: false}}
 
       %{type: :package} = package, acc ->
+        maybe_links_cell =
+          if links_column?, do: "#{package.hex_badge} #{package.hexdocs_badge} |", else: ""
+
         package_info = """
         #{if acc.is_header_present, do: "", else: header}\
-        | [#{package.name}](#{package.url}) | #{package.owner_prefix}#{package.description} | #{package.hex_badge} #{package.hexdocs_badge} |\
+        | [#{package.name}](#{package.url}) | #{package.owner_prefix}#{package.description} |\
+        #{maybe_links_cell}\
         """
 
         {package_info, %{acc | is_header_present: true}}
@@ -206,7 +217,7 @@ generate_packages_md = fn packages, header ->
   |> Enum.join("\n")
 end
 
-packages_md = generate_packages_md.(packages, header)
+packages_md = generate_packages_md.(packages, true)
 
 packages_md =
   """
@@ -286,12 +297,7 @@ end)
 
 # replace packages list for LLMs
 
-llms_header = """
-| Package | Description |
-| --- | --- |
-"""
-
-llms_packages_md = generate_packages_md.(packages, llms_header)
+llms_packages_md = generate_packages_md.(packages, false)
 llms_packages_list_path = "guides/llms/packages_list.md"
 File.write!(llms_packages_list_path, llms_packages_md)
 
