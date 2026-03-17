@@ -207,55 +207,29 @@ More info: [Membrane.Time](https://hexdocs.pm/membrane_core/Membrane.Time.md), [
 
 ## Actions
 
-Actions are returned from callbacks as `{[action_list], state}`.
+Actions are returned from callbacks as `{[action_list], state}`. Full reference by component type:
 
-```elixir
-# Data (Elements only)
-{:buffer, {pad_ref, %Membrane.Buffer{payload: binary, pts: pts, dts: dts, metadata: map}}}
-{:stream_format, {pad_ref, %SomeFormat{}}}   # must be sent before the first buffer
-{:event, {pad_ref, %SomeEvent{}}}            # can travel upstream or downstream
-{:end_of_stream, pad_ref}
-
-# Flow control
-{:demand, {pad_ref, size}}        # manual input pad: request more data
-{:redemand, pad_ref}              # re-evaluate demand on output pad
-{:pause_auto_demand, pad_ref}     # auto input pad: pause pulling
-{:resume_auto_demand, pad_ref}    # auto input pad: resume pulling
-
-# Topology (Pipeline and Bin)
-{:spec, children_spec}
-{:remove_children, name_or_list}
-{:remove_link, {child_name, pad_ref}}
-
-# Communication
-{:notify_parent, any_term}               # Element/Bin → parent; received in handle_child_notification/4
-{:notify_child, {child_name, any_term}}  # Pipeline/Bin → child; received in handle_parent_notification/3
-
-# Component control
-{:setup, :complete | :incomplete}
-{:terminate, reason}
-
-# Timers
-{:start_timer, {name, interval}}         # interval is Membrane.Time.t() nanoseconds
-{:stop_timer, name}
-{:timer_interval, {name, new_interval}}
-```
+- [Membrane.Element.Action](https://hexdocs.pm/membrane_core/Membrane.Element.Action.md) — buffers, stream_format, events, EOS, demand, timers, notify_parent, setup, terminate
+- [Membrane.Bin.Action](https://hexdocs.pm/membrane_core/Membrane.Bin.Action.md) — spec, remove_children, remove_link, notify_parent, notify_child, timers, setup, terminate
+- [Membrane.Pipeline.Action](https://hexdocs.pm/membrane_core/Membrane.Pipeline.Action.md) — spec, remove_children, remove_link, notify_child, timers, terminate
 
 ---
 
 ## Key Source Files
 
-| File | Purpose |
-|------|---------|
-| `lib/membrane/pipeline.ex` | Pipeline behaviour & all callbacks |
-| `lib/membrane/bin.ex` | Bin behaviour & all callbacks |
-| `lib/membrane/element/base.ex` | Shared element callbacks |
-| `lib/membrane/element/with_input_pads.ex` | `handle_buffer/4`, `handle_stream_format/4`, `handle_end_of_stream/3` |
-| `lib/membrane/element/with_output_pads.ex` | `handle_demand/5` |
-| `lib/membrane/pad.ex` | Pad definitions, `Pad.ref/2` |
-| `lib/membrane/buffer.ex` | Buffer struct |
-| `lib/membrane/children_spec.ex` | Topology DSL |
-| `lib/membrane/element/action.ex` | Action type specs |
+| Module | Purpose |
+|--------|---------|
+| `Membrane.Pipeline` | Pipeline behaviour & all callbacks |
+| `Membrane.Pipeline.Action` | Pipeline action type specs |
+| `Membrane.Bin` | Bin behaviour & all callbacks |
+| `Membrane.Bin.Action` | Bin action type specs |
+| `Membrane.Element.Base` | Shared element callbacks |
+| `Membrane.Element.WithInputPads` | `handle_buffer/4`, `handle_stream_format/4`, `handle_end_of_stream/3` |
+| `Membrane.Element.WithOutputPads` | `handle_demand/5` |
+| `Membrane.Element.Action` | Element action type specs |
+| `Membrane.Pad` | Pad definitions, `Pad.ref/2` |
+| `Membrane.Buffer` | Buffer struct |
+| `Membrane.ChildrenSpec` | Topology DSL |
 
 ---
 
