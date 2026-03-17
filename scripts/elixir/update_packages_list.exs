@@ -237,10 +237,10 @@ packages
     %{type: :package} = package, acc ->
       package_info = """
       ## #{package.name}
-      #{package.owner_prefix}#{package.description} 
+      #{package.owner_prefix}#{package.description}
 
       #{package.hex_badge} #{package.hexdocs_badge} #{package.github_badge}
-       
+
       """
 
       files =

@@ -92,7 +92,7 @@ defmodule Membrane.Element.Action do
 
   When the pad's `demand_unit` is `:timestamp`, `{:timestamp, :pts}`,
   `{:timestamp, :dts}`, or `{:timestamp, :dts_or_pts}`, the demand size is a
-  `t:Membrane.Time.t/0` duration (in nanoseconds). The queue will deliver
+  `t:Membrane.Time.t/0` duration. The queue will deliver
   buffers until the elapsed timestamp span (last consumed timestamp minus
   first consumed timestamp) reaches the demanded duration.
 

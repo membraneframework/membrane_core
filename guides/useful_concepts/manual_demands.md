@@ -17,19 +17,24 @@ When downstream element requests data, Membrane invokes
 element whose output pad with manual flow control is connected to that
 downstream element. The callback receives the pad name, the demanded amount, and the
 demand unit. The element is expected to produce and send that amount of data,
-or less if the stream ends.
+or less if the stream ends. It does not need to fulfill the whole demand in a
+single callback invocation — it can send fewer buffers and return a
+[`:redemand`](`t:Membrane.Element.Action.redemand/0`) action to be called again
+with the reduced outstanding demand.
 
 The unit in which `demand_size` is expressed is resolved as follows:
 
 1. If the **output pad** declares `demand_unit: :buffers | :bytes`, that unit
    is used.
-2. Otherwise, if the linked **input pad** declares `:buffers` or `:bytes` :demand_unit, that
-   unit is inherited.
+2. Otherwise, if the linked **input pad** declares `demand_unit: :buffers` or
+   `demand_unit: :bytes`, that unit is inherited.
 3. Otherwise — when the input pad uses a timestamp demand unit or has auto
    flow control — the output pad inherits `:buffers`.
 
-So the output pad can explicitly control the unit it receives demand in, but
-timestamp units are not available on output pads.
+The output pad can explicitly control which unit it receives demand in.
+Timestamp-based demand units are only available on input pads; Output pads must not
+declare `demand_unit: :timestamp`.
+Membrane handles any necessary unit conversion automatically.
 
 ### Declarative nature of `handle_demand`
 
@@ -40,7 +45,7 @@ There is no need to accumulate demand values across multiple callback invocation
 
 ### Producing buffers on demand
 
-A source generating random buffers:
+A source handling demand when the unit is `:buffers`:
 
 ```elixir
 defmodule MySource do
@@ -63,7 +68,7 @@ defmodule MySource do
 end
 ```
 
-A source generating random bytes:
+A source handling demand when the unit is `:bytes`:
 
 ```elixir
 defmodule MyBytesSource do
@@ -327,7 +332,7 @@ stream.
 The canonical pattern for a filter with both pads using manual flow control is:
 
 - **[`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)** — propagate the demand upstream by returning a [`:demand`](`t:Membrane.Element.Action.demand/0`) action on the input pad.
-- **[`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`)** — process the incoming buffer and forward it (possibly modified) downstream via a [`:buffer`](`t:Membrane.Element.Action.buffer/0`) action.
+- **[`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`)** — process the incoming buffer and forward it (possibly modified) downstream via a [`:buffer`](`t:Membrane.Element.Action.buffer/0`) action. 
 
 The following example combines every two input buffers into one output buffer,
 so to satisfy a demand of `n` output buffers, the filter needs `n * 2` input
