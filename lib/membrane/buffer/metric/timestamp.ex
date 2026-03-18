@@ -22,41 +22,6 @@ defmodule Membrane.Buffer.Metric.Timestamp do
                   __MODULE__.DTSorPTS
                 ]
 
-  defmacro __using__(_opts) do
-    quote do
-      alias Membrane.Buffer.Metric
-      alias Membrane.Buffer.Metric.Timestamp.Utils
-
-      @init_manual_demand_size -1
-
-      @behaviour Metric
-      @behaviour Metric.Timestamp
-
-      @impl Metric
-      def buffer_size_approximation, do: 1
-
-      @impl Metric
-      def buffers_size(_buffers), do: {:error, :operation_not_supported}
-
-      @impl Metric
-      def init_manual_demand_size(), do: @init_manual_demand_size
-
-      @impl Metric
-      def split_buffers(buffers, demand_timestamp, first_consumed_buffer, last_consumed_buffer) do
-        Utils.split_buffers(
-          buffers,
-          demand_timestamp,
-          first_consumed_buffer,
-          last_consumed_buffer,
-          unquote(__CALLER__.module)
-        )
-      end
-
-      @impl Metric
-      def reduce_demand(demand, _consumed), do: demand
-    end
-  end
-
   @spec generate_metric_specific_warnings(Pad.ref(), [Buffer.t()], module()) :: :ok
   def generate_metric_specific_warnings(_pad_ref, [], _timestamp_metric), do: :ok
 
