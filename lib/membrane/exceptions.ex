@@ -113,7 +113,12 @@ defmodule Membrane.ActionError do
   end
 
   defp format_reason({:invalid_component_playback, playback}) do
-    "Cannot invoke this action while component playback is #{playback}."
+    "Cannot invoke this action while component playback is #{playback}." <>
+      if playback != :playing do
+        " When callback changes from :stopped to :playing the handle_playing/2 callback is called - you might consider executing actions there."
+      else
+        ""
+      end
   end
 
   defp format_reason(:actions_after_redemand) do
