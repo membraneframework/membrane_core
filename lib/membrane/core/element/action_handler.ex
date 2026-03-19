@@ -92,6 +92,7 @@ defmodule Membrane.Core.Element.ActionHandler do
                :pause_auto_demand,
                :resume_auto_demand,
                :forward,
+               :broadcast,
                :end_of_stream
              ] do
     raise ActionError, action: action, reason: {:invalid_component_playback, playback}
@@ -215,6 +216,19 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
+  def handle_action({:broadcast, data}, cb, params, state) do
+    output_pads =
+      Enum.flat_map(state.pads_data, fn
+        {pad_ref, %{direction: :output}} -> [pad_ref]
+        _other -> []
+      end)
+
+    Enum.reduce(output_pads, state, fn pad_ref, state ->
+      handle_action(broadcast_to_action(data, pad_ref), cb, params, state)
+    end)
+  end
+
+  @impl CallbackHandler
   def handle_action(
         {:demand, pad_ref},
         cb,
@@ -285,6 +299,20 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def handle_action(action, _callback, _params, _state) do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Element.Action}
+  end
+
+  defp broadcast_to_action(:end_of_stream, pad_ref), do: {:end_of_stream, pad_ref}
+  defp broadcast_to_action(%Buffer{} = buffer, pad_ref), do: {:buffer, {pad_ref, buffer}}
+
+  defp broadcast_to_action(buffers, pad_ref) when is_list(buffers),
+    do: {:buffer, {pad_ref, buffers}}
+
+  defp broadcast_to_action(data, pad_ref) do
+    if Event.event?(data) do
+      {:event, {pad_ref, data}}
+    else
+      {:stream_format, {pad_ref, data}}
+    end
   end
 
   defp join_buffers(actions) do

@@ -174,6 +174,20 @@ defmodule Membrane.Element.Action do
           {:forward, Buffer.t() | [Buffer.t()] | StreamFormat.t() | Event.t() | :end_of_stream}
 
   @typedoc """
+  Sends buffers/stream format/event/end of stream to all output pads of the element.
+
+  The action sent to each output pad is determined by the data type:
+  - `Membrane.Buffer` struct(s) → `:buffer` action on each output pad
+  - Atom `:end_of_stream` → `:end_of_stream` action on each output pad
+  - Struct implementing `Membrane.EventProtocol` → `:event` action on each output pad
+  - Any other struct → `:stream_format` action on each output pad
+
+  Allowed only when playback is `playing`.
+  """
+  @type broadcast ::
+          {:broadcast, Buffer.t() | [Buffer.t()] | StreamFormat.t() | Event.t() | :end_of_stream}
+
+  @typedoc """
   Starts a timer that will invoke `c:Membrane.Element.Base.handle_tick/3` callback
   every `interval` according to the given `clock`.
 
@@ -274,5 +288,5 @@ defmodule Membrane.Element.Action do
   Check the typespec and documentation of particular callbacks
   for details.
   """
-  @type t :: common_actions | stream_actions | latency | forward | setup
+  @type t :: common_actions | stream_actions | latency | forward | broadcast | setup
 end
