@@ -672,6 +672,23 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref1)
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref2)
     end
+
+    test "mixed list broadcast when playing", %{state: state} do
+      result =
+        @module.handle_action(
+          {:broadcast, [@mock_stream_format, @mock_buffer, :end_of_stream]},
+          :handle_info,
+          %{},
+          state
+        )
+
+      assert_received Message.new(:stream_format, @mock_stream_format, for_pad: :other_ref1)
+      assert_received Message.new(:stream_format, @mock_stream_format, for_pad: :other_ref2)
+      assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref1)
+      assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref2)
+      assert result.pads_data.output1.end_of_stream? == true
+      assert result.pads_data.output2.end_of_stream? == true
+    end
   end
 
   describe "handling_actions" do

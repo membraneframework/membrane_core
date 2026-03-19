@@ -185,7 +185,12 @@ defmodule Membrane.Element.Action do
   Allowed only when playback is `playing`.
   """
   @type broadcast ::
-          {:broadcast, Buffer.t() | [Buffer.t()] | StreamFormat.t() | Event.t() | :end_of_stream}
+          {:broadcast,
+           Buffer.t()
+           | StreamFormat.t()
+           | Event.t()
+           | :end_of_stream
+           | [Buffer.t() | StreamFormat.t() | Event.t() | :end_of_stream]}
 
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Element.Base.handle_tick/3` callback
