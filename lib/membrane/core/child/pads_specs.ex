@@ -257,8 +257,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
           file: env.file,
           line: env.line,
           description: """
-          Error parsing pad spec defined in #{inspect(env.module)}.def_#{direction}_pad #{inspect(pad_name)},
-          reason: #{format_parsing_error(reason, direction, component)}
+          Error parsing pad spec defined in #{inspect(env.module)}.def_#{direction}_pad #{inspect(pad_name)}.
+          #{format_parsing_error(reason, direction, component)}
           """
     end
   end
@@ -344,16 +344,16 @@ defmodule Membrane.Core.Child.PadsSpecs do
       when component != :filter and direction == :output ->
         "Flow control needs to be provided and set to :manual or :push for output pads of Sources and Endpoints"
 
-      {:config_field,
-       {:invalid_value, key: :flow_control, value: _value, reason: {:not_in, [:manual, :push]}}}
-      when component != :filter and direction == :output ->
-        "Flow control needs to be set to :manual or :push for output pads of Sources and Endpoints"
-
       {:config_field, {:key_not_found, :demand_unit}} ->
         "When defining input pads with manual flow control, :demand_unit also needs to be provided"
 
       {:config_field, {:key_not_found, key}} ->
-        "Key not found in spec: #{inspect(key)}"
+        "Expected key #{inspect(key)} not found in config"
+
+      {:config_field,
+       {:invalid_value, key: :flow_control, value: :auto, reason: {:not_in, [:manual, :push]}}}
+      when component != :filter and direction == :output ->
+        "Flow control needs to be set to :manual or :push for output pads of Sources and Endpoints"
 
       {:config_field, {:config_field, key: key, value: value}} ->
         "Invalid value #{inspect(value)} for key #{inspect(key)}"
@@ -361,9 +361,9 @@ defmodule Membrane.Core.Child.PadsSpecs do
       {:config_field, {:config_field, key: key, value: value, reason: reason}} ->
         "Invalid value #{inspect(value)} for key #{inspect(key)}, reason: #{inspect(reason)}"
 
-      {:config_invalid_keys, remaining_config} ->
-        invalid_keys_logs =
-          Enum.each(remaining_config, fn
+      {:config_invalid_keys, remaining_config_keys} ->
+        invalid_keys_reasons =
+          Enum.map_join(remaining_config_keys, "\n", fn
             :flow_control ->
               ":flow_control can't be set for Bin pads"
 
@@ -371,14 +371,16 @@ defmodule Membrane.Core.Child.PadsSpecs do
               ":demand_unit can't be set for Bin pads"
 
             :demand_unit ->
-              ":demand_unit can be set only for pads with manual flow control"
+              ":demand_unit can only be set for pads with :flow_control set to :manual"
 
             :max_instances ->
-              ":max_instances can be set only for pads with :availability set to :on_request"
-          end)
-          |> Enum.join("\n")
+              ":max_instances can only be set for pads with :availability set to :on_request"
 
-        "Invalid config keys:\n" <> invalid_keys_logs
+            other_config_key ->
+              "#{inspect(other_config_key)} is not a valid config key"
+          end)
+
+        "Invalid config keys:\n" <> invalid_keys_reasons
 
       other ->
         "Invalid pad config: #{other}"
