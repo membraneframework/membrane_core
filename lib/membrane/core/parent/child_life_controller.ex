@@ -324,17 +324,18 @@ defmodule Membrane.Core.Parent.ChildLifeController do
             _other -> []
           end)
 
-        bin_pads_linked_in_spec
-        |> Enum.reduce(state, fn pad_ref, state ->
-          case PadModel.assert_instance(state, pad_ref) do
-            :ok -> state
-            {:error, :unknown_pad} -> PadController.init_pad_data(pad_ref, state)
-          end
-          |> PadModel.set_data!(pad_ref, :linked_in_spec?, true)
-        end)
+        Enum.reduce(bin_pads_linked_in_spec, state, &init_bin_pad_linked_in_spec/2)
       end
 
     do_proceed_spec_startup(spec_ref, %{spec_data | status: :initializing}, state)
+  end
+
+  defp init_bin_pad_linked_in_spec(pad_ref, state) do
+    case PadModel.assert_instance(state, pad_ref) do
+      :ok -> state
+      {:error, :unknown_pad} -> PadController.init_pad_data(pad_ref, state)
+    end
+    |> PadModel.set_data!(pad_ref, :linked_in_spec?, true)
   end
 
   defp do_proceed_spec_startup(spec_ref, %{status: :initializing} = spec_data, state) do

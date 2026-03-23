@@ -119,7 +119,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
 
   test "handle_init with unsupported pad flow control mode", ctx do
     # use stub to get the default value
-    pads_descriptions = apply(FilterA, :membrane_pads, [])
+    pads_descriptions = FilterA.membrane_pads()
 
     FilterA
     |> expect(:membrane_pads, fn ->

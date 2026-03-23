@@ -107,15 +107,7 @@ defmodule Membrane.Core.Element.StreamFormatController do
         pretty_accepted_format =
           module.membrane_pads()
           |> get_in([pad_name, :accepted_formats_str])
-          |> case do
-            [pattern_string] ->
-              "`#{pattern_string}`"
-
-            many_patterns ->
-              [last | head] = Enum.reverse(many_patterns)
-              head = head |> Enum.reverse() |> Enum.map_join(", ", &"`#{&1}`")
-              "#{head} or `#{last}`"
-          end
+          |> format_accepted_formats()
 
         raise Membrane.StreamFormatError, """
         Stream format: #{inspect(stream_format)} is not matching accepted format pattern \
@@ -127,5 +119,13 @@ defmodule Membrane.Core.Element.StreamFormatController do
     end
 
     :ok
+  end
+
+  defp format_accepted_formats([pattern_string]), do: "`#{pattern_string}`"
+
+  defp format_accepted_formats(many_patterns) do
+    [last | head] = Enum.reverse(many_patterns)
+    head = head |> Enum.reverse() |> Enum.map_join(", ", &"`#{&1}`")
+    "#{head} or `#{last}`"
   end
 end
