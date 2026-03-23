@@ -217,21 +217,20 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:broadcast, items}, cb, params, state) when is_list(items) do
+    output_pads = get_output_pad_refs(state)
+
     Enum.reduce(items, state, fn item, state ->
-      handle_action({:broadcast, item}, cb, params, state)
+      Enum.reduce(output_pads, state, fn pad_ref, state ->
+        broadcast_to_action(item, pad_ref) |> handle_action(cb, params, state)
+      end)
     end)
   end
 
   @impl CallbackHandler
-  def handle_action({:broadcast, data}, cb, params, state) do
-    output_pads =
-      Enum.flat_map(state.pads_data, fn
-        {pad_ref, %{direction: :output}} -> [pad_ref]
-        _other -> []
-      end)
-
-    Enum.reduce(output_pads, state, fn pad_ref, state ->
-      handle_action(broadcast_to_action(data, pad_ref), cb, params, state)
+  def handle_action({:broadcast, item}, cb, params, state) do
+    get_output_pad_refs(state)
+    |> Enum.reduce(state, fn pad_ref, state ->
+      broadcast_to_action(item, pad_ref) |> handle_action(cb, params, state)
     end)
   end
 
@@ -308,14 +307,31 @@ defmodule Membrane.Core.Element.ActionHandler do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Element.Action}
   end
 
-  defp broadcast_to_action(:end_of_stream, pad_ref), do: {:end_of_stream, pad_ref}
-  defp broadcast_to_action(%Buffer{} = buffer, pad_ref), do: {:buffer, {pad_ref, buffer}}
+  defp get_output_pad_refs(state) do
+    Enum.flat_map(state.pads_data, fn
+      {pad_ref, %{direction: :output}} -> [pad_ref]
+      _other -> []
+    end)
+  end
 
-  defp broadcast_to_action(data, pad_ref) do
-    if Event.event?(data) do
-      {:event, {pad_ref, data}}
-    else
-      {:stream_format, {pad_ref, data}}
+  defp broadcast_to_action(%Buffer{} = buffer, pad_ref), do: {:buffer, {pad_ref, buffer}}
+  defp broadcast_to_action(:end_of_stream, pad_ref), do: {:end_of_stream, pad_ref}
+
+  defp broadcast_to_action(item, pad_ref) do
+    cond do
+      Event.event?(item) ->
+        {:event, {pad_ref, item}}
+
+      is_struct(item) ->
+        {:stream_format, {pad_ref, item}}
+
+      true ->
+        raise ActionError,
+          action: :broadcast,
+          reason: """
+          #{inspect(item)} is neither %Membrane.Buffer{}, :end_of_stream, \
+          a stream format struct, nor does it implement Membrane.EventProtocol.
+          """
     end
   end
 
