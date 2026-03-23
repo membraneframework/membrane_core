@@ -318,14 +318,20 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp broadcast_to_action(:end_of_stream, pad_ref), do: {:end_of_stream, pad_ref}
 
   defp broadcast_to_action(item, pad_ref) do
-    cond do
-      Event.event?(item) ->
-        {:event, {pad_ref, item}}
-
-      is_struct(item) ->
+    # Dialyzer kept on complaining when I used
+    # `cond` clause since it infered that `item`
+    # which is not a `Buffer` nor `:end_of_stream`
+    # is always a struct.
+    # `with` statement workarounds this problem and
+    # yet leaves us with a proper typechecking
+    # e.g. when user returns {:broadcast, nil}
+    with true <- Event.event?(item) do
+      {:event, {pad_ref, item}}
+    else
+      false when is_struct(item) ->
         {:stream_format, {pad_ref, item}}
 
-      true ->
+      false ->
         raise ActionError,
           action: :broadcast,
           reason: """
