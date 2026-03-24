@@ -45,7 +45,19 @@ defmodule Membrane.Core.Child.PadsSpecs do
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, pad_opts)
 
     specs = Keyword.put(specs, :options, escaped_pad_opts)
-    {accepted_format, specs} = Keyword.pop!(specs, :accepted_format)
+
+    {accepted_format, specs} =
+      case Keyword.pop(specs, :accepted_format) do
+        {nil, _specs} ->
+          raise CompileError,
+            description: """
+            Error parsing pad spec defined def_#{direction}_pad #{inspect(pad_name)}.
+            Field :accepted_format must be provided.
+            """
+
+        {accepted_format, specs} ->
+          {accepted_format, specs}
+      end
 
     accepted_formats =
       case accepted_format do
@@ -342,10 +354,10 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
       {:config_field, {:key_not_found, :flow_control}}
       when component != :filter and direction == :output ->
-        "Flow control needs to be provided and set to :manual or :push for output pads of Sources and Endpoints"
+        "Field :flow_control must be provided and set to :manual or :push for output pads of Sources and Endpoints"
 
       {:config_field, {:key_not_found, :demand_unit}} ->
-        "When defining input pads with manual flow control, :demand_unit also needs to be provided"
+        "When defining input pads with :flow_control set to :manual, :demand_unit also must be provided"
 
       {:config_field, {:key_not_found, key}} ->
         "Expected key #{inspect(key)} not found in config"
@@ -353,7 +365,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
       {:config_field,
        {:invalid_value, key: :flow_control, value: :auto, reason: {:not_in, [:manual, :push]}}}
       when component != :filter and direction == :output ->
-        "Flow control needs to be set to :manual or :push for output pads of Sources and Endpoints"
+        "Flow control must be set to :manual or :push for output pads of Sources and Endpoints"
 
       {:config_field, {:config_field, key: key, value: value}} ->
         "Invalid value #{inspect(value)} for key #{inspect(key)}"

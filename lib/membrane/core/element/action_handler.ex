@@ -36,6 +36,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
+  @uninterrupted_redemands_warning_limit 1000
+
   @impl CallbackHandler
   def transform_actions(actions, _callback, _handler_params, state) do
     actions = join_buffers(actions)
@@ -150,6 +152,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     if type == :sink do
       raise ActionError, action: action, reason: {:invalid_element, type}
     else
+      state = %{state | uninterrupted_redemands: 0}
       send_buffer(pad_ref, buffers, state)
     end
   end
@@ -550,8 +553,16 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_redemand(Pad.ref(), State.t()) :: State.t()
   defp handle_redemand(pad_ref, %{type: type} = state)
        when type in [:source, :filter, :endpoint] do
-    with %{direction: :output, flow_control: :manual} <-
-           PadModel.get_data!(state, pad_ref) do
+    with %{direction: :output, flow_control: :manual} <- PadModel.get_data!(state, pad_ref) do
+      state = update_in(state.uninterrupted_redemands, &(&1 + 1))
+
+      if state.uninterrupted_redemands == @uninterrupted_redemands_warning_limit do
+        Membrane.Logger.warning("""
+        This element has returned #{@uninterrupted_redemands_warning_limit} :redemand actions without any :buffer actions in between. \
+        This can be an indication that the element is in an infinite handle_demand loop without actually supplying the demand.
+        """)
+      end
+
       ManualFlowController.delay_redemand(pad_ref, state)
     else
       %{direction: :input} ->
