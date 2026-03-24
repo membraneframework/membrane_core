@@ -498,8 +498,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
 
-      assert %{new_state | delayed_demands: MapSet.new()} == state
-      assert MapSet.member?(new_state.delayed_demands, {:output, :redemand}) == true
+      assert %{new_state | delayed_demands: MapSet.new(), uninterrupted_redemands: 0} == state
+      assert MapSet.member?(new_state.delayed_demands, {:output, :redemand})
     end
   end
 
