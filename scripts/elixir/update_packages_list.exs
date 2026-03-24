@@ -70,7 +70,8 @@ packages_blacklist = [
   "membraneframework.github.io",
   "membrane_rtc_engine_timescaledb",
   "github_actions_test",
-  "membrane_ice_plugin"
+  "membrane_ice_plugin",
+  "membrane_rtc_engine"
 ]
 
 lacking_repos =
