@@ -190,10 +190,6 @@ defmodule Membrane.Core.Element.ActionHandler do
              :handle_buffer,
              :handle_end_of_stream
            ] do
-    Membrane.Logger.warning(
-      "The :forward action is deprecated. Use the :broadcast action instead."
-    )
-
     dir =
       case cb do
         :handle_event -> Pad.opposite_direction(params.direction)
