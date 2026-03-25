@@ -193,7 +193,6 @@ defmodule Membrane.Element.Action do
            | StreamFormat.t()
            | Event.t()
            | :end_of_stream
-           | any()
            | [Buffer.t() | StreamFormat.t() | Event.t() | :end_of_stream]}
 
   @typedoc """

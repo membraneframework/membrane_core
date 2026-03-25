@@ -20,7 +20,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
 
     @impl true
     def handle_buffer(_pad, buffer, _ctx, state) do
-      {[forward: buffer], state}
+      {[broadcast: buffer], state}
     end
 
     @impl true
