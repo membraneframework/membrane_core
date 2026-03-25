@@ -169,6 +169,9 @@ defmodule Membrane.Element.Action do
   forward buffers, `c:Membrane.Element.WithInputPads.handle_stream_format/4` - stream formats.
   `c:Membrane.Element.Base.handle_event/4` - events and
   `c:Membrane.Element.WithInputPads.handle_end_of_stream/3` - ends of streams.
+
+  > #### Deprecated {: .warning}
+  > The `:forward` action is deprecated. Use `t:broadcast/0` instead.
   """
   @type forward ::
           {:forward, Buffer.t() | [Buffer.t()] | StreamFormat.t() | Event.t() | :end_of_stream}
@@ -190,6 +193,7 @@ defmodule Membrane.Element.Action do
            | StreamFormat.t()
            | Event.t()
            | :end_of_stream
+           | any()
            | [Buffer.t() | StreamFormat.t() | Event.t() | :end_of_stream]}
 
   @typedoc """

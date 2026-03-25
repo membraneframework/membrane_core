@@ -27,8 +27,16 @@ defmodule Membrane.Support.Element.DynamicFilter do
   end
 
   @impl true
-  def handle_event(ref, event, _ctx, state) do
-    {[forward: event], state |> Map.put(:last_event, {ref, event})}
+  def handle_event(ref, event, ctx, state) do
+    opposite_dir = Membrane.Pad.opposite_direction(ctx.pads[ref].direction)
+
+    actions =
+      Enum.flat_map(ctx.pads, fn
+        {pad_ref, %{direction: ^opposite_dir}} -> [{:event, {pad_ref, event}}]
+        _other -> []
+      end)
+
+    {actions, state |> Map.put(:last_event, {ref, event})}
   end
 
   @impl true

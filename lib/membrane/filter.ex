@@ -43,14 +43,24 @@ defmodule Membrane.Filter do
 
       @impl true
       def handle_stream_format(_pad, stream_format, _context, state),
-        do: {[forward: stream_format], state}
+        do: {[broadcast: stream_format], state}
 
       @impl true
-      def handle_event(_pad, event, _context, state), do: {[forward: event], state}
+      def handle_event(pad, event, context, state) do
+        opposite_dir = Membrane.Pad.opposite_direction(context.pads[pad].direction)
+
+        actions =
+          Enum.flat_map(context.pads, fn
+            {pad_ref, %{direction: ^opposite_dir}} -> [{:event, {pad_ref, event}}]
+            _other -> []
+          end)
+
+        {actions, state}
+      end
 
       @impl true
-      def handle_end_of_stream(pad, _context, state),
-        do: {[forward: :end_of_stream], state}
+      def handle_end_of_stream(_pad, _context, state),
+        do: {[broadcast: :end_of_stream], state}
 
       defoverridable handle_stream_format: 4,
                      handle_event: 4,
