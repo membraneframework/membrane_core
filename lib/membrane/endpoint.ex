@@ -21,11 +21,10 @@ defmodule Membrane.Endpoint do
   some important differences. While Filters can be thought as parts of a Pipeline that 
   take in data, process it in some way, and then pass it along, Endpoints create 
   "holes" in the pipeline. They behave more like a [Sink](`m:Membrane.Sink`) and a 
-  [Source](`m:Membrane.Source`) in a single element - media they consume and produce are
-  parts of different streams. The main consequence of this is the fact that 
+  [Source](`m:Membrane.Source`) combined in a single element - media they consume and produce are parts of different streams. The main consequence of this is the fact that 
   they separate the flow control of the pipeline ahead of them and behind them, 
-  and in turn their input pads behave like ones of a Sink, and their output pads behave
-  like ones of a Source.
+  as their input pads behave like those of a Sink, and their output pads behave
+  like those of a Source.
   """
 
   alias Membrane.Core.DocsHelper
