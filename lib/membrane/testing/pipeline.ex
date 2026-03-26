@@ -197,6 +197,7 @@ defmodule Membrane.Testing.Pipeline do
 
   defp ex_unit_start_supervised(child_spec) do
     # It's not a 'normal' call to keep dialyzer quiet
+    # credo:disable-for-next-line Credo.Check.Refactor.Apply
     apply(ExUnit.Callbacks, :start_supervised, [child_spec])
   end
 

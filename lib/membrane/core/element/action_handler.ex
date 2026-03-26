@@ -92,6 +92,7 @@ defmodule Membrane.Core.Element.ActionHandler do
                :pause_auto_demand,
                :resume_auto_demand,
                :forward,
+               :broadcast,
                :end_of_stream
              ] do
     raise ActionError, action: action, reason: {:invalid_component_playback, playback}
@@ -215,6 +216,25 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
+  def handle_action({:broadcast, items}, cb, params, state) when is_list(items) do
+    output_pads = get_output_pad_refs(state)
+
+    Enum.reduce(items, state, fn item, state ->
+      Enum.reduce(output_pads, state, fn pad_ref, state ->
+        broadcast_to_action(item, pad_ref) |> handle_action(cb, params, state)
+      end)
+    end)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:broadcast, item}, cb, params, state) do
+    get_output_pad_refs(state)
+    |> Enum.reduce(state, fn pad_ref, state ->
+      broadcast_to_action(item, pad_ref) |> handle_action(cb, params, state)
+    end)
+  end
+
+  @impl CallbackHandler
   def handle_action(
         {:demand, pad_ref},
         cb,
@@ -285,6 +305,34 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def handle_action(action, _callback, _params, _state) do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Element.Action}
+  end
+
+  defp get_output_pad_refs(state) do
+    Enum.flat_map(state.pads_data, fn
+      {pad_ref, %{direction: :output}} -> [pad_ref]
+      _other -> []
+    end)
+  end
+
+  defp broadcast_to_action(%Buffer{} = buffer, pad_ref), do: {:buffer, {pad_ref, buffer}}
+  defp broadcast_to_action(:end_of_stream, pad_ref), do: {:end_of_stream, pad_ref}
+
+  defp broadcast_to_action(item, pad_ref) do
+    cond do
+      Event.event?(item) ->
+        {:event, {pad_ref, item}}
+
+      is_struct(item) ->
+        {:stream_format, {pad_ref, item}}
+
+      true ->
+        raise ActionError,
+          action: :broadcast,
+          reason: """
+          #{inspect(item)} is neither %Membrane.Buffer{}, :end_of_stream, \
+          a stream format struct, nor does it implement Membrane.EventProtocol.
+          """
+    end
   end
 
   defp join_buffers(actions) do

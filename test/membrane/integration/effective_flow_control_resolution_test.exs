@@ -22,7 +22,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     @impl true
     def handle_buffer(_pad, buffer, _ctx, state) do
       if state.lazy?, do: Process.sleep(100)
-      {[forward: buffer], state}
+      {[broadcast: buffer], state}
     end
 
     @impl true
