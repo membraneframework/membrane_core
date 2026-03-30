@@ -17,14 +17,25 @@ defmodule Membrane.Endpoint do
   Endpoints, like all elements, can of course have multiple pads if needed to
   provide more complex solutions.
 
-  Although Endpoints may seem similair to [Filters](`m:Membrane.Filter`), there are 
-  some important differences. While Filters can be thought as parts of a Pipeline that 
+  Although Endpoints may seem similair to [Filters](`m:Membrane.Filter`) - they both have
+  input and output pads - there are some important differences. While Filters can
+  be thought as parts of a Pipeline that 
   take in data, process it in some way, and then pass it along, Endpoints create 
   "holes" in the pipeline. They behave more like a [Sink](`m:Membrane.Sink`) and a 
-  [Source](`m:Membrane.Source`) combined in a single element - media they consume and produce are parts of different streams. The main consequence of this is the fact that 
+  [Source](`m:Membrane.Source`) combined in a single element - media they consume
+  and produce are parts of different streams. 
+
+  For example an example Filter would only modify
+  the input stream and then forward it, an Endpoint would consume the input stream
+  (e.g. send it to some external receiver) and produce a completely separate output stream 
+  (e.g. receive it from some external sender).
+
+  The main consequence of this is the fact that 
   they separate the flow control of the pipeline ahead of them and behind them, 
   as their input pads behave like those of a Sink, and their output pads behave
-  like those of a Source.
+  like those of a Source: 
+    * A Filter can have `:flow_control` set to `:auto` on its output pads, an Endpoint cannot - just like a Source.
+    * A Filter cannot return `:redemand` action in `handle_demand` callback, an Endpoint can - just like a Source.
   """
 
   alias Membrane.Core.DocsHelper

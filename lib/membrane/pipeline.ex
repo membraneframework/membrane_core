@@ -56,8 +56,10 @@ defmodule Membrane.Pipeline do
   by executing a `t:Membrane.Pipeline.Action.terminate/0` action. The reason for 
   this is the fact that there is no objective way to tell when a Pipeline should terminate.
   Even if all of it's children have terminated, it doesn't mean that it should too - more
-  children can be spawned later on.
+  children can be spawned later on. 
 
+  In simpler use cases it's usually enough to terminate the pipeline when a Sink (or all Sinks) 
+  receive `:end_of_stream`s.
   """
 
   use Bunch
