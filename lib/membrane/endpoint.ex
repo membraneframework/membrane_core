@@ -25,8 +25,8 @@ defmodule Membrane.Endpoint do
   [Source](`m:Membrane.Source`) combined in a single element - media they consume
   and produce are parts of different streams. 
 
-  For example an example Filter would only modify
-  the input stream and then forward it, an Endpoint would consume the input stream
+  For instance, while a typical Filter would only modify
+  the input stream and then forward it, a typical Endpoint would consume the input stream
   (e.g. send it to some external receiver) and produce a completely separate output stream 
   (e.g. receive it from some external sender).
 
