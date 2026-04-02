@@ -71,7 +71,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     def_output_pad :output, accepted_format: _any, availability: :on_request
 
     @impl true
-    def handle_buffer(:input, buffer, _ctx, state), do: {[forward: buffer], state}
+    def handle_buffer(:input, buffer, _ctx, state), do: {[broadcast: buffer], state}
   end
 
   [
