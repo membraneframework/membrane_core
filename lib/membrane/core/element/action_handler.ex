@@ -555,7 +555,7 @@ defmodule Membrane.Core.Element.ActionHandler do
     with %{direction: :output, flow_control: :manual} <- PadModel.get_data!(state, pad_ref) do
       state = PadModel.update_data!(state, pad_ref, :uninterrupted_redemands, &(&1 + 1))
 
-      if state.pads_data[pad_ref].uninterrupted_redemands ==
+      if PadModel.get_data!(state, pad_ref, :uninterrupted_redemands) ==
            @uninterrupted_redemands_warning_limit do
         Membrane.Logger.warning("""
         This element has returned #{@uninterrupted_redemands_warning_limit} :redemand actions without any :buffer actions in between for pad #{inspect(pad_ref)}. \
