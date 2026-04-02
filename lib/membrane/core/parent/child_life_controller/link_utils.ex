@@ -289,15 +289,19 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
           put_in(state, [:links, link.id, :linked?], true)
 
         {:error, reason} ->
-          log_handle_link_error(reason, from, to)
-
-          for endpoint <- [from, to] do
-            Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
-          end
-
-          state
+          handle_link_error(reason, from, to, state)
       end
     end
+  end
+
+  defp handle_link_error(reason, from, to, state) do
+    log_handle_link_error(reason, from, to)
+
+    for endpoint <- [from, to] do
+      Message.send(endpoint.pid, :handle_unlink, endpoint.pad_ref)
+    end
+
+    state
   end
 
   defp log_handle_link_error({:call_failure, _reason}, from, to) do

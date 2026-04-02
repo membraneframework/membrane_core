@@ -3,7 +3,6 @@
   {:section, "General"},
   "membrane_sdk",
   "membrane_core",
-  "membrane_rtc_engine",
   "kino_membrane",
   "docker_membrane",
   "membrane_demo",

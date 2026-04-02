@@ -277,25 +277,27 @@ defmodule Membrane.FilterAggregator do
 
   defp transform_out_actions(actions) do
     actions
-    |> Enum.map(fn
-      {:forward, data} -> resolve_forward_action(data)
-      action -> action
+    |> Enum.flat_map(fn
+      {:forward, data} -> [resolve_to_output_action(data)]
+      {:broadcast, items} when is_list(items) -> Enum.map(items, &resolve_to_output_action/1)
+      {:broadcast, item} -> [resolve_to_output_action(item)]
+      action -> [action]
     end)
   end
 
-  defp resolve_forward_action(%Membrane.Buffer{} = buffer) do
+  defp resolve_to_output_action(%Membrane.Buffer{} = buffer) do
     {:buffer, {:output, buffer}}
   end
 
-  defp resolve_forward_action([%Membrane.Buffer{} | _tail] = buffers) do
+  defp resolve_to_output_action([%Membrane.Buffer{} | _tail] = buffers) do
     {:buffer, {:output, buffers}}
   end
 
-  defp resolve_forward_action(:end_of_stream) do
+  defp resolve_to_output_action(:end_of_stream) do
     {:end_of_stream, :output}
   end
 
-  defp resolve_forward_action(%_struct{} = data) do
+  defp resolve_to_output_action(%_struct{} = data) do
     if Membrane.Event.event?(data),
       do: {:event, {:output, data}},
       else: {:stream_format, {:output, data}}
