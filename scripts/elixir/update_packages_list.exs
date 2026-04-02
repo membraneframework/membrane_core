@@ -176,7 +176,7 @@ File.write!(Path.join(__DIR__, "hex_packages.exs"), hex_packages_text)
 generated_code_comment =
   "<!-- #{generated_code_comment} -->"
 
-generate_packages_md = fn packages, links_column? ->
+generate_packages_md_fun = fn packages, links_column? ->
   header =
     if links_column? do
       """
@@ -202,7 +202,7 @@ generate_packages_md = fn packages, links_column? ->
 
       %{type: :package} = package, acc ->
         maybe_links_cell =
-          if links_column?, do: "#{package.hex_badge} #{package.hexdocs_badge} |", else: ""
+          if links_column?, do: " #{package.hex_badge} #{package.hexdocs_badge} |", else: ""
 
         package_info = """
         #{if acc.is_header_present, do: "", else: header}\
@@ -217,7 +217,7 @@ generate_packages_md = fn packages, links_column? ->
   |> Enum.join("\n")
 end
 
-packages_md = generate_packages_md.(packages, true)
+packages_md = generate_packages_md_fun.(packages, true)
 
 packages_md =
   """
@@ -297,7 +297,7 @@ end)
 
 # replace packages list for LLMs
 
-llms_packages_md = generate_packages_md.(packages, false)
+llms_packages_md = generate_packages_md_fun.(packages, false)
 llms_packages_list_path = "guides/llms/packages_list.md"
 File.write!(llms_packages_list_path, llms_packages_md)
 
