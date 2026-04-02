@@ -24,7 +24,7 @@ description: Work with the Membrane multimedia streaming framework in Elixir. Us
 - **Debugging** — check pad `accepted_format` compatibility
 - **Callback context** — every callback receives `ctx`; key fields: `ctx.children`, `ctx.pads`, `ctx.playback`; crash callbacks also have `ctx.crash_initiator`, `ctx.exit_reason`, `ctx.group_name`; see [Pipeline.CallbackContext](https://hexdocs.pm/membrane_core/Membrane.Pipeline.CallbackContext.md), [Bin.CallbackContext](https://hexdocs.pm/membrane_core/Membrane.Bin.CallbackContext.md), [Element.CallbackContext](https://hexdocs.pm/membrane_core/Membrane.Element.CallbackContext.md)
 
-- **Logging** — use `Membrane.Logger` instead of `Logger` in Membrane components; it prepends component context to log messages. Requires `use Membrane.Logger` in the module before calling any logging functions.
+- **Logging** — use `Membrane.Logger` instead of `Logger` in Membrane components; it prepends component context to log messages. Requires `import Membrane.Logger` in the module before calling any logging functions.
 - **Never modify code in `deps/`**
 - **Use `mix hex.info <plugin name>` when you need to check the newest version of a plugin**
 - **Search for appropriate plugins in `README.md`, in `all-packages` section**
