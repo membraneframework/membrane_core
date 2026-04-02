@@ -16,7 +16,7 @@ description: Work with the Membrane multimedia streaming framework in Elixir. Us
 - **Pipeline topology** — use the ChildrenSpec DSL (`child/2`, `get_child/1`, `via_in/2`, `via_out/2`) (more info: [Membrane.ChildrenSpec](https://hexdocs.pm/membrane_core/Membrane.ChildrenSpec.md))
 - **Static vs dynamic topology** — return `spec:` from `handle_init/2` for static pipelines; return additional `spec:` actions from any callback (e.g. `handle_child_notification/4`) to grow the topology at runtime
 - **Naming children** — use atoms (`:source`) for singletons, tuples (`{:decoder, track_id}`) for multi-instance children of the same type
-- **Detecting pipeline completion** — implement `handle_element_end_of_stream/4` in the pipeline to know when a sink's input pad received EOS; then return `{[terminate: :normal], state}` (doesn't work if sink is a Membrane.Bin)
+- **Detecting pipeline completion** — implement `handle_element_end_of_stream/4` in the pipeline to know when a sink's input pad received EOS; then return `{[terminate: :normal], state}` (doesn't work if sink is a Membrane.Bin - then expect a custom message from the bin in `handle_child_notification` callback instead, if the bin sends it)
 - **Dynamic tracks** (demuxers, variable inputs) — use the Dynamic Pads Pattern below
 - **Crash isolation** — group children with `{spec, group: <name>, crash_group_mode: :temporary}`; handle recovery in `handle_crash_group_down/3`; see [Crash Groups guide](https://hexdocs.pm/membrane_core/crash_groups.md)
 - **Inserting debug probes** — add `child(:probe, %Membrane.Debug.Filter{handle_buffer: &IO.inspect(&1, label: :buffer)})` between any two elements to log buffers without changing pipeline logic. You can use different logging functions than `IO.inspect/2`. More info: [Membrane.Debug.Filter](https://hexdocs.pm/membrane_core/Membrane.Debug.Filter.md).
@@ -24,6 +24,7 @@ description: Work with the Membrane multimedia streaming framework in Elixir. Us
 - **Debugging** — check pad `accepted_format` compatibility
 - **Callback context** — every callback receives `ctx`; key fields: `ctx.children`, `ctx.pads`, `ctx.playback`; crash callbacks also have `ctx.crash_initiator`, `ctx.exit_reason`, `ctx.group_name`; see [Pipeline.CallbackContext](https://hexdocs.pm/membrane_core/Membrane.Pipeline.CallbackContext.md), [Bin.CallbackContext](https://hexdocs.pm/membrane_core/Membrane.Bin.CallbackContext.md), [Element.CallbackContext](https://hexdocs.pm/membrane_core/Membrane.Element.CallbackContext.md)
 
+- **Logging** — use `Membrane.Logger` instead of `Logger` in Membrane components; it prepends component context to log messages. Requires `use Membrane.Logger` in the module before calling any logging functions.
 - **Never modify code in `deps/`**
 - **Use `mix hex.info <plugin name>` when you need to check the newest version of a plugin**
 - **Search for appropriate plugins in `README.md`, in `all-packages` section**
@@ -80,7 +81,7 @@ def_output_pad :output, accepted_format: Membrane.RawAudio, flow_control: :auto
 - **Flow control**: `:auto` (framework manages demand — preferred), `:manual` (explicit via `:demand`/`:redemand`), `:push` (no demand, risk of overflow)
 - One input pad ↔ one output pad only; pads must have compatible `accepted_format`
 - Default pad names `:input`/`:output` allow omitting `via_in`/`via_out` in specs
-- **`accepted_format` matching syntax**: `_any` (accept anything) · `Membrane.RawAudio` (any struct of that type) · `%Membrane.RawAudio{channels: 2}` (match specific fields) · `%Membrane.RemoteStream{}` (unknown/unparsed stream)
+- **`accepted_format` matching syntax**: `_any` (accept anything) · `Membrane.RawAudio` (any struct of that type) · `%Membrane.RawAudio{channels: 2}` (match specific fields) · `%Membrane.RemoteStream{}` (unknown/unparsed stream). `any_of(patter1, pattern2, ...)` matches if any pattern matches. 
 - **Full pads guide** (static vs dynamic, bin pads, lifecycle): [Everything about pads](https://hexdocs.pm/membrane_core/pads.md)
 
 ---
@@ -95,7 +96,7 @@ handle_pad_added/3 fires for dynamic pads linked in the same spec
 handle_playing/2   component is ready — start producing/consuming data
 ```
 
-All components spawned in the same `:spec` action enter `:playing` together (slowest setup wins). Elements and Bins wait for their parent before `handle_playing/2`.
+All components spawned in the same `:spec` action enter `:playing` together (they synchronize to the slowest setup). Elements and Bins wait for their parent before `handle_playing/2`.
 
 **Stream format and EOS rules (critical for filter authors):**
 - A source/filter **must send `{:stream_format, {pad, format}}` before the first buffer** on each output pad, or downstream elements crash
@@ -219,17 +220,17 @@ Actions are returned from callbacks as `{[action_list], state}`. Full reference 
 
 | Module | Purpose |
 |--------|---------|
-| `Membrane.Pipeline` | Pipeline behaviour & all callbacks |
-| `Membrane.Pipeline.Action` | Pipeline action type specs |
-| `Membrane.Bin` | Bin behaviour & all callbacks |
-| `Membrane.Bin.Action` | Bin action type specs |
-| `Membrane.Element.Base` | Shared element callbacks |
-| `Membrane.Element.WithInputPads` | `handle_buffer/4`, `handle_stream_format/4`, `handle_end_of_stream/3` |
-| `Membrane.Element.WithOutputPads` | `handle_demand/5` |
-| `Membrane.Element.Action` | Element action type specs |
-| `Membrane.Pad` | Pad definitions, `Pad.ref/2` |
-| `Membrane.Buffer` | Buffer struct |
-| `Membrane.ChildrenSpec` | Topology DSL |
+| [`Membrane.Pipeline`](https://hexdocs.pm/membrane_core/Membrane.Pipeline.md) | Pipeline behaviour & all callbacks |
+| [`Membrane.Pipeline.Action`](https://hexdocs.pm/membrane_core/Membrane.Pipeline.Action.md) | Pipeline action type specs |
+| [`Membrane.Bin`](https://hexdocs.pm/membrane_core/Membrane.Bin.md) | Bin behaviour & all callbacks |
+| [`Membrane.Bin.Action`](https://hexdocs.pm/membrane_core/Membrane.Bin.Action.md) | Bin action type specs |
+| [`Membrane.Element.Base`](https://hexdocs.pm/membrane_core/Membrane.Element.Base.md) | Shared element callbacks |
+| [`Membrane.Element.WithInputPads`](https://hexdocs.pm/membrane_core/Membrane.Element.WithInputPads.md) | `handle_buffer/4`, `handle_stream_format/4`, `handle_end_of_stream/3` |
+| [`Membrane.Element.WithOutputPads`](https://hexdocs.pm/membrane_core/Membrane.Element.WithOutputPads.md) | `handle_demand/5` |
+| [`Membrane.Element.Action`](https://hexdocs.pm/membrane_core/Membrane.Element.Action.md) | Element action type specs |
+| [`Membrane.Pad`](https://hexdocs.pm/membrane_core/Membrane.Pad.md) | Pad definitions, `Pad.ref/2` |
+| [`Membrane.Buffer`](https://hexdocs.pm/membrane_core/Membrane.Buffer.md) | Buffer struct |
+| [`Membrane.ChildrenSpec`](https://hexdocs.pm/membrane_core/Membrane.ChildrenSpec.md) | Topology DSL |
 
 ---
 
