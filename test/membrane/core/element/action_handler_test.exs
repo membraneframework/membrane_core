@@ -572,6 +572,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             flow_control: :push,
             atomic_demand: output1_atomic_demand,
             demand: 0,
+            uninterrupted_redemands: 0,
             stalker_metrics: %{total_buffers: :atomics.new(1, [])},
             name: :output,
             stream_format_validation_params: []
@@ -588,6 +589,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             flow_control: :push,
             atomic_demand: output2_atomic_demand,
             demand: 0,
+            uninterrupted_redemands: 0,
             stalker_metrics: %{total_buffers: :atomics.new(1, [])},
             name: :output,
             stream_format_validation_params: []
