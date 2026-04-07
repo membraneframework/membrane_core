@@ -259,7 +259,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:broadcast, items}, cb, params, state) when is_list(items) do
+  def handle_action({:broadcast, items}, cb, params, %State{type: type} = state)
+      when is_list(items) and type != :sink do
     output_pads = get_output_pad_refs(state)
 
     Enum.reduce(items, state, fn item, state ->
@@ -270,11 +271,16 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action({:broadcast, item}, cb, params, state) do
+  def handle_action({:broadcast, item}, cb, params, %State{type: type} = state)
+      when type != :sink do
     get_output_pad_refs(state)
     |> Enum.reduce(state, fn pad_ref, state ->
       broadcast_to_action(item, pad_ref) |> handle_action(cb, params, state)
     end)
+  end
+
+  def handle_action({:broadcast, _item} = action, _cb, _params, %State{type: type}) do
+    raise ActionError, action: action, reason: {:invalid_component, type}
   end
 
   @impl CallbackHandler
