@@ -45,7 +45,19 @@ defmodule Membrane.Core.Child.PadsSpecs do
     {escaped_pad_opts, pad_opts_typedef} = OptionsSpecs.def_pad_options(pad_name, pad_opts)
 
     specs = Keyword.put(specs, :options, escaped_pad_opts)
-    {accepted_format, specs} = Keyword.pop!(specs, :accepted_format)
+
+    {accepted_format, specs} =
+      case Keyword.pop(specs, :accepted_format) do
+        {nil, _specs} ->
+          raise CompileError,
+            description: """
+            Error parsing pad spec defined def_#{direction}_pad #{inspect(pad_name)}.
+            Field :accepted_format must be provided.
+            """
+
+        {accepted_format, specs} ->
+          {accepted_format, specs}
+      end
 
     accepted_formats =
       case accepted_format do
@@ -86,7 +98,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     quote do
       unquote(do_ensure_default_membrane_pads())
 
-      @membrane_pads unquote(__MODULE__).parse_pad_specs!(
+      @membrane_pads unquote(__MODULE__).parse_pad_spec!(
                        {unquote(pad_name), unquote(specs)},
                        unquote(direction),
                        unquote(component),
@@ -241,35 +253,36 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
   defp endpoint_with_surely_valid_flow_control(_used_module, _pads), do: false
 
-  @spec parse_pad_specs!(
-          specs :: Pad.spec(),
+  @spec parse_pad_spec!(
+          spec :: Pad.spec(),
           direction :: Pad.direction(),
           :filter | :endpoint | :source | :sink | :bin,
           declaration_env :: Macro.Env.t()
         ) :: {Pad.name(), Pad.description()}
-  def parse_pad_specs!(specs, direction, component, env) do
-    with {:ok, specs} <- parse_pad_specs(specs, direction, component) do
-      specs
-    else
-      {:error, reason} ->
+  def parse_pad_spec!(spec, direction, component, env) do
+    case parse_pad_spec(spec, direction, component) do
+      {:ok, spec} ->
+        spec
+
+      {:error, {reason, pad: pad_name}} ->
         raise CompileError,
           file: env.file,
           line: env.line,
           description: """
-          Error parsing pad specs defined in #{inspect(env.module)}.def_#{direction}_pads/1,
-          reason: #{inspect(reason)}
+          Error parsing pad spec defined in #{inspect(env.module)}.def_#{direction}_pad #{inspect(pad_name)}.
+          #{format_parsing_error(reason, direction, component)}
           """
     end
   end
 
-  @spec parse_pad_specs(
+  @spec parse_pad_spec(
           Pad.spec(),
           Pad.direction(),
           :filter | :endpoint | :source | :sink | :bin
         ) ::
           {Pad.name(), Pad.description()} | {:error, reason :: any}
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
-  def parse_pad_specs(spec, direction, component) do
+  def parse_pad_spec(spec, direction, component) do
     withl spec: {name, config} when Pad.is_pad_name(name) and is_list(config) <- spec,
           config:
             {:ok, config} <-
@@ -322,6 +335,67 @@ defmodule Membrane.Core.Child.PadsSpecs do
     else
       spec: spec -> {:error, {:invalid_pad_spec, spec}}
       config: {:error, reason} -> {:error, {reason, pad: name}}
+    end
+  end
+
+  @spec format_parsing_error(
+          term(),
+          Pad.direction(),
+          :filter | :endpoint | :source | :sink | :bin
+        ) :: String.t()
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
+  defp format_parsing_error(reason, direction, component) do
+    case reason do
+      {:config_not_keyword, _config} ->
+        "Pad config not a keyword list"
+
+      {:config_duplicates, duplicates} ->
+        "Duplicate keys in pad config: #{inspect(duplicates)}"
+
+      {:config_field, {:key_not_found, :flow_control}}
+      when component != :filter and direction == :output ->
+        "Field :flow_control must be provided and set to :manual or :push for output pads of Sources and Endpoints"
+
+      {:config_field, {:key_not_found, :demand_unit}} ->
+        "When defining input pads with :flow_control set to :manual, :demand_unit also must be provided"
+
+      {:config_field, {:key_not_found, key}} ->
+        "Expected key #{inspect(key)} not found in config"
+
+      {:config_field,
+       {:invalid_value, key: :flow_control, value: :auto, reason: {:not_in, [:manual, :push]}}}
+      when component != :filter and direction == :output ->
+        "Flow control must be set to :manual or :push for output pads of Sources and Endpoints"
+
+      {:config_field, {:config_field, key: key, value: value}} ->
+        "Invalid value #{inspect(value)} for key #{inspect(key)}"
+
+      {:config_field, {:config_field, key: key, value: value, reason: reason}} ->
+        "Invalid value #{inspect(value)} for key #{inspect(key)}, reason: #{inspect(reason)}"
+
+      {:config_invalid_keys, remaining_config_keys} ->
+        invalid_keys_reasons =
+          Enum.map_join(remaining_config_keys, "\n", fn
+            :flow_control ->
+              ":flow_control can't be set for Bin pads"
+
+            :demand_unit when component == :bin ->
+              ":demand_unit can't be set for Bin pads"
+
+            :demand_unit ->
+              ":demand_unit can only be set for pads with :flow_control set to :manual"
+
+            :max_instances ->
+              ":max_instances can only be set for pads with :availability set to :on_request"
+
+            other_config_key ->
+              "#{inspect(other_config_key)} is not a valid config key"
+          end)
+
+        "Invalid config keys:\n" <> invalid_keys_reasons
+
+      other ->
+        "Invalid pad config: #{other}"
     end
   end
 

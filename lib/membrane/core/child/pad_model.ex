@@ -28,6 +28,7 @@ defmodule Membrane.Core.Child.PadModel do
           stream_format: Membrane.StreamFormat.t() | nil,
           demand: integer() | nil,
           manual_demand_size: integer(),
+          uninterrupted_redemands: non_neg_integer(),
           start_of_stream?: boolean(),
           end_of_stream?: boolean(),
           direction: Pad.direction(),

@@ -123,6 +123,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             flow_control: :push,
             atomic_demand: output_atomic_demand,
             demand: 0,
+            uninterrupted_redemands: 0,
             stalker_metrics: %{total_buffers: :atomics.new(1, [])}
           },
           input: %{
@@ -135,6 +136,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             flow_control: :push,
             atomic_demand: input_atomic_demand,
             demand: 0,
+            uninterrupted_redemands: 0,
             stalker_metrics: %{total_buffers: :atomics.new(1, [])}
           }
         },
@@ -498,8 +500,11 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
 
-      assert %{new_state | delayed_demands: MapSet.new()} == state
-      assert MapSet.member?(new_state.delayed_demands, {:output, :redemand}) == true
+      assert new_state
+             |> put_in([:delayed_demands], MapSet.new())
+             |> update_in([:pads_data, :output, :uninterrupted_redemands], &(&1 - 1)) == state
+
+      assert MapSet.member?(new_state.delayed_demands, {:output, :redemand})
     end
   end
 
@@ -567,6 +572,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             flow_control: :push,
             atomic_demand: output1_atomic_demand,
             demand: 0,
+            uninterrupted_redemands: 0,
             stalker_metrics: %{total_buffers: :atomics.new(1, [])},
             name: :output,
             stream_format_validation_params: []
@@ -583,6 +589,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             flow_control: :push,
             atomic_demand: output2_atomic_demand,
             demand: 0,
+            uninterrupted_redemands: 0,
             stalker_metrics: %{total_buffers: :atomics.new(1, [])},
             name: :output,
             stream_format_validation_params: []
