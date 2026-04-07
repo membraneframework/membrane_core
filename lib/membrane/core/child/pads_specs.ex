@@ -395,7 +395,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
         "Invalid config keys:\n" <> invalid_keys_reasons
 
       other ->
-        "Invalid pad config: #{other}"
+        "Invalid pad config: #{inspect(other)}"
     end
   end
 

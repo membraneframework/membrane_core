@@ -13,6 +13,9 @@ defmodule Membrane.FilterAggregator do
   * their pads cannot use manual demands
   * the first filter must make demands in buffers
   """
+  @moduledoc deprecated:
+               "This module is deprecated, if you need to aggregate children into a single component, use Membrane.Bin"
+
   use Membrane.Filter
 
   alias Membrane.Core.FilterAggregator.Context

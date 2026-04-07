@@ -8,6 +8,7 @@ defmodule Membrane.Pipeline do
 
   To create a pipeline, use `use Membrane.Pipeline` and implement callbacks of `Membrane.Pipeline`  behaviour.
   See `Membrane.ChildrenSpec` for details on instantiating and linking children.
+
   ## Starting and supervision
 
   Start a pipeline with `start_link/2` or `start/2`. Pipelines always spawn under a dedicated supervisor, so
@@ -47,7 +48,18 @@ defmodule Membrane.Pipeline do
   Use the [Applications tab](https://www.erlang.org/doc/apps/observer/observer_ug#applications-tab) in Erlang's Observer GUI
   (or the `Kino` library in Livebook) to visualize a pipeline's internal supervision tree.
 
-  ![Observer graph](assets/images/observer_graph.png).
+  ![Observer graph](assets/images/observer_graph.png)
+
+  ## Terminating
+
+  The Pipeline won't terminate automatically - it has to be terminated explicitly 
+  by executing a `t:Membrane.Pipeline.Action.terminate/0` action. The reason for 
+  this is the fact that there is no objective way to tell when a Pipeline should terminate.
+  Even if all of it's children have terminated, it doesn't mean that it should too - more
+  children can be spawned later on. 
+
+  In simpler use cases it's usually enough to terminate the pipeline when a Sink (or all Sinks) 
+  receive `:end_of_stream`s.
   """
 
   use Bunch
