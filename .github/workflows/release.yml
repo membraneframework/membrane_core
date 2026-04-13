@@ -13,10 +13,11 @@ jobs:
       submodules: recursive
 
   test:
-    uses: membraneframework/membrane_actions/.github/workflows/test.yml@main
+    uses: membraneframework/membrane_actions/.github/workflows/test.yml@test-sharding
     with:
       submodules: recursive
       test-flags: "--include long_running"
+      shards: 4
 
   lint:
     uses: membraneframework/membrane_actions/.github/workflows/lint.yml@main
