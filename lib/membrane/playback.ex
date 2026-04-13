@@ -11,6 +11,8 @@ defmodule Membrane.Playback do
   is returned from antoher callback.
 
   Untils the setup lasts, the component won't enter `:playing` playback.
+
+  When the component enters `:playing` playback, `handle_playing/2` callback is called.
   """
 
   @typedoc @moduledoc

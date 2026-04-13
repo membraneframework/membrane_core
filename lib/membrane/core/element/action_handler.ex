@@ -36,6 +36,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
+  @uninterrupted_redemands_warning_limit 1000
+
   @impl CallbackHandler
   def transform_actions(actions, _callback, _handler_params, state) do
     actions = join_buffers(actions)
@@ -92,6 +94,7 @@ defmodule Membrane.Core.Element.ActionHandler do
                :pause_auto_demand,
                :resume_auto_demand,
                :forward,
+               :broadcast,
                :end_of_stream
              ] do
     raise ActionError, action: action, reason: {:invalid_component_playback, playback}
@@ -140,8 +143,14 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:buffer, {pad_ref, buffers}}, _cb, _params, %State{type: type} = state)
-      when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
+      when is_pad_ref(pad_ref) and type != :sink do
     send_buffer(pad_ref, buffers, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:buffer, {pad_ref, _buffers}} = action, _cb, _params, %State{type: type})
+      when is_pad_ref(pad_ref) do
+    raise ActionError, action: action, reason: {:invalid_component, type}
   end
 
   @impl CallbackHandler
@@ -151,8 +160,16 @@ defmodule Membrane.Core.Element.ActionHandler do
         _params,
         %State{type: type} = state
       )
-      when type in [:source, :filter, :endpoint] and is_pad_ref(pad_ref) do
+      when is_pad_ref(pad_ref) and type != :sink do
     send_stream_format(pad_ref, stream_format, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:stream_format, {pad_ref, _stream_format}} = action, _cb, _params, %State{
+        type: type
+      })
+      when is_pad_ref(pad_ref) do
+    raise ActionError, action: action, reason: {:invalid_component, type}
   end
 
   @impl CallbackHandler
@@ -165,20 +182,42 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_action({:redemand, out_ref}, cb, _params, %State{type: type} = state)
-      when type in [:source, :filter, :endpoint] and {type, cb} != {:filter, :handle_demand} do
+      when type != :sink and (type != :filter or cb != :handle_demand) do
     handle_redemand(out_ref, state)
   end
 
   @impl CallbackHandler
+  def handle_action({:redemand, _out_ref} = action, _cb, _params, %State{type: :sink}) do
+    raise ActionError, action: action, reason: {:invalid_component, :sink}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:redemand, _out_ref} = action, cb, _params, %State{type: :filter}) do
+    raise ActionError,
+      action: action,
+      reason: {:invalid_component_callback_combination, :filter, cb}
+  end
+
+  @impl CallbackHandler
   def handle_action({:pause_auto_demand, in_ref}, _cb, _params, %State{type: type} = state)
-      when type in [:sink, :filter, :endpoint] do
+      when type != :source do
     AutoFlowController.pause_demands(in_ref, state)
   end
 
   @impl CallbackHandler
+  def handle_action({:pause_auto_demand, _in_ref} = action, _cb, _params, %State{type: type}) do
+    raise ActionError, action: action, reason: {:invalid_component, type}
+  end
+
+  @impl CallbackHandler
   def handle_action({:resume_auto_demand, in_ref}, _cb, _params, %State{type: type} = state)
-      when type in [:sink, :filter, :endpoint] do
+      when type != :source do
     AutoFlowController.resume_demands(in_ref, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:resume_auto_demand, _in_ref} = action, _cb, _params, %State{type: type}) do
+    raise ActionError, action: action, reason: {:invalid_component, type}
   end
 
   @impl CallbackHandler
@@ -215,26 +254,58 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
-  def handle_action(
-        {:demand, pad_ref},
-        cb,
-        params,
-        %State{type: type} = state
-      )
-      when is_pad_ref(pad_ref) and type in [:sink, :filter, :endpoint] do
+  def handle_action({:forward, _data} = action, _cb, _params, %State{type: non_filter_type}) do
+    raise ActionError, action: action, reason: {:invalid_component, non_filter_type}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:broadcast, items}, cb, params, %State{type: type} = state)
+      when is_list(items) and type != :sink do
+    output_pads = get_output_pad_refs(state)
+
+    Enum.reduce(items, state, fn item, state ->
+      Enum.reduce(output_pads, state, fn pad_ref, state ->
+        broadcast_to_action(item, pad_ref) |> handle_action(cb, params, state)
+      end)
+    end)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:broadcast, item}, cb, params, %State{type: type} = state)
+      when type != :sink do
+    get_output_pad_refs(state)
+    |> Enum.reduce(state, fn pad_ref, state ->
+      broadcast_to_action(item, pad_ref) |> handle_action(cb, params, state)
+    end)
+  end
+
+  def handle_action({:broadcast, _item} = action, _cb, _params, %State{type: type}) do
+    raise ActionError, action: action, reason: {:invalid_component, type}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:demand, pad_ref}, cb, params, %State{type: type} = state)
+      when is_pad_ref(pad_ref) and type != :source do
     handle_action({:demand, {pad_ref, 1}}, cb, params, state)
   end
 
   @impl CallbackHandler
-  def handle_action(
-        {:demand, {pad_ref, size}},
-        cb,
-        _params,
-        %State{type: type} = state
-      )
-      when is_pad_ref(pad_ref) and is_demand_size(size) and type in [:sink, :filter, :endpoint] do
+  def handle_action({:demand, pad_ref} = action, _cb, _params, %State{type: type})
+      when is_pad_ref(pad_ref) do
+    raise ActionError, action: action, reason: {:invalid_component, type}
+  end
+
+  @impl CallbackHandler
+  def handle_action({:demand, {pad_ref, size}}, cb, _params, %State{type: type} = state)
+      when is_pad_ref(pad_ref) and is_demand_size(size) and type != :source do
     :ok = maybe_warn_on_demand_action(pad_ref, size, cb, state)
     delay_supplying_demand(pad_ref, size, state)
+  end
+
+  @impl CallbackHandler
+  def handle_action({:demand, {pad_ref, size}} = action, _cb, _params, %State{type: type})
+      when is_pad_ref(pad_ref) and is_demand_size(size) do
+    raise ActionError, action: action, reason: {:invalid_component, type}
   end
 
   @impl CallbackHandler
@@ -271,6 +342,12 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   @impl CallbackHandler
+  def handle_action({:end_of_stream, pad_ref} = action, _callback, _params, %State{type: type})
+      when is_pad_ref(pad_ref) do
+    raise ActionError, action: action, reason: {:invalid_component, type}
+  end
+
+  @impl CallbackHandler
   def handle_action({:terminate, :normal}, _cb, _params, %State{terminating?: false}) do
     raise Membrane.ElementError,
           "Cannot terminate an element with reason `:normal` unless it's removed by its parent"
@@ -285,6 +362,34 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def handle_action(action, _callback, _params, _state) do
     raise ActionError, action: action, reason: {:unknown_action, Membrane.Element.Action}
+  end
+
+  defp get_output_pad_refs(state) do
+    Enum.flat_map(state.pads_data, fn
+      {pad_ref, %{direction: :output}} -> [pad_ref]
+      _other -> []
+    end)
+  end
+
+  defp broadcast_to_action(%Buffer{} = buffer, pad_ref), do: {:buffer, {pad_ref, buffer}}
+  defp broadcast_to_action(:end_of_stream, pad_ref), do: {:end_of_stream, pad_ref}
+
+  defp broadcast_to_action(item, pad_ref) do
+    cond do
+      Event.event?(item) ->
+        {:event, {pad_ref, item}}
+
+      is_struct(item) ->
+        {:stream_format, {pad_ref, item}}
+
+      true ->
+        raise ActionError,
+          action: :broadcast,
+          reason: """
+          #{inspect(item)} is neither %Membrane.Buffer{}, :end_of_stream, \
+          a stream format struct, nor does it implement Membrane.EventProtocol.
+          """
+    end
   end
 
   defp join_buffers(actions) do
@@ -425,8 +530,17 @@ defmodule Membrane.Core.Element.ActionHandler do
   @spec handle_redemand(Pad.ref(), State.t()) :: State.t()
   defp handle_redemand(pad_ref, %{type: type} = state)
        when type in [:source, :filter, :endpoint] do
-    with %{direction: :output, flow_control: :manual} <-
-           PadModel.get_data!(state, pad_ref) do
+    with %{direction: :output, flow_control: :manual} <- PadModel.get_data!(state, pad_ref) do
+      state = PadModel.update_data!(state, pad_ref, :uninterrupted_redemands, &(&1 + 1))
+
+      if PadModel.get_data!(state, pad_ref, :uninterrupted_redemands) ==
+           @uninterrupted_redemands_warning_limit do
+        Membrane.Logger.warning("""
+        This element has returned #{@uninterrupted_redemands_warning_limit} :redemand actions without any :buffer actions in between for pad #{inspect(pad_ref)}. \
+        This can be an indication that the element is in an infinite handle_demand loop without actually supplying the demand.
+        """)
+      end
+
       ManualFlowController.delay_redemand(pad_ref, state)
     else
       %{direction: :input} ->

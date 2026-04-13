@@ -220,7 +220,7 @@ defmodule Membrane.Integration.DemandsTest do
 
     @impl true
     def handle_buffer(pad, buffer, ctx, state) do
-      buffer = %Membrane.Buffer{buffer | metadata: pad}
+      buffer = %{buffer | metadata: pad}
 
       {pad_counter, state} = get_and_update_in(state, [:pads_counters, pad], &{&1, &1 + 1})
 

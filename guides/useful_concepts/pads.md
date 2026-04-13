@@ -51,6 +51,24 @@ def handle_something(..., _context, state) do
 end          ^^^^^^^^
 ```
 
+When an element has multiple output pads and wants to send the same data to all
+of them, it can use the [`:broadcast`](`t:Membrane.Element.Action.broadcast/0`)
+action instead of iterating over pads manually:
+
+```elixir
+@impl true
+def handle_something(..., _context, state) do
+  ...
+  {[broadcast: buffer], state}
+end
+```
+
+This sends `buffer` on every linked output pad of the element. The action
+dispatched to each pad is determined automatically based on the data type:
+`Membrane.Buffer` structs become `:buffer` actions, `:end_of_stream` becomes
+an `:end_of_stream` action on each pad, events become `:event` actions, and
+any other struct is treated as a `:stream_format` action.
+
 ## Defining pads
 
 To define what pads a component will have and how they'll behave, we use

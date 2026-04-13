@@ -1,6 +1,9 @@
 # Changelog
 
 ## Latest
+* Make errors more descriptive [#1102](https://github.com/membraneframework/membrane_core/pull/1102)
+* Add `:broadcast` action for sending data to all output pads of an element
+* Deprecate `:forward` action in favour of `:broadcast`
 * Handle removed pads properly in `Membrane.Connector` [#1075](https://github.com/membraneframework/membrane_core/pull/1075)
 * Improve remove_link action docs
 * Deprecate `:components` option for `:unsafely_name_processes_for_observer`

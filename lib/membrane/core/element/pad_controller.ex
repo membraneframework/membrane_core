@@ -180,9 +180,9 @@ defmodule Membrane.Core.Element.PadController do
 
     :ok =
       Child.PadController.validate_pads_flow_control_compability!(
-        output_endpoint.pad_ref,
+        output_endpoint,
         output_pad_info.flow_control,
-        input_endpoint.pad_ref,
+        input_endpoint,
         pad_info.flow_control
       )
 

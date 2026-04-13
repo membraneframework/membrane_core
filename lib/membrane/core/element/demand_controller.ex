@@ -115,7 +115,8 @@ defmodule Membrane.Core.Element.DemandController do
     |> PadModel.set_data!(pad_ref, %{
       pad_data
       | demand: demand,
-        atomic_demand: atomic_demand
+        atomic_demand: atomic_demand,
+        uninterrupted_redemands: 0
     })
   end
 

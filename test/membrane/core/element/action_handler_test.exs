@@ -123,6 +123,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             flow_control: :push,
             atomic_demand: output_atomic_demand,
             demand: 0,
+            uninterrupted_redemands: 0,
             stalker_metrics: %{total_buffers: :atomics.new(1, [])}
           },
           input: %{
@@ -135,6 +136,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
             flow_control: :push,
             atomic_demand: input_atomic_demand,
             demand: 0,
+            uninterrupted_redemands: 0,
             stalker_metrics: %{total_buffers: :atomics.new(1, [])}
           }
         },
@@ -498,8 +500,11 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           state
         )
 
-      assert %{new_state | delayed_demands: MapSet.new()} == state
-      assert MapSet.member?(new_state.delayed_demands, {:output, :redemand}) == true
+      assert new_state
+             |> put_in([:delayed_demands], MapSet.new())
+             |> update_in([:pads_data, :output, :uninterrupted_redemands], &(&1 - 1)) == state
+
+      assert MapSet.member?(new_state.delayed_demands, {:output, :redemand})
     end
   end
 
@@ -526,6 +531,171 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       )
 
     [state: state]
+  end
+
+  defp two_output_pad_state(_context) do
+    supervisor = SubprocessSupervisor.start_link!()
+
+    make_output_atomic_demand = fn ->
+      AtomicDemand.new(%{
+        receiver_effective_flow_control: :push,
+        receiver_process: spawn(fn -> :ok end),
+        receiver_demand_unit: :bytes,
+        sender_process: self(),
+        sender_pad_ref: :output,
+        supervisor: supervisor
+      })
+    end
+
+    output1_atomic_demand = make_output_atomic_demand.()
+    output2_atomic_demand = make_output_atomic_demand.()
+
+    state =
+      struct!(State,
+        module: TrivialFilter,
+        name: :elem_name,
+        type: :filter,
+        synchronization: %{clock: nil, parent_clock: nil},
+        delayed_demands: MapSet.new(),
+        playback: :playing,
+        pads_to_snapshot: MapSet.new(),
+        pads_data: %{
+          output1: %{
+            direction: :output,
+            pid: self(),
+            other_ref: :other_ref1,
+            stream_format: @mock_stream_format,
+            demand_unit: :bytes,
+            other_demand_unit: :bytes,
+            start_of_stream?: true,
+            end_of_stream?: false,
+            flow_control: :push,
+            atomic_demand: output1_atomic_demand,
+            demand: 0,
+            uninterrupted_redemands: 0,
+            stalker_metrics: %{total_buffers: :atomics.new(1, [])},
+            name: :output,
+            stream_format_validation_params: []
+          },
+          output2: %{
+            direction: :output,
+            pid: self(),
+            other_ref: :other_ref2,
+            stream_format: @mock_stream_format,
+            demand_unit: :bytes,
+            other_demand_unit: :bytes,
+            start_of_stream?: true,
+            end_of_stream?: false,
+            flow_control: :push,
+            atomic_demand: output2_atomic_demand,
+            demand: 0,
+            uninterrupted_redemands: 0,
+            stalker_metrics: %{total_buffers: :atomics.new(1, [])},
+            name: :output,
+            stream_format_validation_params: []
+          }
+        },
+        pads_info: %{
+          output1: %{flow_control: :push},
+          output2: %{flow_control: :push}
+        },
+        satisfied_auto_output_pads: MapSet.new(),
+        awaiting_auto_input_pads: MapSet.new(),
+        popping_auto_flow_queue?: false
+      )
+
+    [state: state]
+  end
+
+  describe "handling :broadcast action" do
+    setup :two_output_pad_state
+
+    test "buffer broadcast when playing", %{state: state} do
+      _result = @module.handle_action({:broadcast, @mock_buffer}, :handle_info, %{}, state)
+
+      assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref1)
+      assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref2)
+    end
+
+    test "event broadcast when playing", %{state: state} do
+      mock_event = %Membrane.Core.Events.EndOfStream{}
+      _result = @module.handle_action({:broadcast, mock_event}, :handle_info, %{}, state)
+
+      assert_received Message.new(:event, ^mock_event, for_pad: :other_ref1)
+      assert_received Message.new(:event, ^mock_event, for_pad: :other_ref2)
+    end
+
+    test "stream_format broadcast when playing", %{state: state} do
+      _result =
+        @module.handle_action({:broadcast, @mock_stream_format}, :handle_info, %{}, state)
+
+      assert_received Message.new(:stream_format, @mock_stream_format, for_pad: :other_ref1)
+      assert_received Message.new(:stream_format, @mock_stream_format, for_pad: :other_ref2)
+    end
+
+    test "end_of_stream broadcast when playing", %{state: state} do
+      result = @module.handle_action({:broadcast, :end_of_stream}, :handle_info, %{}, state)
+
+      assert result.pads_data.output1.end_of_stream? == true
+      assert result.pads_data.output2.end_of_stream? == true
+    end
+
+    test "broadcast when not playing", %{state: state} do
+      state = %{state | playback: :stopped}
+
+      assert_raise ActionError, ~r/stopped/, fn ->
+        @module.handle_action({:broadcast, @mock_buffer}, :handle_info, %{}, state)
+      end
+    end
+
+    test "broadcast with no output pads", %{state: state} do
+      state = %{
+        state
+        | pads_data: %{
+            input: %{
+              direction: :input,
+              pid: self(),
+              other_ref: :other_input,
+              stream_format: nil,
+              start_of_stream?: true,
+              end_of_stream?: false,
+              flow_control: :push,
+              demand: 0,
+              stalker_metrics: %{total_buffers: :atomics.new(1, [])}
+            }
+          },
+          pads_info: %{input: %{flow_control: :push}}
+      }
+
+      result = @module.handle_action({:broadcast, @mock_buffer}, :handle_info, %{}, state)
+      assert result == state
+    end
+
+    test "broadcast on source element", %{state: state} do
+      state = %{state | type: :source}
+
+      _result = @module.handle_action({:broadcast, @mock_buffer}, :handle_info, %{}, state)
+
+      assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref1)
+      assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref2)
+    end
+
+    test "mixed list broadcast when playing", %{state: state} do
+      result =
+        @module.handle_action(
+          {:broadcast, [@mock_stream_format, @mock_buffer, :end_of_stream]},
+          :handle_info,
+          %{},
+          state
+        )
+
+      assert_received Message.new(:stream_format, @mock_stream_format, for_pad: :other_ref1)
+      assert_received Message.new(:stream_format, @mock_stream_format, for_pad: :other_ref2)
+      assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref1)
+      assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref2)
+      assert result.pads_data.output1.end_of_stream? == true
+      assert result.pads_data.output2.end_of_stream? == true
+    end
   end
 
   describe "handling_actions" do
