@@ -5,6 +5,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
   alias Membrane.Core.Element.AtomicDemand
   alias Membrane.Core.Element.ManualFlowController.InputQueue
   alias Membrane.Core.Message
+  alias Membrane.Core.Metric
   alias Membrane.Core.SubprocessSupervisor
   alias Membrane.Testing.Event
 
@@ -19,8 +20,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
          inbound_demand_unit: :bytes,
          outbound_demand_unit: :bytes,
          pad_ref: :output_pad_ref,
-         atomic_demand: new_atomic_demand(),
-         expected_metric: Buffer.Metric.from_unit(:bytes)
+         atomic_demand: new_atomic_demand()
        }}
     end
 
@@ -38,10 +38,10 @@ defmodule Membrane.Core.Element.InputQueueTest do
                log_tag: context.log_tag,
                target_size: context.target_queue_size,
                atomic_demand: context.atomic_demand,
-               inbound_metric: context.expected_metric,
-               outbound_metric: context.expected_metric,
+               inbound_demand_unit: :bytes,
+               outbound_demand_unit: :bytes,
                outbound_metric_demand_init_size:
-                 context.expected_metric.init_manual_demand_size(),
+                 Metric.init_manual_demand_size(context.outbound_demand_unit),
                pad_ref: context.pad_ref,
                size: 0,
                demand: context.target_queue_size,
@@ -62,8 +62,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         prepare_input_queue(
           size: 0,
-          inbound_metric: Buffer.Metric.Count,
-          outbound_metric: Buffer.Metric.Count,
+          inbound_demand_unit: :buffers,
+          outbound_demand_unit: :buffers,
           q: Qex.new()
         )
 
@@ -98,13 +98,13 @@ defmodule Membrane.Core.Element.InputQueueTest do
        }}
     end
 
-    test "updated properly `size` and `demand` when `:metric` is `Buffer.Metric.Count`",
+    test "updated properly `size` and `demand` when demand unit is `:buffers`",
          context do
       input_queue =
         prepare_input_queue(
           size: context.size,
-          inbound_metric: Buffer.Metric.Count,
-          outbound_metric: Buffer.Metric.Count,
+          inbound_demand_unit: :buffers,
+          outbound_demand_unit: :buffers,
           q: context.q,
           demand: context.demand
         )
@@ -116,13 +116,13 @@ defmodule Membrane.Core.Element.InputQueueTest do
       assert updated_input_queue.demand == context.demand - 1
     end
 
-    test "updated properly `size` and `demand` when `:metric` is `Buffer.Metric.ByteSize`",
+    test "updated properly `size` and `demand` when demand unit is `:bytes`",
          context do
       input_queue =
         prepare_input_queue(
           size: context.size,
-          inbound_metric: Buffer.Metric.ByteSize,
-          outbound_metric: Buffer.Metric.ByteSize,
+          inbound_demand_unit: :bytes,
+          outbound_demand_unit: :bytes,
           q: context.q,
           demand: context.demand
         )
@@ -140,8 +140,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         prepare_input_queue(
           size: context.size,
-          inbound_metric: Buffer.Metric.ByteSize,
-          outbound_metric: Buffer.Metric.ByteSize,
+          inbound_demand_unit: :bytes,
+          outbound_demand_unit: :bytes,
           q: context.q,
           demand: context.demand
         )
@@ -157,8 +157,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         prepare_input_queue(
           size: context.size,
-          inbound_metric: Buffer.Metric.ByteSize,
-          outbound_metric: Buffer.Metric.ByteSize,
+          inbound_demand_unit: :bytes,
+          outbound_demand_unit: :bytes,
           q: context.q,
           demand: context.demand
         )
@@ -174,8 +174,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         prepare_input_queue(
           size: context.size,
-          inbound_metric: Buffer.Metric.ByteSize,
-          outbound_metric: Buffer.Metric.ByteSize,
+          inbound_demand_unit: :bytes,
+          outbound_demand_unit: :bytes,
           q: context.q,
           demand: context.demand
         )
@@ -241,8 +241,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
           size: size,
           demand: 94,
           target_size: 100,
-          inbound_metric: Buffer.Metric.Count,
-          outbound_metric: Buffer.Metric.Count,
+          inbound_demand_unit: :buffers,
+          outbound_demand_unit: :buffers,
           q: q,
           pad_ref: :output_pad_ref,
           atomic_demand: atomic_demand
@@ -503,12 +503,15 @@ defmodule Membrane.Core.Element.InputQueueTest do
   end
 
   defp prepare_input_queue(fields) do
-    outbound_metric = Keyword.get(fields, :outbound_metric)
+    outbound_demand_unit = Keyword.get(fields, :outbound_demand_unit)
 
     defaults = [
       stalker_metrics: %{size: :atomics.new(1, [])},
       outbound_metric_demand_init_size:
-        if(outbound_metric, do: outbound_metric.init_manual_demand_size(), else: 0)
+        if(outbound_demand_unit,
+          do: Metric.init_manual_demand_size(outbound_demand_unit),
+          else: 0
+        )
     ]
 
     struct(InputQueue, defaults ++ fields)
@@ -528,12 +531,12 @@ defmodule Membrane.Core.Element.InputQueueTest do
   defp bufs_size(output, unit) do
     {_state, bufs} = output
 
-    {:ok, size} =
+    all_buffers =
       Enum.flat_map(bufs, fn {:buffers, bufs_list, _inbound_metric_size, _outbound_metric_size} ->
         bufs_list
       end)
-      |> Membrane.Buffer.Metric.from_unit(unit).buffers_size()
 
+    {:ok, size} = Metric.buffers_size(unit, all_buffers)
     size
   end
 

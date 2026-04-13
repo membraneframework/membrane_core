@@ -200,16 +200,14 @@ defmodule Membrane.Core.Element.ManualFlowController do
          {:buffers, buffers, _inbound_metric_buf_size, outbound_metric_buf_size},
          state
        ) do
-    outbound_metric =
-      PadModel.get_data!(state, pad_ref, :demand_unit)
-      |> Membrane.Buffer.Metric.from_unit()
+    demand_unit = PadModel.get_data!(state, pad_ref, :demand_unit)
 
     state =
       PadModel.update_data!(
         state,
         pad_ref,
         :manual_demand_size,
-        &outbound_metric.reduce_demand(&1, outbound_metric_buf_size)
+        &Membrane.Core.Metric.reduce_demand(demand_unit, &1, outbound_metric_buf_size)
       )
 
     BufferController.exec_buffer_callback(pad_ref, buffers, state)

@@ -1,30 +1,32 @@
-defmodule Membrane.Buffer.Metric.CountTest do
+defmodule Membrane.Core.Metric.CountTest do
   use ExUnit.Case, async: true
 
   alias Membrane.Buffer
-  alias Membrane.Buffer.Metric.Count
+  alias Membrane.Core.Metric
+
+  @unit :buffers
 
   @buf1 %Buffer{payload: :pay1}
   @buf2 %Buffer{payload: :pay2}
   @buffers [@buf1, @buf2]
   @count 1
 
-  describe ".buffers_size/1" do
+  describe ".buffers_size/2" do
     test "should return count of all buffers" do
-      assert Count.buffers_size(@buffers) == {:ok, 2}
+      assert Metric.buffers_size(@unit, @buffers) == {:ok, 2}
     end
   end
 
-  describe ".split_buffers/4" do
+  describe ".split_buffers/5" do
     test "should return split buffers" do
-      {extracted, rest} = Count.split_buffers(@buffers, @count, nil, nil)
+      {extracted, rest} = Metric.split_buffers(@unit, @buffers, @count, nil, nil)
 
       assert extracted == [@buf1]
       assert rest == [@buf2]
     end
   end
 
-  test ".reduce_demand/2 should subtract the consumed count from the remaining demand" do
-    assert Count.reduce_demand(10, 3) == 7
+  test ".reduce_demand/3 should subtract the consumed count from the remaining demand" do
+    assert Metric.reduce_demand(@unit, 10, 3) == 7
   end
 end

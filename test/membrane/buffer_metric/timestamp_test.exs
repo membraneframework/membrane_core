@@ -1,12 +1,10 @@
-defmodule Membrane.Buffer.Metric.TimestampTest do
+defmodule Membrane.Core.Metric.TimestampTest do
   use ExUnit.Case, async: true
-
-  # This module was vibe-coded
 
   import ExUnit.CaptureLog
 
   alias Membrane.Buffer
-  alias Membrane.Buffer.Metric.Timestamp.{DTS, DTSorPTS, PTS}
+  alias Membrane.Core.Metric
 
   @t0 0 |> Membrane.Time.milliseconds()
   @t1 100 |> Membrane.Time.milliseconds()
@@ -16,51 +14,57 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
 
   @demand 300 |> Membrane.Time.milliseconds()
 
+  @pts_unit {:timestamp, :pts}
+  @dts_unit {:timestamp, :dts}
+  @dts_or_pts_unit {:timestamp, :dts_or_pts}
+
   defp buf(ts_field, ts), do: struct(%Buffer{payload: <<>>}, [{ts_field, ts}])
 
-  test ".init_manual_demand_size/0 returns -1 as the no-demand sentinel" do
-    assert PTS.init_manual_demand_size() == -1
-    assert DTS.init_manual_demand_size() == -1
-    assert DTSorPTS.init_manual_demand_size() == -1
+  test ".init_manual_demand_size/1 returns -1 as the no-demand sentinel" do
+    assert Metric.init_manual_demand_size(@pts_unit) == -1
+    assert Metric.init_manual_demand_size(@dts_unit) == -1
+    assert Metric.init_manual_demand_size(@dts_or_pts_unit) == -1
   end
 
-  test ".reduce_demand/2 always returns the demand unchanged regardless of consumed size" do
-    for module <- [PTS, DTS, DTSorPTS] do
-      assert module.reduce_demand(1_000, 5) == 1_000
-      assert module.reduce_demand(1_000, nil) == 1_000
+  test ".reduce_demand/3 always returns the demand unchanged regardless of consumed size" do
+    for unit <- [@pts_unit, @dts_unit, @dts_or_pts_unit] do
+      assert Metric.reduce_demand(unit, 1_000, 5) == 1_000
+      assert Metric.reduce_demand(unit, 1_000, nil) == 1_000
     end
   end
 
-  test ".buffers_size/1 returns {:error, :operation_not_supported}" do
-    for module <- [PTS, DTS, DTSorPTS] do
-      assert module.buffers_size([]) == {:error, :operation_not_supported}
-      assert module.buffers_size([%Buffer{payload: <<>>}]) == {:error, :operation_not_supported}
+  test ".buffers_size/2 returns {:error, :operation_not_supported}" do
+    for unit <- [@pts_unit, @dts_unit, @dts_or_pts_unit] do
+      assert Metric.buffers_size(unit, []) == {:error, :operation_not_supported}
+      assert Metric.buffers_size(unit, [%Buffer{payload: <<>>}]) == {:error, :operation_not_supported}
     end
   end
 
-  describe ".split_buffers/4" do
-    for {module, name, ts_field} <- [{PTS, "PTS", :pts}, {DTS, "DTS", :dts}] do
+  describe ".split_buffers/5" do
+    for {unit, name, ts_field} <- [
+          {{:timestamp, :pts}, "PTS", :pts},
+          {{:timestamp, :dts}, "DTS", :dts}
+        ] do
       test "returns {[], buffers} when demand is the initial sentinel value (-1) for #{name}" do
         buffers = Enum.map([@t0, @t1, @t2], &buf(unquote(ts_field), &1))
-        assert unquote(module).split_buffers(buffers, -1, nil, nil) == {[], buffers}
+        assert Metric.split_buffers(unquote(unit), buffers, -1, nil, nil) == {[], buffers}
       end
 
       test "uses first buffer's #{name} as offset when no buffers have been consumed yet" do
         buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &buf(unquote(ts_field), &1))
 
-        {consumed, remaining} = unquote(module).split_buffers(buffers, @demand, nil, nil)
+        {consumed, remaining} = Metric.split_buffers(unquote(unit), buffers, @demand, nil, nil)
         assert Enum.map(consumed, &Map.get(&1, unquote(ts_field))) == [@t0, @t1, @t2, @t3]
         assert Enum.map(remaining, &Map.get(&1, unquote(ts_field))) == [@t4]
       end
 
       test "uses first_consumed_buffer's #{name} as offset when buffers have been consumed" do
         buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &buf(unquote(ts_field), &1))
-        # first_consumed at @t0 → same offset as above, same split point
         first_consumed = buf(unquote(ts_field), @t0)
         last_consumed = buf(unquote(ts_field), @t1)
 
         {consumed, remaining} =
-          unquote(module).split_buffers(buffers, @demand, first_consumed, last_consumed)
+          Metric.split_buffers(unquote(unit), buffers, @demand, first_consumed, last_consumed)
 
         assert Enum.map(consumed, &Map.get(&1, unquote(ts_field))) == [@t0, @t1, @t2, @t3]
         assert Enum.map(remaining, &Map.get(&1, unquote(ts_field))) == [@t4]
@@ -68,7 +72,7 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
 
       test "returns all buffers for #{name} when demand exceeds the available timestamp range" do
         buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &buf(unquote(ts_field), &1))
-        {consumed, remaining} = unquote(module).split_buffers(buffers, @t4 * 10, nil, nil)
+        {consumed, remaining} = Metric.split_buffers(unquote(unit), buffers, @t4 * 10, nil, nil)
         assert consumed == buffers
         assert remaining == []
       end
@@ -80,7 +84,7 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
 
         log =
           capture_log(fn ->
-            assert unquote(module).split_buffers(buffers, @demand, first_consumed, last_consumed) ==
+            assert Metric.split_buffers(unquote(unit), buffers, @demand, first_consumed, last_consumed) ==
                      {[], buffers}
           end)
 
@@ -90,46 +94,48 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
     end
 
     test "DTSorPTS prefers DTS when present, falls back to PTS" do
-      # first buffer has dts=@t0 and pts=@t4: metric should use dts
       buf_with_dts = %Buffer{payload: <<>>, dts: @t0, pts: @t4}
       buf_pts_only = %Buffer{payload: <<>>, pts: @t3}
 
       {consumed, remaining} =
-        DTSorPTS.split_buffers([buf_with_dts, buf_pts_only], @demand, nil, nil)
+        Metric.split_buffers(@dts_or_pts_unit, [buf_with_dts, buf_pts_only], @demand, nil, nil)
 
       assert consumed == [buf_with_dts, buf_pts_only]
       assert remaining == []
     end
 
     test "returns {[], []} when buffers is empty and no buffers have been consumed yet" do
-      for module <- [PTS, DTS, DTSorPTS] do
-        assert module.split_buffers([], @demand, nil, nil) == {[], []}
+      for unit <- [@pts_unit, @dts_unit, @dts_or_pts_unit] do
+        assert Metric.split_buffers(unit, [], @demand, nil, nil) == {[], []}
       end
     end
 
     test "DTSorPTS uses first buffer's DTS-or-PTS as offset when no buffers have been consumed yet" do
       buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &%Buffer{payload: <<>>, dts: &1})
 
-      {consumed, remaining} = DTSorPTS.split_buffers(buffers, @demand, nil, nil)
+      {consumed, remaining} = Metric.split_buffers(@dts_or_pts_unit, buffers, @demand, nil, nil)
       assert Enum.map(consumed, & &1.dts) == [@t0, @t1, @t2, @t3]
       assert Enum.map(remaining, & &1.dts) == [@t4]
     end
   end
 
-  describe ".generate_metric_specific_warnings/1" do
+  describe ".generate_metric_specific_warnings/3" do
     test "returns :ok for an empty list" do
-      assert PTS.generate_metric_specific_warnings([]) == :ok
-      assert DTS.generate_metric_specific_warnings([]) == :ok
-      assert DTSorPTS.generate_metric_specific_warnings([]) == :ok
+      assert Metric.generate_metric_specific_warnings(nil, [], @pts_unit) == :ok
+      assert Metric.generate_metric_specific_warnings(nil, [], @dts_unit) == :ok
+      assert Metric.generate_metric_specific_warnings(nil, [], @dts_or_pts_unit) == :ok
     end
 
-    for {module, name, ts_field} <- [{PTS, "PTS", :pts}, {DTS, "DTS", :dts}] do
+    for {unit, name, ts_field} <- [
+          {{:timestamp, :pts}, "PTS", :pts},
+          {{:timestamp, :dts}, "DTS", :dts}
+        ] do
       test "emits no warning for monotonically increasing #{name}s" do
         buffers = Enum.map([@t0, @t1, @t2, @t3], &buf(unquote(ts_field), &1))
 
         log =
           capture_log(fn ->
-            assert unquote(module).generate_metric_specific_warnings(buffers) == :ok
+            assert Metric.generate_metric_specific_warnings(nil, buffers, unquote(unit)) == :ok
           end)
 
         refute log =~ "warning"
@@ -140,7 +146,7 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
 
         log =
           capture_log(fn ->
-            assert unquote(module).generate_metric_specific_warnings(buffers) == :ok
+            assert Metric.generate_metric_specific_warnings(nil, buffers, unquote(unit)) == :ok
           end)
 
         assert log =~ "warning"
@@ -153,7 +159,7 @@ defmodule Membrane.Buffer.Metric.TimestampTest do
 
       log =
         capture_log(fn ->
-          assert DTSorPTS.generate_metric_specific_warnings(buffers) == :ok
+          assert Metric.generate_metric_specific_warnings(nil, buffers, @dts_or_pts_unit) == :ok
         end)
 
       assert log =~ "warning"

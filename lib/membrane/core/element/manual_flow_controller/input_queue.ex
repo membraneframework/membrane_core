@@ -8,10 +8,9 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   use Bunch
 
-  require Membrane.Buffer.Metric.Timestamp
   alias Membrane.Buffer
-  alias Membrane.Buffer.Metric
   alias Membrane.Core.Element.AtomicDemand
+  alias Membrane.Core.Metric
   alias Membrane.Core.Telemetry
   alias Membrane.Event
   alias Membrane.Pad
@@ -37,8 +36,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
           target_size: pos_integer(),
           size: non_neg_integer(),
           demand: non_neg_integer(),
-          inbound_metric: module(),
-          outbound_metric: module(),
+          inbound_demand_unit: Membrane.Buffer.Metric.unit(),
+          outbound_demand_unit: Membrane.Buffer.Metric.unit(),
           outbound_metric_demand_init_size: non_neg_integer() | Membrane.Time.t(),
           pad_ref: Pad.ref(),
           atomic_demand: AtomicDemand.t(),
@@ -52,8 +51,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
     :log_tag,
     :target_size,
     :atomic_demand,
-    :inbound_metric,
-    :outbound_metric,
+    :inbound_demand_unit,
+    :outbound_demand_unit,
     :outbound_metric_demand_init_size,
     :pad_ref,
     :stalker_metrics
@@ -67,8 +66,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
   def default_min_demand_factor, do: 0.25
 
   @spec new(%{
-          inbound_demand_unit: Buffer.Metric.unit(),
-          outbound_demand_unit: Buffer.Metric.unit(),
+          inbound_demand_unit: Membrane.Buffer.Metric.unit(),
+          outbound_demand_unit: Membrane.Buffer.Metric.unit(),
           atomic_demand: AtomicDemand.t(),
           pad_ref: Pad.ref(),
           log_tag: String.t(),
@@ -84,10 +83,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
       target_size: target_size
     } = config
 
-    inbound_metric = Buffer.Metric.from_unit(inbound_demand_unit)
-    outbound_metric = Buffer.Metric.from_unit(outbound_demand_unit)
-
-    default_target_size = inbound_metric.buffer_size_approximation() * @default_target_size_factor
+    default_target_size =
+      Metric.buffer_size_approximation(inbound_demand_unit) * @default_target_size_factor
 
     target_size = target_size || default_target_size
 
@@ -99,15 +96,14 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
       pad: pad_ref
     )
 
-    outbound_metric_demand_init_size =
-      Buffer.Metric.from_unit(outbound_demand_unit).init_manual_demand_size()
+    outbound_metric_demand_init_size = Metric.init_manual_demand_size(outbound_demand_unit)
 
     %__MODULE__{
       q: @qe.new(),
       log_tag: log_tag,
       target_size: target_size,
-      inbound_metric: inbound_metric,
-      outbound_metric: outbound_metric,
+      inbound_demand_unit: inbound_demand_unit,
+      outbound_demand_unit: outbound_demand_unit,
       outbound_metric_demand_init_size: outbound_metric_demand_init_size,
       atomic_demand: atomic_demand,
       pad_ref: pad_ref,
@@ -155,20 +151,20 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
            q: q,
            size: size,
            demand: demand,
-           inbound_metric: inbound_metric,
-           outbound_metric: outbound_metric,
+           inbound_demand_unit: inbound_demand_unit,
+           outbound_demand_unit: outbound_demand_unit,
            pad_ref: pad_ref
          } = input_queue,
          v
        ) do
-    if Metric.Timestamp.is_timestamp_metric?(outbound_metric) do
-      :ok = Metric.Timestamp.assert_non_nil_timestamps!(pad_ref, v, outbound_metric)
+    if Metric.is_timestamp_metric?(outbound_demand_unit) do
+      :ok = Metric.assert_non_nil_timestamps!(pad_ref, v, outbound_demand_unit)
     end
 
-    inbound_metric_buffer_size = size(v, inbound_metric)
-    outbound_metric_buffer_size = size(v, outbound_metric)
+    inbound_metric_buffer_size = size(v, inbound_demand_unit)
+    outbound_metric_buffer_size = size(v, outbound_demand_unit)
 
-    unit = if inbound_metric == Buffer.Metric.ByteSize, do: "bytes", else: "buffers"
+    unit = if inbound_demand_unit == :bytes, do: "bytes", else: "buffers"
 
     "Storing #{inspect(inbound_metric_buffer_size)} #{unit}"
     |> mk_log(input_queue)
@@ -184,7 +180,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   @spec take(t, non_neg_integer() | Membrane.Time.t()) :: {output(), t}
   def take(%__MODULE__{} = input_queue, demand) do
-    "Handling #{inspect(demand)} #{inspect(input_queue.outbound_metric)}"
+    "Handling #{inspect(demand)} #{inspect(input_queue.outbound_demand_unit)}"
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 
@@ -206,8 +202,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
          %__MODULE__{
            q: q,
            size: size,
-           inbound_metric: inbound_metric,
-           outbound_metric: outbound_metric,
+           inbound_demand_unit: inbound_demand_unit,
+           outbound_demand_unit: outbound_demand_unit,
            outbound_metric_demand_init_size: outbound_metric_demand_init_size,
            first_outbound_buffer: first_outbound_buffer,
            last_outbound_buffer: last_outbound_buffer
@@ -215,8 +211,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
          demand
        ) do
     ctx = %{
-      inbound_metric: inbound_metric,
-      outbound_metric: outbound_metric,
+      inbound_demand_unit: inbound_demand_unit,
+      outbound_demand_unit: outbound_demand_unit,
       first_outbound_buffer: first_outbound_buffer,
       last_outbound_buffer: last_outbound_buffer,
       zero_demand: outbound_metric_demand_init_size
@@ -232,8 +228,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
   defp q_pop(q, demand, queue_size, acc, %{zero_demand: zero_demand} = ctx)
        when demand > zero_demand do
     %{
-      inbound_metric: inbound_metric,
-      outbound_metric: outbound_metric,
+      inbound_demand_unit: inbound_demand_unit,
+      outbound_demand_unit: outbound_demand_unit,
       first_outbound_buffer: first_outbound_buffer,
       last_outbound_buffer: last_outbound_buffer
     } = ctx
@@ -243,16 +239,17 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
     |> case do
       {{:value, {:buffers, buffers, inbound_metric_buf_size, _outbound_metric_buf_size}}, nq} ->
         {buffers, excess_buffers} =
-          outbound_metric.split_buffers(
+          Metric.split_buffers(
+            outbound_demand_unit,
             buffers,
             demand,
             first_outbound_buffer,
             last_outbound_buffer
           )
 
-        buffers_size_inbound_metric = size(buffers, inbound_metric)
-        buffers_size_outbound_metric = size(buffers, outbound_metric)
-        new_demand = outbound_metric.reduce_demand(demand, buffers_size_outbound_metric)
+        buffers_size_inbound_metric = size(buffers, inbound_demand_unit)
+        buffers_size_outbound_metric = size(buffers, outbound_demand_unit)
+        new_demand = Metric.reduce_demand(outbound_demand_unit, demand, buffers_size_outbound_metric)
 
         case excess_buffers do
           [] ->
@@ -268,8 +265,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
             )
 
           non_empty_excess_buffers ->
-            excess_buffers_inbound_metric_size = size(non_empty_excess_buffers, inbound_metric)
-            excess_buffers_outbound_metric_size = size(non_empty_excess_buffers, outbound_metric)
+            excess_buffers_inbound_metric_size = size(non_empty_excess_buffers, inbound_demand_unit)
+            excess_buffers_outbound_metric_size = size(non_empty_excess_buffers, outbound_demand_unit)
 
             nq =
               @qe.push_front(
@@ -340,11 +337,11 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
         _other_output -> []
       end)
 
-    if Metric.Timestamp.is_timestamp_metric?(input_queue.outbound_metric) do
-      Metric.Timestamp.generate_metric_specific_warnings(
+    if Metric.is_timestamp_metric?(input_queue.outbound_demand_unit) do
+      Metric.generate_metric_specific_warnings(
         input_queue.pad_ref,
         [input_queue.last_outbound_buffer | buffers],
-        input_queue.outbound_metric
+        input_queue.outbound_demand_unit
       )
     end
 
@@ -373,8 +370,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
   @spec empty?(t()) :: boolean()
   def empty?(%__MODULE__{size: size}), do: size == 0
 
-  defp size(buffers, metric) do
-    case metric.buffers_size(buffers) do
+  defp size(buffers, demand_unit) do
+    case Metric.buffers_size(demand_unit, buffers) do
       {:ok, size} -> size
       {:error, :operation_not_supported} -> nil
     end

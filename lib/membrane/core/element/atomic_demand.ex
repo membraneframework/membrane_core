@@ -222,7 +222,7 @@ defmodule Membrane.Core.Element.AtomicDemand do
   end
 
   defp default_toilet_capacity(demand_unit) do
-    Membrane.Buffer.Metric.from_unit(demand_unit).buffer_size_approximation() *
+    Membrane.Core.Metric.buffer_size_approximation(demand_unit) *
       @default_toilet_capacity_factor
   end
 end
