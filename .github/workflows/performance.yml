@@ -1,0 +1,65 @@
+name: Performance Test
+
+# Replaces the CircleCI manual approval gate. Trigger this workflow
+# manually from the Actions tab on the branch you want to benchmark.
+on:
+  workflow_dispatch:
+
+jobs:
+  performance:
+    # TODO: replace with the actual self-hosted runner label
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Back up benchmark and mix.exs
+        run: |
+          cp -r benchmark/ $HOME/benchmark_backup/
+          cp mix.exs $HOME/benchmark_backup/
+
+      - name: Pull Docker image
+        run: docker pull membraneframeworklabs/docker_membrane
+
+      - name: Run benchmarks on feature branch
+        run: |
+          mkdir -p $HOME/results
+          docker run \
+            -e MIX_ENV=benchmark \
+            -v $PWD:/root/app \
+            -v $HOME/results:/root/results \
+            -w /root/app \
+            membraneframeworklabs/docker_membrane \
+            mix do deps.get, deps.compile --force --all, compile --force, run benchmark/run.exs /root/results/feature_branch_results
+
+      - name: Switch to master and restore benchmark
+        run: |
+          git checkout -f master
+          cp $HOME/benchmark_backup/mix.exs .
+
+      - name: Run benchmarks on master
+        run: |
+          docker run \
+            -e MIX_ENV=benchmark \
+            -v $PWD:/root/app \
+            -v $HOME/results:/root/results \
+            -v $HOME/benchmark_backup/benchmark:/root/app/benchmark \
+            -w /root/app \
+            membraneframeworklabs/docker_membrane \
+            mix do deps.get, deps.compile --force --all, compile --force, run benchmark/run.exs /root/results/master_results
+
+      - name: Compare results
+        run: |
+          docker run \
+            -e MIX_ENV=benchmark \
+            -v $PWD:/root/app \
+            -v $HOME/results:/root/results \
+            -v $HOME/benchmark_backup/benchmark:/root/app/benchmark \
+            -w /root/app \
+            membraneframeworklabs/docker_membrane \
+            mix run benchmark/compare.exs /root/results/feature_branch_results /root/results/master_results
+
+      - name: Clean up results
+        if: always()
+        run: rm -f $HOME/results/*
