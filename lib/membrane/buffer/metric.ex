@@ -3,8 +3,8 @@ defmodule Membrane.Buffer.Metric do
   Specifies the type for demand units.
 
   > #### Deprecated behaviour {: .warning}
-  > The callbacks defined here are deprecated. Use `Membrane.Core.Metric` functions
-  > (which dispatch on `demand_unit`) instead of implementing this behaviour.
+  > The callbacks defined here are deprecated. The metric functionality has been moved
+  > to the internal API of the Membrane Framework.
   """
 
   alias Membrane.Buffer

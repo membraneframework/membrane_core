@@ -3,8 +3,8 @@ defmodule Membrane.Buffer.Metric.Count do
   Implementation of `Membrane.Buffer.Metric` for the `:buffers` unit.
 
   > #### Deprecated {: .warning}
-  > This module is deprecated. Use `Membrane.Core.Metric` functions with `:buffers` as the
-  > `demand_unit` argument instead.
+  > This module is deprecated. The metric functionality has been moved to the internal API
+  > of the Membrane Framework and is no longer accessible via this behaviour.
   """
 
   @behaviour Membrane.Buffer.Metric
@@ -43,9 +43,10 @@ defmodule Membrane.Buffer.Metric.Count do
 
   defp ensure_deprecated_warning_printed() do
     if Process.get({__MODULE__, :deprecated_warned}) == nil do
-      Membrane.Logger.warning(
-        "#{__MODULE__} is deprecated. Use Membrane.Core.Metric with :buffers demand_unit instead."
-      )
+      Membrane.Logger.warning("""
+      #{__MODULE__} is deprecated. The metric functionality has been moved to the internal \
+      API of the Membrane Framework.
+      """)
 
       Process.put({__MODULE__, :deprecated_warned}, true)
     end
