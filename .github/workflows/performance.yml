@@ -7,8 +7,7 @@ on:
 
 jobs:
   performance:
-    # TODO: replace with the actual self-hosted runner label
-    runs-on: ubuntu-latest
+    runs-on: performance
     steps:
       - uses: actions/checkout@v4
         with:
