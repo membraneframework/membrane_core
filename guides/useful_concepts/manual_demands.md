@@ -380,14 +380,91 @@ defmodule MyFilter do
 end
 ```
 
+### Redemand in filters
+
+Sometimes the number of input buffers needed to satisfy a given output demand
+is not known upfront. The relationship between input and output may be
+non-deterministic — for instance, a filter may drop buffers based on their
+content, or produce output of varying size depending on the input. In such
+cases, the required input demand cannot be calculated in
+[`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`) alone.
+
+In such cases, the filter can use
+[`:redemand`](`t:Membrane.Element.Action.redemand/0`). The pattern works as
+follows:
+
+1. [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)
+   issues demand on the input pad — the value may be derived from the output
+   demand, but does not have to match it exactly.
+2. [`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`)
+   processes each arriving buffer and returns a `:redemand` action at the end.
+3. `:redemand` re-triggers
+   [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)
+   with the current unfulfilled output demand, which in turn issues new demand
+   upstream — and so on.
+
+This interleaves [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)
+and [`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`)
+calls rather than batching them. It is less efficient than computing the exact
+input demand upfront, but it makes implementation straightforward when the
+required amount of input data cannot be determined in advance.
+
+As a concrete example, consider a filter that keeps only buffers whose
+timestamp falls on an odd second of the stream, and drops all others:
+
+```elixir
+defmodule OddFilter do
+  use Membrane.Filter
+
+  def_input_pad :input,
+    flow_control: :manual,
+    demand_unit: :buffers,
+    accepted_format: _any
+
+  def_output_pad :output,
+    flow_control: :manual,
+    demand_unit: :buffers,
+    accepted_format: _any
+
+  @impl true
+  def handle_demand(:output, demand_size, :buffers, _ctx, state) do
+    {[demand: {:input, demand_size}], state}
+  end
+
+  @impl true
+  def handle_buffer(:input, buffer, _ctx, state) do
+    seconds =
+      Membrane.Buffer.get_dts_or_pts(buffer)
+      |> Membrane.Time.as_seconds(:round)
+
+    buffer_action =
+      if rem(seconds, 2) != 0 do
+        [buffer: {:output, buffer}]
+      else
+        []
+      end
+
+    {buffer_action ++ [redemand: :output], state}
+  end
+end
+```
+
 > #### Do not use redemand in a filter's `handle_demand` {: .warning}
 >
 > Returning [`:redemand`](`t:Membrane.Element.Action.redemand/0`) from
 > [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`) in a
-> filter is illegal. [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)
-> should propagate the demand upstream and return. Processing happens in
-> [`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`) when
-> the data actually arrives.
+> filter is illegal. Filters are designed around a clear separation of concerns:
+> [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)
+> propagates demand upstream, while
+> [`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`)
+> transforms data and passes it downstream. Returning `:redemand` from
+> [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)
+> would cause it to re-trigger itself in a loop — and because the element
+> process is busy executing that loop, it cannot read messages from its mailbox,
+> including buffers sent by upstream elements. Those buffers would never be
+> delivered to
+> [`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`),
+> causing the pipeline to hang.
 
 ## Auto flow control
 
