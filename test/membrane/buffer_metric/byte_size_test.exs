@@ -1,8 +1,8 @@
-defmodule Membrane.Core.Metric.ByteSizeTest do
+defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.ByteSizeTest do
   use ExUnit.Case, async: true
 
   alias Membrane.Buffer
-  alias Membrane.Core.Metric
+  alias Membrane.Core.Element.ManualFlowController.BufferMetric
 
   @unit :bytes
 

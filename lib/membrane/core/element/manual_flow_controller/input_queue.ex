@@ -10,7 +10,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
   alias Membrane.Buffer
   alias Membrane.Core.Element.AtomicDemand
-  alias Membrane.Core.Metric
+  alias Membrane.Core.Element.ManualFlowController.BufferMetric
   alias Membrane.Core.Telemetry
   alias Membrane.Event
   alias Membrane.Pad
@@ -84,7 +84,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
     } = config
 
     default_target_size =
-      Metric.buffer_size_approximation(inbound_demand_unit) * @default_target_size_factor
+      BufferMetric.buffer_size_approximation(inbound_demand_unit) * @default_target_size_factor
 
     target_size = target_size || default_target_size
 
@@ -96,7 +96,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
       pad: pad_ref
     )
 
-    outbound_metric_demand_init_size = Metric.init_manual_demand_size(outbound_demand_unit)
+    outbound_metric_demand_init_size = BufferMetric.init_manual_demand_size(outbound_demand_unit)
 
     %__MODULE__{
       q: @qe.new(),
@@ -157,16 +157,14 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
          } = input_queue,
          v
        ) do
-    if Metric.is_timestamp_metric?(outbound_demand_unit) do
-      :ok = Metric.assert_non_nil_timestamps!(pad_ref, v, outbound_demand_unit)
+    if BufferMetric.is_timestamp_metric?(outbound_demand_unit) do
+      :ok = BufferMetric.assert_non_nil_timestamps!(pad_ref, v, outbound_demand_unit)
     end
 
     inbound_metric_buffer_size = size(v, inbound_demand_unit)
     outbound_metric_buffer_size = size(v, outbound_demand_unit)
 
-    unit = if inbound_demand_unit == :bytes, do: "bytes", else: "buffers"
-
-    "Storing #{inspect(inbound_metric_buffer_size)} #{unit}"
+    "Storing #{inspect(inbound_metric_buffer_size)} #{inbound_demand_unit}"
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 
@@ -239,7 +237,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
     |> case do
       {{:value, {:buffers, buffers, inbound_metric_buf_size, _outbound_metric_buf_size}}, nq} ->
         {buffers, excess_buffers} =
-          Metric.split_buffers(
+          BufferMetric.split_buffers(
             outbound_demand_unit,
             buffers,
             demand,
@@ -249,7 +247,9 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
 
         buffers_size_inbound_metric = size(buffers, inbound_demand_unit)
         buffers_size_outbound_metric = size(buffers, outbound_demand_unit)
-        new_demand = Metric.reduce_demand(outbound_demand_unit, demand, buffers_size_outbound_metric)
+
+        new_demand =
+          BufferMetric.reduce_demand(outbound_demand_unit, demand, buffers_size_outbound_metric)
 
         case excess_buffers do
           [] ->
@@ -265,8 +265,11 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
             )
 
           non_empty_excess_buffers ->
-            excess_buffers_inbound_metric_size = size(non_empty_excess_buffers, inbound_demand_unit)
-            excess_buffers_outbound_metric_size = size(non_empty_excess_buffers, outbound_demand_unit)
+            excess_buffers_inbound_metric_size =
+              size(non_empty_excess_buffers, inbound_demand_unit)
+
+            excess_buffers_outbound_metric_size =
+              size(non_empty_excess_buffers, outbound_demand_unit)
 
             nq =
               @qe.push_front(
@@ -337,7 +340,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
         _other_output -> []
       end)
 
-    Metric.generate_metric_specific_warnings(
+    BufferMetric.generate_metric_specific_warnings(
       input_queue.pad_ref,
       [input_queue.last_outbound_buffer | buffers],
       input_queue.outbound_demand_unit
@@ -369,7 +372,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
   def empty?(%__MODULE__{size: size}), do: size == 0
 
   defp size(buffers, demand_unit) do
-    case Metric.buffers_size(demand_unit, buffers) do
+    case BufferMetric.buffers_size(demand_unit, buffers) do
       {:ok, size} -> size
       {:error, :operation_not_supported} -> nil
     end

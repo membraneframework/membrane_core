@@ -3,9 +3,9 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
   alias Membrane.Buffer
   alias Membrane.Core.Element.AtomicDemand
+  alias Membrane.Core.Element.ManualFlowController.BufferMetric
   alias Membrane.Core.Element.ManualFlowController.InputQueue
   alias Membrane.Core.Message
-  alias Membrane.Core.Metric
   alias Membrane.Core.SubprocessSupervisor
   alias Membrane.Testing.Event
 

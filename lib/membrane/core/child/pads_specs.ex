@@ -4,13 +4,13 @@ defmodule Membrane.Core.Child.PadsSpecs do
   # based on them.
   use Bunch
 
-  alias Membrane.Core.Metric
+  alias Membrane.Core.Element.ManualFlowController.BufferMetric
   alias Membrane.Core.OptionsSpecs
   alias Membrane.Pad
 
   require Membrane.Logger
   require Membrane.Pad
-  require Membrane.Core.Metric
+  require Membrane.Core.Element.ManualFlowController.BufferMetric
 
   @doc """
   Returns documentation string common for both input and output pads
@@ -329,10 +329,10 @@ defmodule Membrane.Core.Child.PadsSpecs do
           nil
 
         direction == :input ->
-          [validate: &Metric.is_valid_unit/1]
+          [validate: &BufferMetric.is_valid_unit/1]
 
         direction == :output ->
-          [default: nil, validate: &(&1 == nil or Metric.is_non_timestamp_unit(&1))]
+          [default: nil, validate: &(&1 == nil or BufferMetric.is_non_timestamp_unit(&1))]
       end
     end
   end

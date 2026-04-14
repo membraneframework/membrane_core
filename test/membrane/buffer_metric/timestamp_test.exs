@@ -1,10 +1,10 @@
-defmodule Membrane.Core.Metric.TimestampTest do
+defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest do
   use ExUnit.Case, async: true
 
   import ExUnit.CaptureLog
 
   alias Membrane.Buffer
-  alias Membrane.Core.Metric
+  alias Membrane.Core.Element.ManualFlowController.BufferMetric
 
   @t0 0 |> Membrane.Time.milliseconds()
   @t1 100 |> Membrane.Time.milliseconds()
@@ -36,7 +36,9 @@ defmodule Membrane.Core.Metric.TimestampTest do
   test ".buffers_size/2 returns {:error, :operation_not_supported}" do
     for unit <- [@pts_unit, @dts_unit, @dts_or_pts_unit] do
       assert Metric.buffers_size(unit, []) == {:error, :operation_not_supported}
-      assert Metric.buffers_size(unit, [%Buffer{payload: <<>>}]) == {:error, :operation_not_supported}
+
+      assert Metric.buffers_size(unit, [%Buffer{payload: <<>>}]) ==
+               {:error, :operation_not_supported}
     end
   end
 
@@ -84,7 +86,13 @@ defmodule Membrane.Core.Metric.TimestampTest do
 
         log =
           capture_log(fn ->
-            assert Metric.split_buffers(unquote(unit), buffers, @demand, first_consumed, last_consumed) ==
+            assert Metric.split_buffers(
+                     unquote(unit),
+                     buffers,
+                     @demand,
+                     first_consumed,
+                     last_consumed
+                   ) ==
                      {[], buffers}
           end)
 

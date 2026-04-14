@@ -207,7 +207,11 @@ defmodule Membrane.Core.Element.ManualFlowController do
         state,
         pad_ref,
         :manual_demand_size,
-        &Membrane.Core.Metric.reduce_demand(demand_unit, &1, outbound_metric_buf_size)
+        &Membrane.Core.Element.ManualFlowController.BufferMetric.reduce_demand(
+          demand_unit,
+          &1,
+          outbound_metric_buf_size
+        )
       )
 
     BufferController.exec_buffer_callback(pad_ref, buffers, state)

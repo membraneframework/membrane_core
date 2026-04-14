@@ -395,7 +395,9 @@ defmodule Membrane.Core.Element.PadController do
       })
 
     manual_demand_size =
-      Membrane.Core.Metric.init_manual_demand_size(this_demand_unit)
+      Membrane.Core.Element.ManualFlowController.BufferMetric.init_manual_demand_size(
+        this_demand_unit
+      )
 
     pad_data
     |> Map.merge(%{
@@ -430,7 +432,10 @@ defmodule Membrane.Core.Element.PadController do
 
         true ->
           demand_unit = pad_data.other_demand_unit || pad_data.demand_unit || :buffers
-          Membrane.Core.Metric.buffer_size_approximation(demand_unit) * @default_auto_demand_size_factor
+
+          Membrane.Core.Element.ManualFlowController.BufferMetric.buffer_size_approximation(
+            demand_unit
+          ) * @default_auto_demand_size_factor
       end
 
     demand_metric =

@@ -1,8 +1,8 @@
-defmodule Membrane.Core.Metric.CountTest do
+defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.CountTest do
   use ExUnit.Case, async: true
 
   alias Membrane.Buffer
-  alias Membrane.Core.Metric
+  alias Membrane.Core.Element.ManualFlowController.BufferMetric
 
   @unit :buffers
 

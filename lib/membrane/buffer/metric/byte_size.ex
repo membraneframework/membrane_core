@@ -9,9 +9,9 @@ defmodule Membrane.Buffer.Metric.ByteSize do
 
   @behaviour Membrane.Buffer.Metric
 
-  require Membrane.Logger
-
   alias Membrane.{Buffer, Payload}
+
+  require Membrane.Logger
 
   @impl true
   def buffer_size_approximation() do

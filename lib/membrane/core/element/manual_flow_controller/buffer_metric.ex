@@ -1,4 +1,4 @@
-defmodule Membrane.Core.Metric do
+defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
   @moduledoc false
 
   alias Membrane.{Buffer, Pad, Payload}
