@@ -9,8 +9,6 @@ defmodule Membrane.Buffer.Metric do
 
   alias Membrane.Buffer
 
-  @type unit :: :buffers | :bytes | :timestamp | {:timestamp, :pts | :dts | :dts_or_pts}
-
   @callback buffer_size_approximation() :: pos_integer
 
   @callback buffers_size([%Buffer{}] | []) ::

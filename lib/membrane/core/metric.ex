@@ -89,6 +89,9 @@ defmodule Membrane.Core.Metric do
     do: "<DTS || PTS>"
 
   @spec generate_metric_specific_warnings(Pad.ref(), [Buffer.t() | nil], Pad.demand_unit()) :: :ok
+  def generate_metric_specific_warnings(_pad_ref, _buffers, unit) when is_non_timestamp_unit(unit),
+    do: :ok
+
   def generate_metric_specific_warnings(_pad_ref, [], _unit), do: :ok
 
   def generate_metric_specific_warnings(pad_ref, buffers, unit) when is_timestamp_unit(unit) do

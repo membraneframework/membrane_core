@@ -4,8 +4,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
   # based on them.
   use Bunch
 
-  alias Membrane.Core.OptionsSpecs
   alias Membrane.Core.Metric
+  alias Membrane.Core.OptionsSpecs
   alias Membrane.Pad
 
   require Membrane.Logger
@@ -333,9 +333,6 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
         direction == :output ->
           [default: nil, validate: &(&1 == nil or Metric.is_non_timestamp_unit(&1))]
-
-        true ->
-          nil
       end
     end
   end

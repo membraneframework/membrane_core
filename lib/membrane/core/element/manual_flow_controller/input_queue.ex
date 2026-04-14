@@ -337,13 +337,11 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
         _other_output -> []
       end)
 
-    if Metric.is_timestamp_metric?(input_queue.outbound_demand_unit) do
-      Metric.generate_metric_specific_warnings(
-        input_queue.pad_ref,
-        [input_queue.last_outbound_buffer | buffers],
-        input_queue.outbound_demand_unit
-      )
-    end
+    Metric.generate_metric_specific_warnings(
+      input_queue.pad_ref,
+      [input_queue.last_outbound_buffer | buffers],
+      input_queue.outbound_demand_unit
+    )
 
     input_queue
     |> Map.update!(:first_outbound_buffer, &(&1 || List.first(buffers)))
