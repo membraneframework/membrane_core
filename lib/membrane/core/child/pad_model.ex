@@ -36,8 +36,8 @@ defmodule Membrane.Core.Child.PadModel do
           other_effective_flow_control: EffectiveFlowController.effective_flow_control() | nil,
           name: Pad.name(),
           ref: Pad.ref(),
-          demand_unit: Membrane.Buffer.Metric.unit() | nil,
-          other_demand_unit: Membrane.Buffer.Metric.unit() | nil,
+          demand_unit: Membrane.Pad.demand_unit() | nil,
+          other_demand_unit: Membrane.Pad.demand_unit() | nil,
           pid: pid,
           other_ref: Pad.ref(),
           sticky_messages: [Membrane.Event.t()],
@@ -58,8 +58,8 @@ defmodule Membrane.Core.Child.PadModel do
           required(:name) => Pad.name(),
           required(:accepted_formats_str) => String.t(),
           optional(:flow_control) => Pad.flow_control(),
-          optional(:demand_unit) => Membrane.Buffer.Metric.unit(),
-          optional(:other_demand_unit) => Membrane.Buffer.Metric.unit(),
+          optional(:demand_unit) => Membrane.Pad.demand_unit(),
+          optional(:other_demand_unit) => Membrane.Pad.demand_unit(),
           optional(:max_instances) => Pad.max_instances()
         }
 

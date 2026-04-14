@@ -6,29 +6,27 @@ defmodule Membrane.Core.Metric do
   alias Membrane.{Buffer, Pad, Payload}
   require Membrane.Logger
 
-  @type unit :: :buffers | :bytes | :timestamp | {:timestamp, :pts | :dts | :dts_or_pts}
-
   # Sentinel value for timestamp-based metrics: means "no demand set yet".
   @timestamp_init_demand_size -1
 
-  defguardp is_timestamp_unit(unit)
-            when unit == :timestamp or
-                   (is_tuple(unit) and tuple_size(unit) == 2 and elem(unit, 0) == :timestamp and
-                      elem(unit, 1) in [:pts, :dts, :dts_or_pts])
+  defguard is_timestamp_unit(unit)
+           when unit == :timestamp or
+                  (is_tuple(unit) and tuple_size(unit) == 2 and elem(unit, 0) == :timestamp and
+                     elem(unit, 1) in [:pts, :dts, :dts_or_pts])
 
-  defguardp is_non_timestamp_unit(unit) when unit == :buffers or unit == :bytes
+  defguard is_non_timestamp_unit(unit) when unit == :buffers or unit == :bytes
 
-  defguardp is_valid_unit(unit) when is_non_timestamp_unit(unit) or is_timestamp_unit(unit)
+  defguard is_valid_unit(unit) when is_non_timestamp_unit(unit) or is_timestamp_unit(unit)
 
-  @spec buffer_size_approximation(unit()) :: pos_integer()
+  @spec buffer_size_approximation(Pad.demand_unit()) :: pos_integer()
   def buffer_size_approximation(:bytes), do: 1500
   def buffer_size_approximation(unit) when is_valid_unit(unit), do: 1
 
-  @spec init_manual_demand_size(unit()) :: non_neg_integer() | Membrane.Time.t()
+  @spec init_manual_demand_size(Pad.demand_unit()) :: non_neg_integer() | Membrane.Time.t()
   def init_manual_demand_size(unit) when is_non_timestamp_unit(unit), do: 0
   def init_manual_demand_size(unit) when is_timestamp_unit(unit), do: @timestamp_init_demand_size
 
-  @spec buffers_size(unit(), [Buffer.t()] | []) ::
+  @spec buffers_size(Pad.demand_unit(), [Buffer.t()] | []) ::
           {:ok, non_neg_integer()} | {:error, :operation_not_supported}
   def buffers_size(:buffers, buffers), do: {:ok, length(buffers)}
 
@@ -41,7 +39,7 @@ defmodule Membrane.Core.Metric do
     do: {:error, :operation_not_supported}
 
   @spec split_buffers(
-          unit(),
+          Pad.demand_unit(),
           [Buffer.t()] | [],
           non_neg_integer() | Membrane.Time.t(),
           Buffer.t() | nil,
@@ -59,7 +57,7 @@ defmodule Membrane.Core.Metric do
   end
 
   @spec reduce_demand(
-          unit(),
+          Pad.demand_unit(),
           non_neg_integer() | Membrane.Time.t(),
           non_neg_integer() | nil
         ) :: non_neg_integer() | Membrane.Time.t()
@@ -72,25 +70,25 @@ defmodule Membrane.Core.Metric do
   # Timestamp-specific functions
   # ---------------------------------------------------------------------------
 
-  @spec is_timestamp_metric?(unit()) :: boolean()
+  @spec is_timestamp_metric?(Pad.demand_unit()) :: boolean()
   def is_timestamp_metric?(unit) when is_timestamp_unit(unit), do: true
   def is_timestamp_metric?(unit) when is_non_timestamp_unit(unit), do: false
 
-  @spec get_timestamp(unit(), Buffer.t()) :: Membrane.Time.t() | nil
+  @spec get_timestamp(Pad.timestamp_demand_unit(), Buffer.t()) :: Membrane.Time.t() | nil
   defp get_timestamp({:timestamp, :pts}, %Buffer{pts: pts}), do: pts
   defp get_timestamp({:timestamp, :dts}, %Buffer{dts: dts}), do: dts
 
   defp get_timestamp(unit, buffer) when unit in [:timestamp, {:timestamp, :dts_or_pts}],
     do: Buffer.get_dts_or_pts(buffer)
 
-  @spec timestamp_name(unit()) :: String.t()
+  @spec timestamp_name(Pad.timestamp_demand_unit()) :: String.t()
   defp timestamp_name({:timestamp, :pts}), do: "PTS"
   defp timestamp_name({:timestamp, :dts}), do: "DTS"
 
   defp timestamp_name(unit) when unit in [:timestamp, {:timestamp, :dts_or_pts}],
     do: "<DTS || PTS>"
 
-  @spec generate_metric_specific_warnings(Pad.ref(), [Buffer.t() | nil], unit()) :: :ok
+  @spec generate_metric_specific_warnings(Pad.ref(), [Buffer.t() | nil], Pad.demand_unit()) :: :ok
   def generate_metric_specific_warnings(_pad_ref, [], _unit), do: :ok
 
   def generate_metric_specific_warnings(pad_ref, buffers, unit) when is_timestamp_unit(unit) do
@@ -123,7 +121,7 @@ defmodule Membrane.Core.Metric do
     :ok
   end
 
-  @spec assert_non_nil_timestamps!(Pad.ref(), [Buffer.t()], unit()) :: :ok | no_return()
+  @spec assert_non_nil_timestamps!(Pad.ref(), [Buffer.t()], Pad.timestamp_demand_unit()) :: :ok | no_return()
   def assert_non_nil_timestamps!(pad_ref, buffers, unit) when is_timestamp_unit(unit) do
     Enum.each(buffers, fn buffer ->
       if get_timestamp(unit, buffer) == nil do

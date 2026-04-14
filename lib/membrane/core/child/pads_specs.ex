@@ -5,10 +5,12 @@ defmodule Membrane.Core.Child.PadsSpecs do
   use Bunch
 
   alias Membrane.Core.OptionsSpecs
+  alias Membrane.Core.Metric
   alias Membrane.Pad
 
   require Membrane.Logger
   require Membrane.Pad
+  require Membrane.Core.Metric
 
   @doc """
   Returns documentation string common for both input and output pads
@@ -18,7 +20,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     {entity, pad_type_spec} =
       case component do
         :bin -> {"bin", "bin_spec/0"}
-        :element -> {"element", "element_spec/0"}
+        :element -> {"element", "#{direction}_element_spec/0"}
       end
 
     """
@@ -290,51 +292,9 @@ defmodule Membrane.Core.Child.PadsSpecs do
               |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
                 accepted_formats_str: [],
-                flow_control: fn _config ->
-                  cond do
-                    component == :bin ->
-                      nil
-
-                    direction == :output and component != :filter ->
-                      [in: [:manual, :push]]
-
-                    direction == :input or component == :filter ->
-                      [in: [:auto, :manual, :push], default: :auto]
-                  end
-                end,
-                demand_unit:
-                  &cond do
-                    component == :bin or &1[:flow_control] != :manual ->
-                      nil
-
-                    direction == :input ->
-                      [
-                        in: [
-                          :buffers,
-                          :bytes,
-                          :timestamp,
-                          {:timestamp, :pts},
-                          {:timestamp, :dts},
-                          {:timestamp, :dts_or_pts}
-                        ]
-                      ]
-
-                    direction == :output ->
-                      [in: [:buffers, :bytes, nil], default: nil]
-
-                    true ->
-                      nil
-                  end,
-                max_instances: fn config ->
-                  if config[:availability] == :on_request do
-                    [
-                      default: :infinity,
-                      validate: &(&1 == :infinity or (is_integer(&1) and &1 >= 0))
-                    ]
-                  else
-                    nil
-                  end
-                end,
+                flow_control: flow_control_spec(direction, component),
+                demand_unit: demand_unit_spec(direction, component),
+                max_instances: max_instances_spec(),
                 options: [default: nil]
               ) do
       config
@@ -344,6 +304,49 @@ defmodule Membrane.Core.Child.PadsSpecs do
     else
       spec: spec -> {:error, {:invalid_pad_spec, spec}}
       config: {:error, reason} -> {:error, {reason, pad: name}}
+    end
+  end
+
+  defp flow_control_spec(direction, component) do
+    fn _config ->
+      cond do
+        component == :bin ->
+          nil
+
+        direction == :output and component != :filter ->
+          [in: [:manual, :push]]
+
+        direction == :input or component == :filter ->
+          [in: [:auto, :manual, :push], default: :auto]
+      end
+    end
+  end
+
+  defp demand_unit_spec(direction, component) do
+    fn config ->
+      cond do
+        component == :bin or config[:flow_control] != :manual ->
+          nil
+
+        direction == :input ->
+          [validate: &Metric.is_valid_unit/1]
+
+        direction == :output ->
+          [default: nil, validate: &(&1 == nil or Metric.is_non_timestamp_unit(&1))]
+
+        true ->
+          nil
+      end
+    end
+  end
+
+  defp max_instances_spec() do
+    fn config ->
+      if config[:availability] == :on_request do
+        [default: :infinity, validate: &(&1 == :infinity or (is_integer(&1) and &1 >= 0))]
+      else
+        nil
+      end
     end
   end
 
@@ -367,6 +370,10 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
       {:config_field, {:key_not_found, :demand_unit}} ->
         "When defining input pads with :flow_control set to :manual, :demand_unit also must be provided"
+
+      {:config_field, {:invalid_value, key: :demand_unit, value: value}}
+      when direction == :output ->
+        "Invalid :demand_unit #{inspect(value)} for output pad. Output pads only support :buffers or :bytes (timestamp-based demand units are not allowed on output pads)"
 
       {:config_field, {:key_not_found, key}} ->
         "Expected key #{inspect(key)} not found in config"

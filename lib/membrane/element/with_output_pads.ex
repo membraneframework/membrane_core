@@ -8,7 +8,7 @@ defmodule Membrane.Element.WithOutputPads do
   For more information on implementing elements, see `Membrane.Element.Base`.
   """
 
-  alias Membrane.{Buffer, Element, Pad}
+  alias Membrane.{Element, Pad}
   alias Membrane.Core.Child.PadsSpecs
   alias Membrane.Element.CallbackContext
 
@@ -34,7 +34,7 @@ defmodule Membrane.Element.WithOutputPads do
   @callback handle_demand(
               pad :: Pad.ref(),
               size :: non_neg_integer,
-              unit :: Buffer.Metric.unit(),
+              unit :: Pad.demand_unit(),
               context :: CallbackContext.t(),
               state :: Element.state()
             ) ::

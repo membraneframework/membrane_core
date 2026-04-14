@@ -36,8 +36,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
           target_size: pos_integer(),
           size: non_neg_integer(),
           demand: non_neg_integer(),
-          inbound_demand_unit: Membrane.Buffer.Metric.unit(),
-          outbound_demand_unit: Membrane.Buffer.Metric.unit(),
+          inbound_demand_unit: Membrane.Pad.demand_unit(),
+          outbound_demand_unit: Membrane.Pad.demand_unit(),
           outbound_metric_demand_init_size: non_neg_integer() | Membrane.Time.t(),
           pad_ref: Pad.ref(),
           atomic_demand: AtomicDemand.t(),
@@ -66,8 +66,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
   def default_min_demand_factor, do: 0.25
 
   @spec new(%{
-          inbound_demand_unit: Membrane.Buffer.Metric.unit(),
-          outbound_demand_unit: Membrane.Buffer.Metric.unit(),
+          inbound_demand_unit: Membrane.Pad.demand_unit(),
+          outbound_demand_unit: Membrane.Pad.demand_unit(),
           atomic_demand: AtomicDemand.t(),
           pad_ref: Pad.ref(),
           log_tag: String.t(),
