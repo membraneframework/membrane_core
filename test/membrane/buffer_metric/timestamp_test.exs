@@ -55,7 +55,9 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
       test "uses first buffer's #{name} as offset when no buffers have been consumed yet" do
         buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &buf(unquote(ts_field), &1))
 
-        {consumed, remaining} = BufferMetric.split_buffers(unquote(unit), buffers, @demand, nil, nil)
+        {consumed, remaining} =
+          BufferMetric.split_buffers(unquote(unit), buffers, @demand, nil, nil)
+
         assert Enum.map(consumed, &Map.get(&1, unquote(ts_field))) == [@t0, @t1, @t2, @t3]
         assert Enum.map(remaining, &Map.get(&1, unquote(ts_field))) == [@t4]
       end
@@ -66,7 +68,13 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
         last_consumed = buf(unquote(ts_field), @t1)
 
         {consumed, remaining} =
-          BufferMetric.split_buffers(unquote(unit), buffers, @demand, first_consumed, last_consumed)
+          BufferMetric.split_buffers(
+            unquote(unit),
+            buffers,
+            @demand,
+            first_consumed,
+            last_consumed
+          )
 
         assert Enum.map(consumed, &Map.get(&1, unquote(ts_field))) == [@t0, @t1, @t2, @t3]
         assert Enum.map(remaining, &Map.get(&1, unquote(ts_field))) == [@t4]
@@ -74,7 +82,10 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
       test "returns all buffers for #{name} when demand exceeds the available timestamp range" do
         buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &buf(unquote(ts_field), &1))
-        {consumed, remaining} = BufferMetric.split_buffers(unquote(unit), buffers, @t4 * 10, nil, nil)
+
+        {consumed, remaining} =
+          BufferMetric.split_buffers(unquote(unit), buffers, @t4 * 10, nil, nil)
+
         assert consumed == buffers
         assert remaining == []
       end
@@ -106,7 +117,13 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
       buf_pts_only = %Buffer{payload: <<>>, pts: @t3}
 
       {consumed, remaining} =
-        BufferMetric.split_buffers(@dts_or_pts_unit, [buf_with_dts, buf_pts_only], @demand, nil, nil)
+        BufferMetric.split_buffers(
+          @dts_or_pts_unit,
+          [buf_with_dts, buf_pts_only],
+          @demand,
+          nil,
+          nil
+        )
 
       assert consumed == [buf_with_dts, buf_pts_only]
       assert remaining == []
@@ -121,7 +138,9 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
     test "DTSorPTS uses first buffer's DTS-or-PTS as offset when no buffers have been consumed yet" do
       buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &%Buffer{payload: <<>>, dts: &1})
 
-      {consumed, remaining} = BufferMetric.split_buffers(@dts_or_pts_unit, buffers, @demand, nil, nil)
+      {consumed, remaining} =
+        BufferMetric.split_buffers(@dts_or_pts_unit, buffers, @demand, nil, nil)
+
       assert Enum.map(consumed, & &1.dts) == [@t0, @t1, @t2, @t3]
       assert Enum.map(remaining, & &1.dts) == [@t4]
     end
@@ -143,7 +162,8 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
         log =
           capture_log(fn ->
-            assert BufferMetric.generate_metric_specific_warnings(nil, buffers, unquote(unit)) == :ok
+            assert BufferMetric.generate_metric_specific_warnings(nil, buffers, unquote(unit)) ==
+                     :ok
           end)
 
         refute log =~ "warning"
@@ -154,7 +174,8 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
         log =
           capture_log(fn ->
-            assert BufferMetric.generate_metric_specific_warnings(nil, buffers, unquote(unit)) == :ok
+            assert BufferMetric.generate_metric_specific_warnings(nil, buffers, unquote(unit)) ==
+                     :ok
           end)
 
         assert log =~ "warning"
@@ -167,7 +188,8 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
       log =
         capture_log(fn ->
-          assert BufferMetric.generate_metric_specific_warnings(nil, buffers, @dts_or_pts_unit) == :ok
+          assert BufferMetric.generate_metric_specific_warnings(nil, buffers, @dts_or_pts_unit) ==
+                   :ok
         end)
 
       assert log =~ "warning"

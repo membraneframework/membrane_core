@@ -15,7 +15,8 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.ByteSizeTest d
 
   describe ".buffers_size/2" do
     test "should return size of all buffers" do
-      assert BufferMetric.buffers_size(@unit, @buffers) == {:ok, byte_size(@pay1) + byte_size(@pay2)}
+      assert BufferMetric.buffers_size(@unit, @buffers) ==
+               {:ok, byte_size(@pay1) + byte_size(@pay2)}
     end
   end
 
@@ -28,7 +29,9 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.ByteSizeTest d
 
     test "when there is only one buffer where split position is greater than buffer size \
       returns the buffer and an empty list" do
-      {buf, []} = BufferMetric.split_buffers(@unit, @single_buffer, byte_size(@pay1) + 10, nil, nil)
+      {buf, []} =
+        BufferMetric.split_buffers(@unit, @single_buffer, byte_size(@pay1) + 10, nil, nil)
+
       assert buf == [@buf1]
     end
 
