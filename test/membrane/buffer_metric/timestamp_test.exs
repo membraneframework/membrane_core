@@ -21,23 +21,23 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
   defp buf(ts_field, ts), do: struct(%Buffer{payload: <<>>}, [{ts_field, ts}])
 
   test ".init_manual_demand_size/1 returns -1 as the no-demand sentinel" do
-    assert Metric.init_manual_demand_size(@pts_unit) == -1
-    assert Metric.init_manual_demand_size(@dts_unit) == -1
-    assert Metric.init_manual_demand_size(@dts_or_pts_unit) == -1
+    assert BufferMetric.init_manual_demand_size(@pts_unit) == -1
+    assert BufferMetric.init_manual_demand_size(@dts_unit) == -1
+    assert BufferMetric.init_manual_demand_size(@dts_or_pts_unit) == -1
   end
 
   test ".reduce_demand/3 always returns the demand unchanged regardless of consumed size" do
     for unit <- [@pts_unit, @dts_unit, @dts_or_pts_unit] do
-      assert Metric.reduce_demand(unit, 1_000, 5) == 1_000
-      assert Metric.reduce_demand(unit, 1_000, nil) == 1_000
+      assert BufferMetric.reduce_demand(unit, 1_000, 5) == 1_000
+      assert BufferMetric.reduce_demand(unit, 1_000, nil) == 1_000
     end
   end
 
   test ".buffers_size/2 returns {:error, :operation_not_supported}" do
     for unit <- [@pts_unit, @dts_unit, @dts_or_pts_unit] do
-      assert Metric.buffers_size(unit, []) == {:error, :operation_not_supported}
+      assert BufferMetric.buffers_size(unit, []) == {:error, :operation_not_supported}
 
-      assert Metric.buffers_size(unit, [%Buffer{payload: <<>>}]) ==
+      assert BufferMetric.buffers_size(unit, [%Buffer{payload: <<>>}]) ==
                {:error, :operation_not_supported}
     end
   end
@@ -49,13 +49,13 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
         ] do
       test "returns {[], buffers} when demand is the initial sentinel value (-1) for #{name}" do
         buffers = Enum.map([@t0, @t1, @t2], &buf(unquote(ts_field), &1))
-        assert Metric.split_buffers(unquote(unit), buffers, -1, nil, nil) == {[], buffers}
+        assert BufferMetric.split_buffers(unquote(unit), buffers, -1, nil, nil) == {[], buffers}
       end
 
       test "uses first buffer's #{name} as offset when no buffers have been consumed yet" do
         buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &buf(unquote(ts_field), &1))
 
-        {consumed, remaining} = Metric.split_buffers(unquote(unit), buffers, @demand, nil, nil)
+        {consumed, remaining} = BufferMetric.split_buffers(unquote(unit), buffers, @demand, nil, nil)
         assert Enum.map(consumed, &Map.get(&1, unquote(ts_field))) == [@t0, @t1, @t2, @t3]
         assert Enum.map(remaining, &Map.get(&1, unquote(ts_field))) == [@t4]
       end
@@ -66,7 +66,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
         last_consumed = buf(unquote(ts_field), @t1)
 
         {consumed, remaining} =
-          Metric.split_buffers(unquote(unit), buffers, @demand, first_consumed, last_consumed)
+          BufferMetric.split_buffers(unquote(unit), buffers, @demand, first_consumed, last_consumed)
 
         assert Enum.map(consumed, &Map.get(&1, unquote(ts_field))) == [@t0, @t1, @t2, @t3]
         assert Enum.map(remaining, &Map.get(&1, unquote(ts_field))) == [@t4]
@@ -74,7 +74,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
       test "returns all buffers for #{name} when demand exceeds the available timestamp range" do
         buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &buf(unquote(ts_field), &1))
-        {consumed, remaining} = Metric.split_buffers(unquote(unit), buffers, @t4 * 10, nil, nil)
+        {consumed, remaining} = BufferMetric.split_buffers(unquote(unit), buffers, @t4 * 10, nil, nil)
         assert consumed == buffers
         assert remaining == []
       end
@@ -86,7 +86,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
         log =
           capture_log(fn ->
-            assert Metric.split_buffers(
+            assert BufferMetric.split_buffers(
                      unquote(unit),
                      buffers,
                      @demand,
@@ -106,7 +106,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
       buf_pts_only = %Buffer{payload: <<>>, pts: @t3}
 
       {consumed, remaining} =
-        Metric.split_buffers(@dts_or_pts_unit, [buf_with_dts, buf_pts_only], @demand, nil, nil)
+        BufferMetric.split_buffers(@dts_or_pts_unit, [buf_with_dts, buf_pts_only], @demand, nil, nil)
 
       assert consumed == [buf_with_dts, buf_pts_only]
       assert remaining == []
@@ -114,14 +114,14 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
     test "returns {[], []} when buffers is empty and no buffers have been consumed yet" do
       for unit <- [@pts_unit, @dts_unit, @dts_or_pts_unit] do
-        assert Metric.split_buffers(unit, [], @demand, nil, nil) == {[], []}
+        assert BufferMetric.split_buffers(unit, [], @demand, nil, nil) == {[], []}
       end
     end
 
     test "DTSorPTS uses first buffer's DTS-or-PTS as offset when no buffers have been consumed yet" do
       buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &%Buffer{payload: <<>>, dts: &1})
 
-      {consumed, remaining} = Metric.split_buffers(@dts_or_pts_unit, buffers, @demand, nil, nil)
+      {consumed, remaining} = BufferMetric.split_buffers(@dts_or_pts_unit, buffers, @demand, nil, nil)
       assert Enum.map(consumed, & &1.dts) == [@t0, @t1, @t2, @t3]
       assert Enum.map(remaining, & &1.dts) == [@t4]
     end
@@ -129,9 +129,9 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
   describe ".generate_metric_specific_warnings/3" do
     test "returns :ok for an empty list" do
-      assert Metric.generate_metric_specific_warnings(nil, [], @pts_unit) == :ok
-      assert Metric.generate_metric_specific_warnings(nil, [], @dts_unit) == :ok
-      assert Metric.generate_metric_specific_warnings(nil, [], @dts_or_pts_unit) == :ok
+      assert BufferMetric.generate_metric_specific_warnings(nil, [], @pts_unit) == :ok
+      assert BufferMetric.generate_metric_specific_warnings(nil, [], @dts_unit) == :ok
+      assert BufferMetric.generate_metric_specific_warnings(nil, [], @dts_or_pts_unit) == :ok
     end
 
     for {unit, name, ts_field} <- [
@@ -143,7 +143,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
         log =
           capture_log(fn ->
-            assert Metric.generate_metric_specific_warnings(nil, buffers, unquote(unit)) == :ok
+            assert BufferMetric.generate_metric_specific_warnings(nil, buffers, unquote(unit)) == :ok
           end)
 
         refute log =~ "warning"
@@ -154,7 +154,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
         log =
           capture_log(fn ->
-            assert Metric.generate_metric_specific_warnings(nil, buffers, unquote(unit)) == :ok
+            assert BufferMetric.generate_metric_specific_warnings(nil, buffers, unquote(unit)) == :ok
           end)
 
         assert log =~ "warning"
@@ -167,7 +167,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
       log =
         capture_log(fn ->
-          assert Metric.generate_metric_specific_warnings(nil, buffers, @dts_or_pts_unit) == :ok
+          assert BufferMetric.generate_metric_specific_warnings(nil, buffers, @dts_or_pts_unit) == :ok
         end)
 
       assert log =~ "warning"

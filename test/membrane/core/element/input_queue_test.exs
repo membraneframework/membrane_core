@@ -41,7 +41,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
                inbound_demand_unit: :bytes,
                outbound_demand_unit: :bytes,
                outbound_metric_demand_init_size:
-                 Metric.init_manual_demand_size(context.outbound_demand_unit),
+                 BufferMetric.init_manual_demand_size(context.outbound_demand_unit),
                pad_ref: context.pad_ref,
                size: 0,
                demand: context.target_queue_size,
@@ -509,7 +509,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
       stalker_metrics: %{size: :atomics.new(1, [])},
       outbound_metric_demand_init_size:
         if(outbound_demand_unit,
-          do: Metric.init_manual_demand_size(outbound_demand_unit),
+          do: BufferMetric.init_manual_demand_size(outbound_demand_unit),
           else: 0
         )
     ]
@@ -536,7 +536,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
         bufs_list
       end)
 
-    {:ok, size} = Metric.buffers_size(unit, all_buffers)
+    {:ok, size} = BufferMetric.buffers_size(unit, all_buffers)
     size
   end
 

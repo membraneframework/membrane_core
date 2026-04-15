@@ -13,13 +13,13 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.CountTest do
 
   describe ".buffers_size/2" do
     test "should return count of all buffers" do
-      assert Metric.buffers_size(@unit, @buffers) == {:ok, 2}
+      assert BufferMetric.buffers_size(@unit, @buffers) == {:ok, 2}
     end
   end
 
   describe ".split_buffers/5" do
     test "should return split buffers" do
-      {extracted, rest} = Metric.split_buffers(@unit, @buffers, @count, nil, nil)
+      {extracted, rest} = BufferMetric.split_buffers(@unit, @buffers, @count, nil, nil)
 
       assert extracted == [@buf1]
       assert rest == [@buf2]
@@ -27,6 +27,6 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.CountTest do
   end
 
   test ".reduce_demand/3 should subtract the consumed count from the remaining demand" do
-    assert Metric.reduce_demand(@unit, 10, 3) == 7
+    assert BufferMetric.reduce_demand(@unit, 10, 3) == 7
   end
 end
