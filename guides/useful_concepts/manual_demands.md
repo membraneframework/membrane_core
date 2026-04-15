@@ -1,5 +1,14 @@
 # Manual demands
 
+This guide explains how to use manual demands. Make sure you read
+[the pads guide](pads.md) first, as it introduces flow control modes.
+
+Manual demands are a mechanism for manually controlling the speed of processing
+data in Membrane pipelines. This mechanism is powerful, but requires manual
+demand management. `:auto` flow control delivers input buffers as fast as possible, for as long as
+the output has outstanding demand. If that is sufficient for your use case,
+prefer it instead.
+
 Elements with pads using manual flow control have two responsibilities:
 
 - **Output pads**: produce the amount of data requested in the
@@ -22,7 +31,16 @@ single callback invocation — it can send fewer buffers and return a
 [`:redemand`](`t:Membrane.Element.Action.redemand/0`) action to be called again
 with the reduced outstanding demand.
 
-The unit in which `demand_size` is expressed is resolved as follows:
+Available demand units:
+
+- `:buffers` — demand is expressed as a buffer count.
+- `:bytes` — demand is expressed as a number of bytes.
+- Timestamp units (`:timestamp`, `{:timestamp, :pts}`, `{:timestamp, :dts}`,
+  `{:timestamp, :dts_or_pts}`) — demand is expressed as a time threshold;
+  only input pads support these. See the
+  [timestamp section](#timestamp-demand-units) below for details.
+
+The unit in which `demand_size` is expressed in an output pad's `handle_demand` is resolved as follows:
 
 1. If the **output pad** declares `demand_unit: :buffers | :bytes`, that unit
    is used.
@@ -32,16 +50,20 @@ The unit in which `demand_size` is expressed is resolved as follows:
    flow control — the output pad inherits `:buffers`.
 
 The output pad can explicitly control which unit it receives demand in.
-Timestamp-based demand units are only available on input pads; Output pads must not
-declare `demand_unit: :timestamp`.
-Membrane handles any necessary unit conversion automatically.
+Timestamp-based demand units are only available on input pads; output pads must
+not declare a timestamp `demand_unit`. If the units differ between the output
+pad and the connected input pad, Membrane automatically converts demand to the
+unit declared by the output pad.
 
 ### Declarative nature of `handle_demand`
 
 [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`) always
 receives the **total current outstanding demand** from downstream, not a delta.
-There is no need to accumulate demand values across multiple callback invocations 
-— each call tells you the full amount still expected.
+There is no need to accumulate demand values across multiple callback invocations
+— each call tells you the full amount still expected. The `incoming_demand` field
+of the [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)
+context holds the amount by which demand increased since the previous invocation,
+if you need that delta.
 
 ### Producing buffers on demand
 
