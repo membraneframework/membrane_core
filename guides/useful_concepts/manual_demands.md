@@ -1,7 +1,8 @@
 # Manual demands
 
-This guide explains how to use manual demands. Make sure you read
-[the pads guide](pads.md) first, as it introduces flow control modes.
+This guide explains how to use manual demands. Make sure you are familiar with
+the concepts from [the flow control guide](06_flow_control.md) and
+[the pads guide](pads.md) before proceeding.
 
 Manual demands are a mechanism for manually controlling the speed of processing
 data in Membrane pipelines. This mechanism is powerful, but requires manual
