@@ -46,13 +46,14 @@ defmodule Membrane.Mixfile do
     opts = [
       plt_local_path: "priv/plts",
       flags: [:error_handling, :unmatched_returns],
-      plt_add_apps: [:mix, :req]
+      plt_add_apps: [:mix, :req, :syntax_tools]
     ]
 
     if System.get_env("CI") == "true" do
       # Store core PLTs in cacheable directory for CI
       # For development it's better to stick to default, $MIX_HOME based path
       # to allow sharing core PLTs between projects
+      File.mkdir_p!(Path.join([__DIR__, "priv", "plts"]))
       [plt_core_path: "priv/plts"] ++ opts
     else
       opts
@@ -256,7 +257,7 @@ defmodule Membrane.Mixfile do
       # Development
       {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.1", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.4", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: :dev, runtime: false},
       {:req, "~> 0.5.17", only: [:dev, :test], runtime: false},
       # Testing
