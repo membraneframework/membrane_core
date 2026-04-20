@@ -37,7 +37,7 @@ defmodule Membrane.Core.Child do
         |> Enum.filter(& &1)
         |> Enum.reduce(moduledoc, fn doc, moduledoc ->
           quote do
-            unquote(moduledoc) <> unquote(doc)
+            unquote(moduledoc) <> "\n" <> unquote(doc)
           end
         end)
 
