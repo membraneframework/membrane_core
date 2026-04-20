@@ -243,7 +243,7 @@ defmodule Membrane.Mixfile do
         "Membrane Framework Homepage" => "https://membrane.stream"
       },
       files:
-        ~w"lib .formatter.exs mix.exs README* LICENSE* CHANGELOG* #{@hex_packages_path} templates"
+        ~w"lib .formatter.exs mix.exs README* LICENSE* CHANGELOG* #{@hex_packages_path}"
     ]
   end
 
