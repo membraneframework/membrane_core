@@ -9,7 +9,7 @@ defmodule Membrane.Mixfile do
     [
       app: :membrane_core,
       version: @version,
-      elixir: "~> 1.12",
+      elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       description: "Membrane Multimedia Framework (Core)",
       dialyzer: dialyzer(),
@@ -45,7 +45,8 @@ defmodule Membrane.Mixfile do
   defp dialyzer() do
     opts = [
       plt_local_path: "priv/plts",
-      flags: [:error_handling, :unmatched_returns]
+      flags: [:error_handling, :unmatched_returns],
+      plt_add_apps: [:mix, :req]
     ]
 
     if System.get_env("CI") == "true" do
@@ -77,7 +78,6 @@ defmodule Membrane.Mixfile do
         }
       ],
       extras: extras(),
-      formatters: ["html"],
       logo: "assets/logo.svg",
       source_ref: @source_ref,
       assets: %{
@@ -118,7 +118,11 @@ defmodule Membrane.Mixfile do
 
   defp extras do
     [
+      {"skills/membrane-framework/SKILL.md",
+       [title: "Membrane Framework AI Skill", hidden: true]},
       "README.md",
+      {"guides/llms/packages_list.md",
+       [title: "Packages in the Membrane ecosystem", hidden: true]},
       "CHANGELOG.md",
       "CONTRIBUTING.md",
       Path.wildcard("guides/upgrading/*.md"),
@@ -238,7 +242,8 @@ defmodule Membrane.Mixfile do
         "GitHub" => link(),
         "Membrane Framework Homepage" => "https://membrane.stream"
       },
-      files: ~w"lib .formatter.exs mix.exs README* LICENSE* CHANGELOG* #{@hex_packages_path}"
+      files:
+        ~w"lib .formatter.exs mix.exs README* LICENSE* CHANGELOG* #{@hex_packages_path} templates"
     ]
   end
 
@@ -249,10 +254,11 @@ defmodule Membrane.Mixfile do
       {:bunch, "~> 1.6"},
       {:ratio, "~> 3.0 or ~> 4.0"},
       # Development
-      {:ex_doc, "~> 0.39", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: :dev, runtime: false},
+      {:req, "~> 0.5.17", only: [:dev, :test], runtime: false},
       # Testing
       {:mox, "~> 1.0", only: :test},
       {:mock, "~> 0.3.8", only: :test},

@@ -353,6 +353,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
 
     quote do
       """
+
       ## Pads
 
       #{unquote(pads_docs)}
