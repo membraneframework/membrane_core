@@ -72,12 +72,24 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
   def is_timestamp_metric?(unit) when is_timestamp_unit(unit), do: true
   def is_timestamp_metric?(unit) when is_non_timestamp_unit(unit), do: false
 
-  @spec get_timestamp(Pad.timestamp_demand_unit(), Buffer.t()) :: Membrane.Time.t() | nil
-  defp get_timestamp({:timestamp, :pts}, %Buffer{pts: pts}), do: pts
-  defp get_timestamp({:timestamp, :dts}, %Buffer{dts: dts}), do: dts
+  @spec get_timestamp!(Buffer.t(), Pad.timestamp_demand_unit()) :: Membrane.Time.t() | nil
+  defp get_timestamp!(%Buffer{} = buffer, unit) do
+    timestamp =
+      case unit do
+        {:timestamp, :pts} -> buffer.pts
+        {:timestamp, :dts} -> buffer.dts
+        {:timestamp, :dts_or_pts} -> Buffer.get_dts_or_pts(buffer)
+      end
 
-  defp get_timestamp(unit, buffer) when unit in [:timestamp, {:timestamp, :dts_or_pts}],
-    do: Buffer.get_dts_or_pts(buffer)
+    if timestamp == nil do
+      raise """
+      Buffer is missing required timestamp for demand unit #{inspect(unit)}.
+      Buffer: #{inspect(buffer)}
+      """
+    end
+
+    timestamp
+  end
 
   @spec timestamp_name(Pad.timestamp_demand_unit()) :: String.t()
   defp timestamp_name({:timestamp, :pts}), do: "PTS"
@@ -102,8 +114,8 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
           curr_buffer
 
         curr_buffer, prev_buffer ->
-          prev_timestamp = get_timestamp(unit, prev_buffer)
-          curr_timestamp = get_timestamp(unit, curr_buffer)
+          prev_timestamp = get_timestamp!(prev_buffer, unit)
+          curr_timestamp = get_timestamp!(curr_buffer, unit)
 
           if curr_timestamp < prev_timestamp do
             Membrane.Logger.warning("""
@@ -127,7 +139,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
           :ok | no_return()
   def assert_non_nil_timestamps!(pad_ref, buffers, unit) when is_timestamp_unit(unit) do
     Enum.each(buffers, fn buffer ->
-      if get_timestamp(unit, buffer) == nil do
+      if get_timestamp!(buffer, unit) == nil do
         raise """
         All buffers must have a non-nil #{timestamp_name(unit)} when using \
         #{inspect(unit)} as a demand unit for input pads with manual flow control.
@@ -163,13 +175,13 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
         {[], buffers}
 
       first_consumed != nil and last_consumed != nil and
-          get_timestamp(unit, last_consumed) -
-            get_timestamp(unit, first_consumed) >= demand_timestamp ->
+          get_timestamp!(last_consumed, unit) -
+            get_timestamp!(first_consumed, unit) >= demand_timestamp ->
         Membrane.Logger.warning("""
         Demanded #{timestamp_name(unit)} should be greater than the elapsed #{timestamp_name(unit)} \
         since the first consumed buffer. Got :demand of #{demand_timestamp}, while the elapsed \
         #{timestamp_name(unit)} equals \
-        #{get_timestamp(unit, last_consumed) - get_timestamp(unit, first_consumed)}. \
+        #{get_timestamp!(last_consumed, unit) - get_timestamp!(first_consumed, unit)}. \
         Demanding a #{timestamp_name(unit)} that is not greater than the elapsed one \
         won't result in handling any further buffers, until the element demands a #{timestamp_name(unit)} \
         greater than the elapsed one. \
@@ -181,18 +193,18 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
         {[], buffers}
 
       is_nil(first_consumed) ->
-        offset = get_timestamp(unit, List.first(buffers))
+        offset = List.first(buffers) |> get_timestamp!(unit)
         split_timestamp_recursion(unit, buffers, [], demand_timestamp, offset)
 
       true ->
-        offset = get_timestamp(unit, first_consumed)
+        offset = get_timestamp!(first_consumed, unit)
         split_timestamp_recursion(unit, buffers, [], demand_timestamp, offset)
     end
   end
 
   defp split_timestamp_recursion(unit, [buffer | rest], acc, demand_timestamp, offset) do
     acc = [buffer | acc]
-    buffer_timestamp = get_timestamp(unit, buffer)
+    buffer_timestamp = get_timestamp!(buffer, unit)
 
     if buffer_timestamp - offset >= demand_timestamp do
       {Enum.reverse(acc), rest}

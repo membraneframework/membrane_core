@@ -11,15 +11,15 @@ defmodule Membrane.Buffer.Metric do
 
   @callback buffer_size_approximation() :: pos_integer
 
-  @callback buffers_size([%Buffer{}] | []) ::
+  @callback buffers_size([Buffer.t()]) ::
               {:ok, non_neg_integer()} | {:error, reason :: atom()}
 
   @callback split_buffers(
-              [%Buffer{}] | [],
+              [Buffer.t()],
               non_neg_integer | Membrane.Time.t(),
               first_consumed_buffer :: Buffer.t() | nil,
               last_consumed_buffer :: Buffer.t() | nil
-            ) :: {[%Buffer{}] | [], [%Buffer{}] | []}
+            ) :: {[Buffer.t()], [Buffer.t()]}
 
   @callback init_manual_demand_size() :: non_neg_integer() | Membrane.Time.t()
 
