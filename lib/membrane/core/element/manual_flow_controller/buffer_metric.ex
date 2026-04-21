@@ -80,7 +80,9 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
 
     if timestamp == nil do
       raise """
-      Buffer is missing required #{timestamp_name(unit)} timestamp for demand unit #{inspect(unit)}.
+      Buffer is missing required #{timestamp_name(unit)} timestamp. \
+      All buffers must have a non-nil #{timestamp_name(unit)} when using \
+      #{inspect(unit)} as a demand unit for input pads with manual flow control.
       Buffer: #{inspect(buffer)}
       Pad reference: #{inspect(pad_ref)}
       """
@@ -131,12 +133,6 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
       end)
 
     :ok
-  end
-
-  @spec assert_non_nil_timestamps!(Pad.ref(), [Buffer.t()], Pad.timestamp_demand_unit()) ::
-          :ok | no_return()
-  def assert_non_nil_timestamps!(_pad_ref, buffers, unit) when is_timestamp_unit(unit) do
-    Enum.each(buffers, fn buffer -> get_timestamp!(buffer, unit, nil) end)
   end
 
   # ---------------------------------------------------------------------------

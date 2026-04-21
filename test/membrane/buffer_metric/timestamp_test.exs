@@ -49,7 +49,9 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
         ] do
       test "returns {[], buffers} when demand is the initial sentinel value (-1) for #{name}" do
         buffers = Enum.map([@t0, @t1, @t2], &buf(unquote(ts_field), &1))
-        assert BufferMetric.split_buffers(unquote(unit), buffers, -1, nil, nil, nil) == {[], buffers}
+
+        assert BufferMetric.split_buffers(unquote(unit), buffers, -1, nil, nil, nil) ==
+                 {[], buffers}
       end
 
       test "uses first buffer's #{name} as offset when no buffers have been consumed yet" do

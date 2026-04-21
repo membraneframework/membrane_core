@@ -152,15 +152,10 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
            size: size,
            demand: demand,
            inbound_demand_unit: inbound_demand_unit,
-           outbound_demand_unit: outbound_demand_unit,
-           pad_ref: pad_ref
+           outbound_demand_unit: outbound_demand_unit
          } = input_queue,
          v
        ) do
-    if BufferMetric.is_timestamp_metric?(outbound_demand_unit) do
-      :ok = BufferMetric.assert_non_nil_timestamps!(pad_ref, v, outbound_demand_unit)
-    end
-
     inbound_metric_buffer_size = size(v, inbound_demand_unit)
     outbound_metric_buffer_size = size(v, outbound_demand_unit)
 

@@ -337,8 +337,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert queue.demand >= 2
   end
 
-  # this test was vibe coded
-  test "raises when storing a buffer with nil PTS on a {:timestamp, :pts} pad" do
+  test "raises when taking a buffer with nil PTS from a {:timestamp, :pts} pad" do
     queue =
       InputQueue.new(%{
         inbound_demand_unit: :buffers,
@@ -352,12 +351,13 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
 
     assert_raise RuntimeError, ~r/PTS/, fn ->
-      InputQueue.store(queue, [%Buffer{payload: <<>>, pts: nil}])
+      queue
+      |> InputQueue.store([%Buffer{payload: <<>>, pts: nil}])
+      |> InputQueue.take(Membrane.Time.milliseconds(100))
     end
   end
 
-  # this test was vibe coded
-  test "raises when storing a buffer with nil DTS on a {:timestamp, :dts} pad" do
+  test "raises when taking a buffer with nil DTS from a {:timestamp, :dts} pad" do
     queue =
       InputQueue.new(%{
         inbound_demand_unit: :buffers,
@@ -371,12 +371,13 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
 
     assert_raise RuntimeError, ~r/DTS/, fn ->
-      InputQueue.store(queue, [%Buffer{payload: <<>>, dts: nil}])
+      queue
+      |> InputQueue.store([%Buffer{payload: <<>>, dts: nil}])
+      |> InputQueue.take(Membrane.Time.milliseconds(100))
     end
   end
 
-  # this test was vibe coded
-  test "raises when storing a buffer with both nil DTS and PTS on a {:timestamp, :dts_or_pts} pad" do
+  test "raises when taking a buffer with both nil DTS and PTS from a {:timestamp, :dts_or_pts} pad" do
     queue =
       InputQueue.new(%{
         inbound_demand_unit: :buffers,
@@ -390,7 +391,9 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
 
     assert_raise RuntimeError, ~r/DTS \|\| PTS/, fn ->
-      InputQueue.store(queue, [%Buffer{payload: <<>>, pts: nil, dts: nil}])
+      queue
+      |> InputQueue.store([%Buffer{payload: <<>>, pts: nil, dts: nil}])
+      |> InputQueue.take(Membrane.Time.milliseconds(100))
     end
   end
 
