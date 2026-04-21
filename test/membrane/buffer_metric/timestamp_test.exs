@@ -42,21 +42,21 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
     end
   end
 
-  describe ".split_buffers/5" do
+  describe ".split_buffers/6" do
     for {unit, name, ts_field} <- [
           {{:timestamp, :pts}, "PTS", :pts},
           {{:timestamp, :dts}, "DTS", :dts}
         ] do
       test "returns {[], buffers} when demand is the initial sentinel value (-1) for #{name}" do
         buffers = Enum.map([@t0, @t1, @t2], &buf(unquote(ts_field), &1))
-        assert BufferMetric.split_buffers(unquote(unit), buffers, -1, nil, nil) == {[], buffers}
+        assert BufferMetric.split_buffers(unquote(unit), buffers, -1, nil, nil, nil) == {[], buffers}
       end
 
       test "uses first buffer's #{name} as offset when no buffers have been consumed yet" do
         buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &buf(unquote(ts_field), &1))
 
         {consumed, remaining} =
-          BufferMetric.split_buffers(unquote(unit), buffers, @demand, nil, nil)
+          BufferMetric.split_buffers(unquote(unit), buffers, @demand, nil, nil, nil)
 
         assert Enum.map(consumed, &Map.get(&1, unquote(ts_field))) == [@t0, @t1, @t2, @t3]
         assert Enum.map(remaining, &Map.get(&1, unquote(ts_field))) == [@t4]
@@ -73,7 +73,8 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
             buffers,
             @demand,
             first_consumed,
-            last_consumed
+            last_consumed,
+            nil
           )
 
         assert Enum.map(consumed, &Map.get(&1, unquote(ts_field))) == [@t0, @t1, @t2, @t3]
@@ -84,7 +85,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
         buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &buf(unquote(ts_field), &1))
 
         {consumed, remaining} =
-          BufferMetric.split_buffers(unquote(unit), buffers, @t4 * 10, nil, nil)
+          BufferMetric.split_buffers(unquote(unit), buffers, @t4 * 10, nil, nil, nil)
 
         assert consumed == buffers
         assert remaining == []
@@ -102,7 +103,8 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
                      buffers,
                      @demand,
                      first_consumed,
-                     last_consumed
+                     last_consumed,
+                     nil
                    ) ==
                      {[], buffers}
           end)
@@ -122,6 +124,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
           [buf_with_dts, buf_pts_only],
           @demand,
           nil,
+          nil,
           nil
         )
 
@@ -131,7 +134,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
     test "returns {[], []} when buffers is empty and no buffers have been consumed yet" do
       for unit <- [@pts_unit, @dts_unit, @dts_or_pts_unit] do
-        assert BufferMetric.split_buffers(unit, [], @demand, nil, nil) == {[], []}
+        assert BufferMetric.split_buffers(unit, [], @demand, nil, nil, nil) == {[], []}
       end
     end
 
@@ -139,7 +142,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
       buffers = Enum.map([@t0, @t1, @t2, @t3, @t4], &%Buffer{payload: <<>>, dts: &1})
 
       {consumed, remaining} =
-        BufferMetric.split_buffers(@dts_or_pts_unit, buffers, @demand, nil, nil)
+        BufferMetric.split_buffers(@dts_or_pts_unit, buffers, @demand, nil, nil, nil)
 
       assert Enum.map(consumed, & &1.dts) == [@t0, @t1, @t2, @t3]
       assert Enum.map(remaining, & &1.dts) == [@t4]

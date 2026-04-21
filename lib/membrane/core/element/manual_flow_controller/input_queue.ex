@@ -204,7 +204,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
            outbound_demand_unit: outbound_demand_unit,
            outbound_metric_demand_init_size: outbound_metric_demand_init_size,
            first_outbound_buffer: first_outbound_buffer,
-           last_outbound_buffer: last_outbound_buffer
+           last_outbound_buffer: last_outbound_buffer,
+           pad_ref: pad_ref
          } = input_queue,
          demand
        ) do
@@ -213,7 +214,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
       outbound_demand_unit: outbound_demand_unit,
       first_outbound_buffer: first_outbound_buffer,
       last_outbound_buffer: last_outbound_buffer,
-      zero_demand: outbound_metric_demand_init_size
+      zero_demand: outbound_metric_demand_init_size,
+      pad_ref: pad_ref
     }
 
     {out, nq, new_size} = q_pop(q, demand, size, [], ctx)
@@ -229,7 +231,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
       inbound_demand_unit: inbound_demand_unit,
       outbound_demand_unit: outbound_demand_unit,
       first_outbound_buffer: first_outbound_buffer,
-      last_outbound_buffer: last_outbound_buffer
+      last_outbound_buffer: last_outbound_buffer,
+      pad_ref: pad_ref
     } = ctx
 
     q
@@ -242,7 +245,8 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
             buffers,
             demand,
             first_outbound_buffer,
-            last_outbound_buffer
+            last_outbound_buffer,
+            pad_ref
           )
 
         buffers_size_inbound_metric = size(buffers, inbound_demand_unit)

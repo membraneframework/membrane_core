@@ -41,17 +41,12 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
           [Buffer.t()] | [],
           non_neg_integer() | Membrane.Time.t(),
           Buffer.t() | nil,
-          Buffer.t() | nil
+          Buffer.t() | nil,
+          Pad.ref()
         ) :: {[Buffer.t()], [Buffer.t()]}
-  def split_buffers(:buffers, buffers, count, _first, _last),
-    do: Enum.split(buffers, count)
-
-  def split_buffers(:bytes, buffers, count, _first, _last),
-    do: do_split_bytes(buffers, count, [])
-
-  def split_buffers(unit, buffers, demand_timestamp, first_consumed, last_consumed)
-      when is_timestamp_unit(unit) do
-    do_split_timestamp_buffers(unit, buffers, demand_timestamp, first_consumed, last_consumed)
+  def split_buffers(unit, buffers, demand, first, last, pad_ref) do
+    ctx = %{demand: demand, first: first, last: last, pad_ref: pad_ref}
+    do_split_buffers(unit, buffers, ctx)
   end
 
   @spec reduce_demand(
@@ -72,19 +67,22 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
   def is_timestamp_metric?(unit) when is_timestamp_unit(unit), do: true
   def is_timestamp_metric?(unit) when is_non_timestamp_unit(unit), do: false
 
-  @spec get_timestamp!(Buffer.t(), Pad.timestamp_demand_unit()) :: Membrane.Time.t() | nil
-  defp get_timestamp!(%Buffer{} = buffer, unit) do
+  @spec get_timestamp!(Buffer.t(), Pad.timestamp_demand_unit(), Pad.ref() | nil) ::
+          Membrane.Time.t()
+  defp get_timestamp!(%Buffer{} = buffer, unit, pad_ref) do
     timestamp =
       case unit do
         {:timestamp, :pts} -> buffer.pts
         {:timestamp, :dts} -> buffer.dts
+        :timestamp -> Buffer.get_dts_or_pts(buffer)
         {:timestamp, :dts_or_pts} -> Buffer.get_dts_or_pts(buffer)
       end
 
     if timestamp == nil do
       raise """
-      Buffer is missing required timestamp for demand unit #{inspect(unit)}.
+      Buffer is missing required #{timestamp_name(unit)} timestamp for demand unit #{inspect(unit)}.
       Buffer: #{inspect(buffer)}
+      Pad reference: #{inspect(pad_ref)}
       """
     end
 
@@ -114,8 +112,8 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
           curr_buffer
 
         curr_buffer, prev_buffer ->
-          prev_timestamp = get_timestamp!(prev_buffer, unit)
-          curr_timestamp = get_timestamp!(curr_buffer, unit)
+          prev_timestamp = get_timestamp!(prev_buffer, unit, nil)
+          curr_timestamp = get_timestamp!(curr_buffer, unit, nil)
 
           if curr_timestamp < prev_timestamp do
             Membrane.Logger.warning("""
@@ -137,22 +135,22 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
 
   @spec assert_non_nil_timestamps!(Pad.ref(), [Buffer.t()], Pad.timestamp_demand_unit()) ::
           :ok | no_return()
-  def assert_non_nil_timestamps!(pad_ref, buffers, unit) when is_timestamp_unit(unit) do
-    Enum.each(buffers, fn buffer ->
-      if get_timestamp!(buffer, unit) == nil do
-        raise """
-        All buffers must have a non-nil #{timestamp_name(unit)} when using \
-        #{inspect(unit)} as a demand unit for input pads with manual flow control.
-        Pad reference: #{inspect(pad_ref)}
-        Buffer: #{inspect(buffer)}
-        """
-      end
-    end)
+  def assert_non_nil_timestamps!(_pad_ref, buffers, unit) when is_timestamp_unit(unit) do
+    Enum.each(buffers, fn buffer -> get_timestamp!(buffer, unit, nil) end)
   end
 
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
+
+  defp do_split_buffers(:buffers, buffers, %{demand: count}),
+    do: Enum.split(buffers, count)
+
+  defp do_split_buffers(:bytes, buffers, %{demand: count}),
+    do: do_split_bytes(buffers, count, [])
+
+  defp do_split_buffers(unit, buffers, ctx) when is_timestamp_unit(unit),
+    do: do_split_timestamp_buffers(unit, buffers, ctx)
 
   defp do_split_bytes(buffers, at_pos, acc) when at_pos == 0 or buffers == [] do
     {Enum.reverse(acc), buffers}
@@ -169,19 +167,26 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
     end
   end
 
-  defp do_split_timestamp_buffers(unit, buffers, demand_timestamp, first_consumed, last_consumed) do
+  defp do_split_timestamp_buffers(unit, buffers, ctx) do
+    %{
+      demand: demand_timestamp,
+      first: first_consumed,
+      last: last_consumed,
+      pad_ref: pad_ref
+    } = ctx
+
     cond do
       @timestamp_init_demand_size == demand_timestamp ->
         {[], buffers}
 
       first_consumed != nil and last_consumed != nil and
-          get_timestamp!(last_consumed, unit) -
-            get_timestamp!(first_consumed, unit) >= demand_timestamp ->
+          get_timestamp!(last_consumed, unit, pad_ref) -
+            get_timestamp!(first_consumed, unit, pad_ref) >= demand_timestamp ->
         Membrane.Logger.warning("""
         Demanded #{timestamp_name(unit)} should be greater than the elapsed #{timestamp_name(unit)} \
         since the first consumed buffer. Got :demand of #{demand_timestamp}, while the elapsed \
         #{timestamp_name(unit)} equals \
-        #{get_timestamp!(last_consumed, unit) - get_timestamp!(first_consumed, unit)}. \
+        #{get_timestamp!(last_consumed, unit, pad_ref) - get_timestamp!(first_consumed, unit, pad_ref)}. \
         Demanding a #{timestamp_name(unit)} that is not greater than the elapsed one \
         won't result in handling any further buffers, until the element demands a #{timestamp_name(unit)} \
         greater than the elapsed one. \
@@ -193,27 +198,28 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
         {[], buffers}
 
       is_nil(first_consumed) ->
-        offset = List.first(buffers) |> get_timestamp!(unit)
-        split_timestamp_recursion(unit, buffers, [], demand_timestamp, offset)
+        offset = List.first(buffers) |> get_timestamp!(unit, pad_ref)
+        split_timestamp_recursion(unit, buffers, [], ctx, offset)
 
       true ->
-        offset = get_timestamp!(first_consumed, unit)
-        split_timestamp_recursion(unit, buffers, [], demand_timestamp, offset)
+        offset = get_timestamp!(first_consumed, unit, pad_ref)
+        split_timestamp_recursion(unit, buffers, [], ctx, offset)
     end
   end
 
-  defp split_timestamp_recursion(unit, [buffer | rest], acc, demand_timestamp, offset) do
+  defp split_timestamp_recursion(unit, [buffer | rest], acc, ctx, offset) do
+    %{demand: demand_timestamp, pad_ref: pad_ref} = ctx
     acc = [buffer | acc]
-    buffer_timestamp = get_timestamp!(buffer, unit)
+    buffer_timestamp = get_timestamp!(buffer, unit, pad_ref)
 
     if buffer_timestamp - offset >= demand_timestamp do
       {Enum.reverse(acc), rest}
     else
-      split_timestamp_recursion(unit, rest, acc, demand_timestamp, offset)
+      split_timestamp_recursion(unit, rest, acc, ctx, offset)
     end
   end
 
-  defp split_timestamp_recursion(_unit, [], acc, _demand_timestamp, _offset) do
+  defp split_timestamp_recursion(_unit, [], acc, _ctx, _offset) do
     {Enum.reverse(acc), []}
   end
 end

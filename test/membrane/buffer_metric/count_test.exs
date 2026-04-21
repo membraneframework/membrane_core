@@ -17,9 +17,9 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.CountTest do
     end
   end
 
-  describe ".split_buffers/5" do
+  describe ".split_buffers/6" do
     test "should return split buffers" do
-      {extracted, rest} = BufferMetric.split_buffers(@unit, @buffers, @count, nil, nil)
+      {extracted, rest} = BufferMetric.split_buffers(@unit, @buffers, @count, nil, nil, nil)
 
       assert extracted == [@buf1]
       assert rest == [@buf2]
