@@ -149,14 +149,6 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
       assert Enum.map(consumed, & &1.dts) == [@t0, @t1, @t2, @t3]
       assert Enum.map(remaining, & &1.dts) == [@t4]
     end
-  end
-
-  describe ".generate_metric_specific_warnings/3" do
-    test "returns :ok for an empty list" do
-      assert BufferMetric.generate_metric_specific_warnings(nil, [], @pts_unit) == :ok
-      assert BufferMetric.generate_metric_specific_warnings(nil, [], @dts_unit) == :ok
-      assert BufferMetric.generate_metric_specific_warnings(nil, [], @dts_or_pts_unit) == :ok
-    end
 
     for {unit, name, ts_field} <- [
           {{:timestamp, :pts}, "PTS", :pts},
@@ -167,8 +159,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
         log =
           capture_log(fn ->
-            assert BufferMetric.generate_metric_specific_warnings(nil, buffers, unquote(unit)) ==
-                     :ok
+            BufferMetric.split_buffers(unquote(unit), buffers, @t4 * 10, nil, nil, nil)
           end)
 
         refute log =~ "warning"
@@ -179,8 +170,28 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
         log =
           capture_log(fn ->
-            assert BufferMetric.generate_metric_specific_warnings(nil, buffers, unquote(unit)) ==
-                     :ok
+            BufferMetric.split_buffers(unquote(unit), buffers, @t4 * 10, nil, nil, nil)
+          end)
+
+        assert log =~ "warning"
+        assert log =~ unquote(name)
+      end
+
+      test "emits a warning for non-monotonic #{name}s across takes (last_consumed vs first new buffer)" do
+        buffers = Enum.map([@t0, @t1, @t2], &buf(unquote(ts_field), &1))
+        first_consumed = buf(unquote(ts_field), @t0)
+        last_consumed = buf(unquote(ts_field), @t3)
+
+        log =
+          capture_log(fn ->
+            BufferMetric.split_buffers(
+              unquote(unit),
+              buffers,
+              @t4 * 10,
+              first_consumed,
+              last_consumed,
+              nil
+            )
           end)
 
         assert log =~ "warning"
@@ -193,8 +204,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric.TimestampTest 
 
       log =
         capture_log(fn ->
-          assert BufferMetric.generate_metric_specific_warnings(nil, buffers, @dts_or_pts_unit) ==
-                   :ok
+          BufferMetric.split_buffers(@dts_or_pts_unit, buffers, @t4 * 10, nil, nil, nil)
         end)
 
       assert log =~ "warning"

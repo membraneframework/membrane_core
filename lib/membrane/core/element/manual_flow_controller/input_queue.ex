@@ -339,12 +339,6 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
         _other_output -> []
       end)
 
-    BufferMetric.generate_metric_specific_warnings(
-      input_queue.pad_ref,
-      [input_queue.last_outbound_buffer | buffers],
-      input_queue.outbound_demand_unit
-    )
-
     input_queue
     |> Map.update!(:first_outbound_buffer, &(&1 || List.first(buffers)))
     |> Map.update!(:last_outbound_buffer, &(List.last(buffers) || &1))

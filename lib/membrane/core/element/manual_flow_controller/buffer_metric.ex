@@ -98,43 +98,6 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
   defp timestamp_name(unit) when unit in [:timestamp, {:timestamp, :dts_or_pts}],
     do: "<DTS || PTS>"
 
-  @spec generate_metric_specific_warnings(Pad.ref(), [Buffer.t() | nil], Pad.demand_unit()) :: :ok
-  def generate_metric_specific_warnings(_pad_ref, _buffers, unit)
-      when is_non_timestamp_unit(unit),
-      do: :ok
-
-  def generate_metric_specific_warnings(_pad_ref, [], _unit), do: :ok
-
-  def generate_metric_specific_warnings(pad_ref, buffers, unit) when is_timestamp_unit(unit) do
-    [first | rest] = buffers
-
-    _last =
-      Enum.reduce(rest, first, fn
-        curr_buffer, nil ->
-          curr_buffer
-
-        curr_buffer, prev_buffer ->
-          prev_timestamp = get_timestamp!(prev_buffer, unit, nil)
-          curr_timestamp = get_timestamp!(curr_buffer, unit, nil)
-
-          if curr_timestamp < prev_timestamp do
-            Membrane.Logger.warning("""
-            Received buffers with non-monotonic #{timestamp_name(unit)}s. \
-            Current buffer's #{timestamp_name(unit)} is #{curr_timestamp}, \
-            while the previous buffer's #{timestamp_name(unit)} is #{prev_timestamp}. \
-            This may lead to unexpected behavior in elements that have input pad with flow \
-            control set to `:manual` and demand unit set to `:timestamp`, `{:timestamp, :dts}` \
-            `{:timestamp, :pts}` or `{:timestamp, :dts_or_pts}`.
-            Pad reference: #{inspect(pad_ref)}
-            """)
-          end
-
-          curr_buffer
-      end)
-
-    :ok
-  end
-
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
@@ -176,17 +139,14 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
         {[], buffers}
 
       first_consumed != nil and last_consumed != nil and
-          get_timestamp!(last_consumed, unit, pad_ref) -
-            get_timestamp!(first_consumed, unit, pad_ref) >= demand_timestamp ->
-        Membrane.Logger.warning("""
-        Demanded #{timestamp_name(unit)} should be greater than the elapsed #{timestamp_name(unit)} \
-        since the first consumed buffer. Got :demand of #{demand_timestamp}, while the elapsed \
-        #{timestamp_name(unit)} equals \
-        #{get_timestamp!(last_consumed, unit, pad_ref) - get_timestamp!(first_consumed, unit, pad_ref)}. \
-        Demanding a #{timestamp_name(unit)} that is not greater than the elapsed one \
-        won't result in handling any further buffers, until the element demands a #{timestamp_name(unit)} \
-        greater than the elapsed one. \
-        """)
+          elapsed_timestamp(first_consumed, last_consumed, unit, pad_ref) >= demand_timestamp ->
+        warn_demand_not_greater_than_elapsed(
+          unit,
+          demand_timestamp,
+          first_consumed,
+          last_consumed,
+          pad_ref
+        )
 
         {[], buffers}
 
@@ -195,27 +155,72 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
 
       is_nil(first_consumed) ->
         offset = List.first(buffers) |> get_timestamp!(unit, pad_ref)
-        split_timestamp_recursion(unit, buffers, [], ctx, offset)
+        split_timestamp_recursion(unit, buffers, [], ctx, offset, nil)
 
       true ->
         offset = get_timestamp!(first_consumed, unit, pad_ref)
-        split_timestamp_recursion(unit, buffers, [], ctx, offset)
+        split_timestamp_recursion(unit, buffers, [], ctx, offset, last_consumed)
     end
   end
 
-  defp split_timestamp_recursion(unit, [buffer | rest], acc, ctx, offset) do
+  defp split_timestamp_recursion(unit, [curr_buffer | rest], acc, ctx, offset, prev_buffer) do
     %{demand: demand_timestamp, pad_ref: pad_ref} = ctx
-    acc = [buffer | acc]
-    buffer_timestamp = get_timestamp!(buffer, unit, pad_ref)
+    acc = [curr_buffer | acc]
+    curr_timestamp = get_timestamp!(curr_buffer, unit, pad_ref)
 
-    if buffer_timestamp - offset >= demand_timestamp do
+    with %Buffer{} <- prev_buffer,
+         prev_timestamp = get_timestamp!(prev_buffer, unit, pad_ref),
+         true <- curr_timestamp < prev_timestamp do
+      warn_non_monotonic_timestamps(unit, prev_timestamp, curr_timestamp, pad_ref)
+    end
+
+    if curr_timestamp - offset >= demand_timestamp do
       {Enum.reverse(acc), rest}
     else
-      split_timestamp_recursion(unit, rest, acc, ctx, offset)
+      split_timestamp_recursion(unit, rest, acc, ctx, offset, curr_buffer)
     end
   end
 
-  defp split_timestamp_recursion(_unit, [], acc, _ctx, _offset) do
+  defp split_timestamp_recursion(_unit, [], acc, _ctx, _offset, _prev_buffer) do
     {Enum.reverse(acc), []}
+  end
+
+  defp elapsed_timestamp(first_consumed, last_consumed, unit, pad_ref) do
+    get_timestamp!(last_consumed, unit, pad_ref) - get_timestamp!(first_consumed, unit, pad_ref)
+  end
+
+  defp warn_demand_not_greater_than_elapsed(
+         unit,
+         demand_timestamp,
+         first_consumed,
+         last_consumed,
+         pad_ref
+       ) do
+    first_timestamp = get_timestamp!(first_consumed, unit, pad_ref)
+    last_timestamp = get_timestamp!(last_consumed, unit, pad_ref)
+    elapsed = last_timestamp - first_timestamp
+
+    Membrane.Logger.warning("""
+    Demanded #{timestamp_name(unit)} should be greater than the elapsed #{timestamp_name(unit)} \
+    since the first consumed buffer. Got :demand of #{demand_timestamp}, while the elapsed \
+    #{timestamp_name(unit)} equals #{elapsed}. \
+    First consumed buffer's #{timestamp_name(unit)}: #{first_timestamp}. \
+    Last consumed buffer's #{timestamp_name(unit)}: #{last_timestamp}. \
+    Demanding a #{timestamp_name(unit)} that is not greater than the elapsed one \
+    won't result in handling any further buffers, until the element demands a #{timestamp_name(unit)} \
+    greater than the elapsed one. \
+    """)
+  end
+
+  defp warn_non_monotonic_timestamps(unit, prev_timestamp, curr_timestamp, pad_ref) do
+    Membrane.Logger.warning("""
+    Received buffers with non-monotonic #{timestamp_name(unit)}s. \
+    Current buffer's #{timestamp_name(unit)} is #{curr_timestamp}, \
+    while the previous buffer's #{timestamp_name(unit)} is #{prev_timestamp}. \
+    This may lead to unexpected behavior in elements that have input pad with flow \
+    control set to `:manual` and demand unit set to `:timestamp`, `{:timestamp, :dts}` \
+    `{:timestamp, :pts}` or `{:timestamp, :dts_or_pts}`.
+    Pad reference: #{inspect(pad_ref)}
+    """)
   end
 end
