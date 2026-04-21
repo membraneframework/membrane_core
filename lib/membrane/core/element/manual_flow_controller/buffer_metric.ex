@@ -60,45 +60,6 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
   def reduce_demand(unit, demand, _consumed) when is_timestamp_unit(unit), do: demand
 
   # ---------------------------------------------------------------------------
-  # Timestamp-specific functions
-  # ---------------------------------------------------------------------------
-
-  @spec is_timestamp_metric?(Pad.demand_unit()) :: boolean()
-  def is_timestamp_metric?(unit) when is_timestamp_unit(unit), do: true
-  def is_timestamp_metric?(unit) when is_non_timestamp_unit(unit), do: false
-
-  @spec get_timestamp!(Buffer.t(), Pad.timestamp_demand_unit(), Pad.ref() | nil) ::
-          Membrane.Time.t()
-  defp get_timestamp!(%Buffer{} = buffer, unit, pad_ref) do
-    timestamp =
-      case unit do
-        {:timestamp, :pts} -> buffer.pts
-        {:timestamp, :dts} -> buffer.dts
-        :timestamp -> Buffer.get_dts_or_pts(buffer)
-        {:timestamp, :dts_or_pts} -> Buffer.get_dts_or_pts(buffer)
-      end
-
-    if timestamp == nil do
-      raise """
-      Buffer is missing required #{timestamp_name(unit)} timestamp. \
-      All buffers must have a non-nil #{timestamp_name(unit)} when using \
-      #{inspect(unit)} as a demand unit for input pads with manual flow control.
-      Buffer: #{inspect(buffer)}
-      Pad reference: #{inspect(pad_ref)}
-      """
-    end
-
-    timestamp
-  end
-
-  @spec timestamp_name(Pad.timestamp_demand_unit()) :: String.t()
-  defp timestamp_name({:timestamp, :pts}), do: "PTS"
-  defp timestamp_name({:timestamp, :dts}), do: "DTS"
-
-  defp timestamp_name(unit) when unit in [:timestamp, {:timestamp, :dts_or_pts}],
-    do: "<DTS || PTS>"
-
-  # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
 
@@ -188,6 +149,34 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
   defp elapsed_timestamp(first_consumed, last_consumed, unit, pad_ref) do
     get_timestamp!(last_consumed, unit, pad_ref) - get_timestamp!(first_consumed, unit, pad_ref)
   end
+
+  defp get_timestamp!(%Buffer{} = buffer, unit, pad_ref) do
+    timestamp =
+      case unit do
+        {:timestamp, :pts} -> buffer.pts
+        {:timestamp, :dts} -> buffer.dts
+        :timestamp -> Buffer.get_dts_or_pts(buffer)
+        {:timestamp, :dts_or_pts} -> Buffer.get_dts_or_pts(buffer)
+      end
+
+    if timestamp == nil do
+      raise """
+      Buffer is missing required #{timestamp_name(unit)} timestamp. \
+      All buffers must have a non-nil #{timestamp_name(unit)} when using \
+      #{inspect(unit)} as a demand unit for input pads with manual flow control.
+      Buffer: #{inspect(buffer)}
+      Pad reference: #{inspect(pad_ref)}
+      """
+    end
+
+    timestamp
+  end
+
+  defp timestamp_name({:timestamp, :pts}), do: "PTS"
+  defp timestamp_name({:timestamp, :dts}), do: "DTS"
+
+  defp timestamp_name(unit) when unit in [:timestamp, {:timestamp, :dts_or_pts}],
+    do: "<DTS || PTS>"
 
   defp warn_demand_not_greater_than_elapsed(
          unit,
