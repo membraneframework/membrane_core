@@ -113,7 +113,7 @@ end
 ### Redemand
 
 Sometimes producing all demanded buffers at once is not possible or not
-desired — for example when the element generates one buffer at a time. In that
+desired — for example when the element can produce at most one buffer per invocation. In that
 case, return the [`:redemand`](`t:Membrane.Element.Action.redemand/0`) action
 alongside the buffer. Membrane will then invoke
 [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`) again
@@ -258,10 +258,7 @@ Timestamp demand units let an element request buffers by specifying a
 all buffers up to and including the first one whose timestamp meets or exceeds
 the demanded value.
 
-Timestamp demand units are only applicable to **input pads with manual flow
-control**. Output pads do not support them. If an input pad uses a timestamp
-demand unit and the linked upstream output pad does not specify a `demand_unit`,
-that element will receive [`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`) with demand expressed in `:buffers`.
+Timestamp demand units are exclusive to manual input pads. Unless a specific unit is explicitly configured for the output pad linked to an input pad using :timestamps, that output pad defaults to receiving demands in :buffers.
 
 #### Available variants
 
@@ -354,7 +351,7 @@ stream.
 
 The canonical pattern for a filter with both pads using manual flow control is:
 
-- **[`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)** — propagate the demand upstream by returning a [`:demand`](`t:Membrane.Element.Action.demand/0`) action on the input pad.
+- **[`handle_demand/5`](`c:Membrane.Element.WithOutputPads.handle_demand/5`)** — propagate the demand upstream by returning a [`:demand`](`t:Membrane.Element.Action.demand/0`) action on the input pad. The demand passed upstream might be modified, e.g. it is multiplied by 2 in the example below.
 - **[`handle_buffer/4`](`c:Membrane.Element.WithInputPads.handle_buffer/4`)** — process the incoming buffer and forward it (possibly modified) downstream via a [`:buffer`](`t:Membrane.Element.Action.buffer/0`) action. 
 
 The following example combines every two input buffers into one output buffer,
