@@ -425,13 +425,15 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert queue.last_outbound_buffer == nil
 
     # First take: demand 300ms — consumes b0..b3
-    {_out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+    {out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+    assert bufs_size(out, :buffers) == 4
 
     assert queue.first_outbound_buffer == b0
     assert queue.last_outbound_buffer == b3
 
     # Second take: demand still ≤ elapsed from b0, so no buffers consumed
-    {_out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+    {out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+    assert bufs_size(out, :buffers) == 0
 
     # first_outbound_buffer must remain b0 (the very first ever consumed)
     assert queue.first_outbound_buffer == b0

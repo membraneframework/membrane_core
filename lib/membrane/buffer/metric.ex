@@ -8,23 +8,18 @@ defmodule Membrane.Buffer.Metric do
   """
 
   alias Membrane.Buffer
+  alias __MODULE__
+
+  @type unit :: :buffers | :bytes
 
   @callback buffer_size_approximation() :: pos_integer
 
-  @callback buffers_size([Buffer.t()]) ::
-              {:ok, non_neg_integer()} | {:error, reason :: atom()}
+  @callback buffers_size([Buffer.t()]) :: non_neg_integer
 
-  @callback split_buffers(
-              [Buffer.t()],
-              non_neg_integer | Membrane.Time.t(),
-              first_consumed_buffer :: Buffer.t() | nil,
-              last_consumed_buffer :: Buffer.t() | nil
-            ) :: {[Buffer.t()], [Buffer.t()]}
+  @callback split_buffers([Buffer.t()], non_neg_integer) ::
+              {[Buffer.t()], [Buffer.t()]}
 
-  @callback init_manual_demand_size() :: non_neg_integer() | Membrane.Time.t()
-
-  @callback reduce_demand(
-              demand :: non_neg_integer() | Membrane.Time.t(),
-              consumed_size :: non_neg_integer() | nil
-            ) :: non_neg_integer() | Membrane.Time.t()
+  @spec from_unit(unit()) :: module()
+  def from_unit(:buffers), do: Metric.Count
+  def from_unit(:bytes), do: Metric.ByteSize
 end

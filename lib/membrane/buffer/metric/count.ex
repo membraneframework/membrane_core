@@ -18,27 +18,15 @@ defmodule Membrane.Buffer.Metric.Count do
   end
 
   @impl true
-  def init_manual_demand_size() do
-    ensure_deprecated_warning_printed()
-    0
-  end
-
-  @impl true
   def buffers_size(buffers) do
     ensure_deprecated_warning_printed()
-    {:ok, length(buffers)}
+    length(buffers)
   end
 
   @impl true
-  def split_buffers(buffers, count, _first_consumed_buffer, _last_consumed_buffer) do
+  def split_buffers(buffers, count) do
     ensure_deprecated_warning_printed()
     Enum.split(buffers, count)
-  end
-
-  @impl true
-  def reduce_demand(demand, consumed) do
-    ensure_deprecated_warning_printed()
-    demand - consumed
   end
 
   defp ensure_deprecated_warning_printed() do

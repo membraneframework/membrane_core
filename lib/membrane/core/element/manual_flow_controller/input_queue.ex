@@ -159,7 +159,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
     inbound_metric_buffer_size = size(v, inbound_demand_unit)
     outbound_metric_buffer_size = size(v, outbound_demand_unit)
 
-    "Storing #{inspect(inbound_metric_buffer_size)} #{inbound_demand_unit}"
+    "Storing #{inspect(inbound_metric_buffer_size)} #{inspect(inbound_demand_unit)}"
     |> mk_log(input_queue)
     |> Membrane.Logger.debug_verbose()
 

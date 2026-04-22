@@ -133,8 +133,8 @@ defmodule Membrane.Pad do
   @typedoc """
   Demand unit that does not involve timestamps — applicable to both input and output pads.
 
-  - `:buffers` — demand counted in number of buffers
-  - `:bytes` — demand counted in bytes of payload
+  - `:buffers` — demand expressed in number of buffers
+  - `:bytes` — demand expressed in bytes of payload
   """
   @type non_timestamp_demand_unit :: :buffers | :bytes
 

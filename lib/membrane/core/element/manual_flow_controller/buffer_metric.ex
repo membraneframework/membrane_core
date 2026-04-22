@@ -7,10 +7,10 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
   # Sentinel value for timestamp-based metrics: means "no demand set yet".
   @timestamp_init_demand_size -1
 
-  defguard is_timestamp_unit(unit)
-           when unit == :timestamp or
-                  (is_tuple(unit) and tuple_size(unit) == 2 and elem(unit, 0) == :timestamp and
-                     elem(unit, 1) in [:pts, :dts, :dts_or_pts])
+  defguardp is_timestamp_unit(unit)
+            when unit == :timestamp or
+                   (is_tuple(unit) and tuple_size(unit) == 2 and elem(unit, 0) == :timestamp and
+                      elem(unit, 1) in [:pts, :dts, :dts_or_pts])
 
   defguard is_non_timestamp_unit(unit) when unit == :buffers or unit == :bytes
 
@@ -20,11 +20,11 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
   def buffer_size_approximation(:bytes), do: 1500
   def buffer_size_approximation(unit) when is_valid_unit(unit), do: 1
 
-  @spec init_manual_demand_size(Pad.demand_unit()) :: non_neg_integer() | Membrane.Time.t()
+  @spec init_manual_demand_size(Pad.demand_unit()) :: non_neg_integer() | Membrane.Time.t() | -1
   def init_manual_demand_size(unit) when is_non_timestamp_unit(unit), do: 0
   def init_manual_demand_size(unit) when is_timestamp_unit(unit), do: @timestamp_init_demand_size
 
-  @spec buffers_size(Pad.demand_unit(), [Buffer.t()] | []) ::
+  @spec buffers_size(Pad.demand_unit(), [Buffer.t()]) ::
           {:ok, non_neg_integer()} | {:error, :operation_not_supported}
   def buffers_size(:buffers, buffers), do: {:ok, length(buffers)}
 
@@ -38,7 +38,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
 
   @spec split_buffers(
           Pad.demand_unit(),
-          [Buffer.t()] | [],
+          [Buffer.t()],
           non_neg_integer() | Membrane.Time.t(),
           Buffer.t() | nil,
           Buffer.t() | nil,
@@ -67,27 +67,28 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
     do: Enum.split(buffers, count)
 
   defp do_split_buffers(:bytes, buffers, %{demand: count}),
-    do: do_split_bytes(buffers, count, [])
+    do: do_split_buffers_by_bytesize(buffers, count, [])
 
   defp do_split_buffers(unit, buffers, ctx) when is_timestamp_unit(unit),
-    do: do_split_timestamp_buffers(unit, buffers, ctx)
+    do: do_split_buffers_by_timestamp(unit, buffers, ctx)
 
-  defp do_split_bytes(buffers, at_pos, acc) when at_pos == 0 or buffers == [] do
+  defp do_split_buffers_by_bytesize(buffers, at_pos, acc) when at_pos == 0 or buffers == [] do
     {Enum.reverse(acc), buffers}
   end
 
-  defp do_split_bytes([%Buffer{payload: p} = buf | rest], at_pos, acc) when at_pos > 0 do
+  defp do_split_buffers_by_bytesize([%Buffer{payload: p} = buf | rest], at_pos, acc)
+       when at_pos > 0 do
     if at_pos < Payload.size(p) do
       {p1, p2} = Payload.split_at(p, at_pos)
       acc = [%Buffer{buf | payload: p1} | acc] |> Enum.reverse()
       rest = [%Buffer{buf | payload: p2} | rest]
       {acc, rest}
     else
-      do_split_bytes(rest, at_pos - Payload.size(p), [buf | acc])
+      do_split_buffers_by_bytesize(rest, at_pos - Payload.size(p), [buf | acc])
     end
   end
 
-  defp do_split_timestamp_buffers(unit, buffers, ctx) do
+  defp do_split_buffers_by_timestamp(unit, buffers, ctx) do
     %{
       demand: demand_timestamp,
       first: first_consumed,
@@ -195,8 +196,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
     #{timestamp_name(unit)} equals #{elapsed}. \
     First consumed buffer's #{timestamp_name(unit)}: #{first_timestamp}. \
     Last consumed buffer's #{timestamp_name(unit)}: #{last_timestamp}. \
-    Demanding a #{timestamp_name(unit)} that is not greater than the elapsed one \
-    won't result in handling any further buffers, until the element demands a #{timestamp_name(unit)} \
+    No further buffers will be delivered until the element demands a #{timestamp_name(unit)} \
     greater than the elapsed one. \
     """)
   end
@@ -207,8 +207,7 @@ defmodule Membrane.Core.Element.ManualFlowController.BufferMetric do
     Current buffer's #{timestamp_name(unit)} is #{curr_timestamp}, \
     while the previous buffer's #{timestamp_name(unit)} is #{prev_timestamp}. \
     This may lead to unexpected behavior in elements that have input pad with flow \
-    control set to `:manual` and demand unit set to `:timestamp`, `{:timestamp, :dts}` \
-    `{:timestamp, :pts}` or `{:timestamp, :dts_or_pts}`.
+    control set to `:manual` and a timestamp demand unit.
     Pad reference: #{inspect(pad_ref)}
     """)
   end

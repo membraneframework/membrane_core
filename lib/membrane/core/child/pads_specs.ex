@@ -4,13 +4,12 @@ defmodule Membrane.Core.Child.PadsSpecs do
   # based on them.
   use Bunch
 
-  alias Membrane.Core.Element.ManualFlowController.BufferMetric
   alias Membrane.Core.OptionsSpecs
   alias Membrane.Pad
 
   require Membrane.Logger
   require Membrane.Pad
-  require Membrane.Core.Element.ManualFlowController.BufferMetric
+  require Membrane.Core.Element.ManualFlowController.BufferMetric, as: BufferMetric
 
   @doc """
   Returns documentation string common for both input and output pads
@@ -292,7 +291,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
               |> Bunch.Config.parse(
                 availability: [in: [:always, :on_request], default: :always],
                 accepted_formats_str: [],
-                flow_control: flow_control_spec(direction, component),
+                flow_control: flow_control_spec_constraints(direction, component),
                 demand_unit: demand_unit_spec(direction, component),
                 max_instances: max_instances_spec(),
                 options: [default: nil]
@@ -307,7 +306,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  defp flow_control_spec(direction, component) do
+  defp flow_control_spec_constraints(direction, component) do
     fn _config ->
       cond do
         component == :bin ->
