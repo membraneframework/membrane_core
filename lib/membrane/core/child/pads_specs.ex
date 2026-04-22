@@ -292,8 +292,8 @@ defmodule Membrane.Core.Child.PadsSpecs do
                 availability: [in: [:always, :on_request], default: :always],
                 accepted_formats_str: [],
                 flow_control: flow_control_spec_constraints(direction, component),
-                demand_unit: demand_unit_spec(direction, component),
-                max_instances: max_instances_spec(),
+                demand_unit: demand_unit_spec_constraints(direction, component),
+                max_instances: max_instances_spec_constraints(),
                 options: [default: nil]
               ) do
       config
@@ -321,7 +321,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  defp demand_unit_spec(direction, component) do
+  defp demand_unit_spec_constraints(direction, component) do
     fn config ->
       cond do
         component == :bin or config[:flow_control] != :manual ->
@@ -336,7 +336,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
     end
   end
 
-  defp max_instances_spec() do
+  defp max_instances_spec_constraints() do
     fn config ->
       if config[:availability] == :on_request do
         [default: :infinity, validate: &(&1 == :infinity or (is_integer(&1) and &1 >= 0))]
