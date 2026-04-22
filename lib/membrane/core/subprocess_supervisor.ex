@@ -221,7 +221,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
 
   defp do_handle_info({:EXIT, pid, reason}, state) do
     {data, state} = pop_in(state, [:children, pid])
-    handle_exit(data, reason, state)
+    state = handle_exit(data, reason, state)
 
     case state do
       %{parent_process: :exit_requested, children: children} when children == %{} ->
@@ -250,22 +250,33 @@ defmodule Membrane.Core.SubprocessSupervisor do
         raise "Subprocess supervisor failure #{inspect(child_data.name)}, reason: #{inspect(reason)}"
 
       :error ->
-        :ok
+        case data do
+          %{pending_child_death: {child_name, death_reason}} ->
+            Message.send(state.parent_component, :child_death, [child_name, death_reason])
+
+          _no_pending_death ->
+            :ok
+        end
     end
+
+    state
   end
 
   defp handle_exit(%{role: :component} = data, reason, state) do
     Process.exit(data.supervisor_pid, :shutdown)
-    Message.send(state.parent_component, :child_death, [data.name, reason])
+
+    update_in(state, [:children, data.supervisor_pid], fn supervisor_data ->
+      Map.put(supervisor_data, :pending_child_death, {data.name, reason})
+    end)
   end
 
-  defp handle_exit(%{role: :utility}, _reason, _state) do
-    :ok
+  defp handle_exit(%{role: :utility}, _reason, state) do
+    state
   end
 
   # Clause handling the case when child start function returns error
   # and we don't know its PID, but we still receive exit signal from it.
-  defp handle_exit(nil, _reason, _state) do
-    :ok
+  defp handle_exit(nil, _reason, state) do
+    state
   end
 end
