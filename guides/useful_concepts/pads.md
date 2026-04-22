@@ -358,3 +358,10 @@ sent to whatever component is connected to the bin's newly created pad.
 It's worth noting that pads of bins are only an abstraction. When a component
 links with a bin, it actually links directly to one of the components inside of
 it to avoid unnecessary forwarding of messages.
+
+## Demand units
+
+Input pads with `:manual` flow control use a _demand unit_ to determine how
+data is measured when an element requests buffers. For a detailed explanation
+of the available units — including timestamp-based demands — see the
+[Manual demands](manual_demands.md) guide.

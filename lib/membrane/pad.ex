@@ -12,7 +12,6 @@ defmodule Membrane.Pad do
 
   use Bunch
 
-  alias Membrane.Buffer
   alias Membrane.Core.OptionsSpecs
 
   @availability_values [:always, :on_request]
@@ -132,18 +131,66 @@ defmodule Membrane.Pad do
            max_instances: max_instances()}
 
   @typedoc """
-  Describes how a pad should be declared inside an element.
+  Demand unit that does not involve timestamps — applicable to both input and output pads.
+
+  - `:buffers` — demand expressed in number of buffers
+  - `:bytes` — demand expressed in bytes of payload
+  """
+  @type non_timestamp_demand_unit :: :buffers | :bytes
+
+  @typedoc """
+  Demand unit based on timestamps — applicable to input pads only.
+
+  - `:timestamp` / `{:timestamp, :dts_or_pts}` — demand expressed as a DTS-or-PTS duration
+  - `{:timestamp, :pts}` — demand expressed as a PTS duration
+  - `{:timestamp, :dts}` — demand expressed as a DTS duration
+  """
+  @type timestamp_demand_unit ::
+          :timestamp
+          | {:timestamp, :pts | :dts | :dts_or_pts}
+
+  @typedoc """
+  Specifies the unit in which a pad's demand is expressed.
+
+  Output pads only support `t:non_timestamp_demand_unit/0` (`:buffers` or `:bytes`).
+  Input pads support both `t:non_timestamp_demand_unit/0` and `t:timestamp_demand_unit/0`.
+  """
+  @type demand_unit :: non_timestamp_demand_unit() | timestamp_demand_unit()
+
+  @typedoc """
+  Describes how an output pad should be declared inside an element.
+
+  Output pads only support `t:non_timestamp_demand_unit/0` for `demand_unit`.
 
   #{OptionsSpecs.pad_options_doc()}
   """
-  @type element_spec ::
+  @type output_element_spec ::
           {name(),
            availability: availability(),
            accepted_format: accepted_format(),
            flow_control: flow_control(),
            options: Keyword.t(),
-           demand_unit: Buffer.Metric.unit(),
+           demand_unit: non_timestamp_demand_unit(),
            max_instances: max_instances()}
+
+  @typedoc """
+  Describes how an input pad should be declared inside an element.
+
+  #{OptionsSpecs.pad_options_doc()}
+  """
+  @type input_element_spec ::
+          {name(),
+           availability: availability(),
+           accepted_format: accepted_format(),
+           flow_control: flow_control(),
+           options: Keyword.t(),
+           demand_unit: demand_unit(),
+           max_instances: max_instances()}
+
+  @typedoc """
+  Describes how a pad should be declared inside an element.
+  """
+  @type element_spec :: output_element_spec() | input_element_spec()
 
   @typedoc """
   Type describing a pad. Contains data parsed from `t:spec/0`
@@ -153,7 +200,7 @@ defmodule Membrane.Pad do
           optional(:flow_control) => flow_control(),
           :name => name(),
           :accepted_formats_str => [String.t()],
-          optional(:demand_unit) => Buffer.Metric.unit() | nil,
+          optional(:demand_unit) => demand_unit() | nil,
           :direction => direction(),
           :options => nil | Keyword.t(),
           optional(:max_instances) => max_instances()
