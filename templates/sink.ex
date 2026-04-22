@@ -96,11 +96,11 @@ defmodule Membrane.TemplateSink do
   #   {[], state}
   # end
 
-  # This callback doesn't have a default implementation. The one present
-  # here forwards all buffers received without doing anything else.
+  # This callback doesn't have a default implementation.
+  # The one present here doesn't do anything.
   @impl true
   def handle_buffer(_pad, buffer, _ctx, state) do
-    {[forward: buffer], state}
+    {[], state}
   end
   
   # @impl true

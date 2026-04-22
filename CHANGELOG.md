@@ -1,6 +1,9 @@
 # Changelog
 
 ## Latest
+* Make errors more descriptive [#1102](https://github.com/membraneframework/membrane_core/pull/1102)
+* Add `:broadcast` action for sending data to all output pads of an element
+* Deprecate `:forward` action in favour of `:broadcast`
 * Handle removed pads properly in `Membrane.Connector` [#1075](https://github.com/membraneframework/membrane_core/pull/1075)
 * Improve remove_link action docs
 * Deprecate `:components` option for `:unsafely_name_processes_for_observer`
@@ -9,6 +12,7 @@
 * Update required Elixir version to `~> 1.17`
 * Add a Mix task for generating demos [#1067](https://github.com/membraneframework/membrane_core/pull/1067)
 * Add Mix tasks for easier initialization of components [#1059](https://github.com/membraneframework/membrane_core/pull/1059)
+* Support input demand unit expressed in timestamps [#1079](https://github.com/membraneframework/membrane_core/pull/1079)
 
 ## 1.2.6
  * Add tutorials [#1007](https://github.com/membraneframework/membrane_core/pull/1007), plugins [#1012](https://github.com/membraneframework/membrane_core/pull/1012) and demos [#1013](https://github.com/membraneframework/membrane_core/pull/1013) to the docs.

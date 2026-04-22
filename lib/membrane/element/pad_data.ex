@@ -62,6 +62,7 @@ defmodule Membrane.Element.PadData do
           # Contains amount of data (:buffers/:bytes), that has been demanded from the element on the other side of link, but
           # hasn't arrived yet. Unused for output pads.
           manual_demand_size: private_field,
+          uninterrupted_redemands: private_field,
           sticky_events: private_field,
           other_effective_flow_control: private_field,
           stalker_metrics: private_field
@@ -93,6 +94,7 @@ defmodule Membrane.Element.PadData do
                 sticky_messages: [],
                 atomic_demand: nil,
                 manual_demand_size: 0,
+                uninterrupted_redemands: 0,
                 sticky_events: [],
                 stream_format_validation_params: [],
                 other_demand_unit: nil,
