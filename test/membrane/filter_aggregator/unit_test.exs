@@ -119,7 +119,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
 
   test "handle_init with unsupported pad flow control mode", ctx do
     # use stub to get the default value
-    pads_descriptions = apply(FilterA, :membrane_pads, [])
+    pads_descriptions = FilterA.membrane_pads()
 
     FilterA
     |> expect(:membrane_pads, fn ->
@@ -321,11 +321,11 @@ defmodule Membrane.FilterAggregator.UnitTest do
     end)
     |> expect(:handle_buffer, fn :input, ^buffer, %{} = ctx, state ->
       assert ctx.pads.input.start_of_stream? == true
-      {[forward: buffer], state}
+      {[buffer: {:output, buffer}], state}
     end)
     |> expect(:handle_end_of_stream, fn :input, %{} = ctx, state ->
       assert ctx.pads.input.end_of_stream? == true
-      {[forward: :end_of_stream], %{state | state: :ok}}
+      {[end_of_stream: :output], %{state | state: :ok}}
     end)
 
     FilterB
@@ -370,7 +370,7 @@ defmodule Membrane.FilterAggregator.UnitTest do
 
     FilterA
     |> expect(:handle_event, fn :input, ^event, %{}, state ->
-      {[forward: event], %{state | state: :ok}}
+      {[event: {:output, event}], %{state | state: :ok}}
     end)
 
     FilterB

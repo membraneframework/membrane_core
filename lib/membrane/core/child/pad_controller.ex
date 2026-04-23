@@ -2,6 +2,7 @@ defmodule Membrane.Core.Child.PadController do
   @moduledoc false
 
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
+  alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.{LinkError, Pad, PadError}
 
   require Membrane.Core.Child.PadModel
@@ -23,15 +24,15 @@ defmodule Membrane.Core.Child.PadController do
   end
 
   @spec validate_pads_flow_control_compability!(
-          Pad.ref(),
+          Endpoint.t(),
           Pad.flow_control(),
-          Pad.ref(),
+          Endpoint.t(),
           Pad.flow_control()
         ) :: :ok
   def validate_pads_flow_control_compability!(from, from_flow_control, to, to_flow_control) do
     if from_flow_control in [:auto, :manual] and to_flow_control == :push do
       raise LinkError,
-            "Cannot connect #{inspect(from_flow_control)} output #{inspect(from)} to push input #{inspect(to)}"
+            "Cannot connect #{inspect(from_flow_control)} output pad #{inspect(from.pad_ref)} of child #{inspect(from.child)} to push input pad #{inspect(to.pad_ref)} of child #{inspect(to.child)}"
     end
 
     :ok

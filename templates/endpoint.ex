@@ -110,7 +110,7 @@ defmodule Membrane.TemplateEndpoint do
   # here forwards all buffers received without doing anything else.
   @impl true
   def handle_buffer(_pad, buffer, _ctx, state) do
-    {[forward: buffer], state}
+    {[broadcast: buffer], state}
   end
   
   # Important: this callback needs to be implemented when any output pads operate

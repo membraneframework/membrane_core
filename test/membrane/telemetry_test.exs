@@ -215,14 +215,14 @@ defmodule Membrane.TelemetryTest do
                  from: ":filter",
                  pad_from: ":output",
                  pad_to: ":input",
-                 parent_component_path: _path,
+                 parent_component_path: path,
                  to: ":sink"
                },
                %{
                  from: ":source",
                  pad_from: ":output",
                  pad_to: ":input",
-                 parent_component_path: _path,
+                 parent_component_path: path,
                  to: ":filter"
                }
              ] = Enum.sort([link1.value, link2.value])

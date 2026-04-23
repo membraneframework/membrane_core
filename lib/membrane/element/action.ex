@@ -81,14 +81,31 @@ defmodule Membrane.Element.Action do
   `c:Membrane.WithInputPads.handle_buffer/4` callback. Invoked callback is
   guaranteed not to receive more data than demanded.
 
-  Demand size can be either a non-negative integer, that overrides existing demand,
-  or a function that is passed current demand, and is to return the new demand. In case only pad
+  ## `:buffers` and `:bytes` demand units
+
+  When the pad's `demand_unit` is `:buffers` or `:bytes`, the demand size is a
+  non-negative integer that overrides the existing demand, or a function that
+  receives the current demand and returns the new demand. If only the pad ref
   is specified, the demand size defaults to 1.
+
+  ## Timestamp demand units
+
+  When the pad's `demand_unit` is `:timestamp`, `{:timestamp, :pts}`,
+  `{:timestamp, :dts}`, or `{:timestamp, :dts_or_pts}`, the demand size is a
+  `t:Membrane.Time.t/0` duration. The queue will deliver
+  buffers until the elapsed timestamp span (last consumed timestamp minus
+  first consumed timestamp) reaches the demanded duration.
+
+  Unlike `:buffers`/`:bytes` demands, **timestamp demand does not decrement** as buffers
+  are consumed. To make progress after the demanded window has elapsed, the
+  element must re-issue a larger demand (e.g. advancing the window by the
+  desired step). Issuing the same demand again after the window has been
+  satisfied will result in a warning and no buffers being delivered.
 
   Allowed only when playback is playing.
   """
   @type demand :: {:demand, {Pad.ref(), demand_size} | Pad.ref()}
-  @type demand_size :: pos_integer | (pos_integer() -> non_neg_integer())
+  @type demand_size :: pos_integer | Membrane.Time.t() | (pos_integer() -> non_neg_integer())
 
   @typedoc """
   Pauses auto-demanding on the specific pad.
@@ -139,9 +156,15 @@ defmodule Membrane.Element.Action do
   ## Redemand in Filters
 
   Redemand in Filters is useful in a situation where not the entire demand of
-  output pad has been satisfied and there is a need to send a demand for additional
-  buffers through the input pad.
-  A typical example of this situation is a parser that has not demanded enough
+  output pad has been satisfied and there is a need to demand for additional
+  buffers on an input pad.
+
+  Redemanding in `handle_demand` is not allowed in Filters. In situations where
+  the demand cannot be supplied, the element should demand on it's input pad
+  and wait for the necessary data to arrive in `handle_buffer`, and only then
+  call `:redemand`.
+
+  A typical example of this situation is a parser that has not gotten enough
   bytes to parse the whole frame.
 
   ## Usage limitations
@@ -169,6 +192,9 @@ defmodule Membrane.Element.Action do
   forward buffers, `c:Membrane.Element.WithInputPads.handle_stream_format/4` - stream formats.
   `c:Membrane.Element.Base.handle_event/4` - events and
   `c:Membrane.Element.WithInputPads.handle_end_of_stream/3` - ends of streams.
+
+  > #### Deprecated {: .warning}
+  > The `:forward` action is deprecated. Use `t:broadcast/0` instead.
   """
   @type forward ::
           {:forward, Buffer.t() | [Buffer.t()] | StreamFormat.t() | Event.t() | :end_of_stream}
@@ -185,7 +211,12 @@ defmodule Membrane.Element.Action do
   Allowed only when playback is `playing`.
   """
   @type broadcast ::
-          {:broadcast, Buffer.t() | [Buffer.t()] | StreamFormat.t() | Event.t() | :end_of_stream}
+          {:broadcast,
+           Buffer.t()
+           | StreamFormat.t()
+           | Event.t()
+           | :end_of_stream
+           | [Buffer.t() | StreamFormat.t() | Event.t() | :end_of_stream]}
 
   @typedoc """
   Starts a timer that will invoke `c:Membrane.Element.Base.handle_tick/3` callback

@@ -3,6 +3,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
 
   alias Membrane.Buffer
   alias Membrane.Core.Element.AtomicDemand
+  alias Membrane.Core.Element.ManualFlowController.BufferMetric
   alias Membrane.Core.Element.ManualFlowController.InputQueue
   alias Membrane.Core.Message
   alias Membrane.Core.SubprocessSupervisor
@@ -19,8 +20,7 @@ defmodule Membrane.Core.Element.InputQueueTest do
          inbound_demand_unit: :bytes,
          outbound_demand_unit: :bytes,
          pad_ref: :output_pad_ref,
-         atomic_demand: new_atomic_demand(),
-         expected_metric: Buffer.Metric.from_unit(:bytes)
+         atomic_demand: new_atomic_demand()
        }}
     end
 
@@ -38,8 +38,10 @@ defmodule Membrane.Core.Element.InputQueueTest do
                log_tag: context.log_tag,
                target_size: context.target_queue_size,
                atomic_demand: context.atomic_demand,
-               inbound_metric: context.expected_metric,
-               outbound_metric: context.expected_metric,
+               inbound_demand_unit: :bytes,
+               outbound_demand_unit: :bytes,
+               outbound_metric_demand_init_size:
+                 BufferMetric.init_manual_demand_size(context.outbound_demand_unit),
                pad_ref: context.pad_ref,
                size: 0,
                demand: context.target_queue_size,
@@ -60,8 +62,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         prepare_input_queue(
           size: 0,
-          inbound_metric: Buffer.Metric.Count,
-          outbound_metric: Buffer.Metric.Count,
+          inbound_demand_unit: :buffers,
+          outbound_demand_unit: :buffers,
           q: Qex.new()
         )
 
@@ -96,13 +98,13 @@ defmodule Membrane.Core.Element.InputQueueTest do
        }}
     end
 
-    test "updated properly `size` and `demand` when `:metric` is `Buffer.Metric.Count`",
+    test "updated properly `size` and `demand` when demand unit is `:buffers`",
          context do
       input_queue =
         prepare_input_queue(
           size: context.size,
-          inbound_metric: Buffer.Metric.Count,
-          outbound_metric: Buffer.Metric.Count,
+          inbound_demand_unit: :buffers,
+          outbound_demand_unit: :buffers,
           q: context.q,
           demand: context.demand
         )
@@ -114,13 +116,13 @@ defmodule Membrane.Core.Element.InputQueueTest do
       assert updated_input_queue.demand == context.demand - 1
     end
 
-    test "updated properly `size` and `demand` when `:metric` is `Buffer.Metric.ByteSize`",
+    test "updated properly `size` and `demand` when demand unit is `:bytes`",
          context do
       input_queue =
         prepare_input_queue(
           size: context.size,
-          inbound_metric: Buffer.Metric.ByteSize,
-          outbound_metric: Buffer.Metric.ByteSize,
+          inbound_demand_unit: :bytes,
+          outbound_demand_unit: :bytes,
           q: context.q,
           demand: context.demand
         )
@@ -138,8 +140,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         prepare_input_queue(
           size: context.size,
-          inbound_metric: Buffer.Metric.ByteSize,
-          outbound_metric: Buffer.Metric.ByteSize,
+          inbound_demand_unit: :bytes,
+          outbound_demand_unit: :bytes,
           q: context.q,
           demand: context.demand
         )
@@ -155,8 +157,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         prepare_input_queue(
           size: context.size,
-          inbound_metric: Buffer.Metric.ByteSize,
-          outbound_metric: Buffer.Metric.ByteSize,
+          inbound_demand_unit: :bytes,
+          outbound_demand_unit: :bytes,
           q: context.q,
           demand: context.demand
         )
@@ -172,8 +174,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
       input_queue =
         prepare_input_queue(
           size: context.size,
-          inbound_metric: Buffer.Metric.ByteSize,
-          outbound_metric: Buffer.Metric.ByteSize,
+          inbound_demand_unit: :bytes,
+          outbound_demand_unit: :bytes,
           q: context.q,
           demand: context.demand
         )
@@ -239,8 +241,8 @@ defmodule Membrane.Core.Element.InputQueueTest do
           size: size,
           demand: 94,
           target_size: 100,
-          inbound_metric: Buffer.Metric.Count,
-          outbound_metric: Buffer.Metric.Count,
+          inbound_demand_unit: :buffers,
+          outbound_demand_unit: :buffers,
           q: q,
           pad_ref: :output_pad_ref,
           atomic_demand: atomic_demand
@@ -335,6 +337,141 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert queue.demand >= 2
   end
 
+  test "raises when taking a buffer with nil PTS from a {:timestamp, :pts} pad" do
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: {:timestamp, :pts},
+        atomic_demand: new_atomic_demand(),
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: 10
+      })
+
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
+
+    assert_raise RuntimeError, ~r/PTS/, fn ->
+      queue
+      |> InputQueue.store([%Buffer{payload: <<>>, pts: nil}])
+      |> InputQueue.take(Membrane.Time.milliseconds(100))
+    end
+  end
+
+  test "raises when taking a buffer with nil DTS from a {:timestamp, :dts} pad" do
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: {:timestamp, :dts},
+        atomic_demand: new_atomic_demand(),
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: 10
+      })
+
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
+
+    assert_raise RuntimeError, ~r/DTS/, fn ->
+      queue
+      |> InputQueue.store([%Buffer{payload: <<>>, dts: nil}])
+      |> InputQueue.take(Membrane.Time.milliseconds(100))
+    end
+  end
+
+  test "raises when taking a buffer with both nil DTS and PTS from a {:timestamp, :dts_or_pts} pad" do
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: {:timestamp, :dts_or_pts},
+        atomic_demand: new_atomic_demand(),
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: 10
+      })
+
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
+
+    assert_raise RuntimeError, ~r/DTS \|\| PTS/, fn ->
+      queue
+      |> InputQueue.store([%Buffer{payload: <<>>, pts: nil, dts: nil}])
+      |> InputQueue.take(Membrane.Time.milliseconds(100))
+    end
+  end
+
+  # this test was vibe coded
+  test "first_outbound_buffer and last_outbound_buffer are tracked correctly across multiple takes" do
+    atomic_demand = new_atomic_demand()
+
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: {:timestamp, :dts},
+        atomic_demand: atomic_demand,
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: 10
+      })
+
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
+
+    b0 = %Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(0)}
+    b1 = %Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(100)}
+    b2 = %Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(250)}
+    b3 = %Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(350)}
+    b4 = %Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(500)}
+
+    queue = InputQueue.store(queue, [b0, b1, b2, b3, b4])
+
+    assert queue.first_outbound_buffer == nil
+    assert queue.last_outbound_buffer == nil
+
+    # First take: demand 300ms — consumes b0..b3
+    {out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+    assert bufs_size(out, :buffers) == 4
+
+    assert queue.first_outbound_buffer == b0
+    assert queue.last_outbound_buffer == b3
+
+    # Second take: demand still ≤ elapsed from b0, so no buffers consumed
+    {out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+    assert bufs_size(out, :buffers) == 0
+
+    # first_outbound_buffer must remain b0 (the very first ever consumed)
+    assert queue.first_outbound_buffer == b0
+    # last_outbound_buffer unchanged when no new buffers are delivered
+    assert queue.last_outbound_buffer == b3
+  end
+
+  test "if the queue works properly for :buffers input metric and :timestamp output metric" do
+    atomic_demand = new_atomic_demand()
+
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: {:timestamp, :dts},
+        atomic_demand: atomic_demand,
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: 10
+      })
+
+    assert_receive Message.new(:atomic_demand_increased, :output_pad_ref)
+
+    buffers =
+      [0, 100, 250, 350, 500]
+      |> Enum.map(&%Buffer{payload: <<>>, dts: Membrane.Time.milliseconds(&1)})
+
+    queue = InputQueue.store(queue, buffers)
+    assert queue.size == 5
+
+    {out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+    assert bufs_size(out, :buffers) == 4
+    assert queue.size == 1
+
+    {out, queue} = InputQueue.take(queue, Membrane.Time.milliseconds(300))
+    assert bufs_size(out, :buffers) == 0
+    assert queue.size == 1
+  end
+
   test "if the queue works properly for :buffers input metric and :bytes output metric" do
     atomic_demand = new_atomic_demand()
 
@@ -371,7 +508,18 @@ defmodule Membrane.Core.Element.InputQueueTest do
   end
 
   defp prepare_input_queue(fields) do
-    struct(InputQueue, [stalker_metrics: %{size: :atomics.new(1, [])}] ++ fields)
+    outbound_demand_unit = Keyword.get(fields, :outbound_demand_unit)
+
+    defaults = [
+      stalker_metrics: %{size: :atomics.new(1, [])},
+      outbound_metric_demand_init_size:
+        if(outbound_demand_unit,
+          do: BufferMetric.init_manual_demand_size(outbound_demand_unit),
+          else: 0
+        )
+    ]
+
+    struct(InputQueue, defaults ++ fields)
   end
 
   defp new_atomic_demand(),
@@ -388,10 +536,13 @@ defmodule Membrane.Core.Element.InputQueueTest do
   defp bufs_size(output, unit) do
     {_state, bufs} = output
 
-    Enum.flat_map(bufs, fn {:buffers, bufs_list, _inbound_metric_size, _outbound_metric_size} ->
-      bufs_list
-    end)
-    |> Membrane.Buffer.Metric.from_unit(unit).buffers_size()
+    all_buffers =
+      Enum.flat_map(bufs, fn {:buffers, bufs_list, _inbound_metric_size, _outbound_metric_size} ->
+        bufs_list
+      end)
+
+    {:ok, size} = BufferMetric.buffers_size(unit, all_buffers)
+    size
   end
 
   defp bufs(n), do: Enum.to_list(1..n)
