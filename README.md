@@ -71,6 +71,21 @@ To learn step-by-step what exactly happens here, follow [this tutorial](https://
 
 The best place to learn Membrane is the [membrane.stream/learn](https://membrane.stream/learn) website and the [membrane_demo](https://github.com/membraneframework/membrane_demo) repository. Try them out, then hack something exciting!
 
+## Membrane skill for AI assistants
+
+This repo includes [`skills/membrane-framework/SKILL.md`](skills/membrane-framework/SKILL.md), a structured guide that helps AI coding assistants write Membrane code.
+
+If you use [Claude Code](https://docs.claude.com/en/docs/claude-code), install it via the plugin system:
+
+```
+/plugin marketplace add membraneframework/membrane_core
+/plugin install membrane-core@membraneframework-membrane-core
+```
+
+After install, Claude automatically pulls in the skill whenever you work on Membrane code (mentioning `Membrane.Pipeline`, `Bin`, `Filter`, `Pad`, etc).
+
+For other agents, point them at the SKILL.md file directly.
+
 ## Structure of the framework
 
 The most basic media processing entities of Membrane are `Element`s. An element might be able, for example, to mux incoming audio and video streams into MP4, or play raw audio using your sound card. You can create elements yourself, or choose from the ones provided by the framework.
