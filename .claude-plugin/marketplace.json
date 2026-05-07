@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "membrane-core",
-      "description": "Work with the Membrane multimedia streaming and processing framework in Elixir. Build or debug Membrane multimedia pipelines and write custom Membrane Elements, Bins, and Filters.",
-      "version": "0.1.0",
+      "description": "Work with the Membrane multimedia streaming framework in Elixir. Provides architectural guidance, callback/action references, and code patterns for pipelines, elements, and bins.",
+      "version": "1.0.0",
       "source": "./",
       "category": "development",
       "homepage": "https://github.com/membraneframework/membrane_core",
