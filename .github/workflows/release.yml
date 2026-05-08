@@ -31,3 +31,7 @@ jobs:
       submodules: recursive
     secrets:
       HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+
+  gh_release:
+    needs: [hex_publish]
+    uses: membraneframework/membrane-actions/.github/workflows/github-release.yml@main
