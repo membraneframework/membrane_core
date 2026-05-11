@@ -84,7 +84,13 @@ If you use [Claude Code](https://docs.claude.com/en/docs/claude-code), install i
 
 After install, Claude automatically pulls in the skill whenever you work on Membrane code (mentioning `Membrane.Pipeline`, `Bin`, `Filter`, `Pad`, etc).
 
-For other agents, point them at the SKILL.md file directly.
+If you use [Cursor](https://www.cursor.com/), drop the skill into your project's rules directory:
+
+```
+mkdir -p .cursor/rules && curl -fL https://raw.githubusercontent.com/membraneframework/membrane_core/master/skills/membrane-framework/SKILL.md -o .cursor/rules/membrane-framework.mdc
+```
+
+For other agents, include the `SKILL.md` file directly in the agent's context. If your tool doesn't support that, copy the file's contents into whatever instruction file it reads.
 
 ## Structure of the framework
 
