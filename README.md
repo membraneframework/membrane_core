@@ -79,7 +79,7 @@ If you use [Claude Code](https://docs.claude.com/en/docs/claude-code), install i
 
 ```
 /plugin marketplace add membraneframework/membrane_core
-/plugin install membrane@membraneframework
+/plugin install membrane-framework@membrane
 ```
 
 After install, Claude automatically pulls in the skill whenever you work on Membrane code (mentioning `Membrane.Pipeline`, `Bin`, `Filter`, `Pad`, etc).
