@@ -1,0 +1,11 @@
+{
+  "name": "membrane-core",
+  "description": "Work with the Membrane multimedia streaming and processing framework in Elixir. Build or debug Membrane multimedia pipelines and write custom Membrane Elements, Bins, and Filters.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Software Mansion",
+    "url": "https://github.com/membraneframework"
+  },
+  "homepage": "https://github.com/membraneframework/membrane_core",
+  "skills": ["./skills/membrane-framework"]
+}
