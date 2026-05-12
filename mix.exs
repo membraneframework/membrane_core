@@ -131,8 +131,7 @@ defmodule Membrane.Mixfile do
 
   defp extras do
     [
-      {"skills/membrane-framework/SKILL.md",
-       [title: "Membrane Framework AI Skill"]},
+      {"skills/membrane-framework/SKILL.md", [title: "Membrane Framework AI Skill"]},
       "README.md",
       {"guides/llms/packages_list.md",
        [title: "Packages in the Membrane ecosystem", hidden: true]},
