@@ -21,6 +21,8 @@ You can also [follow Membrane on X (Twitter)](https://twitter.com/ElixirMembrane
 
 If you already had a chance to use Membrane, we will be greateful if could fill out quick [survey](https://forms.gle/dgVDFHUD7CUGxU5VA) to help us improve framework and decide on what to do next.
 
+For people who write Membrane code with AI assistants, we ship a [dedicated skill](#membrane-skill-for-ai-assistants) for them.
+
 Membrane is maintained by [Software Mansion](https://swmansion.com).
 
 ## Quick start
@@ -70,6 +72,27 @@ To learn step-by-step what exactly happens here, follow [this tutorial](https://
 ## Learning
 
 The best place to learn Membrane is the [membrane.stream/learn](https://membrane.stream/learn) website and the [membrane_demo](https://github.com/membraneframework/membrane_demo) repository. Try them out, then hack something exciting!
+
+## Membrane skill for AI assistants
+
+This repo includes [`skills/membrane-framework/SKILL.md`](skills/membrane-framework/SKILL.md), a structured guide that helps AI coding assistants write Membrane code.
+
+If you use [Claude Code](https://docs.claude.com/en/docs/claude-code), install it via the plugin system:
+
+```
+/plugin marketplace add membraneframework/membrane_core
+/plugin install membrane-framework@membrane
+```
+
+After install, Claude automatically pulls in the skill whenever you work on Membrane code (mentioning `Membrane.Pipeline`, `Bin`, `Filter`, `Pad`, etc).
+
+If you use [Cursor](https://www.cursor.com/), drop the skill into your project's rules directory:
+
+```
+mkdir -p .cursor/rules && curl -fL https://raw.githubusercontent.com/membraneframework/membrane_core/master/skills/membrane-framework/SKILL.md -o .cursor/rules/membrane-framework.mdc
+```
+
+For other agents, include the `SKILL.md` file directly in the agent's context. If your tool doesn't support that, copy the file's contents into whatever instruction file it reads.
 
 ## Structure of the framework
 

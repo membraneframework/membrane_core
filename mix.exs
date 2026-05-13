@@ -108,9 +108,22 @@ defmodule Membrane.Mixfile do
         Membrane.RCMessage
       ],
       groups_for_modules: groups_for_modules(),
-      groups_for_extras: groups_for_extras()
+      groups_for_extras: groups_for_extras(),
+      before_closing_head_tag: &before_closing_head_tag/1
     ]
   end
+
+  # Hides the AI skill page from the sidebar while keeping it published and linked from llms.txt.
+  defp before_closing_head_tag(:html) do
+    """
+    <style>
+      #sidebar li:has(> a[href$="skill.html"]),
+      #sidebar a[href$="skill.html"] { display: none; }
+    </style>
+    """
+  end
+
+  defp before_closing_head_tag(_format), do: ""
 
   defp packages_in_ecosystem do
     {packages, _bindings} = Code.eval_file(@hex_packages_path)
@@ -119,8 +132,7 @@ defmodule Membrane.Mixfile do
 
   defp extras do
     [
-      {"skills/membrane-framework/SKILL.md",
-       [title: "Membrane Framework AI Skill", hidden: true]},
+      {"skills/membrane-framework/SKILL.md", [title: "Membrane Framework AI Skill"]},
       "README.md",
       {"guides/llms/packages_list.md",
        [title: "Packages in the Membrane ecosystem", hidden: true]},
