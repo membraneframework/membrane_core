@@ -139,7 +139,8 @@ defmodule Membrane.Core.SubprocessSupervisor do
           name: {__MODULE__, name},
           type: :supervisor,
           child_pid: child_pid,
-          role: :subprocess_supervisor
+          role: :subprocess_supervisor,
+          pending_child_death: nil
         })
 
       {:reply, {:ok, child_pid}, state}
@@ -221,7 +222,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
 
   defp do_handle_info({:EXIT, pid, reason}, state) do
     {data, state} = pop_in(state, [:children, pid])
-    handle_exit(data, reason, state)
+    state = handle_exit(data, reason, state)
 
     case state do
       %{parent_process: :exit_requested, children: children} when children == %{} ->
@@ -245,27 +246,33 @@ defmodule Membrane.Core.SubprocessSupervisor do
   end
 
   defp handle_exit(%{role: :subprocess_supervisor} = data, reason, state) do
-    case Map.fetch(state.children, data.child_pid) do
+    with :error <- Map.fetch(state.children, data.child_pid),
+         %{pending_child_death: {child_name, death_reason}} <- data do
+      Message.send(state.parent_component, :child_death, [child_name, death_reason])
+    else
       {:ok, child_data} ->
         raise "Subprocess supervisor failure #{inspect(child_data.name)}, reason: #{inspect(reason)}"
 
-      :error ->
+      _no_pending_death ->
         :ok
     end
+
+    state
   end
 
   defp handle_exit(%{role: :component} = data, reason, state) do
     Process.exit(data.supervisor_pid, :shutdown)
-    Message.send(state.parent_component, :child_death, [data.name, reason])
+
+    put_in(state.children[data.supervisor_pid].pending_child_death, {data.name, reason})
   end
 
-  defp handle_exit(%{role: :utility}, _reason, _state) do
-    :ok
+  defp handle_exit(%{role: :utility}, _reason, state) do
+    state
   end
 
   # Clause handling the case when child start function returns error
   # and we don't know its PID, but we still receive exit signal from it.
-  defp handle_exit(nil, _reason, _state) do
-    :ok
+  defp handle_exit(nil, _reason, state) do
+    state
   end
 end
