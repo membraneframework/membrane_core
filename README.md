@@ -71,6 +71,27 @@ To learn step-by-step what exactly happens here, follow [this tutorial](https://
 
 The best place to learn Membrane is the [membrane.stream/learn](https://membrane.stream/learn) website and the [membrane_demo](https://github.com/membraneframework/membrane_demo) repository. Try them out, then hack something exciting!
 
+## Membrane skill for AI assistants
+
+This repo includes [`skills/membrane-framework/SKILL.md`](skills/membrane-framework/SKILL.md), a structured guide that helps AI coding assistants write Membrane code.
+
+If you use [Claude Code](https://docs.claude.com/en/docs/claude-code), install it via the plugin system:
+
+```
+/plugin marketplace add membraneframework/membrane_core
+/plugin install membrane-framework@membrane
+```
+
+After install, Claude automatically pulls in the skill whenever you work on Membrane code (mentioning `Membrane.Pipeline`, `Bin`, `Filter`, `Pad`, etc).
+
+If you use [Cursor](https://www.cursor.com/), drop the skill into your project's rules directory:
+
+```
+mkdir -p .cursor/rules && curl -fL https://raw.githubusercontent.com/membraneframework/membrane_core/master/skills/membrane-framework/SKILL.md -o .cursor/rules/membrane-framework.mdc
+```
+
+For other agents, include the `SKILL.md` file directly in the agent's context. If your tool doesn't support that, copy the file's contents into whatever instruction file it reads.
+
 ## Structure of the framework
 
 The most basic media processing entities of Membrane are `Element`s. An element might be able, for example, to mux incoming audio and video streams into MP4, or play raw audio using your sound card. You can create elements yourself, or choose from the ones provided by the framework.
@@ -94,7 +115,7 @@ Apart from plugins, Membrane has stream formats, which live in `membrane_X_forma
 The API for creating pipelines (and custom elements too) is provided by [membrane_core](https://github.com/membraneframework/membrane_core). To install it, add the following line to your `deps` in `mix.exs` and run `mix deps.get`
 
 ```elixir
-{:membrane_core, "~> 1.2"}
+{:membrane_core, "~> 1.3"}
 ```
 
 **Standalone libraries**
