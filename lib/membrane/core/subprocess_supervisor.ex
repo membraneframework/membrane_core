@@ -139,7 +139,8 @@ defmodule Membrane.Core.SubprocessSupervisor do
           name: {__MODULE__, name},
           type: :supervisor,
           child_pid: child_pid,
-          role: :subprocess_supervisor
+          role: :subprocess_supervisor,
+          pending_child_death: nil
         })
 
       {:reply, {:ok, child_pid}, state}
@@ -245,18 +246,15 @@ defmodule Membrane.Core.SubprocessSupervisor do
   end
 
   defp handle_exit(%{role: :subprocess_supervisor} = data, reason, state) do
-    case Map.fetch(state.children, data.child_pid) do
+    with :error <- Map.fetch(state.children, data.child_pid),
+         %{pending_child_death: {child_name, death_reason}} <- data do
+      Message.send(state.parent_component, :child_death, [child_name, death_reason])
+    else
       {:ok, child_data} ->
         raise "Subprocess supervisor failure #{inspect(child_data.name)}, reason: #{inspect(reason)}"
 
-      :error ->
-        case data do
-          %{pending_child_death: {child_name, death_reason}} ->
-            Message.send(state.parent_component, :child_death, [child_name, death_reason])
-
-          _no_pending_death ->
-            :ok
-        end
+      _no_pending_death ->
+        :ok
     end
 
     state
@@ -265,9 +263,7 @@ defmodule Membrane.Core.SubprocessSupervisor do
   defp handle_exit(%{role: :component} = data, reason, state) do
     Process.exit(data.supervisor_pid, :shutdown)
 
-    update_in(state, [:children, data.supervisor_pid], fn supervisor_data ->
-      Map.put(supervisor_data, :pending_child_death, {data.name, reason})
-    end)
+    put_in(state.children[data.supervisor_pid].pending_child_death, {data.name, reason})
   end
 
   defp handle_exit(%{role: :utility}, _reason, state) do
