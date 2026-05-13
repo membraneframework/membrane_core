@@ -7,7 +7,7 @@ alwaysApply: false
 
 # Membrane Framework
 
-**Package**: `membrane_core` ~> 1.2 | **Docs**: https://hexdocs.pm/membrane_core/ | **Module index**: https://hexdocs.pm/membrane_core/llms.txt | **Demos**: https://github.com/membraneframework/membrane_demo | **All packages**: [packages_list.md](../../guides/llms/packages_list.md)
+**Package**: `membrane_core` ~> 1.3 | **Docs**: https://hexdocs.pm/membrane_core/ | **Module index**: https://hexdocs.pm/membrane_core/llms.txt | **Demos**: https://github.com/membraneframework/membrane_demo | **All packages**: [packages_list.md](../../guides/llms/packages_list.md)
 
 ## How to Approach Tasks
 

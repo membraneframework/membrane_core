@@ -21,6 +21,8 @@ You can also [follow Membrane on X (Twitter)](https://twitter.com/ElixirMembrane
 
 If you already had a chance to use Membrane, we will be greateful if could fill out quick [survey](https://forms.gle/dgVDFHUD7CUGxU5VA) to help us improve framework and decide on what to do next.
 
+For people who write Membrane code with AI assistants, we ship a [dedicated skill](#membrane-skill-for-ai-assistants) for them.
+
 Membrane is maintained by [Software Mansion](https://swmansion.com).
 
 ## Quick start
