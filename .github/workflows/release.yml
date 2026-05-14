@@ -34,4 +34,4 @@ jobs:
 
   gh_release:
     needs: [hex_publish]
-    uses: membraneframework/membrane-actions/.github/workflows/github-release.yml@main
+    uses: membraneframework/membrane_actions/.github/workflows/github-release.yml@main
