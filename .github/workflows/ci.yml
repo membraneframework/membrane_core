@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  build_test:
+    uses: membraneframework/membrane_actions/.github/workflows/build-test.yml@main
+    with:
+      submodules: recursive
+
+  test:
+    uses: membraneframework/membrane_actions/.github/workflows/test.yml@main
+    with:
+      submodules: recursive
+      test-flags: "--include long_running"
+      shards: 4
+
+  lint:
+    uses: membraneframework/membrane_actions/.github/workflows/lint.yml@main
+    with:
+      submodules: recursive
