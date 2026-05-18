@@ -92,7 +92,13 @@ If you use [Cursor](https://www.cursor.com/), drop the skill into your project's
 mkdir -p .cursor/rules && curl -fL https://raw.githubusercontent.com/membraneframework/membrane_core/master/skills/membrane-framework/SKILL.md -o .cursor/rules/membrane-framework.mdc
 ```
 
-For other agents, include the `SKILL.md` file directly in the agent's context. If your tool doesn't support that, copy the file's contents into whatever instruction file it reads.
+For a cross-agent install, use [skills.sh](https://skills.sh)'s CLI via [`npx`](https://docs.npmjs.com/cli/v10/commands/npx):
+
+```
+npx skills add membraneframework/membrane_core -g
+```
+
+For agents the CLI doesn't support, include the `SKILL.md` file directly in the agent's context, or copy its contents into whatever instruction file the tool reads.
 
 ## Structure of the framework
 
