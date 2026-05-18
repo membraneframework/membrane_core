@@ -12,7 +12,7 @@ alwaysApply: false
 ## How to Approach Tasks
 
 - **New component** — before writing a new element, check [packages_list.md](../../guides/llms/packages_list.md) to see if it already exists in an existing plugin; if not, identify subtype (Source/Filter/Sink/Endpoint/Bin), define pads, implement required callbacks (`handle_buffer/4` for filters/sinks, `handle_demand/5` for manual-flow sources)
-- **Generating boilerplate** — use `mix membrane.gen.filter MyApp.MyFilter`, `mix membrane.gen.source`, `mix membrane.gen.sink`, `mix membrane.gen.endpoint`, `mix membrane.gen.bin` instead of writing component skeletons by hand
+- **Generating boilerplate** — use `mix membrane.gen.filter MyApp.MyFilter`, `mix membrane.gen.source`, `mix membrane.gen.sink`, `mix membrane.gen.endpoint`, `mix membrane.gen.bin`, `mix membrane.gen.pipeline` instead of writing component skeletons by hand
 - **Choosing element subtype** — prefer `Filter` for transformations (has sensible defaults for stream_format forwarding); use `Endpoint` only when output is unrelated to input (e.g. a UDP Endpoint); use `Source`/`Sink` for pure producers/consumers
 - **Flow control** — default to `:auto` on all pads; only use `:manual` when you need fine-grained backpressure control; Almost the only use case of `:push` are output pads of Sources/Endpoints that cannot control when they produce data, e.g. UDP Source/Endpoint.
 - **Pipeline topology** — use the ChildrenSpec DSL (`child/2`, `get_child/1`, `via_in/2`, `via_out/2`) (more info: [Membrane.ChildrenSpec](https://hexdocs.pm/membrane_core/Membrane.ChildrenSpec.md))
@@ -26,9 +26,8 @@ alwaysApply: false
 - **Debugging** — check pad `accepted_format` compatibility
 - **Callback context** — every callback receives `ctx`; key fields: `ctx.children`, `ctx.pads`, `ctx.playback`; crash callbacks also have `ctx.crash_initiator`, `ctx.exit_reason`, `ctx.group_name`; see [Pipeline.CallbackContext](https://hexdocs.pm/membrane_core/Membrane.Pipeline.CallbackContext.md), [Bin.CallbackContext](https://hexdocs.pm/membrane_core/Membrane.Bin.CallbackContext.md), [Element.CallbackContext](https://hexdocs.pm/membrane_core/Membrane.Element.CallbackContext.md)
 - **Logging** — utilize `Membrane.Logger` instead of `Logger` in Membrane components; it prepends component path and name to log messages. Requires `require Membrane.Logger` in the module before calling any logging functions.
-- **Never modify code in `deps/`**
 - **Use `mix hex.info <plugin name>` when you need to check the newest version of a plugin**
-- **Search for appropriate plugins in `README.md`, in `all-packages` section**
+- **Search for appropriate plugins in [packages_list.md](../../guides/llms/packages_list.md)** before writing one — it's the canonical, LLM-tuned index of every published Membrane plugin
 - **Check input and output pad definitions of elements in `deps/` (use `cat <filename> | grep def_input_pad` and `cat <filename> | grep def_output pad`) to make sure output pad's `accepted_stream_format` is compatible with `accepted_stream_format` of the input pad which it is linked to.**
 - **If the `accepted_stream_format` doesn't match, search for an element which can act as an adapter**
 - **When constructing Membrane Pipeline, lean towards using most powerful Membrane Components, which are [Boombox.Bin](https://hexdocs.pm/boombox/llms.txt) and [Membrane.Transcoder](https://hexdocs.pm/membrane_transcoder_plugin/llms.txt), instead of using many smaller plugins**
@@ -43,7 +42,6 @@ alwaysApply: false
 - **Not wiring a dynamic bin pad in `handle_pad_added/3`** — a dynamic bin input pad must be connected to an internal child within 5 seconds or a `LinkError` is raised
 - **Heavy work in `handle_init/2`** — `handle_init` is synchronous and blocks the parent; move file I/O, network connections, etc. to `handle_setup/2`
 - **Producing data before `handle_playing/2`** — pads are not ready until `:playing`; don't send buffers from `handle_setup/2`
-- **Using `:push` flow control carelessly** — whenever it is possible use `:auto` instead (eventually `:manual`). Source/Endpoint output pads are the exception.
 - **Returning non-spec actions from `handle_init/2`** — we recommend to return only `:spec` action from this callback.
 
 ---
@@ -82,7 +80,7 @@ def_output_pad :output, accepted_format: Membrane.RawAudio, flow_control: :auto
 - **Flow control**: `:auto` (framework manages demand — preferred), `:manual` (explicit via `:demand`/`:redemand`), `:push` (no demand, risk of overflow)
 - One input pad ↔ one output pad only; pads must have compatible `accepted_format`
 - Default pad names `:input`/`:output` allow omitting `via_in`/`via_out` in specs
-- **`accepted_format` matching syntax**: `_any` (accept anything) · `Membrane.RawAudio` (any struct of that type) · `%Membrane.RawAudio{channels: 2}` (match specific fields) · `%Membrane.RemoteStream{}` (unknown/unparsed stream). `any_of(patter1, pattern2, ...)` matches if any pattern matches. 
+- **`accepted_format` matching syntax**: `_any` (accept anything) · `Membrane.RawAudio` (any struct of that type) · `%Membrane.RawAudio{channels: 2}` (match specific fields) · `%Membrane.RemoteStream{}` (unknown/unparsed stream). `any_of(pattern1, pattern2, ...)` matches if any pattern matches. 
 - **Full pads guide** (static vs dynamic, bin pads, lifecycle): [Everything about pads](https://hexdocs.pm/membrane_core/pads.md)
 
 ---
