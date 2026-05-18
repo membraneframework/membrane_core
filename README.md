@@ -98,7 +98,7 @@ For a cross-agent install, use [skills.sh](https://skills.sh)'s CLI via [`npx`](
 npx skills add membraneframework/membrane_core -g
 ```
 
-For agents the CLI doesn't support, include the `SKILL.md` file directly in the agent's context, or copy its contents into whatever instruction file the tool reads.
+For agents `skills.sh` doesn't support, include the `SKILL.md` file directly in the agent's context, or copy its contents into whatever instruction file the tool reads.
 
 ## Structure of the framework
 
