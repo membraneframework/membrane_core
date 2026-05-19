@@ -1,7 +1,7 @@
 {
   "name": "membrane-framework",
-  "description": "AI coding skill  for the Membrane Framework in Elixir. Build or debug Membrane multimedia processing and streaming pipelines and write custom Membrane Elements, Bins, and Filters.",
-  "version": "0.1.0",
+  "description": "AI coding skill for the Membrane Framework in Elixir. Build or debug Membrane multimedia processing and streaming pipelines and write custom Membrane Elements, Bins, and Filters.",
+  "version": "0.1.1",
   "author": {
     "name": "Software Mansion",
     "url": "https://github.com/membraneframework"
