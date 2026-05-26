@@ -180,9 +180,9 @@ defmodule Membrane.Core.Element.PadController do
 
     :ok =
       Child.PadController.validate_pads_flow_control_compability!(
-        output_endpoint.pad_ref,
+        output_endpoint,
         output_pad_info.flow_control,
-        input_endpoint.pad_ref,
+        input_endpoint,
         pad_info.flow_control
       )
 
@@ -267,7 +267,13 @@ defmodule Membrane.Core.Element.PadController do
   end
 
   defp resolve_demand_units(output_info, input_info) do
-    output_demand_unit = output_info[:demand_unit] || input_info[:demand_unit] || :buffers
+    output_demand_unit =
+      cond do
+        output_info[:demand_unit] != nil -> output_info[:demand_unit]
+        input_info[:demand_unit] in [:buffers, :bytes] -> input_info[:demand_unit]
+        true -> :buffers
+      end
+
     input_demand_unit = input_info[:demand_unit] || output_info[:demand_unit] || :buffers
 
     {output_demand_unit, input_demand_unit}
@@ -371,9 +377,16 @@ defmodule Membrane.Core.Element.PadController do
       atomic_demand: atomic_demand
     } = pad_data
 
+    queue_inbound_demand_unit =
+      cond do
+        other_pad_info[:demand_unit] != nil -> other_pad_info[:demand_unit]
+        this_demand_unit in [:buffers, :bytes] -> this_demand_unit
+        true -> :buffers
+      end
+
     input_queue =
       InputQueue.new(%{
-        inbound_demand_unit: other_pad_info[:demand_unit] || this_demand_unit,
+        inbound_demand_unit: queue_inbound_demand_unit,
         outbound_demand_unit: this_demand_unit,
         atomic_demand: atomic_demand,
         pad_ref: ref,
@@ -381,10 +394,16 @@ defmodule Membrane.Core.Element.PadController do
         target_size: pad_props.target_queue_size
       })
 
+    manual_demand_size =
+      Membrane.Core.Element.ManualFlowController.BufferMetric.init_manual_demand_size(
+        this_demand_unit
+      )
+
     pad_data
     |> Map.merge(%{
       input_queue: input_queue,
-      demand: 0
+      demand: 0,
+      manual_demand_size: manual_demand_size
     })
   end
 
@@ -413,8 +432,10 @@ defmodule Membrane.Core.Element.PadController do
 
         true ->
           demand_unit = pad_data.other_demand_unit || pad_data.demand_unit || :buffers
-          metric = Membrane.Buffer.Metric.from_unit(demand_unit)
-          metric.buffer_size_approximation() * @default_auto_demand_size_factor
+
+          Membrane.Core.Element.ManualFlowController.BufferMetric.buffer_size_approximation(
+            demand_unit
+          ) * @default_auto_demand_size_factor
       end
 
     demand_metric =

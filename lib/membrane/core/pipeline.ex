@@ -5,8 +5,8 @@ defmodule Membrane.Core.Pipeline do
   alias __MODULE__.{ActionHandler, State}
   alias Membrane.{Clock, ResourceGuard}
   alias Membrane.Core.{CallbackHandler, ProcessHelper, Stalker, SubprocessSupervisor}
-  alias Membrane.Core.Pipeline.CallbackContext
   alias Membrane.Core.Parent.{ChildLifeController, LifecycleController}
+  alias Membrane.Core.Pipeline.CallbackContext
   alias Membrane.Core.TimerController
 
   require Membrane.Core.Utils, as: Utils
@@ -31,13 +31,14 @@ defmodule Membrane.Core.Pipeline do
 
   defp do_init(params) do
     observability_config = %{
-      name: params.name,
-      component_type: :pipeline,
-      pid: self()
+      name: params.name || "Pipeline#{:erlang.pid_to_list(self())}",
+      component_type: :pipeline
     }
 
     %{subprocess_supervisor: subprocess_supervisor} = params
+
     SubprocessSupervisor.set_parent_component(subprocess_supervisor, observability_config)
+
     stalker = Stalker.new(observability_config, subprocess_supervisor)
 
     {:ok, resource_guard} =

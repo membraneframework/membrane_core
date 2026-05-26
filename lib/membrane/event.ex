@@ -19,7 +19,7 @@ defmodule Membrane.Event do
 
   Returns `true` if the `event` implements the `Membrane.EventProtocol`, otherwise `false`.
   """
-  @spec event?(t()) :: boolean
+  @spec event?(t() | any()) :: boolean
   def event?(event) do
     EventProtocol.impl_for(event) != nil
   end

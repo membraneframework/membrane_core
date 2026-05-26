@@ -8,6 +8,7 @@ defmodule Membrane.Pipeline do
 
   To create a pipeline, use `use Membrane.Pipeline` and implement callbacks of `Membrane.Pipeline`  behaviour.
   See `Membrane.ChildrenSpec` for details on instantiating and linking children.
+
   ## Starting and supervision
 
   Start a pipeline with `start_link/2` or `start/2`. Pipelines always spawn under a dedicated supervisor, so
@@ -45,13 +46,20 @@ defmodule Membrane.Pipeline do
   ### Visualizing the supervision tree
 
   Use the [Applications tab](https://www.erlang.org/doc/apps/observer/observer_ug#applications-tab) in Erlang's Observer GUI
-  (or the `Kino` library in Livebook) to visualize a pipeline's internal supervision tree. Use the following configuration for debugging purposes only:
+  (or the `Kino` library in Livebook) to visualize a pipeline's internal supervision tree.
 
-        config :membrane_core, unsafely_name_processes_for_observer: [:components]
+  ![Observer graph](assets/images/observer_graph.png)
 
-  This improves the readability of the Observer's process tree graph by naming the pipeline descendants, as demonstrated here:
+  ## Terminating
 
-  ![Observer graph](assets/images/observer_graph.png).
+  The Pipeline won't terminate automatically - it has to be terminated explicitly 
+  by executing a `t:Membrane.Pipeline.Action.terminate/0` action. The reason for 
+  this is the fact that there is no objective way to tell when a Pipeline should terminate.
+  Even if all of it's children have terminated, it doesn't mean that it should too - more
+  children can be spawned later on. 
+
+  In simpler use cases it's usually enough to terminate the pipeline when a Sink (or all Sinks) 
+  receive `:end_of_stream`s.
   """
 
   use Bunch
@@ -147,8 +155,9 @@ defmodule Membrane.Pipeline do
 
   The callback won't be invoked, when you have initiated the pad removal,
   eg. when you have returned `t:Membrane.Pipeline.Action.remove_link()`
-  action which made one of your children's pads be removed.
-  By default, it does nothing.
+  action which made one of your children's pads be removed. Not having the 
+  callback implemented when a child removes its pad will result in the 
+  pipeline crashing.
   """
   @callback handle_child_pad_removed(
               child :: Child.name(),

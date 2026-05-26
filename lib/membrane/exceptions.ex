@@ -112,8 +112,21 @@ defmodule Membrane.ActionError do
     "This action cannot be returned from the #{callback} callback."
   end
 
+  defp format_reason({:invalid_component, component_type}) do
+    "This action cannot be returned by a #{component_type |> Atom.to_string() |> String.capitalize()}."
+  end
+
+  defp format_reason({:invalid_component_callback_combination, component_type, callback}) do
+    "This action cannot be returned by a #{component_type |> Atom.to_string() |> String.capitalize()} from the #{callback} callback."
+  end
+
   defp format_reason({:invalid_component_playback, playback}) do
-    "Cannot invoke this action while component playback is #{playback}."
+    "Cannot invoke this action while component playback is #{playback}." <>
+      if playback != :playing do
+        " When callback changes from :stopped to :playing the handle_playing/2 callback is called - you might consider executing actions there."
+      else
+        ""
+      end
   end
 
   defp format_reason(:actions_after_redemand) do

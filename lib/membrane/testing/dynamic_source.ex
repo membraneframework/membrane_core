@@ -121,7 +121,9 @@ defmodule Membrane.Testing.DynamicSource do
   def handle_demand(pad, _size, :buffers, _ctx, %{type: :enum} = state) do
     output_for_pad = state.output_for_pad[pad]
 
-    if length(output_for_pad) > 0 do
+    if Enum.empty?(output_for_pad) do
+      {[end_of_stream: pad], state}
+    else
       [payload | rest] = output_for_pad
 
       {
@@ -131,8 +133,6 @@ defmodule Membrane.Testing.DynamicSource do
         ],
         Map.update!(state, :output_for_pad, &Map.put(&1, pad, rest))
       }
-    else
-      {[end_of_stream: pad], state}
     end
   end
 

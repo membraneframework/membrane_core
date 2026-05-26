@@ -27,7 +27,7 @@ defmodule Membrane.Core.Element.AtomicDemand do
             buffered_decrementation: non_neg_integer(),
             throttling_factor: pos_integer(),
             toilet_overflowed?: boolean(),
-            receiver_demand_unit: Membrane.Buffer.Metric.unit()
+            receiver_demand_unit: Membrane.Pad.demand_unit()
           }
 
   @type flow_mode :: AtomicFlowStatus.value()
@@ -49,7 +49,7 @@ defmodule Membrane.Core.Element.AtomicDemand do
   @spec new(%{
           :receiver_effective_flow_control => EffectiveFlowController.effective_flow_control(),
           :receiver_process => Process.dest(),
-          :receiver_demand_unit => Membrane.Buffer.Metric.unit(),
+          :receiver_demand_unit => Membrane.Pad.demand_unit(),
           :sender_process => Process.dest(),
           :sender_pad_ref => Pad.ref(),
           :supervisor => pid(),
@@ -222,7 +222,7 @@ defmodule Membrane.Core.Element.AtomicDemand do
   end
 
   defp default_toilet_capacity(demand_unit) do
-    Membrane.Buffer.Metric.from_unit(demand_unit).buffer_size_approximation() *
+    Membrane.Core.Element.ManualFlowController.BufferMetric.buffer_size_approximation(demand_unit) *
       @default_toilet_capacity_factor
   end
 end

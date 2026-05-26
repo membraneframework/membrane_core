@@ -83,7 +83,7 @@ defmodule Membrane.Core.PipelineTest do
     end
 
     test "should raise if trying to spawn element with already taken name", %{state: state} do
-      state = %State{state | children: %{a: %{group: nil, name: :a}}}
+      state = %{state | children: %{a: %{group: nil, name: :a}}}
 
       assert_raise Membrane.ParentError, ~r/.*duplicate.*\[:a\]/i, fn ->
         ActionHandler.handle_action(
@@ -97,7 +97,7 @@ defmodule Membrane.Core.PipelineTest do
   end
 
   test "notification handling", %{state: state} do
-    state = %State{state | children: %{source: %{}}}
+    state = %{state | children: %{source: %{}}}
     notification = Message.new(:child_notification, [:source, :abc])
     assert {:noreply, state} = @module.handle_info(notification, state)
     assert %{internal_state: %{child_notification: {:abc, :source}}} = state
@@ -110,7 +110,7 @@ defmodule Membrane.Core.PipelineTest do
   end
 
   test "other messages handling", %{state: state} do
-    state = %State{state | children: %{source: %{}}}
+    state = %{state | children: %{source: %{}}}
     assert {:noreply, state} = @module.handle_info(:other_message, state)
     assert %{internal_state: %{other: :other_message}} = state
   end

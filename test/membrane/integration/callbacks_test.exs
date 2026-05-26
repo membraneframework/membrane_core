@@ -121,4 +121,61 @@ defmodule Membrane.Integration.CallbacksTest do
       {:DOWN, _ref, _process, ^pipeline, _reason} -> :ok
     end
   end
+
+  defmodule BinWithTwoChildren do
+    use Membrane.Bin
+
+    alias Membrane.Integration.CallbacksTest.PadlessElement
+
+    @impl true
+    def handle_init(_ctx, _opts) do
+      {[spec: [child(:child_a, PadlessElement), child(:child_b, PadlessElement)]], %{}}
+    end
+
+    @impl true
+    def handle_playing(ctx, state) do
+      {[notify_parent: {:children_pids, ctx.children.child_a.pid, ctx.children.child_b.pid}],
+       state}
+    end
+  end
+
+  defmodule BinTerminationPipeline do
+    use Membrane.Pipeline
+
+    @impl true
+    def handle_child_notification({:children_pids, a_pid, b_pid}, :bin, _ctx, state) do
+      {[], %{state | a_pid: a_pid, b_pid: b_pid}}
+    end
+
+    @impl true
+    def handle_child_terminated(:bin, _ctx, state) do
+      send(
+        state.test_pid,
+        {:terminated, Process.alive?(state.a_pid), Process.alive?(state.b_pid)}
+      )
+
+      {[], state}
+    end
+  end
+
+  test "handle_child_terminated fires only after bin's subprocess_supervisor dies, ensuring bin's children are already dead" do
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(
+        module: BinTerminationPipeline,
+        custom_args: %{test_pid: self(), a_pid: nil, b_pid: nil}
+      )
+
+    Testing.Pipeline.execute_actions(pipeline,
+      spec: {child(:bin, BinWithTwoChildren), group: :bin_group, crash_group_mode: :temporary}
+    )
+
+    assert_pipeline_notified(pipeline, :bin, {:children_pids, _a_pid, _b_pid})
+
+    Testing.Pipeline.get_child_pid!(pipeline, :bin)
+    |> Process.exit(:crash)
+
+    assert_receive {:terminated, false, false}, 1000
+
+    Testing.Pipeline.terminate(pipeline)
+  end
 end

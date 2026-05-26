@@ -40,7 +40,7 @@ defmodule Membrane.Core.Timer do
   end
 
   @spec update_ratio(t, Clock.ratio()) :: t
-  def update_ratio(timer, ratio) do
+  def update_ratio(%__MODULE__{} = timer, ratio) do
     %__MODULE__{timer | ratio: ratio}
   end
 
@@ -55,7 +55,7 @@ defmodule Membrane.Core.Timer do
     timer
   end
 
-  def tick(timer) do
+  def tick(%__MODULE__{} = timer) do
     %__MODULE__{
       id: id,
       interval: interval,
@@ -89,7 +89,7 @@ defmodule Membrane.Core.Timer do
     |> tick()
   end
 
-  def set_interval(timer, interval) do
+  def set_interval(%__MODULE__{} = timer, interval) do
     %__MODULE__{timer | interval: interval}
   end
 end

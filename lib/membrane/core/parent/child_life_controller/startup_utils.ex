@@ -172,7 +172,7 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
     :ok
   end
 
-  defp start_child(child, node, syncs, log_metadata, group, state) do
+  defp start_child(%ChildEntry{} = child, node, syncs, log_metadata, group, state) do
     %ChildEntry{name: name, module: module, options: options} = child
 
     Membrane.Logger.debug(

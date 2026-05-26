@@ -452,7 +452,9 @@ defmodule Membrane.ChildrenSpec do
       via_in(builder, :input)
     end
     |> Builder.finish_link(child_name)
-    |> then(&%Builder{&1 | children: [child_spec | &1.children]})
+    |> then(fn %Builder{} = builder ->
+      %Builder{builder | children: [child_spec | builder.children]}
+    end)
   end
 
   @doc """
@@ -465,7 +467,9 @@ defmodule Membrane.ChildrenSpec do
     :ok = validate_pad_name(pad)
 
     get_child({Membrane.Bin, :itself})
-    |> then(&%Builder{&1 | status: :from_pad, from_pad: pad, from_pad_props: %{}})
+    |> then(fn %Builder{} = builder ->
+      %Builder{builder | status: :from_pad, from_pad: pad, from_pad_props: %{}}
+    end)
   end
 
   @doc """
@@ -488,7 +492,9 @@ defmodule Membrane.ChildrenSpec do
     else
       via_out(builder, :output)
     end
-    |> then(&%Builder{&1 | status: :to_pad, to_pad: pad, to_pad_props: %{}})
+    |> then(fn %Builder{} = builder ->
+      %Builder{builder | status: :to_pad, to_pad: pad, to_pad_props: %{}}
+    end)
     |> get_child({Membrane.Bin, :itself})
   end
 
@@ -541,7 +547,7 @@ defmodule Membrane.ChildrenSpec do
           "Invalid link specification: input #{inspect(pad)} placed after another input"
   end
 
-  def via_in(%Builder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
+  def via_in(%Builder{links: [%{to: {Membrane.Bin, :itself}} | _rest]}, pad, _props) do
     raise ParentError,
           "Invalid link specification: input #{inspect(pad)} placed after bin's output"
   end
@@ -572,7 +578,9 @@ defmodule Membrane.ChildrenSpec do
     else
       via_out(builder, :output)
     end
-    |> then(&%Builder{&1 | status: :to_pad, to_pad: pad, to_pad_props: Enum.into(props, %{})})
+    |> then(fn %Builder{} = builder ->
+      %Builder{builder | status: :to_pad, to_pad: pad, to_pad_props: Enum.into(props, %{})}
+    end)
   end
 
   @doc """
@@ -598,7 +606,7 @@ defmodule Membrane.ChildrenSpec do
     raise ParentError, "Invalid link specification: output #{inspect(pad)} placed after an input"
   end
 
-  def via_out(%Builder{links: [%{to: {Membrane.Bin, :itself}} | _]}, pad, _props) do
+  def via_out(%Builder{links: [%{to: {Membrane.Bin, :itself}} | _rest]}, pad, _props) do
     raise ParentError,
           "Invalid link specification: output #{inspect(pad)} placed after bin's output"
   end

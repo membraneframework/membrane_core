@@ -28,7 +28,7 @@ defmodule Membrane.ComponentPath do
   """
   @spec format(path()) :: String.t()
   def format(path) do
-    Enum.join(path)
+    Enum.join(path, "/")
   end
 
   @doc """

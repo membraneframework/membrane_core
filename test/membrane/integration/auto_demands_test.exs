@@ -71,7 +71,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     def_output_pad :output, accepted_format: _any, availability: :on_request
 
     @impl true
-    def handle_buffer(:input, buffer, _ctx, state), do: {[forward: buffer], state}
+    def handle_buffer(:input, buffer, _ctx, state), do: {[broadcast: buffer], state}
   end
 
   [
@@ -88,10 +88,9 @@ defmodule Membrane.Integration.AutoDemandsTest do
         Enum.flat_map(payloads, &Enum.map(1..Integer.pow(factor, filters), fn _i -> &1 end))
 
       {in_payloads, out_payloads} =
-        case direction do
-          :up -> {payloads, mult_payloads}
-          :down -> {mult_payloads, payloads}
-        end
+        if direction == :up,
+          do: {payloads, mult_payloads},
+          else: {mult_payloads, payloads}
 
       filter = %ExponentialAutoFilter{factor: factor, direction: direction}
 

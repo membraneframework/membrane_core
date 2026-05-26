@@ -197,6 +197,7 @@ defmodule Membrane.Testing.Pipeline do
 
   defp ex_unit_start_supervised(child_spec) do
     # It's not a 'normal' call to keep dialyzer quiet
+    # credo:disable-for-next-line Credo.Check.Refactor.Apply
     apply(ExUnit.Callbacks, :start_supervised, [child_spec])
   end
 
@@ -323,8 +324,8 @@ defmodule Membrane.Testing.Pipeline do
 
       module when is_atom(module) ->
         case Code.ensure_compiled(module) do
-          {:module, _} -> :ok
-          {:error, _} -> raise "Unknown module: #{inspect(module)}"
+          {:module, _module} -> :ok
+          {:error, _error} -> raise "Unknown module: #{inspect(module)}"
         end
 
         new_state = %State{

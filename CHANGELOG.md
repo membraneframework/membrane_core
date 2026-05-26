@@ -1,6 +1,26 @@
 # Changelog
-## 1.2.5 
+
+## 1.3.0
+* Make errors more descriptive [#1102](https://github.com/membraneframework/membrane_core/pull/1102)
+* Add `:broadcast` action for sending data to all output pads of an element
+* Deprecate `:forward` action in favour of `:broadcast`
+* Handle removed pads properly in `Membrane.Connector` [#1075](https://github.com/membraneframework/membrane_core/pull/1075)
+* Improve remove_link action docs
+* Deprecate `:components` option for `:unsafely_name_processes_for_observer`
+* Deprecate `:links` option for `:unsafely_name_processes_for_observer` in favour of `:report_links_to_observer` configuration entry
+* [Set label](https://hexdocs.pm/elixir/Process.html#set_label/1) for all the Membrane processes (i.e. for both Membrane components like pipelines, elements and bins and for utility components like subprocess supervisors)
+* Update required Elixir version to `~> 1.17`
+* Add a Mix task for generating demos [#1067](https://github.com/membraneframework/membrane_core/pull/1067)
+* Add Mix tasks for easier initialization of components [#1059](https://github.com/membraneframework/membrane_core/pull/1059)
+* Support input demand unit expressed in timestamps [#1079](https://github.com/membraneframework/membrane_core/pull/1079)
+
+## 1.2.6
  * Add tutorials [#1007](https://github.com/membraneframework/membrane_core/pull/1007), plugins [#1012](https://github.com/membraneframework/membrane_core/pull/1012) and demos [#1013](https://github.com/membraneframework/membrane_core/pull/1013) to the docs.
+ * Avoid division by 0 in stalker under weird timer behaviour [#1035](https://github.com/membraneframework/membrane_core/pull/1035)
+
+
+## 1.2.5
+_Release retired, please use 1.2.6_
 
 ## 1.2.4
  * Add `:handle_end_of_stream` and `:handle_start_of_stream` options to debug elements. [#993](https://github.com/membraneframework/membrane_core/pull/993)

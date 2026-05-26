@@ -1,6 +1,10 @@
 defmodule Membrane.Buffer.Metric do
   @moduledoc """
-  Specifies API for metrics that analyze data in terms of a given unit
+  Specifies the type for demand units.
+
+  > #### Deprecated behaviour {: .warning}
+  > The callbacks defined here are deprecated. The metric functionality has been moved
+  > to the internal API of the Membrane Framework.
   """
 
   alias Membrane.Buffer
@@ -10,10 +14,10 @@ defmodule Membrane.Buffer.Metric do
 
   @callback buffer_size_approximation() :: pos_integer
 
-  @callback buffers_size([%Buffer{}] | []) :: non_neg_integer
+  @callback buffers_size([Buffer.t()]) :: non_neg_integer
 
-  @callback split_buffers([%Buffer{}] | [], non_neg_integer) ::
-              {[%Buffer{}] | [], [%Buffer{}] | []}
+  @callback split_buffers([Buffer.t()], non_neg_integer) ::
+              {[Buffer.t()], [Buffer.t()]}
 
   @spec from_unit(unit()) :: module()
   def from_unit(:buffers), do: Metric.Count

@@ -48,7 +48,7 @@ defmodule Membrane.Tee do
 
   @impl true
   def handle_stream_format(:input, stream_format, _ctx, state) do
-    {[forward: stream_format], %{state | stream_format: stream_format}}
+    {[broadcast: stream_format], %{state | stream_format: stream_format}}
   end
 
   @impl true
@@ -70,6 +70,6 @@ defmodule Membrane.Tee do
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, state) do
-    {[forward: buffer], state}
+    {[broadcast: buffer], state}
   end
 end

@@ -12,7 +12,8 @@ defmodule Membrane.Core.Element.PlaybackQueue do
 
   @spec eval(State.t()) :: State.t()
   def eval(%State{playback_queue: playback_queue} = state) do
-    state =
+    %State{} =
+      state =
       playback_queue
       |> List.foldr(state, fn function, state -> function.(state) end)
 

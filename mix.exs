@@ -1,14 +1,15 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "1.2.4"
+  @version "1.3.1"
   @source_ref "v#{@version}"
+  @hex_packages_path "scripts/elixir/hex_packages.exs"
 
   def project do
     [
       app: :membrane_core,
       version: @version,
-      elixir: "~> 1.12",
+      elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       description: "Membrane Multimedia Framework (Core)",
       dialyzer: dialyzer(),
@@ -17,12 +18,6 @@ defmodule Membrane.Mixfile do
       source_url: link(),
       docs: docs(),
       aliases: [docs: ["docs", &copy_assets/1]],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.post": :test,
-        "coveralls.html": :test
-      ],
       test_coverage: [tool: ExCoveralls, test_task: "test"],
       deps: deps()
     ]
@@ -32,6 +27,17 @@ defmodule Membrane.Mixfile do
     [extra_applications: [:logger]]
   end
 
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ]
+    ]
+  end
+
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(:benchmark), do: ["lib", "benchmark"]
   defp elixirc_paths(_env), do: ["lib"]
@@ -39,13 +45,15 @@ defmodule Membrane.Mixfile do
   defp dialyzer() do
     opts = [
       plt_local_path: "priv/plts",
-      flags: [:error_handling, :unmatched_returns]
+      flags: [:error_handling, :unmatched_returns],
+      plt_add_apps: [:mix, :req, :syntax_tools]
     ]
 
     if System.get_env("CI") == "true" do
       # Store core PLTs in cacheable directory for CI
       # For development it's better to stick to default, $MIX_HOME based path
       # to allow sharing core PLTs between projects
+      File.mkdir_p!(Path.join([__DIR__, "priv", "plts"]))
       [plt_core_path: "priv/plts"] ++ opts
     else
       opts
@@ -71,7 +79,6 @@ defmodule Membrane.Mixfile do
         }
       ],
       extras: extras(),
-      formatters: ["html"],
       logo: "assets/logo.svg",
       source_ref: @source_ref,
       assets: %{
@@ -82,7 +89,8 @@ defmodule Membrane.Mixfile do
         "guides/membrane_tutorials/digital_video_introduction/assets" => "assets",
         "guides/membrane_tutorials/h264/assets" => "assets",
         "guides/membrane_tutorials/broadcasting/assets" => "assets",
-        "guides/membrane_tutorials/glossary/assets" => "assets"
+        "guides/membrane_tutorials/glossary/assets" => "assets",
+        "guides/useful_concepts/assets" => "assets"
       },
       nest_modules_by_prefix: [
         Membrane.Bin,
@@ -100,21 +108,34 @@ defmodule Membrane.Mixfile do
         Membrane.RCMessage
       ],
       groups_for_modules: groups_for_modules(),
-      groups_for_extras: groups_for_extras()
+      groups_for_extras: groups_for_extras(),
+      before_closing_head_tag: &before_closing_head_tag/1
     ]
   end
 
-  defp packages_in_ecosystem do
-    {packages, _bindings} = Code.eval_file("scripts/elixir/packages.exs")
+  # Hides the AI skill page from the sidebar while keeping it published and linked from llms.txt.
+  defp before_closing_head_tag(:html) do
+    """
+    <style>
+      #sidebar li:has(> a[href$="skill.html"]),
+      #sidebar a[href$="skill.html"] { display: none; }
+    </style>
+    """
+  end
 
+  defp before_closing_head_tag(_format), do: ""
+
+  defp packages_in_ecosystem do
+    {packages, _bindings} = Code.eval_file(@hex_packages_path)
     packages
-    |> Enum.reject(&is_tuple(&1))
-    |> Enum.map(&String.to_atom/1)
   end
 
   defp extras do
     [
+      {"skills/membrane-framework/SKILL.md", [title: "Membrane Framework AI Skill"]},
       "README.md",
+      {"guides/llms/packages_list.md",
+       [title: "Packages in the Membrane ecosystem", hidden: true]},
       "CHANGELOG.md",
       "CONTRIBUTING.md",
       Path.wildcard("guides/upgrading/*.md"),
@@ -223,7 +244,7 @@ defmodule Membrane.Mixfile do
   end
 
   defp copy_assets(_args) do
-    File.cp_r("assets", "doc/assets", fn _source, _destination -> true end)
+    File.cp_r("assets", "doc/assets", on_conflict: fn _source, _destination -> true end)
   end
 
   defp package do
@@ -233,7 +254,9 @@ defmodule Membrane.Mixfile do
       links: %{
         "GitHub" => link(),
         "Membrane Framework Homepage" => "https://membrane.stream"
-      }
+      },
+      files:
+        ~w"lib .formatter.exs mix.exs README* LICENSE* CHANGELOG* #{@hex_packages_path} templates"
     ]
   end
 
@@ -244,10 +267,11 @@ defmodule Membrane.Mixfile do
       {:bunch, "~> 1.6"},
       {:ratio, "~> 3.0 or ~> 4.0"},
       # Development
-      {:ex_doc, "~> 0.39", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.1", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.4", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: :dev, runtime: false},
+      {:req, "~> 0.5.17", only: [:dev, :test], runtime: false},
       # Testing
       {:mox, "~> 1.0", only: :test},
       {:mock, "~> 0.3.8", only: :test},

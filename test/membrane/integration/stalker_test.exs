@@ -114,7 +114,7 @@ defmodule Membrane.Integration.StalkerTest do
 
     # we should receive some metrics
     assert_receive {:metrics, metrics, _timestamp}, 2000
-    assert length(metrics) > 0
+    refute Enum.empty?(metrics)
 
     stop_children(pipeline)
 

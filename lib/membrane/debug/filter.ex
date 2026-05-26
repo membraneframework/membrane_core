@@ -87,9 +87,15 @@ defmodule Membrane.Debug.Filter do
   end
 
   @impl true
-  def handle_event(_pad, event, _ctx, state) do
+  def handle_event(:input, event, _ctx, state) do
     _ignored = state.handle_event.(event)
-    {[forward: event], state}
+    {[event: {:output, event}], state}
+  end
+
+  @impl true
+  def handle_event(:output, event, _ctx, state) do
+    _ignored = state.handle_event.(event)
+    {[event: {:input, event}], state}
   end
 
   @impl true

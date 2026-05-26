@@ -218,6 +218,10 @@ defmodule Membrane.Core.Element.AutoFlowController do
     |> Map.put(:popping_auto_flow_queue?, false)
   end
 
+  # Suppress false positive dialyzer warnings resulting from 
+  # broken handling of opaque types - in this case MapSet.t() 
+  # https://github.com/elixir-lang/elixir/issues/14576
+  @dialyzer {:nowarn_function, bump_demand: 1}
   defp bump_demand(state) do
     if state.effective_flow_control == :pull and
          state.satisfied_auto_output_pads == @empty_map_set do

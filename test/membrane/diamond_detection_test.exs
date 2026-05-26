@@ -53,22 +53,23 @@ defmodule Membrane.DiamondDetectionTest do
                call_history(DiamondLogger)
 
       "#PID" <> pipeline_id = inspect(pipeline)
+      pipeline_name = "Pipeline#{pipeline_id}"
 
       [shorter_path, longer_path] = Enum.sort_by([path_a, path_b], &length/1)
 
       # assert a -> b -> c
       assert [
                %Vertex{
-                 component_path: ^pipeline_id <> "/:c",
+                 component_path: ^pipeline_name <> "/:c",
                  input_pad_ref: {Membrane.Pad, :input, 1}
                },
                %Vertex{
-                 component_path: ^pipeline_id <> "/:b",
+                 component_path: ^pipeline_name <> "/:b",
                  input_pad_ref: {Membrane.Pad, :input, 1},
                  output_pad_ref: {Membrane.Pad, :output, 1}
                },
                %Vertex{
-                 component_path: ^pipeline_id <> "/:a",
+                 component_path: ^pipeline_name <> "/:a",
                  output_pad_ref: {Membrane.Pad, :output, 1}
                }
              ] = longer_path
@@ -76,11 +77,11 @@ defmodule Membrane.DiamondDetectionTest do
       # assert a -> c
       assert [
                %Vertex{
-                 component_path: ^pipeline_id <> "/:c",
+                 component_path: ^pipeline_name <> "/:c",
                  input_pad_ref: {Membrane.Pad, :input, 2}
                },
                %Vertex{
-                 component_path: ^pipeline_id <> "/:a",
+                 component_path: ^pipeline_name <> "/:a",
                  output_pad_ref: {Membrane.Pad, :output, 2}
                }
              ] = shorter_path
@@ -119,8 +120,8 @@ defmodule Membrane.DiamondDetectionTest do
         [path_a, path_b]
       end)
       |> Enum.each(fn path ->
-        assert %{component_path: ^pipeline_id <> "/:c"} = List.first(path)
-        assert %{component_path: ^pipeline_id <> "/:d"} = List.last(path)
+        assert %{component_path: ^pipeline_name <> "/:c"} = List.first(path)
+        assert %{component_path: ^pipeline_name <> "/:d"} = List.last(path)
       end)
 
       Testing.Pipeline.terminate(pipeline)

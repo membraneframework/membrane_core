@@ -5,6 +5,7 @@
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_core.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_core)
 
 Membrane is a versatile multimedia streaming & processing framework. You can use it to build a media server of your need, that can:
+
 - stream via WebRTC, RTSP, RTMP, HLS, HTTP and other protocols,
 - transcode, mix and apply custom processing of video & audio,
 - accept and generate / record to MP4, MKV, FLV and other containers,
@@ -19,6 +20,8 @@ If you have questions or need consulting, we're for you at our [Discord](https:/
 You can also [follow Membrane on X (Twitter)](https://twitter.com/ElixirMembrane) or [join our Discord](https://discord.gg/nwnfVSY) to be up to date and get involved in the community.
 
 If you already had a chance to use Membrane, we will be greateful if could fill out quick [survey](https://forms.gle/dgVDFHUD7CUGxU5VA) to help us improve framework and decide on what to do next.
+
+For people who write Membrane code with AI assistants, we ship a [dedicated skill](#membrane-skill-for-ai-assistants) for them.
 
 Membrane is maintained by [Software Mansion](https://swmansion.com).
 
@@ -53,6 +56,7 @@ Membrane.Pipeline.start_link(MyPipeline, mp3_url)
 ```
 
 This is an [Elixir](elixir-lang.org) snippet, that streams an mp3 via HTTP and plays it on your speaker. Here's how to run it:
+
 - Option 1: Click the button below:
 
   [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fmembraneframework%2Fmembrane_core%2Fblob%2Fmaster%2Fexample.livemd)
@@ -69,6 +73,33 @@ To learn step-by-step what exactly happens here, follow [this tutorial](https://
 
 The best place to learn Membrane is the [membrane.stream/learn](https://membrane.stream/learn) website and the [membrane_demo](https://github.com/membraneframework/membrane_demo) repository. Try them out, then hack something exciting!
 
+## Membrane skill for AI assistants
+
+This repo includes [`skills/membrane-framework/SKILL.md`](skills/membrane-framework/SKILL.md), a structured guide that helps AI coding assistants write Membrane code.
+
+If you use [Claude Code](https://docs.claude.com/en/docs/claude-code), install it via the plugin system:
+
+```
+/plugin marketplace add membraneframework/membrane_core
+/plugin install membrane-framework@membrane
+```
+
+After install, Claude automatically pulls in the skill whenever you work on Membrane code (mentioning `Membrane.Pipeline`, `Bin`, `Filter`, `Pad`, etc).
+
+If you use [Cursor](https://www.cursor.com/), drop the skill into your project's rules directory:
+
+```
+mkdir -p .cursor/rules && curl -fL https://raw.githubusercontent.com/membraneframework/membrane_core/master/skills/membrane-framework/SKILL.md -o .cursor/rules/membrane-framework.mdc
+```
+
+For a cross-agent install, use [skills.sh](https://skills.sh)'s CLI via [`npx`](https://docs.npmjs.com/cli/v10/commands/npx):
+
+```
+npx skills add membraneframework/membrane_core -g
+```
+
+For agents `skills.sh` doesn't support, include the `SKILL.md` file directly in the agent's context, or copy its contents into whatever instruction file the tool reads.
+
 ## Structure of the framework
 
 The most basic media processing entities of Membrane are `Element`s. An element might be able, for example, to mux incoming audio and video streams into MP4, or play raw audio using your sound card. You can create elements yourself, or choose from the ones provided by the framework.
@@ -77,7 +108,7 @@ Elements can be organized into a pipeline - a sequence of linked elements that p
 
 ### Membrane packages
 
-To embrace modularity, Membrane is delivered to you in multiple packages, including plugins, formats, core and standalone libraries. The complete list of all the Membrane packages maintained by the Membrane team is available [here](#Membrane-packages).
+To embrace modularity, Membrane is delivered to you in multiple packages, including plugins, formats, core and standalone libraries. The complete list of all the Membrane packages maintained by the Membrane team is available [here](#membrane-packages).
 
 **Plugins**
 
@@ -85,14 +116,14 @@ Plugins provide elements that you can use in your pipeline. Each plugin lives in
 
 **Formats**
 
-Apart from plugins, Membrane has stream formats, which live in `membrane_X_format` repositories, where X is usually a codec or container, for example [mebrane_opus_format](https://github.com/membraneframework/mebrane_opus_format). Stream formats are published the same way as packages and are used by elements to define what kind of stream can be sent or received. They also provide utility functions to deal with a given codec/container.
+Apart from plugins, Membrane has stream formats, which live in `membrane_X_format` repositories, where X is usually a codec or container, for example [membrane_opus_format](https://github.com/membraneframework/membrane_opus_format). Stream formats are published the same way as packages and are used by elements to define what kind of stream can be sent or received. They also provide utility functions to deal with a given codec/container.
 
 **Core**
 
 The API for creating pipelines (and custom elements too) is provided by [membrane_core](https://github.com/membraneframework/membrane_core). To install it, add the following line to your `deps` in `mix.exs` and run `mix deps.get`
 
 ```elixir
-{:membrane_core, "~> 1.2"}
+{:membrane_core, "~> 1.3"}
 ```
 
 **Standalone libraries**
@@ -102,6 +133,7 @@ Last but not least, Membrane provides tools and libraries that can be used stand
 ## Goals
 
 The main goals of Membrane are:
+
 - To make work with multimedia a more pleasant experience than it is now.
 - To provide a welcoming ecosystem for learning multimedia development.
 - To power resilient, maintainable and scalable systems.
@@ -112,9 +144,21 @@ We chose Elixir for Membrane because it's a modern, high-level, easy-to-learn la
 
 If you don't know Elixir, try [this tutorial](https://elixir-lang.org/getting-started) - it shouldn't take long and you'll know more than enough to get started with Membrane.
 
+## Supported platforms
+
+Membrane was created and is being worked on mainly with UNIX-based operating
+systems in mind - in most cases that means MacOS and Linux. When it comes to
+Windows, if a project uses any native code, not just pure Elixir, we can't
+guarantee it works correctly. To use Membrane on Windows we strongly
+recommend using WSL (Windows Subsystem for Linux), which allows for running a
+Linux environment on a Windows machine. If you wish to get more insight into
+direct support for Windows, see this
+[discussion](https://github.com/orgs/membraneframework/discussions/857).
+
 ## Contributing
 
 We welcome everyone to contribute to Membrane. Here are some ways to contribute:
+
 - Spread the word about Membrane! Even though multimedia are present everywhere today, media dev is still quite niche. Let it be no longer!
 - Create learning materials. We try our best but can cover only a limited number of Membrane use cases.
 - Improve docs. We know it's not the most exciting part, but if you had a hard time understanding the docs, you're the best person to fix them ;)
@@ -128,7 +172,6 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 
 <!-- packages-list-start -->
 <!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->
-
 
 ### General
 
@@ -160,8 +203,15 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_pcap_plugin](https://github.com/membraneframework-labs/membrane_pcap_plugin) | [Labs] Membrane PCAP source, capable of reading captured packets in pcap format |   |
 | [membrane_transcoder_plugin](https://github.com/membraneframework/membrane_transcoder_plugin) | Membrane plugin providing audio and video transcoding capabilities | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_transcoder_plugin.svg)](https://hex.pm/api/packages/membrane_transcoder_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_transcoder_plugin/) |
 | [membrane_generator_plugin](https://github.com/membraneframework/membrane_generator_plugin) | Video and audio samples generator | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_generator_plugin.svg)](https://hex.pm/api/packages/membrane_generator_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_generator_plugin/) |
-| [membrane_live_framerate_converter_plugin](https://github.com/kim-company/membrane_live_framerate_converter_plugin) | [Maintainer: [kim-company](https://github.com/kim-company)] Membrane.Filter that drops or duplicates frames to match a target framerate. Designed for realtime applications |   |
+| [membrane_live_framerate_converter_plugin](https://github.com/kim-company/membrane_live_framerate_converter_plugin) | [Maintainer: [kim-company](https://github.com/kim-company)] Membrane.Filter that drops or duplicates frames to match a target framerate. Designed for realtime applications | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_live_framerate_converter_plugin.svg)](https://hex.pm/api/packages/membrane_live_framerate_converter_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_live_framerate_converter_plugin/) |
 | [membrane_template_plugin](https://github.com/membraneframework/membrane_template_plugin) | Template for Membrane Elements |   |
+
+#### AI
+
+| Package | Description | Links |
+| --- | --- | --- |
+| [membrane_whisper_plugin](https://github.com/membraneframework/membrane_whisper_plugin) | Membrane plugin for integrating OpenAI's Whisper in audio processing pipelines | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_whisper_plugin.svg)](https://hex.pm/api/packages/membrane_whisper_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_whisper_plugin/) |
+| [membrane_yolo_plugin](https://github.com/membraneframework/membrane_yolo_plugin) | Membrane Plugin for applying YOLO object detection on raw video frames | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_yolo_plugin.svg)](https://hex.pm/api/packages/membrane_yolo_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_yolo_plugin/) |
 
 #### Streaming protocols
 
@@ -217,6 +267,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_h264_ffmpeg_plugin](https://github.com/membraneframework/membrane_h264_ffmpeg_plugin) | Membrane H264 decoder and encoder based on FFmpeg and x264 | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_h264_ffmpeg_plugin.svg)](https://hex.pm/api/packages/membrane_h264_ffmpeg_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_h264_ffmpeg_plugin/) |
 | [membrane_vpx_plugin](https://github.com/membraneframework/membrane_vpx_plugin) | Membrane plugin for decoding and encoding VP8 and VP9 streams | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_vpx_plugin.svg)](https://hex.pm/api/packages/membrane_vpx_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_vpx_plugin/) |
 | [membrane_abr_transcoder_plugin](https://github.com/membraneframework/membrane_abr_transcoder_plugin) | ABR (adaptive bitrate) transcoder, that accepts an h.264 video and outputs multiple variants of it with different qualities. | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_abr_transcoder_plugin.svg)](https://hex.pm/api/packages/membrane_abr_transcoder_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_abr_transcoder_plugin/) |
+| [membrane_vk_video_plugin](https://github.com/membraneframework/membrane_vk_video_plugin) | Membrane H.264 decoder and encoder based on vk-video | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_vk_video_plugin.svg)](https://hex.pm/api/packages/membrane_vk_video_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_vk_video_plugin/) |
 | [membrane_h265_ffmpeg_plugin](https://github.com/gBillal/membrane_h265_ffmpeg_plugin) | [Maintainer: [gBillal](https://github.com/gBillal)] Membrane H265 decoder and encoder based on FFmpeg and x265 | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_h265_ffmpeg_plugin.svg)](https://hex.pm/api/packages/membrane_h265_ffmpeg_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_h265_ffmpeg_plugin/) |
 | [elixir-turbojpeg](https://github.com/BinaryNoggin/elixir-turbojpeg) | [Maintainer: [BinaryNoggin](https://github.com/BinaryNoggin)] libjpeg-turbo bindings for Elixir |   |
 | [membrane_subtitle_mixer_plugin](https://github.com/kim-company/membrane_subtitle_mixer_plugin) | [Maintainer: [kim-company](https://github.com/kim-company)] Membrane.Filter that uses CEA708 to merge subtitles directly in H264 packets. |   |
@@ -246,7 +297,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_overlay_plugin](https://github.com/membraneframework/membrane_overlay_plugin) | Filter for applying overlay image or text on top of video | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_overlay_plugin.svg)](https://hex.pm/api/packages/membrane_overlay_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_overlay_plugin/) |
 | [membrane_ffmpeg_swscale_plugin](https://github.com/membraneframework/membrane_ffmpeg_swscale_plugin) | Plugin providing an element scaling raw video frames, using SWScale module of FFmpeg library. | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_ffmpeg_swscale_plugin.svg)](https://hex.pm/api/packages/membrane_ffmpeg_swscale_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_ffmpeg_swscale_plugin/) |
 | [membrane_ffmpeg_video_filter_plugin](https://github.com/membraneframework/membrane_ffmpeg_video_filter_plugin) | FFmpeg-based video filters | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_ffmpeg_video_filter_plugin.svg)](https://hex.pm/api/packages/membrane_ffmpeg_video_filter_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_ffmpeg_video_filter_plugin/) |
-| [membrane_video_mixer_plugin](https://github.com/kim-company/membrane_video_mixer_plugin) | [Maintainer: [kim-company](https://github.com/kim-company)] Membrane.Filter that mixes a variable number of input videos into one output using ffmpeg filters | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_video_mixer_plugin.svg)](https://hex.pm/api/packages/membrane_video_mixer_plugin)  |
+| [membrane_video_mixer_plugin](https://github.com/kim-company/membrane_video_mixer_plugin) | [Maintainer: [kim-company](https://github.com/kim-company)] Membrane.Filter that mixes a variable number of input videos into one output using ffmpeg filters | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_video_mixer_plugin.svg)](https://hex.pm/api/packages/membrane_video_mixer_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_video_mixer_plugin/) |
 
 #### External APIs
 
@@ -254,7 +305,6 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | --- | --- | --- |
 | [membrane_aws_plugin](https://github.com/fishjam-dev/membrane_aws_plugin) | [Maintainer: [fishjam-dev](https://github.com/fishjam-dev)]  |   |
 | [membrane_agora_plugin](https://github.com/membraneframework/membrane_agora_plugin) | Membrane Sink for Agora Server Gateway | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_agora_plugin.svg)](https://hex.pm/api/packages/membrane_agora_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_agora_plugin/) |
-| [membrane_webrtc_live](https://github.com/membraneframework/membrane_webrtc_live) |  |   |
 | [membrane_element_gcloud_speech_to_text](https://github.com/membraneframework/membrane_element_gcloud_speech_to_text) | Membrane plugin providing speech recognition via Google Cloud Speech-to-Text API | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_element_gcloud_speech_to_text.svg)](https://hex.pm/api/packages/membrane_element_gcloud_speech_to_text) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_element_gcloud_speech_to_text/) |
 | [membrane_element_ibm_speech_to_text](https://github.com/membraneframework/membrane_element_ibm_speech_to_text) | Membrane plugin providing speech recognition via IBM Cloud Speech-to-Text service | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_element_ibm_speech_to_text.svg)](https://hex.pm/api/packages/membrane_element_ibm_speech_to_text) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_element_ibm_speech_to_text/) |
 | [membrane_s3_plugin](https://github.com/YuzuTen/membrane_s3_plugin) | [Maintainer: [YuzuTen](https://github.com/YuzuTen)] Membrane framework plugin to support S3 sources/destinations | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_s3_plugin.svg)](https://hex.pm/api/packages/membrane_s3_plugin) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_s3_plugin/) |
@@ -278,6 +328,7 @@ If you have any questions regarding Membrane Framework or need consulting, feel 
 | [membrane_vp8_format](https://github.com/membraneframework/membrane_vp8_format) | VP8 Membrane format | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_vp8_format.svg)](https://hex.pm/api/packages/membrane_vp8_format) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_vp8_format/) |
 | [membrane_vp9_format](https://github.com/membraneframework/membrane_vp9_format) | VP9 Membrane format | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_vp9_format.svg)](https://hex.pm/api/packages/membrane_vp9_format) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_vp9_format/) |
 | [membrane_g711_format](https://github.com/membraneframework/membrane_g711_format) | Membrane Multimedia Framework: G711 audio format definition | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_g711_format.svg)](https://hex.pm/api/packages/membrane_g711_format) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_g711_format/) |
+| [membrane_av1_format](https://github.com/membraneframework/membrane_av1_format) | About Membrane Multimedia Framework: AV1 video format definition | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_av1_format.svg)](https://hex.pm/api/packages/membrane_av1_format) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_av1_format/) |
 | [membrane_h265_format](https://github.com/gBillal/membrane_h265_format) | [Maintainer: [gBillal](https://github.com/gBillal)] H265 video format definition | [![Hex.pm](https://img.shields.io/hexpm/v/membrane_h265_format.svg)](https://hex.pm/api/packages/membrane_h265_format) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_h265_format/) |
 
 ### Standalone media libs

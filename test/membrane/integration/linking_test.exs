@@ -436,7 +436,7 @@ defmodule Membrane.Integration.LinkingTest do
 
       @impl true
       def handle_buffer(_input, buffer, _ctx, state) do
-        {[forward: buffer], state}
+        {[broadcast: buffer], state}
       end
     end
 

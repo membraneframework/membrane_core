@@ -102,13 +102,16 @@ defmodule Membrane.Core.Element do
     end
   end
 
+  # Suppress false positive dialyzer warnings resulting from 
+  # broken handling of opaque types - in this case MapSet.t() 
+  # https://github.com/elixir-lang/elixir/issues/14576
+  @dialyzer {:nowarn_function, do_init: 1}
   defp do_init(options) do
     Process.link(options.parent_supervisor)
 
     observability_config = %{
       name: options.name,
       component_type: :element,
-      pid: self(),
       parent_path: options.parent_path,
       log_metadata: options.log_metadata
     }
@@ -141,9 +144,9 @@ defmodule Membrane.Core.Element do
     state =
       %State{
         module: options.module,
-        type: options.module.membrane_element_type(),
         name: options.name,
         parent_pid: options.parent,
+        type: options.module.membrane_element_type(),
         synchronization: %{
           parent_clock: options.parent_clock,
           timers: %{},

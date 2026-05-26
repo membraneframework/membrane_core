@@ -70,7 +70,9 @@ packages_blacklist = [
   "membraneframework.github.io",
   "membrane_rtc_engine_timescaledb",
   "github_actions_test",
-  "membrane_ice_plugin"
+  "membrane_ice_plugin",
+  "membrane_webrtc_live",
+  "membrane_rtc_engine"
 ]
 
 lacking_repos =
@@ -87,6 +89,7 @@ unless Enum.empty?(lacking_repos) do
   raise """
   The following repositories aren't mentioned in the package list:
   #{Enum.map_join(lacking_repos, ",\n", & &1.name)}
+  Put them in scripts/elixir/packages.exs, or if they aren't packages, add them to the blacklist in this script.
   """
 end
 
@@ -149,18 +152,45 @@ packages =
       other
   end)
 
-# generate packages list in markdown
+generated_code_comment =
+  "Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`."
 
-header = """
+# save packages that have hexdocs
 
-| Package | Description | Links |
-| --- | --- | --- |
+hex_packages =
+  packages
+  |> Enum.filter(&(&1.type == :package and &1.hexdocs_badge != nil))
+  |> Enum.map(&String.to_atom(&1.name))
+  |> inspect(limit: :infinity)
+  |> Code.format_string!()
+  |> IO.iodata_to_binary()
+
+hex_packages_text = """
+# #{generated_code_comment}
+#{hex_packages}
 """
 
-generated_code_comment =
-  "<!-- Generated code, do not edit. See `scripts/elixir/update_packages_list.exs`. -->"
+File.write!(Path.join(__DIR__, "hex_packages.exs"), hex_packages_text)
 
-packages_md =
+# generate packages list in markdown
+
+generated_code_comment =
+  "<!-- #{generated_code_comment} -->"
+
+generate_packages_md_fun = fn packages, links_column? ->
+  header =
+    if links_column? do
+      """
+      | Package | Description | Links |
+      | --- | --- | --- |
+      """
+    else
+      """
+      | Package | Description |
+      | --- | --- |
+      """
+    end
+
   packages
   |> Enum.map_reduce(
     %{is_header_present: false},
@@ -172,9 +202,13 @@ packages_md =
         {"\n#### " <> name, %{acc | is_header_present: false}}
 
       %{type: :package} = package, acc ->
+        maybe_links_cell =
+          if links_column?, do: " #{package.hex_badge} #{package.hexdocs_badge} |", else: ""
+
         package_info = """
         #{if acc.is_header_present, do: "", else: header}\
-        | [#{package.name}](#{package.url}) | #{package.owner_prefix}#{package.description} | #{package.hex_badge} #{package.hexdocs_badge} |\
+        | [#{package.name}](#{package.url}) | #{package.owner_prefix}#{package.description} |\
+        #{maybe_links_cell}\
         """
 
         {package_info, %{acc | is_header_present: true}}
@@ -182,6 +216,9 @@ packages_md =
   )
   |> elem(0)
   |> Enum.join("\n")
+end
+
+packages_md = generate_packages_md_fun.(packages, true)
 
 packages_md =
   """
@@ -217,10 +254,10 @@ packages
     %{type: :package} = package, acc ->
       package_info = """
       ## #{package.name}
-      #{package.owner_prefix}#{package.description} 
+      #{package.owner_prefix}#{package.description}
 
       #{package.hex_badge} #{package.hexdocs_badge} #{package.github_badge}
-       
+
       """
 
       files =
@@ -258,5 +295,11 @@ packages
 |> Enum.each(fn {file_path, file_content} ->
   if file_content != "", do: File.write!(file_path, "#{generated_code_comment}\n#{file_content}")
 end)
+
+# replace packages list for LLMs
+
+llms_packages_md = generate_packages_md_fun.(packages, false)
+llms_packages_list_path = "guides/llms/packages_list.md"
+File.write!(llms_packages_list_path, llms_packages_md)
 
 IO.puts("Packages updated successfully.")

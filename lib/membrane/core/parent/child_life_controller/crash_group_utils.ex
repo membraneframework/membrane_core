@@ -92,12 +92,14 @@ defmodule Membrane.Core.Parent.ChildLifeController.CrashGroupUtils do
 
     update_in(
       state.crash_groups[group.name],
-      &%CrashGroup{
-        &1
-        | detonating?: true,
-          crash_initiator: crash_initiator,
-          crash_reason: reason
-      }
+      fn %CrashGroup{} = group ->
+        %CrashGroup{
+          group
+          | detonating?: true,
+            crash_initiator: crash_initiator,
+            crash_reason: reason
+        }
+      end
     )
   end
 
