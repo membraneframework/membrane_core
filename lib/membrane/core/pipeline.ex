@@ -58,6 +58,7 @@ defmodule Membrane.Core.Pipeline do
 
     state = %State{
       module: params.module,
+      name: params.name,
       synchronization: %{
         clock_proxy: clock_proxy,
         clock_provider: %{clock: nil, provider: nil},

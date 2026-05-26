@@ -45,6 +45,7 @@ defmodule Membrane.Core.Pipeline.State do
   # importance and possibly near other related fields.
 
   defstruct module: nil,
+            name: nil,
             playback: :stopped,
             internal_state: nil,
             children: %{},
