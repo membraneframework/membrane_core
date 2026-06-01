@@ -127,8 +127,10 @@ defmodule Membrane.Core.OptionsSpecs do
             quote(do: &inspect/1)
           )
 
+        default = Macro.escape(opt_definition[:default])
+
         quote do
-          "Default value: `#{unquote(inspector).(unquote(opt_definition)[:default])}`"
+          "Default value: `#{unquote(inspector).(unquote(default))}`"
         end
       else
         quote_expr("***Required***")
