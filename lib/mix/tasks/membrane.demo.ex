@@ -51,11 +51,24 @@ defmodule Mix.Tasks.Membrane.Demo do
   end
 
   defp list_available_demos() do
-    {:ok, _apps} = Application.ensure_all_started(:req)
-    response = Req.get!(@demos_readme_url)
+    Application.ensure_all_started(:inets)
+    Application.ensure_all_started(:ssl)
 
+    case :httpc.request(:get, {~c"#{@demos_readme_url}", []}, [{:autoredirect, true}], []) do
+      {:ok, {{_version, 200, _reason}, _headers, body}} ->
+        fetch_demos_info(body)
+
+      {:ok, {{_version, status, reason}, _headers, _body}} ->
+        Mix.raise("Failed to fetch demos list: HTTP #{status} #{reason}")
+
+      {:error, reason} ->
+        Mix.raise("Failed to fetch demos list: #{inspect(reason)}")
+    end
+  end
+
+  defp fetch_demos_info(body) do
     demos_info =
-      response.body
+      List.to_string(body)
       |> String.split("\n")
       |> Enum.map(&Regex.named_captures(~r/^- \[(?<name>.*?)\]\(.*?\) - (?<description>.*)/, &1))
       |> Enum.filter(&(&1 != nil))

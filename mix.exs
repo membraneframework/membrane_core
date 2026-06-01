@@ -1,7 +1,7 @@
 defmodule Membrane.Mixfile do
   use Mix.Project
 
-  @version "1.3.2"
+  @version "1.3.3"
   @source_ref "v#{@version}"
   @hex_packages_path "scripts/elixir/hex_packages.exs"
 
@@ -46,7 +46,7 @@ defmodule Membrane.Mixfile do
     opts = [
       plt_local_path: "priv/plts",
       flags: [:error_handling, :unmatched_returns],
-      plt_add_apps: [:mix, :req, :syntax_tools]
+      plt_add_apps: [:mix, :syntax_tools]
     ]
 
     if System.get_env("CI") == "true" do
@@ -61,7 +61,7 @@ defmodule Membrane.Mixfile do
   end
 
   defp link do
-    "https://github.com/membraneframework/membrane-core"
+    "https://github.com/membraneframework/membrane_core"
   end
 
   defp docs do
@@ -271,7 +271,6 @@ defmodule Membrane.Mixfile do
       {:makeup_diff, "~> 0.1", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: :dev, runtime: false},
-      {:req, "~> 0.5.17", only: [:dev, :test], runtime: false},
       # Testing
       {:mox, "~> 1.0", only: :test},
       {:mock, "~> 0.3.8", only: :test},
