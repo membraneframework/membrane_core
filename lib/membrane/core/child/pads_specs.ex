@@ -465,15 +465,7 @@ defmodule Membrane.Core.Child.PadsSpecs do
           quote_expr("")
 
         options ->
-          escaped_options =
-            Enum.map(options, fn {name, opts} ->
-              updated =
-                if Keyword.has_key?(opts, :default),
-                  do: Keyword.update!(opts, :default, &Macro.escape/1),
-                  else: opts
-
-              {name, updated}
-            end)
+          escaped_options = escape_options(options)
 
           quote do
             """
@@ -493,6 +485,17 @@ defmodule Membrane.Core.Child.PadsSpecs do
       #{unquote(options_doc)}
       """
     end
+  end
+
+  defp escape_options(options) do
+    Enum.map(options, fn {name, opts} ->
+      updated =
+        if Keyword.has_key?(opts, :default),
+          do: Keyword.update!(opts, :default, &Macro.escape/1),
+          else: opts
+
+      {name, updated}
+    end)
   end
 
   defp generate_pad_property_doc(property, value) do
