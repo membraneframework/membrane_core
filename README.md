@@ -3,7 +3,6 @@
 [![Hex.pm](https://img.shields.io/hexpm/v/membrane_core.svg)](https://hex.pm/packages/membrane_core)
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_core/)
 [![CircleCI](https://circleci.com/gh/membraneframework/membrane_core.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_core)
-
 [![Ad](https://swm-delivery.com/www/images/zone-gh-membrane-1?n=1)](https://swm-delivery.com/www/delivery/ck.php?zoneid=zone-gh-membrane-1&n=1)
 [![Ad](https://swm-delivery.com/www/images/zone-gh-membrane-2?n=1)](https://swm-delivery.com/www/delivery/ck.php?zoneid=zone-gh-membrane-2&n=1)
 [![Ad](https://swm-delivery.com/www/images/zone-gh-membrane-3?n=1)](https://swm-delivery.com/www/delivery/ck.php?zoneid=zone-gh-membrane-3&n=1)
