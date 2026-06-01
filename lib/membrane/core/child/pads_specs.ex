@@ -465,11 +465,21 @@ defmodule Membrane.Core.Child.PadsSpecs do
           quote_expr("")
 
         options ->
+          escaped_options =
+            Enum.map(options, fn {name, opts} ->
+              updated =
+                if Keyword.has_key?(opts, :default),
+                  do: Keyword.update!(opts, :default, &Macro.escape/1),
+                  else: opts
+
+              {name, updated}
+            end)
+
           quote do
             """
             Pad options:
 
-            #{unquote(OptionsSpecs.generate_opts_doc(options))}
+            #{unquote(OptionsSpecs.generate_opts_doc(escaped_options))}
             """
           end
       end
