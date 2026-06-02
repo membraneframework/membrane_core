@@ -51,8 +51,7 @@ defmodule Mix.Tasks.Membrane.Demo do
   end
 
   defp list_available_demos() do
-    {:ok, _apps} = Application.ensure_all_started(:inets)
-    {:ok, _apps} = Application.ensure_all_started(:ssl)
+    {:ok, _apps} = Application.ensure_all_started([:inets, :ssl])
 
     case :httpc.request(:get, {~c"#{@demos_readme_url}", []}, [{:autoredirect, true}], []) do
       {:ok, {{_version, 200, _reason}, _headers, body}} ->
