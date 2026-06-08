@@ -24,8 +24,6 @@ defmodule Mix.Tasks.Membrane.Demo do
     d: :directory
   ]
 
-  @demos_search_list [".", "livebooks"]
-
   @demos_readme_url "https://raw.githubusercontent.com/membraneframework/membrane_demo/refs/heads/master/README.md"
   @demos_clone_url "https://github.com/membraneframework/membrane_demo.git"
 
@@ -120,20 +118,15 @@ defmodule Mix.Tasks.Membrane.Demo do
 
   defp copy_demo(target_dir, demo_name) do
     repo_dir = Path.join(target_dir, "membrane_demo")
+    demo_path = Path.join(repo_dir, demo_name)
 
-    Enum.reduce_while(@demos_search_list, :error, fn demo_dir, _status ->
-      demo_path = Path.join([repo_dir, demo_dir, demo_name])
+    execute_git_command(["sparse-checkout", "set", demo_name], repo_dir)
+    execute_git_command(["checkout"], repo_dir)
 
-      demo_name_path = if demo_dir == ".", do: demo_name, else: Path.join(demo_dir, demo_name)
-
-      execute_git_command(["sparse-checkout", "set", demo_name_path], repo_dir)
-      execute_git_command(["checkout"], repo_dir)
-
-      case File.cp_r(demo_path, Path.join(target_dir, Path.basename(demo_path))) do
-        {:ok, _files} -> {:halt, :ok}
-        {:error, :enoent, _dir} -> {:cont, :error}
-      end
-    end)
+    case File.cp_r(demo_path, Path.join(target_dir, demo_name)) do
+      {:ok, _files} -> :ok
+      {:error, :enoent, _dir} -> :error
+    end
   end
 
   defp execute_git_command(argv, dir \\ ".") do
