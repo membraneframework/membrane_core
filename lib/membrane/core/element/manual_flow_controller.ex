@@ -10,14 +10,13 @@ defmodule Membrane.Core.Element.ManualFlowController do
     State,
     StreamFormatController
   }
+  alias Membrane.Core.Message, as: Message
 
   alias __MODULE__.InputQueue
 
   alias Membrane.Pad
 
   require Membrane.Core.Child.PadModel, as: PadModel
-  require Membrane.Core.Message, as: Message
-  require Membrane.Logger
 
   @handle_demand_loop_limit 20
 

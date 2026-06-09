@@ -8,8 +8,6 @@ defmodule Membrane.Core.Child.PadSpecHandler do
   alias Membrane.Core.{Bin, Child, Element}
   alias Membrane.Pad
 
-  require Membrane.Pad
-
   @doc """
   Initializes pads info basing on element's or bin's pads specifications.
   """

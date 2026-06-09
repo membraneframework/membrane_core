@@ -4,7 +4,7 @@ defmodule Membrane.Core.Parent.DiamondDetectionController do
   alias Membrane.Child
   alias Membrane.Core.Parent
 
-  require Membrane.Core.Message, as: Message
+  alias Membrane.Core.Message, as: Message
 
   @spec start_diamond_detection_trigger(Child.name(), reference(), Parent.state()) :: :ok
   def start_diamond_detection_trigger(child_name, trigger_ref, state) do

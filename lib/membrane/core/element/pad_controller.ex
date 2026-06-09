@@ -19,14 +19,16 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Element.ManualFlowController.InputQueue
 
+  alias Membrane.Core.Message, as: Message
+
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError
 
+  alias Membrane.Pad, as: Pad
+
   require Membrane.Core.Child.PadModel, as: PadModel
-  require Membrane.Core.Message, as: Message
   require Membrane.Core.Stalker, as: Stalker
   require Membrane.Logger
-  require Membrane.Pad, as: Pad
 
   @type link_call_props :: %{
           optional(:output_pad_info) => PadModel.pad_info() | nil,

@@ -12,8 +12,6 @@ defmodule Membrane.Core.LegacyTelemetry do
 
   alias Membrane.ComponentPath
 
-  require Membrane.Pad
-
   @telemetry_flags Application.compile_env(:membrane_core, :telemetry_flags, [])
 
   @doc """
