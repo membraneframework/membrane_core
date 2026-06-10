@@ -3,7 +3,7 @@ defmodule Mix.Tasks.Membrane.Demo do
   @moduledoc """
   Download Membrane demos and examples. Requires `git` installed.
 
-    $ mix membrane.demo [-a] [-l] [-d <repo_dir>] [<demos> ...]
+    $ mix membrane.demo [-a] [-l] [-d <repo_path>] [<demos> ...]
 
   ## Options
   * `-l, --list` - List all demos available and their brief descriptions.
@@ -93,13 +93,13 @@ defmodule Mix.Tasks.Membrane.Demo do
   end
 
   defp copy_all_demos(target_dir) do
-    repo_dir = Path.join(target_dir, "membrane_demo")
-    execute_git_command(["clone", "-q", "--depth", "1", @demos_clone_url, repo_dir])
+    repo_path = Path.join(target_dir, "membrane_demo")
+    execute_git_command(["clone", "-q", "--depth", "1", @demos_clone_url, repo_path])
   end
 
   defp copy_specific_demos(target_dir, demos_names) do
-    repo_dir = Path.join(target_dir, "membrane_demo")
-    execute_git_command(["clone", "-q", "--depth", "1", "-n", @demos_clone_url, repo_dir])
+    repo_path = Path.join(target_dir, "membrane_demo")
+    execute_git_command(["clone", "-q", "--depth", "1", "-n", @demos_clone_url, repo_path])
 
     Enum.each(demos_names, fn demo_name ->
       case copy_demo(target_dir, demo_name) do
@@ -113,15 +113,15 @@ defmodule Mix.Tasks.Membrane.Demo do
       end
     end)
 
-    File.rm_rf!(repo_dir)
+    File.rm_rf!(repo_path)
   end
 
   defp copy_demo(target_dir, demo_name) do
-    repo_dir = Path.join(target_dir, "membrane_demo")
-    demo_path = Path.join(repo_dir, demo_name)
+    repo_path = Path.join(target_dir, "membrane_demo")
+    demo_path = Path.join(repo_path, demo_name)
 
-    execute_git_command(["sparse-checkout", "set", demo_name], repo_dir)
-    execute_git_command(["checkout"], repo_dir)
+    execute_git_command(["sparse-checkout", "set", demo_name], repo_path)
+    execute_git_command(["checkout"], repo_path)
 
     case File.cp_r(demo_path, Path.join(target_dir, demo_name)) do
       {:ok, _files} -> :ok
