@@ -69,14 +69,14 @@ defmodule Membrane.Core.Element.PadControllerTest do
       assert PadModel.assert_instance(new_state, :input) == :ok
     end
 
-    test "when pad is does not exist in the element" do
+    test "when pad does not exist in the element" do
       state = prepare_state(TrivialFilter)
 
       assert_raise LinkError, fn ->
         @module.handle_link(
           :output,
           %{pad_ref: :invalid_pad_ref, child: :a},
-          %{pad_ref: :x, child: :b},
+          %{pad_ref: :x, child: :b, pid: self()},
           %{stream_format_validation_params: []},
           state
         )
