@@ -383,8 +383,8 @@ defmodule Membrane.Integration.DemandsTest do
 
         expected_buffers
         |> Enum.each(fn i ->
-          timestamp = timestamp(i, timestamp_offset)
-          payload = inspect(i)
+          _timestamp = timestamp(i, timestamp_offset)
+          _payload = inspect(i)
 
           assert_pipeline_notified(pipeline, :sink, {:buffer, buffer})
           assert buffer == buffer(i, timestamp_offset)
