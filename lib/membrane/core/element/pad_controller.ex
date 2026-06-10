@@ -154,7 +154,7 @@ defmodule Membrane.Core.Element.PadController do
       AtomicDemand.new(%{
         receiver_effective_flow_control: pad_effective_flow_control,
         receiver_process: self(),
-        receiver_demand_unit: input_demand_unit || :buffers,
+        receiver_demand_unit: input_demand_unit,
         sender_process: output_endpoint.pid,
         sender_pad_ref: output_endpoint.pad_ref,
         supervisor: state.subprocess_supervisor,

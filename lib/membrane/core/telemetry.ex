@@ -166,7 +166,7 @@ defmodule Membrane.Core.Telemetry do
   end
 
   @doc """
-  Reports a span of a compoment callback function in a format consistent with `span/3` in `:telementry`
+  Reports a span of a component callback function in a format consistent with `span/3` in `:telementry`
   """
   @spec track_callback_handler(
           (-> CallbackHandler.callback_return() | no_return()),
@@ -187,7 +187,7 @@ defmodule Membrane.Core.Telemetry do
         component_type
       )
 
-    if handler_reported?(component_type, callback) do
+    if handler_reported?(component_type, callback) |> identity() do
       :telemetry.span([:membrane, component_type, callback], meta, fn ->
         {_actions, int_state} = res = f.()
 
