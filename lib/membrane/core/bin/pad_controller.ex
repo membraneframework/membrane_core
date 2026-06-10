@@ -90,6 +90,7 @@ defmodule Membrane.Core.Bin.PadController do
       Message.send(state.parent_pid, :child_pad_removed, [state.name, pad_ref])
       PadModel.delete_data!(state, pad_ref)
     else
+      # This is to handle the case when a bin pad is removed and then the bin removes its child linked to this pad
       state
     end
   end
