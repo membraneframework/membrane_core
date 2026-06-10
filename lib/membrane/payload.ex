@@ -100,7 +100,7 @@ defimpl Membrane.Payload, for: BitString do
   @spec split_at(binary(), pos_integer) :: {binary(), binary()}
   def split_at(payload, at_pos)
       when is_binary(payload) and 0 < at_pos and at_pos < byte_size(payload) do
-    <<part1::binary-size(at_pos), part2::binary>> = payload
+    <<part1::binary-size(^at_pos), part2::binary>> = payload
     {part1, part2}
   end
 
@@ -113,7 +113,7 @@ defimpl Membrane.Payload, for: BitString do
   @impl true
   @spec drop(payload :: binary(), bytes :: non_neg_integer()) :: binary()
   def drop(payload, bytes) when is_binary(payload) do
-    <<_dropped::binary-size(bytes), rest::binary>> = payload
+    <<_dropped::binary-size(^bytes), rest::binary>> = payload
     rest
   end
 
