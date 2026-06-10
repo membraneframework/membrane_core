@@ -10,6 +10,7 @@ defmodule Membrane.Core.Element.ManualFlowController do
     State,
     StreamFormatController
   }
+
   alias Membrane.Core.Message, as: Message
 
   alias __MODULE__.InputQueue
