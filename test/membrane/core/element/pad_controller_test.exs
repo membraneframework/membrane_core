@@ -3,13 +3,11 @@ defmodule Membrane.Core.Element.PadControllerTest do
 
   alias Membrane.Core.Child.{PadModel, PadSpecHandler}
   alias Membrane.Core.Element.State
-  alias Membrane.Core.Message
   alias Membrane.Core.SubprocessSupervisor
   alias Membrane.LinkError
   alias Membrane.Pad
   alias Membrane.Support.Element.{DynamicFilter, TrivialFilter}
 
-  require Message
   require Pad
 
   @module Membrane.Core.Element.PadController
