@@ -7,6 +7,8 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
   alias Membrane.Core.Bin.PadController
 
+  alias Membrane.Core.Message, as: Message
+
   alias Membrane.Core.Parent.{
     ChildEntryParser,
     ChildrenModel,
@@ -20,8 +22,6 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias Membrane.ParentError
 
   require Membrane.Core.Child.PadModel, as: PadModel
-  require Membrane.Core.Component
-  require Membrane.Core.Message, as: Message
   require Membrane.Logger
 
   @type spec_ref :: reference()

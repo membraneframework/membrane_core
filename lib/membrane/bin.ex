@@ -17,8 +17,6 @@ defmodule Membrane.Bin do
   alias Membrane.Core.Child.PadsSpecs
   alias Membrane.Core.OptionsSpecs
 
-  require Membrane.Core.Message
-
   @type state :: any()
 
   @type callback_return :: {[Action.t()], state()}

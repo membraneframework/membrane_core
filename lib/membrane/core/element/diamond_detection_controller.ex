@@ -76,10 +76,9 @@ defmodule Membrane.Core.Element.DiamondDetectionController do
   alias __MODULE__.{DiamondLogger, PathInGraph}
   alias Membrane.Core.Element.State
   alias Membrane.Element.PadData
+  alias Membrane.Pad, as: Pad
 
   require Membrane.Core.Message, as: Message
-  require Membrane.Logger
-  require Membrane.Pad, as: Pad
 
   @type diamond_detection_message() :: %{
           :type =>

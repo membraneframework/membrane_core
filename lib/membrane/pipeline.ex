@@ -66,9 +66,9 @@ defmodule Membrane.Pipeline do
 
   alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad, PipelineError}
+  alias Membrane.Core.Message, as: Message
 
   require Membrane.Logger
-  require Membrane.Core.Message, as: Message
 
   @typedoc """
   Defines options passed to the `start/3` and `start_link/3` and subsequently received

@@ -20,7 +20,6 @@ defmodule Membrane.Core.Element.StreamFormatController do
   alias Membrane.{Pad, StreamFormat}
 
   require Membrane.Core.Child.PadModel
-  require Membrane.Core.Telemetry
 
   @type stream_format_validation_param() :: {module(), Pad.name()}
   @type stream_format_validation_params() :: [stream_format_validation_param()]

@@ -8,9 +8,10 @@ defmodule Membrane.Core.Element.AtomicDemand do
     AtomicFlowStatus
   }
 
-  require Membrane.Core.Message, as: Message
+  alias Membrane.Core.Message, as: Message
+  alias Membrane.Pad, as: Pad
+
   require Membrane.Logger
-  require Membrane.Pad, as: Pad
 
   @default_toilet_capacity_factor 200
   @default_throttling_factor 1

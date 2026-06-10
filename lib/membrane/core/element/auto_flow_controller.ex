@@ -13,9 +13,10 @@ defmodule Membrane.Core.Element.AutoFlowController do
     StreamFormatController
   }
 
+  alias Membrane.Pad, as: Pad
+
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Logger
-  require Membrane.Pad, as: Pad
 
   @empty_map_set MapSet.new()
 

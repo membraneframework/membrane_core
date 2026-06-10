@@ -17,7 +17,6 @@ defmodule Membrane.Core.Element.LifecycleController do
     State
   }
 
-  require Membrane.Core.Message
   require Membrane.Logger
 
   @doc """

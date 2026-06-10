@@ -3,7 +3,7 @@ defmodule Membrane.Core.Element.DiamondDetectionController.PathInGraph do
 
   defmodule Vertex do
     @moduledoc false
-    require Membrane.Pad, as: Pad
+    alias Membrane.Pad, as: Pad
 
     defstruct [:pid, :component_path, :input_pad_ref, :output_pad_ref]
 

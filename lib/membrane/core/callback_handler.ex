@@ -8,9 +8,9 @@ defmodule Membrane.Core.CallbackHandler do
   use Bunch
 
   alias Membrane.CallbackError
+  alias Membrane.Core.Telemetry, as: Telemetry
 
   require Membrane.Logger
-  require Membrane.Core.Telemetry, as: Telemetry
 
   @type state :: %{
           :module => module,

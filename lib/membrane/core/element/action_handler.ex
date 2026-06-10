@@ -28,12 +28,13 @@ defmodule Membrane.Core.Element.ActionHandler do
   }
 
   alias Membrane.Core.{Events, TimerController}
+  alias Membrane.Core.Message, as: Message
+  alias Membrane.Core.Telemetry, as: Telemetry
+
   alias Membrane.Element.Action
 
   require Membrane.Core.Child.PadModel, as: PadModel
-  require Membrane.Core.Message, as: Message
   require Membrane.Logger
-  require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
   @uninterrupted_redemands_warning_limit 1000
