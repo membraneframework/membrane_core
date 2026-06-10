@@ -85,23 +85,21 @@ defmodule Membrane.Core.Bin.PadController do
   end
 
   @spec remove_pad(Pad.ref(), State.t()) :: State.t()
-  def remove_pad(pad_ref, state) do
-    cond do
-      # This is to handle the case when a bin pad is removed and then the bin removes its child linked to this pad
-      Pad.is_dynamic_pad_ref(pad_ref) and PadModel.assert_instance(state, pad_ref) != :ok ->
-        state
-
-      Pad.is_dynamic_pad_ref(pad_ref) ->
-        Message.send(state.parent_pid, :child_pad_removed, [state.name, pad_ref])
-        PadModel.delete_data!(state, pad_ref)
-
-      Pad.is_static_pad_ref(pad_ref) and state.terminating? ->
-        state
-
-      Pad.is_static_pad_ref(pad_ref) ->
-        raise Membrane.PadError,
-              "Tried to unlink bin static pad #{inspect(pad_ref)}. Static pads cannot be unlinked unless bin is terminating"
+  def remove_pad(pad_ref, state) when Pad.is_dynamic_pad_ref(pad_ref) do
+    if PadModel.assert_instance(state, pad_ref) == :ok do
+      Message.send(state.parent_pid, :child_pad_removed, [state.name, pad_ref])
+      PadModel.delete_data!(state, pad_ref)
+    else
+      state
     end
+  end
+
+  def remove_pad(pad_ref, state) when Pad.is_static_pad_ref(pad_ref) and state.terminating?,
+    do: state
+
+  def remove_pad(pad_ref, _state) when Pad.is_static_pad_ref(pad_ref) do
+    raise Membrane.PadError,
+          "Tried to unlink bin static pad #{inspect(pad_ref)}. Static pads cannot be unlinked unless bin is terminating"
   end
 
   @spec handle_linking_timeout(Pad.ref(), reference(), State.t()) :: :ok | no_return()
