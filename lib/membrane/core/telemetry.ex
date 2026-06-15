@@ -126,16 +126,12 @@ defmodule Membrane.Core.Telemetry do
     end
   end
 
-  @doc false
-  @spec identity(term()) :: term()
-  def identity(term), do: term
-
   defmacrop report_datapoint(datapoint_name, do: lazy_block) do
     unless Macro.quoted_literal?(datapoint_name), do: raise("Datapoint type must be a literal")
 
-    # @legacy? |> indentity() is a hack to mute compilation warnings
+    # piping to identity is a hack to mute compilation warnings
     cond do
-      @legacy? |> identity() ->
+      @legacy? |> Function.identity() ->
         do_legacy_telemetry(datapoint_name, lazy_block)
 
       datapoint_gathered?(datapoint_name) ->
@@ -187,7 +183,7 @@ defmodule Membrane.Core.Telemetry do
         component_type
       )
 
-    if handler_reported?(component_type, callback) |> identity() do
+    if handler_reported?(component_type, callback) |> Function.identity() do
       :telemetry.span([:membrane, component_type, callback], meta, fn ->
         {_actions, int_state} = res = f.()
 

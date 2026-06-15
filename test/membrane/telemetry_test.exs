@@ -62,10 +62,8 @@ defmodule Membrane.TelemetryTest do
     end
   end
 
-  defp identity(term), do: term
-
   setup do
-    if Telemetry.legacy?() |> identity() do
+    if Telemetry.legacy?() |> Function.identity() do
       [skip: true]
     else
       child_spec =
