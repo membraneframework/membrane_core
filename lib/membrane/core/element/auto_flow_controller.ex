@@ -13,7 +13,7 @@ defmodule Membrane.Core.Element.AutoFlowController do
     StreamFormatController
   }
 
-  alias Membrane.Pad, as: Pad
+  alias Membrane.Pad
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Logger

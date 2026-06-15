@@ -28,8 +28,8 @@ defmodule Membrane.Core.Element.ActionHandler do
   }
 
   alias Membrane.Core.{Events, TimerController}
-  alias Membrane.Core.Message, as: Message
-  alias Membrane.Core.Telemetry, as: Telemetry
+  alias Membrane.Core.Message
+  alias Membrane.Core.Telemetry
 
   alias Membrane.Element.Action
 

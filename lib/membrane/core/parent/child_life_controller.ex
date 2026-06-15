@@ -7,7 +7,7 @@ defmodule Membrane.Core.Parent.ChildLifeController do
   alias Membrane.Core.{Bin, CallbackHandler, Component, Parent, Pipeline}
   alias Membrane.Core.Bin.PadController
 
-  alias Membrane.Core.Message, as: Message
+  alias Membrane.Core.Message
 
   alias Membrane.Core.Parent.{
     ChildEntryParser,

@@ -21,7 +21,7 @@ defmodule Membrane.Core.Element.BufferController do
 
   alias Membrane.Core.Element.ManualFlowController.InputQueue
 
-  alias Membrane.Core.Telemetry, as: Telemetry
+  alias Membrane.Core.Telemetry
 
   require Membrane.Core.Child.PadModel
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry

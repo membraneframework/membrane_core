@@ -8,8 +8,8 @@ defmodule Membrane.Core.Element.AtomicDemand do
     AtomicFlowStatus
   }
 
-  alias Membrane.Core.Message, as: Message
-  alias Membrane.Pad, as: Pad
+  alias Membrane.Core.Message
+  alias Membrane.Pad
 
   require Membrane.Logger
 

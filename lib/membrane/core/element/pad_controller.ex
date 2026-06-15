@@ -19,12 +19,12 @@ defmodule Membrane.Core.Element.PadController do
 
   alias Membrane.Core.Element.ManualFlowController.InputQueue
 
-  alias Membrane.Core.Message, as: Message
+  alias Membrane.Core.Message
 
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.LinkError
 
-  alias Membrane.Pad, as: Pad
+  alias Membrane.Pad
 
   require Membrane.Core.Child.PadModel, as: PadModel
   require Membrane.Core.Stalker, as: Stalker

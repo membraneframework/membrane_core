@@ -36,7 +36,7 @@ defmodule Membrane.Core.Element do
 
   alias Membrane.Core.{SubprocessSupervisor, TimerController}
 
-  alias Membrane.Core.Telemetry, as: Telemetry
+  alias Membrane.Core.Telemetry
 
   require Membrane.Core.Utils, as: Utils
   require Membrane.Core.Message, as: Message

@@ -66,7 +66,7 @@ defmodule Membrane.Pipeline do
 
   alias __MODULE__.{Action, CallbackContext}
   alias Membrane.{Child, Pad, PipelineError}
-  alias Membrane.Core.Message, as: Message
+  alias Membrane.Core.Message
 
   require Membrane.Logger
 

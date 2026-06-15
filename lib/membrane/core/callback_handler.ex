@@ -8,7 +8,7 @@ defmodule Membrane.Core.CallbackHandler do
   use Bunch
 
   alias Membrane.CallbackError
-  alias Membrane.Core.Telemetry, as: Telemetry
+  alias Membrane.Core.Telemetry
 
   require Membrane.Logger
 
