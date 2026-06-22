@@ -21,8 +21,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
   alias Membrane.Pad
   alias Membrane.ParentError
 
-  require Membrane.Core.Message
-  require Membrane.Core.Telemetry
   require Membrane.Logger
   require Membrane.Pad
 

@@ -4,8 +4,6 @@ defmodule Membrane.Core.TimerController do
   alias Membrane.Clock
   alias Membrane.Core.{CallbackHandler, Component, Timer}
 
-  require Membrane.Core.Component
-
   defguardp is_timer_present(timer_id, state)
             when is_map_key(state.synchronization.timers, timer_id)
 

@@ -26,13 +26,11 @@ defmodule Membrane.Core.Component do
   @spec context_from_state(state(), callback_context_optional_fields()) ::
           callback_context()
   def context_from_state(state, args \\ []) do
-    alias Membrane.Core.{Bin, Element, Pipeline}
-
     callback_context_module =
       case state do
-        %Element.State{} -> Element.CallbackContext
-        %Bin.State{} -> Bin.CallbackContext
-        %Pipeline.State{} -> Pipeline.CallbackContext
+        %Membrane.Core.Element.State{} -> Membrane.Core.Element.CallbackContext
+        %Membrane.Core.Bin.State{} -> Membrane.Core.Bin.CallbackContext
+        %Membrane.Core.Pipeline.State{} -> Membrane.Core.Pipeline.CallbackContext
       end
 
     callback_context_module.from_state(state, args)

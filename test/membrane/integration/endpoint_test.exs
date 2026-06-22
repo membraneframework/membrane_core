@@ -7,8 +7,6 @@ defmodule Membrane.Core.EndpointTest do
   alias Membrane.Support.Bin.TestBins.TestFilter
   alias Membrane.Testing
 
-  require Membrane.Core.Message
-
   describe "Starting and transmitting buffers" do
     test "with one endpoint and filter" do
       buffers = [~c"a", ~c"b", ~c"c"]

@@ -21,8 +21,6 @@ defmodule Membrane.Core.Element.EventController do
   alias Membrane.{Event, Pad, Sync}
 
   require Membrane.Core.Child.PadModel
-  require Membrane.Core.Message
-  require Membrane.Core.Telemetry
   require Membrane.Logger
 
   @spec handle_start_of_stream(Pad.ref(), State.t()) :: State.t()

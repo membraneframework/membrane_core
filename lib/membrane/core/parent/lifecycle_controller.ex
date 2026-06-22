@@ -15,8 +15,6 @@ defmodule Membrane.Core.Parent.LifecycleController do
   alias Membrane.Core.Events
   alias Membrane.Core.Parent.ChildLifeController
 
-  require Membrane.Core.Component
-  require Membrane.Core.Message
   require Membrane.Logger
 
   @spec handle_setup(Parent.state()) :: Parent.state()

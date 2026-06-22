@@ -6,10 +6,7 @@ defmodule Membrane.Integration.ChildSpawnTest do
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
-  alias Membrane.Core.Message
   alias Membrane.Testing
-
-  require Message
 
   defmodule PipelineWhichDoesntPlayOnStartup do
     use Membrane.Pipeline

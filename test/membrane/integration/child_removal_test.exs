@@ -4,11 +4,8 @@ defmodule Membrane.Integration.ChildRemovalTest do
 
   import Membrane.Testing.Assertions
 
-  alias Membrane.Core.Message
   alias Membrane.Support.ChildRemovalTest
   alias Membrane.Testing
-
-  require Message
 
   test "Element can be removed when pipeline is in stopped state" do
     pipeline_pid =

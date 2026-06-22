@@ -11,7 +11,6 @@ defmodule Membrane.Core.Pipeline do
 
   require Membrane.Core.Utils, as: Utils
   require Membrane.Core.Message, as: Message
-  require Membrane.Core.Component
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
   @spec get_stalker(pipeline :: pid()) :: Membrane.Core.Stalker.t()
