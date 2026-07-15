@@ -302,6 +302,20 @@ defmodule Membrane.Core.Parent.ChildLifeController.LinkUtils do
     state
   end
 
+  defp log_handle_link_error({:call_failure, {:timeout, _reason}}, from, to) do
+    Membrane.Logger.warning("""
+    Failed to establish link between #{inspect(from.child)} via #{inspect(from.pad_ref)} and
+    #{inspect(to.child)} via #{inspect(to.pad_ref)} because #{inspect(from.child)} took too long to link.
+    """)
+  end
+
+  defp log_handle_link_error({:call_failure, {{exception, _stack}, _reason}}, from, to) when is_exception(exception) do
+    Membrane.Logger.debug("""
+    Failed to establish link between #{inspect(from.child)} via #{inspect(from.pad_ref)} and
+    #{inspect(to.child)} via #{inspect(to.pad_ref)} because #{inspect(from.child)} failed with an exception.
+    """)
+  end
+
   defp log_handle_link_error({:call_failure, _reason}, from, to) do
     Membrane.Logger.debug("""
     Failed to establish link between #{inspect(from.child)} via #{inspect(from.pad_ref)} and
