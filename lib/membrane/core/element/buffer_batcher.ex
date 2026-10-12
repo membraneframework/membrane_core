@@ -26,7 +26,7 @@ defmodule Membrane.Core.Element.BufferBatcher do
   alias Membrane.Core.Element.State
   alias Membrane.Pad
 
-  require Membrane.Core.Message, as: Message
+  alias Membrane.Core.Message
   require Membrane.Logger
 
   @type t :: %{
