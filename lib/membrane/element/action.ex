@@ -66,6 +66,10 @@ defmodule Membrane.Element.Action do
 
   The pad must have output direction.
 
+  Buffers returned from subsequent callbacks (e.g. `c:Membrane.WithInputPads.handle_buffer/4`
+  invoked for each of the incoming buffers) are sent to the next element in a single message,
+  as long as no other action is returned in between.
+
   Allowed only when playback is playing.
   """
   @type buffer :: {:buffer, {Pad.ref(), Buffer.t() | [Buffer.t()]}}

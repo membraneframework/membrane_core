@@ -2,7 +2,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
   use ExUnit.Case, async: true
 
   alias Membrane.{ActionError, Buffer, ElementError, PadDirectionError}
-  alias Membrane.Core.Element.{AtomicDemand, State}
+  alias Membrane.Core.Element.{AtomicDemand, BufferBatcher, State}
   alias Membrane.Core.SubprocessSupervisor
   alias Membrane.Support.DemandsTest.Filter
   alias Membrane.Support.Element.{TrivialFilter, TrivialSource}
@@ -197,10 +197,66 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert result.pads_to_snapshot == MapSet.new([:output])
       assert AtomicDemand.get(result.pads_data.output.atomic_demand) < 0
 
-      assert put_in(result, [:pads_data, :output, :demand], 0)
-             |> Map.put(:pads_to_snapshot, MapSet.new()) == state
+      # buffer is batched until the batch is flushed
+      assert %{pad_ref: :output, other_ref: :other_ref, buffers: [@mock_buffer]} =
+               result.buffer_batch
 
+      refute_received Message.new(:buffer, _buffers, for_pad: :other_ref)
+
+      assert put_in(result, [:pads_data, :output, :demand], 0)
+             |> Map.put(:pads_to_snapshot, MapSet.new())
+             |> Map.put(:buffer_batch, nil) == state
+
+      result = BufferBatcher.flush(result)
+      assert result.buffer_batch == nil
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref)
+    end
+
+    test "buffers sent via the same pad are batched into a single message", %{state: state} do
+      state =
+        %{state | playback: :playing}
+        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
+
+      buffers = Enum.map(1..3, &%Buffer{payload: <<&1>>})
+
+      result =
+        Enum.reduce(buffers, state, fn buffer, state ->
+          @module.handle_action({:buffer, {:output, buffer}}, :handle_info, %{}, state)
+        end)
+
+      refute_received Message.new(:buffer, _buffers, for_pad: :other_ref)
+
+      result = BufferBatcher.flush(result)
+      assert result.buffer_batch == nil
+      assert_received Message.new(:buffer, ^buffers, for_pad: :other_ref)
+      refute_received Message.new(:buffer, _buffers, for_pad: :other_ref)
+    end
+
+    test "batched buffers are flushed before handling other actions", %{state: state} do
+      state =
+        %{state | playback: :playing, parent_pid: self()}
+        |> PadModel.set_data!(:output, :stream_format, @mock_stream_format)
+
+      [buffer1, buffer2, buffer3] = Enum.map(1..3, &%Buffer{payload: <<&1>>})
+
+      actions = [
+        {:buffer, {:output, buffer1}},
+        {:buffer, {:output, buffer2}},
+        {:notify_parent, :notification},
+        {:buffer, {:output, buffer3}}
+      ]
+
+      result =
+        Enum.reduce(actions, state, fn action, state ->
+          @module.handle_action(action, :handle_info, %{}, state)
+        end)
+
+      assert_received Message.new(:buffer, [^buffer1, ^buffer2], for_pad: :other_ref)
+      assert_received Message.new(:child_notification, [_name, :notification])
+      refute_received Message.new(:buffer, _buffers, for_pad: :other_ref)
+
+      _result = BufferBatcher.flush(result)
+      assert_received Message.new(:buffer, [^buffer3], for_pad: :other_ref)
     end
 
     test "when pad doesn't exist in the element", %{state: state} do
@@ -611,7 +667,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     setup :two_output_pad_state
 
     test "buffer broadcast when playing", %{state: state} do
-      _result = @module.handle_action({:broadcast, @mock_buffer}, :handle_info, %{}, state)
+      @module.handle_action({:broadcast, @mock_buffer}, :handle_info, %{}, state)
+      |> BufferBatcher.flush()
 
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref1)
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref2)
@@ -674,7 +731,8 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
     test "broadcast on source element", %{state: state} do
       state = %{state | type: :source}
 
-      _result = @module.handle_action({:broadcast, @mock_buffer}, :handle_info, %{}, state)
+      @module.handle_action({:broadcast, @mock_buffer}, :handle_info, %{}, state)
+      |> BufferBatcher.flush()
 
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref1)
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref2)
@@ -688,6 +746,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
           %{},
           state
         )
+        |> BufferBatcher.flush()
 
       assert_received Message.new(:stream_format, @mock_stream_format, for_pad: :other_ref1)
       assert_received Message.new(:stream_format, @mock_stream_format, for_pad: :other_ref2)

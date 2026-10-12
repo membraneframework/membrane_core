@@ -1,6 +1,8 @@
 # Changelog
 
 ## 1.3.5
+* Batch buffers returned from subsequent callbacks into a single message, as long as no other action is returned in between
+* Make the cost of taking buffers from the input queue of a manual pad independent of the size of the incoming batch of buffers
 * Make logs more specific about the reason when linking elements fails [#1167](https://github.com/membraneframework/membrane_core/pull/1167)
 
 ## 1.3.0

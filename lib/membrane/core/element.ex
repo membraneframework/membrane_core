@@ -22,6 +22,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Child.PadSpecHandler
 
   alias Membrane.Core.Element.{
+    BufferBatcher,
     BufferController,
     DemandController,
     DiamondDetectionController,
@@ -169,14 +170,15 @@ defmodule Membrane.Core.Element do
   def handle_continue(:setup, state) do
     Utils.log_on_error do
       state = LifecycleController.handle_setup(state)
-      {:noreply, state}
+      {:noreply, BufferBatcher.flush(state)}
     end
   end
 
   @impl GenServer
   def handle_call(request, from, state) do
     Utils.log_on_error do
-      do_handle_call(request, from, state)
+      {:reply, reply, state} = do_handle_call(request, from, state)
+      {:reply, reply, BufferBatcher.flush(state)}
     end
   end
 
@@ -212,7 +214,8 @@ defmodule Membrane.Core.Element do
     Utils.log_on_error do
       Telemetry.report_queue_len(self())
 
-      do_handle_info(message, state)
+      {:noreply, state} = do_handle_info(message, state)
+      {:noreply, BufferBatcher.flush(state)}
     end
   end
 

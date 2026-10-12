@@ -14,6 +14,7 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
   alias Membrane.Core.Telemetry
   alias Membrane.Event
   alias Membrane.Pad
+  alias Membrane.Payload
   alias Membrane.StreamFormat
 
   require Membrane.Core.Stalker, as: Stalker
@@ -233,11 +234,11 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
     q
     |> @qe.pop
     |> case do
-      {{:value, {:buffers, buffers, inbound_metric_buf_size, _outbound_metric_buf_size}}, nq} ->
+      {{:value, {:buffers, chunk, inbound_metric_buf_size, outbound_metric_buf_size}}, nq} ->
         {buffers, excess_buffers} =
           BufferMetric.split_buffers(
             outbound_demand_unit,
-            buffers,
+            chunk,
             demand,
             first_outbound_buffer,
             last_outbound_buffer,
@@ -264,11 +265,28 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
             )
 
           non_empty_excess_buffers ->
+            # Sizes of the excess buffers are derived from the sizes of the whole chunk
+            # and the taken buffers instead of being computed directly, so that the cost
+            # of a take depends on the number of taken buffers, not on the size of the chunk.
+            # Otherwise, popping a big chunk piece by piece would be quadratic.
+            last_buffer_cut? =
+              last_buffer_cut?(outbound_demand_unit, chunk, buffers, non_empty_excess_buffers)
+
             excess_buffers_inbound_metric_size =
-              size(non_empty_excess_buffers, inbound_demand_unit)
+              excess_size(
+                inbound_demand_unit,
+                inbound_metric_buf_size,
+                buffers_size_inbound_metric,
+                last_buffer_cut?
+              )
 
             excess_buffers_outbound_metric_size =
-              size(non_empty_excess_buffers, outbound_demand_unit)
+              excess_size(
+                outbound_demand_unit,
+                outbound_metric_buf_size,
+                buffers_size_outbound_metric,
+                last_buffer_cut?
+              )
 
             nq =
               @qe.push_front(
@@ -306,6 +324,26 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
         {{:value, acc |> Enum.reverse()}, q, queue_size}
     end
   end
+
+  # Checks whether the last taken buffer is a fragment of a buffer from the chunk, that has
+  # been split in two (which can happen only when splitting by bytes). In such a case,
+  # the first excess buffer is the remaining fragment of that buffer.
+  defp last_buffer_cut?(:bytes, chunk, [_buffer | _rest] = taken_buffers, _excess_buffers) do
+    last_taken_buffer = List.last(taken_buffers)
+    original_buffer = Enum.at(chunk, length(taken_buffers) - 1)
+    Payload.size(last_taken_buffer.payload) != Payload.size(original_buffer.payload)
+  end
+
+  defp last_buffer_cut?(_unit, _chunk, _taken_buffers, _excess_buffers), do: false
+
+  defp excess_size(_unit, nil = _chunk_size, _taken_size, _last_buffer_cut?), do: nil
+
+  # the fragments of the cut buffer are counted both in the taken and in the excess buffers
+  defp excess_size(:buffers, chunk_size, taken_size, true = _last_buffer_cut?),
+    do: chunk_size - taken_size + 1
+
+  defp excess_size(_unit, chunk_size, taken_size, _last_buffer_cut?),
+    do: chunk_size - taken_size
 
   @spec maybe_increase_atomic_demand(t()) :: t()
   defp maybe_increase_atomic_demand(
