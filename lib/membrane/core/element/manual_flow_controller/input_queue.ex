@@ -233,11 +233,11 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
     q
     |> @qe.pop
     |> case do
-      {{:value, {:buffers, buffers, inbound_metric_buf_size, _outbound_metric_buf_size}}, nq} ->
+      {{:value, {:buffers, chunk, inbound_metric_buf_size, outbound_metric_buf_size}}, nq} ->
         {buffers, excess_buffers} =
           BufferMetric.split_buffers(
             outbound_demand_unit,
-            buffers,
+            chunk,
             demand,
             first_outbound_buffer,
             last_outbound_buffer,
@@ -264,16 +264,28 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
             )
 
           non_empty_excess_buffers ->
+            last_buffer_cut? = last_buffer_cut?(outbound_demand_unit, chunk, buffers)
+
             excess_buffers_inbound_metric_size =
-              size(non_empty_excess_buffers, inbound_demand_unit)
+              excess_buffers_size(
+                inbound_demand_unit,
+                inbound_metric_buf_size,
+                buffers_size_inbound_metric,
+                last_buffer_cut?
+              )
 
             excess_buffers_outbound_metric_size =
-              size(non_empty_excess_buffers, outbound_demand_unit)
+              excess_buffers_size(
+                outbound_demand_unit,
+                outbound_metric_buf_size,
+                buffers_size_outbound_metric,
+                last_buffer_cut?
+              )
 
             nq =
               @qe.push_front(
                 nq,
-                {:buffers, excess_buffers, excess_buffers_inbound_metric_size,
+                {:buffers, non_empty_excess_buffers, excess_buffers_inbound_metric_size,
                  excess_buffers_outbound_metric_size}
               )
 
@@ -306,6 +318,21 @@ defmodule Membrane.Core.Element.ManualFlowController.InputQueue do
         {{:value, acc |> Enum.reverse()}, q, queue_size}
     end
   end
+
+  defp last_buffer_cut?(:bytes, chunk, taken_buffers) do
+    List.last(taken_buffers) != Enum.at(chunk, length(taken_buffers) - 1)
+  end
+
+  defp last_buffer_cut?(_outbound_demand_unit, _chunk, _taken_buffers), do: false
+
+  defp excess_buffers_size(_unit, nil = _chunk_size, _taken_buffers_size, _last_buffer_cut?),
+    do: nil
+
+  defp excess_buffers_size(:buffers, chunk_size, taken_buffers_size, true = _last_buffer_cut?),
+    do: chunk_size - taken_buffers_size + 1
+
+  defp excess_buffers_size(_unit, chunk_size, taken_buffers_size, _last_buffer_cut?),
+    do: chunk_size - taken_buffers_size
 
   @spec maybe_increase_atomic_demand(t()) :: t()
   defp maybe_increase_atomic_demand(

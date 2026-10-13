@@ -337,6 +337,71 @@ defmodule Membrane.Core.Element.InputQueueTest do
     assert queue.demand >= 2
   end
 
+  test "if the queue works properly for :buffers input metric and :bytes output metric, when a buffer is cut in two" do
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: :bytes,
+        atomic_demand: new_atomic_demand(),
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: 100
+      })
+
+    buffers = Enum.map(1..3, &%Buffer{payload: <<&1, &1, &1, &1>>})
+    queue = InputQueue.store(queue, buffers)
+    assert queue.size == 3
+
+    {{:value, out}, queue} = InputQueue.take(queue, 6)
+
+    assert [{:buffers, [%Buffer{payload: <<1, 1, 1, 1>>}, %Buffer{payload: <<2, 2>>}], 2, 6}] =
+             out
+
+    assert queue.size == 2
+
+    assert [{:buffers, [%Buffer{payload: <<2, 2>>}, %Buffer{payload: <<3, 3, 3, 3>>}], 2, 6}] =
+             Enum.to_list(queue.q)
+
+    {{:value, out}, queue} = InputQueue.take(queue, 2)
+    assert [{:buffers, [%Buffer{payload: <<2, 2>>}], 1, 2}] = out
+    assert queue.size == 1
+    assert [{:buffers, [%Buffer{payload: <<3, 3, 3, 3>>}], 1, 4}] = Enum.to_list(queue.q)
+
+    {{:value, out}, queue} = InputQueue.take(queue, 4)
+    assert [{:buffers, [%Buffer{payload: <<3, 3, 3, 3>>}], 1, 4}] = out
+    assert queue.size == 0
+    assert Enum.empty?(queue.q)
+  end
+
+  test "taking buffers one by one from a big chunk is not quadratic" do
+    buffers_count = 50_000
+
+    queue =
+      InputQueue.new(%{
+        inbound_demand_unit: :buffers,
+        outbound_demand_unit: :buffers,
+        atomic_demand: new_atomic_demand(),
+        pad_ref: :output_pad_ref,
+        log_tag: nil,
+        target_size: buffers_count
+      })
+
+    queue = InputQueue.store(queue, Enum.map(1..buffers_count, &%Buffer{payload: <<&1::32>>}))
+
+    {time_us, queue} =
+      :timer.tc(fn ->
+        Enum.reduce(1..buffers_count, queue, fn i, queue ->
+          {{:value, [{:buffers, [%Buffer{payload: <<^i::32>>}], 1, 1}]}, queue} =
+            InputQueue.take(queue, 1)
+
+          queue
+        end)
+      end)
+
+    assert queue.size == 0
+    assert time_us < 5_000_000
+  end
+
   test "raises when taking a buffer with nil PTS from a {:timestamp, :pts} pad" do
     queue =
       InputQueue.new(%{
