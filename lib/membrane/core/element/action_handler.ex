@@ -78,17 +78,11 @@ defmodule Membrane.Core.Element.ActionHandler do
     |> Map.put(:pads_to_snapshot, MapSet.new())
   end
 
-  # Actions that don't interrupt batching of buffers (see `Membrane.Core.Element.BufferBatcher`).
-  # :split, :forward and :broadcast are transparent here, as the actions they result in
-  # are passed through handle_action/4 again.
-  @buffer_batch_transparent_actions [:buffer, :split, :forward, :broadcast]
+  @buffer_batching_transparent_actions [:buffer, :split, :forward, :broadcast]
 
   @impl CallbackHandler
-  def handle_action(action, cb, params, %State{buffer_batch: buffer_batch} = state)
-      when buffer_batch != nil and
-             (not is_tuple(action) or elem(action, 0) not in @buffer_batch_transparent_actions) do
-    # Buffers batched so far must be sent before handling any other action,
-    # to preserve the order of actions
+  def handle_action({name, _args} = action, cb, params, state)
+      when state.buffer_batch != nil and name not in @buffer_batching_transparent_actions do
     state = BufferBatcher.flush(state)
     handle_action(action, cb, params, state)
   end
@@ -451,18 +445,15 @@ defmodule Membrane.Core.Element.ActionHandler do
            direction: :output,
            end_of_stream?: false,
            stream_format: stream_format,
-           pid: pid,
-           other_ref: other_ref,
            stalker_metrics: stalker_metrics
          }
          when stream_format != nil <- pad_data do
       state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
       :atomics.add(stalker_metrics.total_buffers, 1, length(buffers))
+      state = BufferBatcher.store(pad_ref, buffers, state)
 
-      state
-      |> PadModel.set_data!(pad_ref, :start_of_stream?, true)
+      PadModel.set_data!(state, pad_ref, :start_of_stream?, true)
       |> Map.update!(:pads_to_snapshot, &MapSet.put(&1, pad_ref))
-      |> then(&BufferBatcher.store(pad_ref, pid, other_ref, buffers, &1))
     else
       %{direction: :input} ->
         raise PadDirectionError, action: :buffer, direction: :input, pad: pad_ref

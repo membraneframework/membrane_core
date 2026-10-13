@@ -102,7 +102,6 @@ defmodule Membrane.Integration.BufferBatchingTest do
     end
   end
 
-  # Returns messages sent by the filter through its output pad, in the order they were sent.
   defp traced_output_messages(filter_pid) do
     receive do
       {:trace, ^filter_pid, :send, Message.message(type: type, args: args, opts: opts), _to}

@@ -352,8 +352,6 @@ defmodule Membrane.Core.Element.InputQueueTest do
     queue = InputQueue.store(queue, buffers)
     assert queue.size == 3
 
-    # buffers 1 and a half of buffer 2 are taken, so both the taken buffers and the excess buffers
-    # consist of 2 buffers
     {{:value, out}, queue} = InputQueue.take(queue, 6)
 
     assert [{:buffers, [%Buffer{payload: <<1, 1, 1, 1>>}, %Buffer{payload: <<2, 2>>}], 2, 6}] =
@@ -401,7 +399,6 @@ defmodule Membrane.Core.Element.InputQueueTest do
       end)
 
     assert queue.size == 0
-    # the quadratic version needs tens of seconds to finish
     assert time_us < 5_000_000
   end
 

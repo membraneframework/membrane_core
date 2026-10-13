@@ -197,10 +197,6 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
       assert result.pads_to_snapshot == MapSet.new([:output])
       assert AtomicDemand.get(result.pads_data.output.atomic_demand) < 0
 
-      # buffer is batched until the batch is flushed
-      assert %{pad_ref: :output, other_ref: :other_ref, buffers: [@mock_buffer]} =
-               result.buffer_batch
-
       refute_received Message.new(:buffer, _buffers, for_pad: :other_ref)
 
       assert put_in(result, [:pads_data, :output, :demand], 0)

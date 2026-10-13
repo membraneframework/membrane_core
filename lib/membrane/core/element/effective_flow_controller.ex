@@ -107,9 +107,6 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
     )
 
     state = %{state | effective_flow_control: new_effective_flow_control}
-
-    # Buffers batched so far have to be sent before :sender_effective_flow_control_resolved,
-    # to keep the order of messages received by the next elements
     state = BufferBatcher.flush(state)
 
     state.pads_data
