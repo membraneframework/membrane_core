@@ -32,7 +32,7 @@ gh_auth_headers =
 
 # fetch repos from the known organizations
 repos =
-  ["membraneframework", "membraneframework-labs", "fishjam-dev"]
+  ["membraneframework", "membraneframework-labs"]
   |> Enum.flat_map(fn org ->
     Stream.from_index()
     |> Stream.map(fn page ->
@@ -72,7 +72,15 @@ packages_blacklist = [
   "github_actions_test",
   "membrane_ice_plugin",
   "membrane_webrtc_live",
-  "membrane_rtc_engine"
+  "membrane_rtc_engine",
+  "membrane_template_plugin_swm",
+  "membrane_gemini_demo",
+  "membrane_actions",
+  "actions-and-CI-tests",
+  "ex_kamailio",
+  "ex_moq_relay",
+  "stream-doctor",
+  "brrr"
 ]
 
 lacking_repos =
@@ -80,8 +88,7 @@ lacking_repos =
   |> Map.values()
   |> Enum.filter(fn repo ->
     repo.name not in package_names and
-      repo.owner.login in ["membraneframework", "fishjam-dev"] and
-      (repo.owner.login == "membraneframework" or repo.name =~ ~r/^membrane_.*/) and
+      repo.owner.login == "membraneframework" and
       not Enum.any?(packages_blacklist, fn name -> repo.name =~ name end)
   end)
 
