@@ -38,6 +38,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
   @uninterrupted_redemands_warning_limit 1000
+  @empty_map_set MapSet.new()
 
   @impl CallbackHandler
   def transform_actions(actions, _callback, _handler_params, state) do
@@ -51,16 +52,27 @@ defmodule Membrane.Core.Element.ActionHandler do
   def handle_end_of_actions(state) do
     # Fixed order of handling demand of manual and auto pads would lead to
     # favoring manual pads over auto pads (or vice versa), especially after
-    # introducting auto flow queues.
+    # introducting auto flow queues. The order matters only when both kinds
+    # of demands are pending, so randomization is skipped otherwise.
 
-    if Enum.random([true, false]) do
-      state
-      |> handle_pads_to_snapshot()
-      |> maybe_handle_delayed_demands()
-    else
-      state
-      |> maybe_handle_delayed_demands()
-      |> handle_pads_to_snapshot()
+    cond do
+      state.pads_to_snapshot == @empty_map_set ->
+        maybe_handle_delayed_demands(state)
+
+      state.delayed_demands == @empty_map_set ->
+        state
+        |> handle_pads_to_snapshot()
+        |> maybe_handle_delayed_demands()
+
+      Enum.random([true, false]) ->
+        state
+        |> handle_pads_to_snapshot()
+        |> maybe_handle_delayed_demands()
+
+      true ->
+        state
+        |> maybe_handle_delayed_demands()
+        |> handle_pads_to_snapshot()
     end
   end
 
@@ -70,11 +82,26 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
+  # Suppress false positive dialyzer warnings resulting from
+  # broken handling of opaque types - in this case MapSet.t()
+  # https://github.com/elixir-lang/elixir/issues/14576
+  @dialyzer {:nowarn_function, handle_pads_to_snapshot: 1}
   defp handle_pads_to_snapshot(state) do
-    state.pads_to_snapshot
-    |> Enum.shuffle()
-    |> Enum.reduce(state, &DemandController.snapshot_atomic_demand/2)
-    |> Map.put(:pads_to_snapshot, MapSet.new())
+    case MapSet.to_list(state.pads_to_snapshot) do
+      [] ->
+        state
+
+      [pad_ref] ->
+        state = %{state | pads_to_snapshot: MapSet.new()}
+        DemandController.snapshot_atomic_demand(pad_ref, state)
+
+      pad_refs ->
+        state = %{state | pads_to_snapshot: MapSet.new()}
+
+        pad_refs
+        |> Enum.shuffle()
+        |> Enum.reduce(state, &DemandController.snapshot_atomic_demand/2)
+    end
   end
 
   @impl CallbackHandler
@@ -393,22 +420,23 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  defp join_buffers(actions) do
-    actions
-    |> Bunch.Enum.chunk_by_prev(
-      fn
-        {:buffer, {pad, _buffer1}}, {:buffer, {pad, _buffer2}} -> true
-        _prev_action, _action -> false
-      end,
-      fn
-        [{:buffer, {pad, _buffer}} | _rest] = buffers ->
-          {:buffer,
-           {pad, buffers |> Enum.map(fn {:buffer, {_pad, b}} -> [b] end) |> List.flatten()}}
+  # Merges consecutive :buffer actions for the same pad into a single action
+  defp join_buffers([]), do: []
+  defp join_buffers([action]), do: [action]
 
-        [other] ->
-          other
-      end
-    )
+  defp join_buffers([{:buffer, {pad, buffers}} | rest]) do
+    {joined, rest} = join_buffers_for_pad(pad, rest, [List.wrap(buffers)])
+    [{:buffer, {pad, joined}} | join_buffers(rest)]
+  end
+
+  defp join_buffers([action | rest]), do: [action | join_buffers(rest)]
+
+  defp join_buffers_for_pad(pad, [{:buffer, {pad, buffers}} | rest], acc) do
+    join_buffers_for_pad(pad, rest, [List.wrap(buffers) | acc])
+  end
+
+  defp join_buffers_for_pad(_pad, rest, acc) do
+    {acc |> Enum.reverse() |> List.flatten(), rest}
   end
 
   @spec send_buffer(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
@@ -444,12 +472,14 @@ defmodule Membrane.Core.Element.ActionHandler do
            stalker_metrics: stalker_metrics
          }
          when stream_format != nil <- pad_data do
-      state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
+      pad_data = %{pad_data | start_of_stream?: true}
+
+      state =
+        DemandController.decrease_demand_by_outgoing_buffers(pad_ref, pad_data, buffers, state)
+
       :atomics.add(stalker_metrics.total_buffers, 1, length(buffers))
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
-
-      PadModel.set_data!(state, pad_ref, :start_of_stream?, true)
-      |> Map.update!(:pads_to_snapshot, &MapSet.put(&1, pad_ref))
+      state
     else
       %{direction: :input} ->
         raise PadDirectionError, action: :buffer, direction: :input, pad: pad_ref
@@ -532,10 +562,10 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp handle_redemand(pad_ref, %{type: type} = state)
        when type in [:source, :filter, :endpoint] do
     with %{direction: :output, flow_control: :manual} <- PadModel.get_data!(state, pad_ref) do
-      state = PadModel.update_data!(state, pad_ref, :uninterrupted_redemands, &(&1 + 1))
+      {uninterrupted_redemands, state} =
+        PadModel.get_and_update_data!(state, pad_ref, :uninterrupted_redemands, &{&1 + 1, &1 + 1})
 
-      if PadModel.get_data!(state, pad_ref, :uninterrupted_redemands) ==
-           @uninterrupted_redemands_warning_limit do
+      if uninterrupted_redemands == @uninterrupted_redemands_warning_limit do
         Membrane.Logger.warning("""
         This element has returned #{@uninterrupted_redemands_warning_limit} :redemand actions without any :buffer actions in between for pad #{inspect(pad_ref)}. \
         This can be an indication that the element is in an infinite handle_demand loop without actually supplying the demand.

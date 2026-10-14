@@ -59,7 +59,9 @@ defmodule Membrane.Core.Element.DemandController do
     atomic_value = AtomicDemand.get(pad_data.atomic_demand)
     state = PadModel.set_data!(state, pad_data.ref, :demand, atomic_value)
 
-    if atomic_value > 0 do
+    # The element gets uncorked only when the pad stops being satisfied, so
+    # there is nothing to pop or bump when it wasn't satisfied before
+    if atomic_value > 0 and MapSet.member?(state.satisfied_auto_output_pads, pad_data.ref) do
       state
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_data.ref))
       |> AutoFlowController.pop_queues_and_bump_demand()
@@ -97,32 +99,50 @@ defmodule Membrane.Core.Element.DemandController do
 
   @doc """
   Decreases demand snapshot and atomic demand on the output by the size of outgoing buffers.
+  Stores the given pad data (with updated demand fields) in the state and schedules
+  a snapshot of the atomic demand, if the demand on the pad might have been exhausted.
   """
-  @spec decrease_demand_by_outgoing_buffers(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
-  def decrease_demand_by_outgoing_buffers(pad_ref, buffers, state) do
-    pad_data = PadModel.get_data!(state, pad_ref)
-
+  @spec decrease_demand_by_outgoing_buffers(Pad.ref(), PadData.t(), [Buffer.t()], State.t()) ::
+          State.t()
+  def decrease_demand_by_outgoing_buffers(pad_ref, pad_data, buffers, state) do
     {:ok, buffers_size} =
       Membrane.Core.Element.ManualFlowController.BufferMetric.buffers_size(
         pad_data.demand_unit,
         buffers
       )
 
-    demand = pad_data.demand - buffers_size
     {decrease_result, atomic_demand} = AtomicDemand.decrease(pad_data.atomic_demand, buffers_size)
 
-    with {:decreased, new_value} when new_value <= 0 <- decrease_result,
-         %{flow_control: :auto} <- pad_data do
-      Map.update!(state, :satisfied_auto_output_pads, &MapSet.put(&1, pad_ref))
-    else
-      _other -> state
-    end
-    |> PadModel.set_data!(pad_ref, %{
-      pad_data
-      | demand: demand,
-        atomic_demand: atomic_demand,
-        uninterrupted_redemands: 0
-    })
+    {demand, state} =
+      case {pad_data.flow_control, decrease_result} do
+        {:auto, {:decreased, new_value}} when new_value <= 0 ->
+          {new_value, Map.update!(state, :satisfied_auto_output_pads, &MapSet.put(&1, pad_ref))}
+
+        {:auto, {:decreased, new_value}} ->
+          {new_value, state}
+
+        _other ->
+          {pad_data.demand - buffers_size, state}
+      end
+
+    snapshot? =
+      case pad_data.flow_control do
+        :auto -> MapSet.member?(state.satisfied_auto_output_pads, pad_ref)
+        :manual -> demand <= 0
+        :push -> false
+      end
+
+    state =
+      PadModel.set_data!(state, pad_ref, %{
+        pad_data
+        | demand: demand,
+          atomic_demand: atomic_demand,
+          uninterrupted_redemands: 0
+      })
+
+    if snapshot?,
+      do: %{state | pads_to_snapshot: MapSet.put(state.pads_to_snapshot, pad_ref)},
+      else: state
   end
 
   @spec exec_handle_demand(Pad.ref(), State.t()) :: State.t()
