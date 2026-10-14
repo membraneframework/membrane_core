@@ -119,8 +119,8 @@ packages =
       hex = Req.get!("https://hex.pm/api/packages/#{name}", decode_json: [keys: :atoms])
 
       hex_badge =
-        if hex.status == 200 and hex.body.url != nil do
-          "[![Hex.pm](https://img.shields.io/hexpm/v/#{name}.svg)](#{hex.body.url})"
+        if hex.status == 200 and hex.body.html_url != nil do
+          "[![Hex.pm](https://img.shields.io/hexpm/v/#{name}.svg)](#{hex.body.html_url})"
         end
 
       hexdocs_badge =
