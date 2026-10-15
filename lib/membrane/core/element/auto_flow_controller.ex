@@ -205,7 +205,7 @@ defmodule Membrane.Core.Element.AutoFlowController do
   defp increase_atomic_demand?(pad_data, state) do
     state.effective_flow_control == :pull and
       not pad_data.auto_demand_paused? and
-      pad_data.demand < pad_data.auto_demand_size / 2 and
+      pad_data.demand * 2 < pad_data.auto_demand_size and
       state.satisfied_auto_output_pads == @empty_map_set
   end
 
@@ -239,7 +239,7 @@ defmodule Membrane.Core.Element.AutoFlowController do
       pad_data = PadModel.get_data!(state, pad_ref)
 
       if not pad_data.auto_demand_paused? and
-           pad_data.demand < pad_data.auto_demand_size / 2 do
+           pad_data.demand * 2 < pad_data.auto_demand_size do
         diff = pad_data.auto_demand_size - pad_data.demand
         :ok = AtomicDemand.increase(pad_data.atomic_demand, diff)
 
@@ -265,7 +265,11 @@ defmodule Membrane.Core.Element.AutoFlowController do
   end
 
   defp pop_random_auto_flow_queue(state) do
-    pad_ref = Enum.random(state.awaiting_auto_input_pads)
+    pad_ref =
+      case MapSet.to_list(state.awaiting_auto_input_pads) do
+        [pad_ref] -> pad_ref
+        pad_refs -> Enum.random(pad_refs)
+      end
 
     state
     |> PadModel.get_data!(pad_ref, :auto_flow_queue)
