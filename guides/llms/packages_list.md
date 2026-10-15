@@ -143,7 +143,7 @@
 | [membrane_vp8_format](https://github.com/membraneframework/membrane_vp8_format) | VP8 Membrane format |
 | [membrane_vp9_format](https://github.com/membraneframework/membrane_vp9_format) | VP9 Membrane format |
 | [membrane_g711_format](https://github.com/membraneframework/membrane_g711_format) | Membrane Multimedia Framework: G711 audio format definition |
-| [membrane_av1_format](https://github.com/membraneframework/membrane_av1_format) | About Membrane Multimedia Framework: AV1 video format definition |
+| [membrane_av1_format](https://github.com/membraneframework/membrane_av1_format) | AV1 video format definition |
 | [membrane_h265_format](https://github.com/gBillal/membrane_h265_format) | [Maintainer: [gBillal](https://github.com/gBillal)] H265 video format definition |
 
 ### Standalone media libs
