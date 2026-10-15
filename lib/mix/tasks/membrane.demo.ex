@@ -3,7 +3,7 @@ defmodule Mix.Tasks.Membrane.Demo do
   @moduledoc """
   Download Membrane demos and examples. Requires `git` installed.
 
-    $ mix membrane.demo [-a] [-l] [-d <repo_dir>] [<demos> ...]
+    $ mix membrane.demo [-a] [-l] [-d <repo_path>] [<demos> ...]
 
   ## Options
   * `-l, --list` - List all demos available and their brief descriptions.
@@ -23,8 +23,6 @@ defmodule Mix.Tasks.Membrane.Demo do
     a: :all,
     d: :directory
   ]
-
-  @demos_search_list [".", "livebooks"]
 
   @demos_readme_url "https://raw.githubusercontent.com/membraneframework/membrane_demo/refs/heads/master/README.md"
   @demos_clone_url "https://github.com/membraneframework/membrane_demo.git"
@@ -51,11 +49,23 @@ defmodule Mix.Tasks.Membrane.Demo do
   end
 
   defp list_available_demos() do
-    {:ok, _apps} = Application.ensure_all_started(:req)
-    response = Req.get!(@demos_readme_url)
+    {:ok, _apps} = Application.ensure_all_started([:inets, :ssl])
 
+    case :httpc.request(:get, {~c"#{@demos_readme_url}", []}, [{:autoredirect, true}], []) do
+      {:ok, {{_version, 200, _reason}, _headers, body}} ->
+        fetch_demos_info(body)
+
+      {:ok, {{_version, status, reason}, _headers, _body}} ->
+        Mix.raise("Failed to fetch demos list: HTTP #{status} #{reason}")
+
+      {:error, reason} ->
+        Mix.raise("Failed to fetch demos list: #{inspect(reason)}")
+    end
+  end
+
+  defp fetch_demos_info(body) do
     demos_info =
-      response.body
+      List.to_string(body)
       |> String.split("\n")
       |> Enum.map(&Regex.named_captures(~r/^- \[(?<name>.*?)\]\(.*?\) - (?<description>.*)/, &1))
       |> Enum.filter(&(&1 != nil))
@@ -83,13 +93,13 @@ defmodule Mix.Tasks.Membrane.Demo do
   end
 
   defp copy_all_demos(target_dir) do
-    repo_dir = Path.join(target_dir, "membrane_demo")
-    execute_git_command(["clone", "-q", "--depth", "1", @demos_clone_url, repo_dir])
+    repo_path = Path.join(target_dir, "membrane_demo")
+    execute_git_command(["clone", "-q", "--depth", "1", @demos_clone_url, repo_path])
   end
 
   defp copy_specific_demos(target_dir, demos_names) do
-    repo_dir = Path.join(target_dir, "membrane_demo")
-    execute_git_command(["clone", "-q", "--depth", "1", "-n", @demos_clone_url, repo_dir])
+    repo_path = Path.join(target_dir, "membrane_demo")
+    execute_git_command(["clone", "-q", "--depth", "1", "-n", @demos_clone_url, repo_path])
 
     Enum.each(demos_names, fn demo_name ->
       case copy_demo(target_dir, demo_name) do
@@ -103,25 +113,20 @@ defmodule Mix.Tasks.Membrane.Demo do
       end
     end)
 
-    File.rm_rf!(repo_dir)
+    File.rm_rf!(repo_path)
   end
 
   defp copy_demo(target_dir, demo_name) do
-    repo_dir = Path.join(target_dir, "membrane_demo")
+    repo_path = Path.join(target_dir, "membrane_demo")
+    demo_path = Path.join(repo_path, demo_name)
 
-    Enum.reduce_while(@demos_search_list, :error, fn demo_dir, _status ->
-      demo_path = Path.join([repo_dir, demo_dir, demo_name])
+    execute_git_command(["sparse-checkout", "set", demo_name], repo_path)
+    execute_git_command(["checkout"], repo_path)
 
-      demo_name_path = if demo_dir == ".", do: demo_name, else: Path.join(demo_dir, demo_name)
-
-      execute_git_command(["sparse-checkout", "set", demo_name_path], repo_dir)
-      execute_git_command(["checkout"], repo_dir)
-
-      case File.cp_r(demo_path, Path.join(target_dir, Path.basename(demo_path))) do
-        {:ok, _files} -> {:halt, :ok}
-        {:error, :enoent, _dir} -> {:cont, :error}
-      end
-    end)
+    case File.cp_r(demo_path, Path.join(target_dir, demo_name)) do
+      {:ok, _files} -> :ok
+      {:error, :enoent, _dir} -> :error
+    end
   end
 
   defp execute_git_command(argv, dir \\ ".") do

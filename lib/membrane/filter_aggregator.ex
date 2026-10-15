@@ -178,6 +178,9 @@ defmodule Membrane.FilterAggregator do
           next_actions_acc
         )
 
+      {[], next_state} ->
+        perform_actions(actions, module, context, next_state, next_actions_acc)
+
       {next_actions, next_state} when is_list(next_actions) ->
         next_actions = transform_out_actions(next_actions)
         next_context = Context.after_out_actions(context, next_actions)
@@ -185,9 +188,6 @@ defmodule Membrane.FilterAggregator do
         perform_actions(actions, module, next_context, next_state, [
           next_actions | next_actions_acc
         ])
-
-      {[], next_state} ->
-        perform_actions(actions, module, context, next_state, next_actions_acc)
 
       term ->
         raise "Invalid return from callback: #{inspect(term)}"

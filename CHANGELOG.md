@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.5
+* Make logs more specific about the reason when linking elements fails [#1167](https://github.com/membraneframework/membrane_core/pull/1167)
+
 ## 1.3.0
 * Make errors more descriptive [#1102](https://github.com/membraneframework/membrane_core/pull/1102)
 * Add `:broadcast` action for sending data to all output pads of an element

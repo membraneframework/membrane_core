@@ -6,7 +6,6 @@ defmodule Membrane.Core.Parent.ChildLifeController.StartupUtils do
   alias Membrane.Core.{CallbackHandler, Component, Message, Parent, SubprocessSupervisor}
   alias Membrane.Core.Parent.{ChildEntryParser, ChildLifeController}
 
-  require Membrane.Core.Component
   require Membrane.Core.Message
   require Membrane.Logger
 

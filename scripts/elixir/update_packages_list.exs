@@ -32,7 +32,7 @@ gh_auth_headers =
 
 # fetch repos from the known organizations
 repos =
-  ["membraneframework", "membraneframework-labs", "fishjam-dev"]
+  ["membraneframework", "membraneframework-labs"]
   |> Enum.flat_map(fn org ->
     Stream.from_index()
     |> Stream.map(fn page ->
@@ -72,7 +72,9 @@ packages_blacklist = [
   "github_actions_test",
   "membrane_ice_plugin",
   "membrane_webrtc_live",
-  "membrane_rtc_engine"
+  "membrane_rtc_engine",
+  "membrane_template_plugin_swm",
+  "membrane_actions"
 ]
 
 lacking_repos =
@@ -80,8 +82,7 @@ lacking_repos =
   |> Map.values()
   |> Enum.filter(fn repo ->
     repo.name not in package_names and
-      repo.owner.login in ["membraneframework", "fishjam-dev"] and
-      (repo.owner.login == "membraneframework" or repo.name =~ ~r/^membrane_.*/) and
+      repo.owner.login == "membraneframework" and
       not Enum.any?(packages_blacklist, fn name -> repo.name =~ name end)
   end)
 
@@ -119,8 +120,8 @@ packages =
       hex = Req.get!("https://hex.pm/api/packages/#{name}", decode_json: [keys: :atoms])
 
       hex_badge =
-        if hex.status == 200 and hex.body.url != nil do
-          "[![Hex.pm](https://img.shields.io/hexpm/v/#{name}.svg)](#{hex.body.url})"
+        if hex.status == 200 and hex.body.html_url != nil do
+          "[![Hex.pm](https://img.shields.io/hexpm/v/#{name}.svg)](#{hex.body.html_url})"
         end
 
       hexdocs_badge =

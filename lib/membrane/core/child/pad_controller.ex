@@ -5,8 +5,6 @@ defmodule Membrane.Core.Child.PadController do
   alias Membrane.Core.Parent.Link.Endpoint
   alias Membrane.{LinkError, Pad, PadError}
 
-  require Membrane.Core.Child.PadModel
-
   @type state :: Membrane.Core.Bin.State.t() | Membrane.Core.Element.State.t()
 
   @spec validate_pad_direction!(

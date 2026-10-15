@@ -81,38 +81,45 @@ defmodule Membrane.Integration.AutoDemandsTest do
   ]
   |> Enum.map(fn opts ->
     test "buffers pass through auto-demand filters; setup: #{inspect(opts)}" do
-      %{payloads: payloads, factor: factor, direction: direction, filters: filters} =
-        unquote(Macro.escape(opts))
-
-      mult_payloads =
-        Enum.flat_map(payloads, &Enum.map(1..Integer.pow(factor, filters), fn _i -> &1 end))
-
-      {in_payloads, out_payloads} =
-        if direction == :up,
-          do: {payloads, mult_payloads},
-          else: {mult_payloads, payloads}
-
-      filter = %ExponentialAutoFilter{factor: factor, direction: direction}
-
-      pipeline =
-        Pipeline.start_link_supervised!(
-          spec:
-            child(:source, %Source{output: in_payloads})
-            |> reduce_link(1..filters, &child(&1, {:filter, &2}, filter))
-            |> child(:sink, Sink)
-        )
-
-      Enum.each(out_payloads, fn payload ->
-        assert_sink_buffer(pipeline, :sink, buffer)
-        assert buffer.payload == payload
-      end)
-
-      assert_end_of_stream(pipeline, :sink)
-      refute_sink_buffer(pipeline, :sink, _buffer, 0)
-
-      Pipeline.terminate(pipeline)
+      opts = unquote(Macro.escape(opts))
+      test_auto_demand_filters(opts)
     end
   end)
+
+  defp test_auto_demand_filters(%{
+         payloads: payloads,
+         factor: factor,
+         direction: direction,
+         filters: filters
+       }) do
+    mult_payloads =
+      Enum.flat_map(payloads, &Enum.map(1..Integer.pow(factor, filters), fn _i -> &1 end))
+
+    {in_payloads, out_payloads} =
+      if direction == :up,
+        do: {payloads, mult_payloads},
+        else: {mult_payloads, payloads}
+
+    filter = %ExponentialAutoFilter{factor: factor, direction: direction}
+
+    pipeline =
+      Pipeline.start_link_supervised!(
+        spec:
+          child(:source, %Source{output: in_payloads})
+          |> reduce_link(1..filters, &child(&1, {:filter, &2}, filter))
+          |> child(:sink, Sink)
+      )
+
+    Enum.each(out_payloads, fn payload ->
+      assert_sink_buffer(pipeline, :sink, buffer)
+      assert buffer.payload == payload
+    end)
+
+    assert_end_of_stream(pipeline, :sink)
+    refute_sink_buffer(pipeline, :sink, _buffer, 0)
+
+    Pipeline.terminate(pipeline)
+  end
 
   test "buffers pass through auto-demand tee" do
     import Membrane.ChildrenSpec

@@ -4,7 +4,6 @@ defmodule Membrane.Core.LifecycleController do
   alias Membrane.Core.{Component, Message, Parent}
   alias Membrane.SetupError
 
-  require Membrane.Core.Message
   require Membrane.Logger
 
   @type setup_operation :: :incomplete | :complete

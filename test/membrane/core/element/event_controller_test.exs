@@ -7,8 +7,6 @@ defmodule Membrane.Core.Element.EventControllerTest do
   alias Membrane.Core.SubprocessSupervisor
   alias Membrane.Event
 
-  require Membrane.Core.Message
-
   defmodule MockEventHandlingElement do
     use Membrane.Filter
 

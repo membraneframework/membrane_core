@@ -8,7 +8,6 @@ defmodule Membrane.Core.Bin.ActionHandler do
   alias Membrane.Core.{Message, Parent, TimerController}
 
   require Membrane.Logger
-  require Message
 
   @impl CallbackHandler
   def handle_action({:spec, args}, _cb, _params, %State{terminating?: true}) do

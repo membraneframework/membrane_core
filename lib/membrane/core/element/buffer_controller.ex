@@ -24,7 +24,6 @@ defmodule Membrane.Core.Element.BufferController do
   alias Membrane.Core.Telemetry
 
   require Membrane.Core.Child.PadModel
-  require Membrane.Core.Telemetry, as: Telemetry
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
   @doc """
