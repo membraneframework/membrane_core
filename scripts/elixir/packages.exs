@@ -126,6 +126,7 @@
   "ex_hls",
   "ex_libsrt",
   "ex_moq",
+  "stream-doctor",
   "membrane_rtsp",
   "membrane_ffmpeg_generator",
   {:section, "Utils"},

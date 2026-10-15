@@ -74,13 +74,8 @@ packages_blacklist = [
   "membrane_webrtc_live",
   "membrane_rtc_engine",
   "membrane_template_plugin_swm",
-  "membrane_gemini_demo",
   "membrane_actions",
-  "actions-and-CI-tests",
-  "ex_kamailio",
-  "ex_moq_relay",
-  "stream-doctor",
-  "brrr"
+  "ex_kamailio"
 ]
 
 lacking_repos =
