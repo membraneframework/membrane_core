@@ -70,7 +70,7 @@ Membrane Multimedia Framework: G711 audio format definition
 [![Hex.pm](https://img.shields.io/hexpm/v/membrane_g711_format.svg)](https://hex.pm/api/packages/membrane_g711_format) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_g711_format/) [![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](https://github.com/membraneframework/membrane_g711_format)
 
 ## membrane_av1_format
-About Membrane Multimedia Framework: AV1 video format definition
+AV1 video format definition
 
 [![Hex.pm](https://img.shields.io/hexpm/v/membrane_av1_format.svg)](https://hex.pm/api/packages/membrane_av1_format) [![Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_av1_format/) [![GitHub](https://img.shields.io/badge/github-code-white.svg?logo=github)](https://github.com/membraneframework/membrane_av1_format)
 
