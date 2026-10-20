@@ -22,6 +22,7 @@ defmodule Membrane.Core.Element do
   alias Membrane.Core.Child.PadSpecHandler
 
   alias Membrane.Core.Element.{
+    BufferBatcher,
     BufferController,
     DemandController,
     DiamondDetectionController,
@@ -176,12 +177,14 @@ defmodule Membrane.Core.Element do
   @impl GenServer
   def handle_call(request, from, state) do
     Utils.log_on_error do
-      do_handle_call(request, from, state)
+      {reply, state} = do_handle_call(request, from, state)
+      state = BufferBatcher.flush(state)
+      {:reply, reply, state}
     end
   end
 
   defp do_handle_call(Message.new(:get_clock), _from, state) do
-    {:reply, state.synchronization.clock, state}
+    {state.synchronization.clock, state}
   end
 
   defp do_handle_call(
@@ -189,17 +192,16 @@ defmodule Membrane.Core.Element do
          _from,
          state
        ) do
-    {reply, state} = PadController.handle_link(direction, this, other, params, state)
-    {:reply, reply, state}
+    PadController.handle_link(direction, this, other, params, state)
   end
 
   defp do_handle_call(Message.new(:set_stream_sync, sync), _from, state) do
     state = put_in(state.synchronization.stream_sync, sync)
-    {:reply, :ok, state}
+    {:ok, state}
   end
 
   defp do_handle_call(Message.new(:get_child_pid, _child_name), _from, state) do
-    {:reply, {:error, :element_cannot_have_children}, state}
+    {{:error, :element_cannot_have_children}, state}
   end
 
   defp do_handle_call(message, {pid, _tag}, _state) do
@@ -212,58 +214,51 @@ defmodule Membrane.Core.Element do
     Utils.log_on_error do
       Telemetry.report_queue_len(self())
 
-      do_handle_info(message, state)
+      state = do_handle_info(message, state)
+      state = BufferBatcher.flush(state)
+      {:noreply, state}
     end
   end
 
   @compile {:inline, do_handle_info: 2}
 
   defp do_handle_info(Message.new(:atomic_demand_increased, pad_ref), state) do
-    state = DemandController.snapshot_atomic_demand(pad_ref, state)
-    {:noreply, state}
+    DemandController.snapshot_atomic_demand(pad_ref, state)
   end
 
   defp do_handle_info(Message.new(:resume_delayed_demands_loop), state) do
-    state = ManualFlowController.resume_delayed_demands_loop(state)
-    {:noreply, state}
+    ManualFlowController.resume_delayed_demands_loop(state)
   end
 
   defp do_handle_info(Message.new(:buffer, buffers, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
-    state = BufferController.handle_incoming_buffers(pad_ref, buffers, state)
-    {:noreply, state}
+    BufferController.handle_incoming_buffers(pad_ref, buffers, state)
   end
 
   defp do_handle_info(Message.new(:stream_format, stream_format, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
-    state = StreamFormatController.handle_stream_format(pad_ref, stream_format, state)
-    {:noreply, state}
+    StreamFormatController.handle_stream_format(pad_ref, stream_format, state)
   end
 
   defp do_handle_info(Message.new(:event, event, _opts) = msg, state) do
     pad_ref = Message.for_pad(msg)
-    state = EventController.handle_event(pad_ref, event, state)
-    {:noreply, state}
+    EventController.handle_event(pad_ref, event, state)
   end
 
   defp do_handle_info(Message.new(:play), state) do
-    state = LifecycleController.handle_playing(state)
-    {:noreply, state}
+    LifecycleController.handle_playing(state)
   end
 
   defp do_handle_info(Message.new(:handle_unlink, pad_ref), state) do
-    state = PadController.handle_unlink(pad_ref, state)
-    {:noreply, state}
+    PadController.handle_unlink(pad_ref, state)
   end
 
   defp do_handle_info(Message.new(:timer_tick, timer_id), state) do
-    state = TimerController.handle_tick(timer_id, state)
-    {:noreply, state}
+    TimerController.handle_tick(timer_id, state)
   end
 
   defp do_handle_info(Message.new(:parent_notification, notification), state) do
-    state = Core.Child.LifecycleController.handle_parent_notification(notification, state)
-    {:noreply, state}
+    Core.Child.LifecycleController.handle_parent_notification(notification, state)
   end
 
   defp do_handle_info(
@@ -273,24 +268,19 @@ defmodule Membrane.Core.Element do
          ]),
          state
        ) do
-    state =
-      EffectiveFlowController.handle_sender_effective_flow_control(
-        input_pad_ref,
-        effective_flow_control,
-        state
-      )
-
-    {:noreply, state}
+    EffectiveFlowController.handle_sender_effective_flow_control(
+      input_pad_ref,
+      effective_flow_control,
+      state
+    )
   end
 
   defp do_handle_info(Message.new(:diamond_detection, message), state) do
-    state = DiamondDetectionController.handle_diamond_detection_message(message, state)
-    {:noreply, state}
+    DiamondDetectionController.handle_diamond_detection_message(message, state)
   end
 
   defp do_handle_info(Message.new(:terminate), state) do
-    state = LifecycleController.handle_terminate_request(state)
-    {:noreply, state}
+    LifecycleController.handle_terminate_request(state)
   end
 
   defp do_handle_info(Message.new(_type, _args, _opts) = message, _state) do
@@ -298,12 +288,10 @@ defmodule Membrane.Core.Element do
   end
 
   defp do_handle_info({:membrane_clock_ratio, clock, ratio}, state) do
-    state = TimerController.handle_clock_update(clock, ratio, state)
-    {:noreply, state}
+    TimerController.handle_clock_update(clock, ratio, state)
   end
 
   defp do_handle_info(message, state) do
-    state = LifecycleController.handle_info(message, state)
-    {:noreply, state}
+    LifecycleController.handle_info(message, state)
   end
 end

@@ -21,6 +21,7 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   alias Membrane.Core.Element.{
     AutoFlowController,
+    BufferBatcher,
     DemandController,
     ManualFlowController,
     State,
@@ -75,6 +76,15 @@ defmodule Membrane.Core.Element.ActionHandler do
     |> Enum.shuffle()
     |> Enum.reduce(state, &DemandController.snapshot_atomic_demand/2)
     |> Map.put(:pads_to_snapshot, MapSet.new())
+  end
+
+  @buffer_batching_transparent_actions [:buffer, :split, :forward, :broadcast]
+
+  @impl CallbackHandler
+  def handle_action({name, _args} = action, cb, params, state)
+      when state.buffer_batch != nil and name not in @buffer_batching_transparent_actions do
+    state = BufferBatcher.flush(state)
+    handle_action(action, cb, params, state)
   end
 
   @impl CallbackHandler
@@ -421,10 +431,6 @@ defmodule Membrane.Core.Element.ActionHandler do
   end
 
   defp send_buffer(pad_ref, buffers, state) when is_list(buffers) do
-    Membrane.Logger.debug_verbose(
-      "Sending #{length(buffers)} buffer(s) through pad #{inspect(pad_ref)}"
-    )
-
     LegacyTelemetry.report_bitrate(buffers)
     Telemetry.report_buffer(buffers)
 
@@ -439,14 +445,12 @@ defmodule Membrane.Core.Element.ActionHandler do
            direction: :output,
            end_of_stream?: false,
            stream_format: stream_format,
-           pid: pid,
-           other_ref: other_ref,
            stalker_metrics: stalker_metrics
          }
          when stream_format != nil <- pad_data do
       state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
       :atomics.add(stalker_metrics.total_buffers, 1, length(buffers))
-      Message.send(pid, :buffer, buffers, for_pad: other_ref)
+      state = BufferBatcher.store(pad_ref, buffers, state)
 
       PadModel.set_data!(state, pad_ref, :start_of_stream?, true)
       |> Map.update!(:pads_to_snapshot, &MapSet.put(&1, pad_ref))
