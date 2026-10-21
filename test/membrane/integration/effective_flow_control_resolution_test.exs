@@ -219,6 +219,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "toilet moves to the auto filter input when its effective flow control switches to :pull" do
     buffers_within_toilet_capacity = 150
     buffers_above_toilet_capacity = 1000
@@ -272,6 +273,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "effective_flow_control follows the linked pull inputs and buffers keep flowing" do
     push_batch_above_toilet_capacity = 1000
 
@@ -327,6 +329,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "buffers queued on a corked auto filter flow once its effective flow control switches to :push" do
     sink_queue_size = 10
     buffers_count = 50

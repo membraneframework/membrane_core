@@ -312,6 +312,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "one output pad without demand corks the tee until its sink demands" do
     tee_auto_demand_size = 400
     slow_sink_queue_size = 10
@@ -352,6 +353,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "handle removed branch" do
     tee_auto_demand_size = 400
     right_sink_queue_size = 100
@@ -380,6 +382,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "big batches flow through a corked auto filter only as far as the sink demands" do
     filter_auto_demand_size = 400
     batch_size = 500
@@ -423,6 +426,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "items queued on a corked auto input keep their order" do
     sink_queue_size = 5
     first_stream_format = %TestStreamFormat{id: 1}
@@ -482,6 +486,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "auto output pad linked while playing corks the tee until the new sink demands" do
     tee_auto_demand_size = 400
     sink_a_queue_size = 100
@@ -527,6 +532,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "auto output pad linked while playing corks the tee while its sink does not demand" do
     tee_auto_demand_size = 400
     sink_a_queue_size = 100
@@ -566,6 +572,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "auto input pad linked to a funnel while playing is demanded" do
     buffers_before_link = 50
     buffers_after_link = 50
@@ -605,6 +612,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "pausing auto demand on one input stops only that input until it is resumed" do
     paused_pad_auto_demand_size = 20
     payloads_count = 300
@@ -645,6 +653,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "pausing auto demand on a corked input still delivers its queued buffers" do
     filter_auto_demand_size = 400
     sink_queue_size = 10
@@ -685,6 +694,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "auto sink blocked in handle_buffer bounds the production of a manual source" do
     sink_auto_demand_size = 50
     payloads_count = 300
@@ -718,6 +728,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "end of stream on the undemanded output uncorks the other output" do
     tee_auto_demand_size = 400
     sink_b_queue_size = 10
@@ -754,6 +765,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "unlinking an auto input with queued buffers keeps the other input's stream in order" do
     sink_queue_size = 10
     payloads_count = 300
@@ -795,6 +807,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "queued buffers wait while another output pad is still undemanded" do
     tee_auto_demand_size = 400
     sink_queue_size = 10
@@ -842,6 +855,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "resuming auto demand on a corked element does not demand on its input" do
     filter_auto_demand_size = 50
     produced_before_corking = 2 * filter_auto_demand_size
@@ -888,6 +902,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "auto input pad re-demands exactly its auto_demand_size" do
     sink_auto_demand_size = 50
     payloads_count = 1000

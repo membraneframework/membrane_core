@@ -230,6 +230,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "toilet with custom capacity overflows exactly when the capacity is exceeded" do
     toilet_capacity = 50
     target_queue_size = 10
@@ -262,6 +263,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "throttling factor delays the toilet overflow until the decrement is flushed" do
     toilet_capacity = 50
     target_queue_size = 10
@@ -294,6 +296,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "toilet overflow kills the receiver of the push link, not the elements downstream" do
     toilet_capacity = 50
     auto_demand_size = 10
@@ -339,6 +342,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "toilet never overflows when the sender works in pull mode" do
     spec = [
       {child(:sink, %Testing.Sink{autodemand: false}),
@@ -362,6 +366,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "demands in uneven chunks pass through alternating auto and manual filters" do
     buffers_count = 2000
     demand_chunks = [1, 7, 100, 3, 500, 1389]
@@ -394,6 +399,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "toilet capacity in bytes counts the payload sizes" do
     toilet_capacity = 100
     target_queue_size = 10
@@ -419,6 +425,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "sink demanding in bytes through auto filters receives exactly the demanded bytes" do
     buffers_count = 10
     <<payload_3_head::binary-size(4), payload_3_tail::binary-size(4)>> = <<3::64>>

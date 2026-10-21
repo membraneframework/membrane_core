@@ -598,6 +598,7 @@ defmodule Membrane.Integration.DemandsTest do
     defstruct []
   end
 
+  @tag :vibe_coded
   test "many single-buffer demands deliver exactly one buffer each" do
     spec =
       child(:source, Source)
@@ -624,6 +625,7 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "end of stream waits until all buffers preceding it are demanded" do
     payloads = Enum.to_list(1..30)
 
@@ -647,6 +649,7 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "manual input queues with small target sizes bound the production of the source" do
     target_queue_size = 10
     filters_count = 3
@@ -685,6 +688,7 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "demands in bytes split buffers across demands" do
     target_queue_size = 4
 
@@ -721,6 +725,7 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "demand altering function changes the pending demand" do
     spec =
       child(:source, Source)
@@ -748,6 +753,7 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "source redemanding after every single buffer delivers the whole stream" do
     buffers_count = 3000
 
@@ -763,6 +769,7 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "handle_demand is not called while the demand is overestimated" do
     target_queue_size = 20
     surplus = 5
@@ -791,6 +798,7 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "manual input queue tops up by at least half of its target size" do
     target_queue_size = 10
     min_top_up = div(target_queue_size, 2)
@@ -830,6 +838,7 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "redemand returned along with end of stream does not call handle_demand again" do
     spec =
       child(:source, RedemandingOnEndOfStreamSource)
@@ -844,6 +853,7 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "events and stream formats keep their order in the manual input queue" do
     spec =
       child(:source, ActionsSource)
@@ -882,6 +892,7 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "demand returned from handle_end_of_stream does not crash the element" do
     payloads = Enum.to_list(1..10)
 

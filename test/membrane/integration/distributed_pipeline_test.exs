@@ -60,6 +60,7 @@ defmodule Membrane.Integration.DistributedPipelineTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "manual demands are supplied across nodes", context do
     payloads_count = 2000
     demands = [1, 10, 500, 1489]
@@ -89,6 +90,7 @@ defmodule Membrane.Integration.DistributedPipelineTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "toilet across nodes overflows only after the throttled decrement is flushed", context do
     toilet_capacity = 100
     distributed_throttling_factor = 150
