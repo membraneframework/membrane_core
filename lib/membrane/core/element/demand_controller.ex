@@ -59,8 +59,6 @@ defmodule Membrane.Core.Element.DemandController do
     atomic_value = AtomicDemand.get(pad_data.atomic_demand)
     state = PadModel.set_data!(state, pad_data.ref, :demand, atomic_value)
 
-    # The element gets uncorked only when the pad stops being satisfied, so
-    # there is nothing to pop or bump when it wasn't satisfied before
     if atomic_value > 0 and MapSet.member?(state.satisfied_auto_output_pads, pad_data.ref) do
       state
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_data.ref))
@@ -98,13 +96,13 @@ defmodule Membrane.Core.Element.DemandController do
   end
 
   @doc """
-  Decreases demand snapshot and atomic demand on the output by the size of outgoing buffers.
-  Stores the given pad data (with updated demand fields) in the state and schedules
-  a snapshot of the atomic demand, if the demand on the pad might have been exhausted.
+  Decreases demand snapshot and atomic demand on the output by the size of outgoing buffers
+  and schedules a snapshot of the atomic demand, if the demand might have been exhausted.
   """
-  @spec decrease_demand_by_outgoing_buffers(Pad.ref(), PadData.t(), [Buffer.t()], State.t()) ::
-          State.t()
-  def decrease_demand_by_outgoing_buffers(pad_ref, pad_data, buffers, state) do
+  @spec decrease_demand_by_outgoing_buffers(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
+  def decrease_demand_by_outgoing_buffers(pad_ref, buffers, state) do
+    pad_data = PadModel.get_data!(state, pad_ref)
+
     {:ok, buffers_size} =
       Membrane.Core.Element.ManualFlowController.BufferMetric.buffers_size(
         pad_data.demand_unit,

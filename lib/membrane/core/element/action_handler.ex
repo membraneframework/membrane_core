@@ -50,11 +50,6 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_end_of_actions(state) do
-    # Fixed order of handling demand of manual and auto pads would lead to
-    # favoring manual pads over auto pads (or vice versa), especially after
-    # introducting auto flow queues. The order matters only when both kinds
-    # of demands are pending, so randomization is skipped otherwise.
-
     cond do
       state.pads_to_snapshot == @empty_map_set ->
         maybe_handle_delayed_demands(state)
@@ -64,15 +59,23 @@ defmodule Membrane.Core.Element.ActionHandler do
         |> handle_pads_to_snapshot()
         |> maybe_handle_delayed_demands()
 
-      Enum.random([true, false]) ->
-        state
-        |> handle_pads_to_snapshot()
-        |> maybe_handle_delayed_demands()
-
       true ->
-        state
-        |> maybe_handle_delayed_demands()
-        |> handle_pads_to_snapshot()
+        handle_pads_to_snapshot_and_delayed_demands_in_random_order(state)
+    end
+  end
+
+  # Fixed order of handling demand of manual and auto pads would lead to
+  # favoring manual pads over auto pads (or vice versa), especially after
+  # introducting auto flow queues.
+  defp handle_pads_to_snapshot_and_delayed_demands_in_random_order(state) do
+    if Enum.random([true, false]) do
+      state
+      |> handle_pads_to_snapshot()
+      |> maybe_handle_delayed_demands()
+    else
+      state
+      |> maybe_handle_delayed_demands()
+      |> handle_pads_to_snapshot()
     end
   end
 
@@ -420,7 +423,6 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  # Merges consecutive :buffer actions for the same pad into a single action
   defp join_buffers([]), do: []
   defp join_buffers([action]), do: [action]
 
@@ -472,14 +474,10 @@ defmodule Membrane.Core.Element.ActionHandler do
            stalker_metrics: stalker_metrics
          }
          when stream_format != nil <- pad_data do
-      pad_data = %{pad_data | start_of_stream?: true}
-
-      state =
-        DemandController.decrease_demand_by_outgoing_buffers(pad_ref, pad_data, buffers, state)
-
+      state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
       :atomics.add(stalker_metrics.total_buffers, 1, length(buffers))
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
-      state
+      mark_start_of_stream(pad_ref, pad_data, state)
     else
       %{direction: :input} ->
         raise PadDirectionError, action: :buffer, direction: :input, pad: pad_ref
@@ -497,6 +495,11 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp send_buffer(_pad_ref, invalid_value, _state) do
     raise ElementError, "Tried to send an invalid buffer #{inspect(invalid_value)}"
   end
+
+  defp mark_start_of_stream(_pad_ref, %{start_of_stream?: true}, state), do: state
+
+  defp mark_start_of_stream(pad_ref, _pad_data, state),
+    do: PadModel.set_data!(state, pad_ref, :start_of_stream?, true)
 
   @spec send_stream_format(Pad.ref(), StreamFormat.t(), State.t()) :: State.t()
   def send_stream_format(pad_ref, stream_format, state) do
