@@ -10,8 +10,7 @@ defmodule Membrane.Core.Element.CallbackContext do
   @spec from_state(Membrane.Core.Element.State.t(), optional_fields()) ::
           Membrane.Element.CallbackContext.t()
   def from_state(state, optional_fields \\ []) do
-    Map.new(optional_fields)
-    |> Map.merge(%{
+    context = %{
       pads: state.pads_data,
       clock: state.synchronization.clock,
       parent_clock: state.synchronization.parent_clock,
@@ -20,6 +19,11 @@ defmodule Membrane.Core.Element.CallbackContext do
       playback: state.playback,
       resource_guard: state.resource_guard,
       utility_supervisor: state.subprocess_supervisor
-    })
+    }
+
+    case optional_fields do
+      [] -> context
+      fields -> Enum.into(fields, context)
+    end
   end
 end

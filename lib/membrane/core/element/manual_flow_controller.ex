@@ -147,10 +147,12 @@ defmodule Membrane.Core.Element.ManualFlowController do
         %{state | handle_demand_loop_counter: 0}
 
       MapSet.size(state.delayed_demands) == 0 ->
-        %{state | handle_demand_loop_counter: 0}
+        if state.handle_demand_loop_counter == 0,
+          do: state,
+          else: %{state | handle_demand_loop_counter: 0}
 
       true ->
-        [{pad_ref, action} = entry] = Enum.take_random(state.delayed_demands, 1)
+        {pad_ref, action} = entry = take_random_delayed_demand(state.delayed_demands)
 
         state =
           state
@@ -161,6 +163,13 @@ defmodule Membrane.Core.Element.ManualFlowController do
           :supply -> supply_demand(pad_ref, state)
           :redemand -> handle_redemand(pad_ref, state)
         end
+    end
+  end
+
+  defp take_random_delayed_demand(delayed_demands) do
+    case MapSet.to_list(delayed_demands) do
+      [entry] -> entry
+      entries -> Enum.random(entries)
     end
   end
 

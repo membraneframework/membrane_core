@@ -2,6 +2,8 @@
 
 ## 1.3.5
 * Make logs more specific about the reason when linking elements fails [#1167](https://github.com/membraneframework/membrane_core/pull/1167)
+* Reduce per-buffer overhead of the element hot path (demand snapshots, randomisation, telemetry metadata, action joining)
+
 
 ## 1.3.0
 * Make errors more descriptive [#1102](https://github.com/membraneframework/membrane_core/pull/1102)
