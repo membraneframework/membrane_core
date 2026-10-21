@@ -31,6 +31,7 @@ defmodule Membrane.Integration.FunnelTest do
     Membrane.Pipeline.terminate(pipeline)
   end
 
+  @tag :vibe_coded
   test "Sends NewInputEvent when an input is linked while playing" do
     import Membrane.ChildrenSpec
 
