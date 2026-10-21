@@ -450,7 +450,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
           stream_format: {:output, second_stream_format}
         ] ++
         Enum.map(11..20, &{:buffer, {:output, %Buffer{payload: &1}}}) ++
-        [event: {:output, second_event}]
+        [event: {:output, second_event}, end_of_stream: :output]
 
     Enum.each(source_actions, &Pipeline.notify_child(pipeline, :source, [&1]))
 
@@ -460,7 +460,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     handled_after_demand =
       Enum.map((sink_queue_size + 1)..10, &{:buffer, &1}) ++
         [{:event, first_event}, {:stream_format, second_stream_format}] ++
-        Enum.map(11..20, &{:buffer, &1}) ++ [{:event, second_event}]
+        Enum.map(11..20, &{:buffer, &1}) ++ [{:event, second_event}, :end_of_stream]
 
     assert_notified_in_order(pipeline, :filter, handled_before_demand)
     refute_pipeline_notified(pipeline, :filter, _notification, 300)
@@ -477,43 +477,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
       [:start_of_stream] ++ Enum.map(1..sink_queue_size, &{:buffer, &1}) ++ handled_after_demand
     )
 
-    Pipeline.terminate(pipeline)
-  end
-
-  test "end of stream queued on a corked auto input is handled after the queued buffers" do
-    sink_queue_size = 10
-    source_batch_size = sink_queue_size
-    payloads_count = 300
-
-    pipeline =
-      Pipeline.start_link_supervised!(
-        spec:
-          child(:source, batched_source(1..payloads_count, source_batch_size))
-          |> child(:filter, NotifyingAutoFilter)
-          |> via_in(:input, target_queue_size: sink_queue_size)
-          |> child(:sink, %Sink{autodemand: false})
-      )
-
-    assert_pipeline_notified(pipeline, :filter, :playing)
-
-    assert_notified_in_order(
-      pipeline,
-      :filter,
-      [{:stream_format, %Membrane.RemoteStream{}}] ++
-        Enum.map(1..sink_queue_size, &{:buffer, &1})
-    )
-
-    refute_pipeline_notified(pipeline, :filter, _notification, 300)
-
-    Pipeline.notify_child(pipeline, :sink, {:make_demand, 2 * payloads_count})
-
-    assert_notified_in_order(
-      pipeline,
-      :filter,
-      Enum.map((sink_queue_size + 1)..payloads_count, &{:buffer, &1}) ++ [:end_of_stream]
-    )
-
-    assert_sink_payloads(pipeline, :sink, 1..payloads_count)
     assert_end_of_stream(pipeline, :sink)
 
     Pipeline.terminate(pipeline)

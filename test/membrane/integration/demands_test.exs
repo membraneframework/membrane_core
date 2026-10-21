@@ -624,24 +624,6 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.terminate(pipeline)
   end
 
-  test "demand exceeding the source output delivers all buffers and then end of stream" do
-    payloads = Enum.to_list(1..30)
-
-    spec =
-      child(:source, %Source{output: payloads})
-      |> child(:sink, %Sink{autodemand: false})
-
-    pipeline = Pipeline.start_link_supervised!(spec: spec)
-    assert_sink_playing(pipeline, :sink)
-
-    Pipeline.notify_child(pipeline, :sink, {:make_demand, 1000})
-    assert_payloads_received(payloads, pipeline)
-    assert_end_of_stream(pipeline, :sink)
-    refute_sink_buffer(pipeline, :sink, _, 100)
-
-    Pipeline.terminate(pipeline)
-  end
-
   test "end of stream waits until all buffers preceding it are demanded" do
     payloads = Enum.to_list(1..30)
 

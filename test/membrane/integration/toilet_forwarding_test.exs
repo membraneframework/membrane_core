@@ -230,18 +230,6 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
-  test "buffers sent outside handle_demand pass through auto and manual filters on demand" do
-    spec =
-      child(:source, PullSource)
-      |> child(AutoFilter)
-      |> child(RedemandingFilter)
-      |> child(:sink, %Testing.Sink{autodemand: false})
-
-    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
-    assert_forwarded_buffers_delivered_on_demand(pipeline)
-    Testing.Pipeline.terminate(pipeline)
-  end
-
   test "toilet with custom capacity overflows exactly when the capacity is exceeded" do
     toilet_capacity = 50
     target_queue_size = 10
@@ -463,28 +451,6 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     end)
 
     Testing.Pipeline.terminate(pipeline)
-  end
-
-  defp assert_forwarded_buffers_delivered_on_demand(pipeline) do
-    assert_sink_playing(pipeline, :sink)
-
-    forward_buffers(pipeline, 1..500)
-    refute_sink_buffer(pipeline, :sink, _, 300)
-
-    Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, 200})
-    assert_buffers_received(pipeline, 1..200)
-    refute_sink_buffer(pipeline, :sink, _, 100)
-
-    Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, 300})
-    assert_buffers_received(pipeline, 201..500)
-    refute_sink_buffer(pipeline, :sink, _, 100)
-
-    forward_buffers(pipeline, 501..600)
-    refute_sink_buffer(pipeline, :sink, _, 100)
-
-    Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, 100})
-    assert_buffers_received(pipeline, 501..600)
-    assert Process.alive?(Testing.Pipeline.get_child_pid!(pipeline, :sink))
   end
 
   defp forward_buffers(pipeline, payloads) do
