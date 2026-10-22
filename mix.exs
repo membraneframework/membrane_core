@@ -5,6 +5,12 @@ defmodule Membrane.Mixfile do
   @source_ref "v#{@version}"
   @hex_packages_path "scripts/elixir/hex_packages.exs"
 
+  # Cookieless page-view analytics for the published docs, see CONTRIBUTING.md.
+  # Set `@analytics_endpoint` to the base URL of the Membrane Plausible instance
+  # (for example "https://analytics.membrane.stream") to enable them.
+  @analytics_domain "membrane-core.hexdocs.pm"
+  @analytics_endpoint nil
+
   def project do
     [
       app: :membrane_core,
@@ -90,7 +96,8 @@ defmodule Membrane.Mixfile do
         "guides/membrane_tutorials/h264/assets" => "assets",
         "guides/membrane_tutorials/broadcasting/assets" => "assets",
         "guides/membrane_tutorials/glossary/assets" => "assets",
-        "guides/useful_concepts/assets" => "assets"
+        "guides/useful_concepts/assets" => "assets",
+        "guides/assets/analytics" => "assets/analytics"
       },
       nest_modules_by_prefix: [
         Membrane.Bin,
@@ -109,7 +116,8 @@ defmodule Membrane.Mixfile do
       ],
       groups_for_modules: groups_for_modules(),
       groups_for_extras: groups_for_extras(),
-      before_closing_head_tag: &before_closing_head_tag/1
+      before_closing_head_tag: &before_closing_head_tag/1,
+      before_closing_body_tag: &before_closing_body_tag/1
     ]
   end
 
@@ -124,6 +132,14 @@ defmodule Membrane.Mixfile do
   end
 
   defp before_closing_head_tag(_format), do: ""
+
+  defp before_closing_body_tag(:html) when is_binary(@analytics_endpoint) do
+    """
+    <script defer data-domain="#{@analytics_domain}" data-api="#{@analytics_endpoint}/api/event" src="assets/analytics/plausible.js"></script>
+    """
+  end
+
+  defp before_closing_body_tag(_format), do: ""
 
   defp packages_in_ecosystem do
     {packages, _bindings} = Code.eval_file(@hex_packages_path)
