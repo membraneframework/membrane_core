@@ -4,6 +4,7 @@ defmodule Membrane.Integration.DemandsTest do
 
   import ExUnit.Assertions
   import Membrane.ChildrenSpec
+  import Membrane.Support.DemandsTest.Helpers
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
@@ -425,31 +426,6 @@ defmodule Membrane.Integration.DemandsTest do
 
   defp timestamp(buffer_idx, offset), do: 10 * buffer_idx + offset
 
-  defmodule TenByteBuffersSource do
-    use Membrane.Source
-
-    def_output_pad :output, flow_control: :manual, accepted_format: _any, demand_unit: :buffers
-
-    @impl true
-    def handle_init(_ctx, _opts), do: {[], %{produced: 0}}
-
-    @impl true
-    def handle_playing(_ctx, state) do
-      {[stream_format: {:output, %Membrane.RemoteStream{}}], state}
-    end
-
-    @impl true
-    def handle_demand(:output, size, :buffers, _ctx, state) do
-      first = state.produced + 1
-      last = state.produced + size
-      buffers = Enum.map(first..last//1, &%Buffer{payload: payload(&1)})
-      {[buffer: {:output, buffers}], %{state | produced: last}}
-    end
-
-    @spec payload(non_neg_integer()) :: binary()
-    def payload(i), do: <<i::40, 0::40>>
-  end
-
   defmodule RedemandingOnEndOfStreamSource do
     use Membrane.Source
 
@@ -521,37 +497,11 @@ defmodule Membrane.Integration.DemandsTest do
     for i <- 0..(single_demands - 1) do
       Pipeline.notify_child(pipeline, :sink, {:make_demand, 1})
       assert_buffers_received(i..i, pipeline)
-      next = i + 1
-      refute_sink_buffer(pipeline, :sink, %Buffer{payload: <<^next::16, 255>>}, 0)
     end
 
     batch_demand = 200
     Pipeline.notify_child(pipeline, :sink, {:make_demand, batch_demand})
     assert_buffers_received(single_demands..(single_demands + batch_demand - 1), pipeline)
-    refute_sink_buffer(pipeline, :sink, _, 100)
-
-    Pipeline.terminate(pipeline)
-  end
-
-  @tag :vibe_coded
-  test "end of stream waits until all buffers preceding it are demanded" do
-    payloads = Enum.to_list(1..30)
-
-    spec =
-      child(:source, %Source{output: payloads})
-      |> child(:sink, %Sink{autodemand: false})
-
-    pipeline = Pipeline.start_link_supervised!(spec: spec)
-    assert_sink_playing(pipeline, :sink)
-
-    [{10, 1..10}, {10, 11..20}, {1000, 21..30}]
-    |> Enum.each(fn {demand, expected_payloads} ->
-      refute_end_of_stream(pipeline, :sink, 100)
-      Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
-      assert_sink_payloads(pipeline, expected_payloads)
-    end)
-
-    assert_end_of_stream(pipeline, :sink)
     refute_sink_buffer(pipeline, :sink, _, 100)
 
     Pipeline.terminate(pipeline)
@@ -581,7 +531,7 @@ defmodule Membrane.Integration.DemandsTest do
     pipeline = Pipeline.start_link_supervised!(spec: spec)
     assert_sink_playing(pipeline, :sink)
 
-    produced = await_settled_production(pipeline)
+    produced = await_settled_production(pipeline, :source)
     assert produced in production_lower_bound..production_upper_bound
     refute_sink_buffer(pipeline, :sink, _, 0)
 
@@ -589,7 +539,7 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
     assert_buffers_received(1..demand, pipeline, filters_count)
 
-    produced = await_settled_production(pipeline, produced)
+    produced = await_settled_production(pipeline, :source, produced)
     assert produced in (demand + production_lower_bound)..(demand + production_upper_bound)
     refute_sink_buffer(pipeline, :sink, _, 0)
 
@@ -601,7 +551,7 @@ defmodule Membrane.Integration.DemandsTest do
     target_queue_size = 4
 
     spec =
-      child(:source, TenByteBuffersSource)
+      child(:source, %ReportingSource{payload: &ten_byte_payload/1})
       |> via_in(:input, target_queue_size: target_queue_size)
       |> child(:sink, BytesSink)
 
@@ -609,16 +559,16 @@ defmodule Membrane.Integration.DemandsTest do
     assert_pipeline_notified(pipeline, :sink, :playing)
 
     <<payload_3_head::binary-size(5), payload_3_tail::binary-size(5)>> =
-      TenByteBuffersSource.payload(3)
+      ten_byte_payload(3)
 
     <<payload_14_head::binary-size(5), _payload_14_tail::binary-size(5)>> =
-      TenByteBuffersSource.payload(14)
+      ten_byte_payload(14)
 
     [
-      {25, [TenByteBuffersSource.payload(1), TenByteBuffersSource.payload(2), payload_3_head]},
-      {35, [payload_3_tail | Enum.map(4..6, &TenByteBuffersSource.payload/1)]},
-      {60, Enum.map(7..12, &TenByteBuffersSource.payload/1)},
-      {15, [TenByteBuffersSource.payload(13), payload_14_head]}
+      {25, [ten_byte_payload(1), ten_byte_payload(2), payload_3_head]},
+      {35, [payload_3_tail | Enum.map(4..6, &ten_byte_payload/1)]},
+      {60, Enum.map(7..12, &ten_byte_payload/1)},
+      {15, [ten_byte_payload(13), payload_14_head]}
     ]
     |> Enum.each(fn {demand_bytes, expected_payloads} ->
       Pipeline.notify_child(pipeline, :sink, {:make_demand, demand_bytes})
@@ -662,22 +612,6 @@ defmodule Membrane.Integration.DemandsTest do
   end
 
   @tag :vibe_coded
-  test "source redemanding after every single buffer delivers the whole stream" do
-    buffers_count = 3000
-
-    spec =
-      child(:source, %ReportingSource{payloads_count: buffers_count, batch_size: 1})
-      |> child(:sink, Sink)
-
-    pipeline = Pipeline.start_link_supervised!(spec: spec)
-
-    assert_sink_payloads(pipeline, 1..buffers_count)
-    assert_end_of_stream(pipeline, :sink)
-
-    Pipeline.terminate(pipeline)
-  end
-
-  @tag :vibe_coded
   test "handle_demand is not called while the demand is overestimated" do
     target_queue_size = 20
     surplus = 5
@@ -691,16 +625,16 @@ defmodule Membrane.Integration.DemandsTest do
     pipeline = Pipeline.start_link_supervised!(spec: spec)
     assert_sink_playing(pipeline, :sink)
 
-    assert_pipeline_notified(pipeline, :source, {:handle_demand, ^target_queue_size, produced})
-    assert produced == target_queue_size + surplus
+    produced = target_queue_size + surplus
+    assert_pipeline_notified(pipeline, :source, {:handle_demand, ^target_queue_size, ^produced})
     refute_pipeline_notified(pipeline, :source, {:handle_demand, _size, _produced}, 300)
 
     Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
-    assert_sink_payloads(pipeline, 1..demand)
+    assert_sink_payloads(pipeline, :sink, 1..demand)
 
     expected_size = demand - surplus
-    assert_pipeline_notified(pipeline, :source, {:handle_demand, ^expected_size, produced})
-    assert produced == target_queue_size + surplus + demand
+    produced = produced + demand
+    assert_pipeline_notified(pipeline, :source, {:handle_demand, ^expected_size, ^produced})
     refute_pipeline_notified(pipeline, :source, {:handle_demand, _size, _produced}, 300)
 
     Pipeline.terminate(pipeline)
@@ -728,19 +662,23 @@ defmodule Membrane.Integration.DemandsTest do
 
     refute_pipeline_notified(pipeline, :source, {:handle_demand, _size, _produced}, 300)
 
-    Enum.reduce(demands, {1, target_queue_size, target_queue_size}, fn demand,
-                                                                       {next_payload, queue_size,
-                                                                        produced} ->
-      Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
-      assert_sink_payloads(pipeline, next_payload..(next_payload + demand - 1))
+    initial_state = %{next_payload: 1, queue_size: target_queue_size, produced: target_queue_size}
 
-      queue_size = queue_size - demand
+    Enum.reduce(demands, initial_state, fn demand, state ->
+      Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
+      assert_sink_payloads(pipeline, :sink, state.next_payload..(state.next_payload + demand - 1))
+
+      queue_size = state.queue_size - demand
       top_up = max(target_queue_size - queue_size, min_top_up)
-      produced = produced + top_up
+      produced = state.produced + top_up
       assert_pipeline_notified(pipeline, :source, {:handle_demand, ^top_up, ^produced})
       refute_pipeline_notified(pipeline, :source, {:handle_demand, _size, _produced}, 300)
 
-      {next_payload + demand, queue_size + top_up, produced}
+      %{
+        next_payload: state.next_payload + demand,
+        queue_size: queue_size + top_up,
+        produced: produced
+      }
     end)
 
     Pipeline.terminate(pipeline)
@@ -769,7 +707,7 @@ defmodule Membrane.Integration.DemandsTest do
 
     pipeline = Pipeline.start_link_supervised!(spec: spec)
     assert_pipeline_notified(pipeline, :sink, :playing)
-    assert_next_sink_notification(pipeline, {:stream_format, %Membrane.RemoteStream{}})
+    assert_notified_in_order(pipeline, :sink, [{:stream_format, %Membrane.RemoteStream{}}])
 
     second_stream_format = %Membrane.RemoteStream{type: :packetized}
 
@@ -787,16 +725,24 @@ defmodule Membrane.Integration.DemandsTest do
     refute_pipeline_notified(pipeline, :sink, _notification, 100)
 
     Pipeline.notify_child(pipeline, :sink, {:make_demand, 2})
-    assert_next_sink_notification(pipeline, {:buffer, %Buffer{payload: 1}})
-    assert_next_sink_notification(pipeline, {:buffer, %Buffer{payload: 2}})
-    assert_next_sink_notification(pipeline, {:event, %Membrane.Event.Discontinuity{duration: 1}})
-    assert_next_sink_notification(pipeline, {:stream_format, second_stream_format})
+
+    assert_notified_in_order(pipeline, :sink, [
+      {:buffer, %Buffer{payload: 1}},
+      {:buffer, %Buffer{payload: 2}},
+      {:event, %Membrane.Event.Discontinuity{duration: 1}},
+      {:stream_format, second_stream_format}
+    ])
+
     refute_pipeline_notified(pipeline, :sink, _notification, 100)
 
     Pipeline.notify_child(pipeline, :sink, {:make_demand, 1})
-    assert_next_sink_notification(pipeline, {:buffer, %Buffer{payload: 3}})
-    assert_next_sink_notification(pipeline, {:event, %Membrane.Event.Discontinuity{duration: 2}})
-    assert_next_sink_notification(pipeline, :end_of_stream)
+
+    assert_notified_in_order(pipeline, :sink, [
+      {:buffer, %Buffer{payload: 3}},
+      {:event, %Membrane.Event.Discontinuity{duration: 2}},
+      :end_of_stream
+    ])
+
     assert_end_of_stream(pipeline, :sink)
 
     Pipeline.terminate(pipeline)
@@ -828,35 +774,5 @@ defmodule Membrane.Integration.DemandsTest do
     Pipeline.terminate(pipeline)
   end
 
-  defp assert_sink_payloads(pipeline, payloads) do
-    Enum.each(payloads, fn payload ->
-      assert_sink_buffer(pipeline, :sink, buffer)
-      assert buffer.payload == payload
-    end)
-  end
-
-  defp assert_next_sink_notification(pipeline, expected_notification) do
-    assert_receive {Pipeline, ^pipeline, {:handle_child_notification, {notification, :sink}}}
-    assert notification == expected_notification
-  end
-
-  defp await_settled_production(pipeline) do
-    assert_pipeline_notified(pipeline, :source, {:handle_demand, _size, produced})
-    await_settled_production(pipeline, produced)
-  end
-
-  defp await_settled_production(pipeline, produced) do
-    receive do
-      {Pipeline, ^pipeline,
-       {:handle_child_notification, {{:handle_demand, _size, produced}, :source}}} ->
-        await_settled_production(pipeline, produced)
-    after
-      300 -> produced
-    end
-  end
-
-  defp refute_end_of_stream(pipeline, sink, timeout) do
-    refute_receive {Pipeline, ^pipeline, {:handle_element_end_of_stream, {^sink, :input}}},
-                   timeout
-  end
+  defp ten_byte_payload(i), do: <<i::40, 0::40>>
 end

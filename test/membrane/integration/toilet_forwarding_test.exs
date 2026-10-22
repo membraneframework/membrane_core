@@ -2,6 +2,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
   use ExUnit.Case, async: true
 
   import Membrane.ChildrenSpec
+  import Membrane.Support.DemandsTest.Helpers
   import Membrane.Testing.Assertions
 
   alias Membrane.Support.DemandsTest.BytesSink
@@ -254,7 +255,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
           forward_buffers(pipeline, next_payload..last_payload)
           refute_pipeline_crash_group_down(pipeline, :sink_group, 300)
           Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
-          assert_buffers_received(pipeline, next_payload..last_payload)
+          assert_sink_payloads(pipeline, :sink, Enum.map(next_payload..last_payload, &payload/1))
           last_payload + 1
         end)
 
@@ -302,7 +303,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
 
     forward_buffers(pipeline, 1..20)
     Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, 20})
-    assert_buffers_received(pipeline, 1..20)
+    assert_sink_payloads(pipeline, :sink, Enum.map(1..20, &payload/1))
     refute_pipeline_crash_group_down(pipeline, :filter_group, 300)
 
     sink_pid = Testing.Pipeline.get_child_pid!(pipeline, :sink)
@@ -333,7 +334,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     refute_sink_buffer(pipeline, :sink, _, 0)
 
     Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, 1000})
-    assert_buffers_received(pipeline, 1..1000)
+    assert_sink_payloads(pipeline, :sink, Enum.map(1..1000, &payload/1))
     assert Process.alive?(Testing.Pipeline.get_child_pid!(pipeline, :sink))
 
     Testing.Pipeline.terminate(pipeline)
@@ -375,13 +376,12 @@ defmodule Membrane.Integration.ToiletForwardingTest do
   @tag :vibe_coded
   test "sink demanding in bytes through auto filters receives exactly the demanded bytes" do
     buffers_count = 10
-    <<payload_3_head::binary-size(4), payload_3_tail::binary-size(4)>> = <<3::64>>
+    <<payload_3_head::binary-size(4), payload_3_tail::binary-size(4)>> = payload(3)
 
     spec =
       child(:source, PullSource)
       |> child(AutoFilter)
       |> child(AutoFilter)
-      |> via_in(:input, target_queue_size: 50)
       |> child(:sink, BytesSink)
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
@@ -391,8 +391,8 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     refute_pipeline_notified(pipeline, :sink, {:buffer, _buffer}, 100)
 
     [
-      {20, [<<1::64>>, <<2::64>>, payload_3_head]},
-      {60, [payload_3_tail | Enum.map(4..buffers_count, &<<&1::64>>)]}
+      {20, [payload(1), payload(2), payload_3_head]},
+      {60, [payload_3_tail | Enum.map(4..buffers_count, &payload/1)]}
     ]
     |> Enum.each(fn {demand_bytes, expected_payloads} ->
       Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, demand_bytes})
@@ -411,13 +411,9 @@ defmodule Membrane.Integration.ToiletForwardingTest do
   defp sink_with_buffer_size(:bytes), do: {BytesSink, @payload_size}
 
   defp forward_buffers(pipeline, payloads) do
-    buffers = Enum.map(payloads, &%Membrane.Buffer{payload: <<&1::size(8 * @payload_size)>>})
+    buffers = Enum.map(payloads, &%Membrane.Buffer{payload: payload(&1)})
     Testing.Pipeline.notify_child(pipeline, :source, {:forward_buffers, buffers})
   end
 
-  defp assert_buffers_received(pipeline, range) do
-    for i <- range do
-      assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: <<^i::64>>})
-    end
-  end
+  defp payload(i), do: <<i::size(8 * @payload_size)>>
 end

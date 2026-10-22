@@ -2,6 +2,7 @@ defmodule Membrane.Integration.DistributedPipelineTest do
   use ExUnit.Case, async: true
 
   import Membrane.ChildrenSpec
+  import Membrane.Support.DemandsTest.Helpers
   import Membrane.Testing.Assertions
 
   alias Membrane.Support.Distributed
@@ -80,7 +81,7 @@ defmodule Membrane.Integration.DistributedPipelineTest do
 
     Enum.reduce(demands, 1, fn demand, next_payload ->
       Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
-      assert_sink_payloads(pipeline, next_payload..(next_payload + demand - 1))
+      assert_sink_payloads(pipeline, :sink, next_payload..(next_payload + demand - 1))
       refute_sink_buffer(pipeline, :sink, _buffer, 0)
       next_payload + demand
     end)
@@ -91,8 +92,10 @@ defmodule Membrane.Integration.DistributedPipelineTest do
   end
 
   @tag :vibe_coded
-  test "toilet across nodes overflows only after the throttled decrement is flushed", context do
+  test "toilet across nodes overflows only once the default throttling factor flushes the decrement",
+       context do
     toilet_capacity = 100
+    target_queue_size = 10
     distributed_throttling_factor = 150
     buffers_below_throttling_factor = distributed_throttling_factor - 1
     buffers_above_toilet_capacity = 1000
@@ -102,7 +105,10 @@ defmodule Membrane.Integration.DistributedPipelineTest do
         spec: [
           {child(:source, PushSource), node: context.first_node},
           {get_child(:source)
-           |> via_in(:input, toilet_capacity: toilet_capacity)
+           |> via_in(:input,
+             toilet_capacity: toilet_capacity,
+             target_queue_size: target_queue_size
+           )
            |> child(:sink, %Testing.Sink{autodemand: false}),
            node: context.second_node, group: :sink_group, crash_group_mode: :temporary}
         ]
@@ -111,7 +117,7 @@ defmodule Membrane.Integration.DistributedPipelineTest do
     assert_pipeline_notified(pipeline, :source, :playing)
     assert_sink_playing(pipeline, :sink)
 
-    send_buffers(pipeline, 1..buffers_below_throttling_factor)
+    push_buffers(pipeline, 1..buffers_below_throttling_factor)
     refute_pipeline_crash_group_down(pipeline, :sink_group, 300)
 
     Testing.Pipeline.notify_child(
@@ -120,11 +126,11 @@ defmodule Membrane.Integration.DistributedPipelineTest do
       {:make_demand, buffers_below_throttling_factor}
     )
 
-    assert_sink_payloads(pipeline, 1..buffers_below_throttling_factor)
+    assert_sink_payloads(pipeline, :sink, 1..buffers_below_throttling_factor)
 
     first_payload_above_capacity = buffers_below_throttling_factor + 1
 
-    send_buffers(
+    push_buffers(
       pipeline,
       first_payload_above_capacity..(buffers_below_throttling_factor +
                                        buffers_above_toilet_capacity)
@@ -135,16 +141,9 @@ defmodule Membrane.Integration.DistributedPipelineTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
-  defp send_buffers(pipeline, payloads) do
+  defp push_buffers(pipeline, payloads) do
     buffers = Enum.map(payloads, &%Membrane.Buffer{payload: &1})
     Testing.Pipeline.notify_child(pipeline, :source, {:buffers, buffers})
-  end
-
-  defp assert_sink_payloads(pipeline, payloads) do
-    Enum.each(payloads, fn payload ->
-      assert_sink_buffer(pipeline, :sink, buffer)
-      assert buffer.payload == payload
-    end)
   end
 
   defp start_another_node() do

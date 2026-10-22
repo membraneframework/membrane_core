@@ -4,7 +4,7 @@ defmodule Membrane.Support.DemandsTest.ReportingSource do
 
   alias Membrane.Buffer
 
-  def_output_pad :output, accepted_format: _any, flow_control: :manual
+  def_output_pad :output, accepted_format: _any, flow_control: :manual, demand_unit: :buffers
 
   def_options payloads_count: [spec: pos_integer() | nil, default: nil],
               batch_size: [spec: pos_integer() | nil, default: nil],

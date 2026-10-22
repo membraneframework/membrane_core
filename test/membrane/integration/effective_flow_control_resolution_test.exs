@@ -2,6 +2,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
   use ExUnit.Case, async: true
 
   import Membrane.ChildrenSpec
+  import Membrane.Support.DemandsTest.Helpers
   import Membrane.Testing.Assertions
 
   alias Membrane.Support.DemandsTest.ControlledSource
@@ -227,7 +228,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
 
     send_buffers(pipeline, :push_source, 1..buffers_within_toilet_capacity)
     Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, buffers_within_toilet_capacity})
-    assert_sink_payloads(pipeline, 1..buffers_within_toilet_capacity)
+    assert_sink_payloads(pipeline, :sink, 1..buffers_within_toilet_capacity)
 
     filter_1_monitor =
       Testing.Pipeline.get_child_pid!(pipeline, :filter_1)
@@ -290,7 +291,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
         assert_child_effective_flow_control(pipeline, :filter_1, :pull)
         last_payload = next_payload + 99
         send_buffers(pipeline, :push_source, next_payload..last_payload)
-        assert_sink_payloads(pipeline, next_payload..last_payload)
+        assert_sink_payloads(pipeline, :sink, next_payload..last_payload)
         assert_child_effective_flow_control(pipeline, :filter_2, :pull)
 
         Testing.Pipeline.execute_actions(pipeline, remove_children: {:pull_source, i})
@@ -299,7 +300,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
         next_payload = last_payload + 1
         last_payload = next_payload + push_batch_above_toilet_capacity - 1
         send_buffers(pipeline, :push_source, next_payload..last_payload)
-        assert_sink_payloads(pipeline, next_payload..last_payload)
+        assert_sink_payloads(pipeline, :sink, next_payload..last_payload)
         assert_child_effective_flow_control(pipeline, :filter_2, :push)
         last_payload + 1
       end)
@@ -313,7 +314,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     assert_pipeline_notified(pipeline, :filter_1, {:pad_removed, Pad.ref(:input, _ref)})
     assert_child_effective_flow_control(pipeline, :filter_1, :pull)
     send_buffers(pipeline, :pull_source, next_payload..(next_payload + 99))
-    assert_sink_payloads(pipeline, next_payload..(next_payload + 99))
+    assert_sink_payloads(pipeline, :sink, next_payload..(next_payload + 99))
     assert_child_effective_flow_control(pipeline, :filter_2, :pull)
 
     Testing.Pipeline.terminate(pipeline)
@@ -350,22 +351,10 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     assert_child_effective_flow_control(pipeline, :filter, :push)
 
     Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, buffers_count})
-    assert_sink_payloads(pipeline, 1..buffers_count)
+    assert_sink_payloads(pipeline, :sink, 1..buffers_count)
     refute_sink_buffer(pipeline, :sink, _buffer, 0)
 
     Testing.Pipeline.terminate(pipeline)
-  end
-
-  defp send_buffers(pipeline, source, payloads) do
-    buffers = Enum.map(payloads, &%Membrane.Buffer{payload: &1})
-    Testing.Pipeline.notify_child(pipeline, source, buffer: {:output, buffers})
-  end
-
-  defp assert_sink_payloads(pipeline, payloads) do
-    Enum.each(payloads, fn payload ->
-      assert_sink_buffer(pipeline, :sink, buffer)
-      assert buffer.payload == payload
-    end)
   end
 
   defp assert_child_effective_flow_control(pipeline, child_name, expected) do
