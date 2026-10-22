@@ -5,7 +5,6 @@ defmodule Membrane.Test.DelayedDemandsLoopTest do
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
-  alias Membrane.Debug
   alias Membrane.Testing
 
   defmodule Source do
@@ -23,7 +22,10 @@ defmodule Membrane.Test.DelayedDemandsLoopTest do
       flow_control: :manual
 
     @impl true
-    def handle_demand(_pad, _size, :buffers, %{pads: pads}, state) do
+    def handle_init(_ctx, _opts), do: {[], %{}}
+
+    @impl true
+    def handle_demand(_pad, _size, :buffers, %{pads: pads}, counters) do
       Process.sleep(@sleep_time)
 
       stream_format_actions =
@@ -32,18 +34,31 @@ defmodule Membrane.Test.DelayedDemandsLoopTest do
           _pad_entry -> []
         end)
 
-      buffer = %Buffer{payload: "a"}
+      counters =
+        Map.new(pads, fn {pad_ref, _pad_data} -> {pad_ref, Map.get(counters, pad_ref, 0) + 1} end)
 
       buffer_and_redemand_actions =
-        Map.keys(pads)
-        |> Enum.flat_map(&[buffer: {&1, buffer}, redemand: &1])
+        Enum.flat_map(counters, fn {pad_ref, counter} ->
+          [buffer: {pad_ref, %Buffer{payload: counter}}, redemand: pad_ref]
+        end)
 
-      {stream_format_actions ++ buffer_and_redemand_actions, state}
+      {stream_format_actions ++ buffer_and_redemand_actions, counters}
     end
 
     @impl true
     def handle_parent_notification(:request, _ctx, state) do
       {[notify_parent: :response], state}
+    end
+  end
+
+  defmodule NotifyingSink do
+    use Membrane.Sink
+
+    def_input_pad :input, accepted_format: _any, flow_control: :auto
+
+    @impl true
+    def handle_buffer(:input, buffer, _ctx, state) do
+      {[notify_parent: {:buffer, buffer.payload}], state}
     end
   end
 
@@ -64,7 +79,7 @@ defmodule Membrane.Test.DelayedDemandsLoopTest do
         for i <- 1..sinks_number do
           get_child(:source)
           |> via_in(:input, auto_demand_size: auto_demand_size)
-          |> child({:sink, i}, Debug.Sink)
+          |> child({:sink, i}, NotifyingSink)
         end
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
@@ -79,6 +94,21 @@ defmodule Membrane.Test.DelayedDemandsLoopTest do
     end
 
     Testing.Pipeline.terminate(pipeline)
+
+    for i <- 1..sinks_number do
+      payloads = received_payloads(pipeline, {:sink, i})
+      assert payloads != []
+      assert payloads == Enum.to_list(1..length(payloads))
+    end
+  end
+
+  defp received_payloads(pipeline, sink) do
+    receive do
+      {Testing.Pipeline, ^pipeline, {:handle_child_notification, {{:buffer, payload}, ^sink}}} ->
+        [payload | received_payloads(pipeline, sink)]
+    after
+      0 -> []
+    end
   end
 
   defmodule VariousFlowFilter do
