@@ -4,6 +4,7 @@ defmodule Membrane.Integration.ToiletForwardingTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
+  alias Membrane.Support.DemandsTest.BytesSink
   alias Membrane.Testing
 
   require Membrane.Pad, as: Pad
@@ -34,25 +35,6 @@ defmodule Membrane.Integration.ToiletForwardingTest do
   defmodule PushSink do
     use Membrane.Sink
     def_input_pad :input, accepted_format: _any, flow_control: :push
-  end
-
-  defmodule BytesSink do
-    use Membrane.Sink
-
-    def_input_pad :input, accepted_format: _any, flow_control: :manual, demand_unit: :bytes
-
-    @impl true
-    def handle_playing(_ctx, state), do: {[notify_parent: :playing], state}
-
-    @impl true
-    def handle_buffer(:input, buffer, _ctx, state) do
-      {[notify_parent: {:buffer, buffer}], state}
-    end
-
-    @impl true
-    def handle_parent_notification({:make_demand, bytes}, _ctx, state) do
-      {[demand: {:input, bytes}], state}
-    end
   end
 
   defmodule AutoSink do
@@ -230,71 +212,62 @@ defmodule Membrane.Integration.ToiletForwardingTest do
     Testing.Pipeline.terminate(pipeline)
   end
 
-  @tag :vibe_coded
-  test "toilet with custom capacity overflows exactly when the capacity is exceeded" do
-    toilet_capacity = 50
-    target_queue_size = 10
-    buffers_filling_toilet = target_queue_size + toilet_capacity
-
-    spec = [
-      {child(:sink, %Testing.Sink{autodemand: false}),
-       group: :sink_group, crash_group_mode: :temporary},
-      child(:source, PushSource)
-      |> child(AutoFilter)
-      |> via_in(:input, toilet_capacity: toilet_capacity, target_queue_size: target_queue_size)
-      |> get_child(:sink)
-    ]
-
-    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
-    assert_sink_playing(pipeline, :sink)
-
-    forward_buffers(pipeline, 1..40)
-    refute_pipeline_crash_group_down(pipeline, :sink_group, 300)
-
-    Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, 40})
-    assert_buffers_received(pipeline, 1..40)
-
-    forward_buffers(pipeline, 41..(40 + buffers_filling_toilet))
-    refute_pipeline_crash_group_down(pipeline, :sink_group, 300)
-
-    forward_buffers(pipeline, [40 + buffers_filling_toilet + 1])
-    assert_pipeline_crash_group_down(pipeline, :sink_group)
-
-    Testing.Pipeline.terminate(pipeline)
-  end
-
-  @tag :vibe_coded
-  test "throttling factor delays the toilet overflow until the decrement is flushed" do
-    toilet_capacity = 50
-    target_queue_size = 10
-    throttling_factor = 10
-    flushes_before_overflow = div(target_queue_size + toilet_capacity, throttling_factor)
-    buffers_before_overflow = (flushes_before_overflow + 1) * throttling_factor - 1
-
-    spec = [
-      {child(:sink, %Testing.Sink{autodemand: false}),
-       group: :sink_group, crash_group_mode: :temporary},
-      child(:source, PushSource)
-      |> child(AutoFilter)
-      |> via_in(:input,
+  [
+    %{demand_unit: :buffers, toilet_capacity: 50, throttling_factor: 1, demands: [40]},
+    %{demand_unit: :buffers, toilet_capacity: 50, throttling_factor: 10, demands: []},
+    %{demand_unit: :bytes, toilet_capacity: 100, throttling_factor: 1, demands: []}
+  ]
+  |> Enum.map(fn setup ->
+    @tag :vibe_coded
+    test "toilet overflows exactly when its capacity is exceeded; setup: #{inspect(setup, charlists: :as_lists)}" do
+      %{
+        demand_unit: demand_unit,
         toilet_capacity: toilet_capacity,
-        target_queue_size: target_queue_size,
-        throttling_factor: throttling_factor
-      )
-      |> get_child(:sink)
-    ]
+        throttling_factor: throttling_factor,
+        demands: demands
+      } = unquote(Macro.escape(setup))
 
-    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
-    assert_sink_playing(pipeline, :sink)
+      {sink, demand_units_per_buffer} = sink_with_buffer_size(demand_unit)
+      target_queue_size = 10
+      flushes_before_overflow = div(target_queue_size + toilet_capacity, throttling_factor)
+      demand_units_before_overflow = (flushes_before_overflow + 1) * throttling_factor - 1
+      buffers_before_overflow = div(demand_units_before_overflow, demand_units_per_buffer)
 
-    forward_buffers(pipeline, 1..buffers_before_overflow)
-    refute_pipeline_crash_group_down(pipeline, :sink_group, 300)
+      spec = [
+        {child(:sink, sink), group: :sink_group, crash_group_mode: :temporary},
+        child(:source, PushSource)
+        |> child(AutoFilter)
+        |> via_in(:input,
+          toilet_capacity: toilet_capacity,
+          target_queue_size: target_queue_size,
+          throttling_factor: throttling_factor
+        )
+        |> get_child(:sink)
+      ]
 
-    forward_buffers(pipeline, [buffers_before_overflow + 1])
-    assert_pipeline_crash_group_down(pipeline, :sink_group)
+      pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+      assert_sink_playing(pipeline, :sink)
 
-    Testing.Pipeline.terminate(pipeline)
-  end
+      next_payload =
+        Enum.reduce(demands, 1, fn demand, next_payload ->
+          last_payload = next_payload + demand - 1
+          forward_buffers(pipeline, next_payload..last_payload)
+          refute_pipeline_crash_group_down(pipeline, :sink_group, 300)
+          Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
+          assert_buffers_received(pipeline, next_payload..last_payload)
+          last_payload + 1
+        end)
+
+      last_payload_before_overflow = next_payload + buffers_before_overflow - 1
+      forward_buffers(pipeline, next_payload..last_payload_before_overflow)
+      refute_pipeline_crash_group_down(pipeline, :sink_group, 300)
+
+      forward_buffers(pipeline, [last_payload_before_overflow + 1])
+      assert_pipeline_crash_group_down(pipeline, :sink_group)
+
+      Testing.Pipeline.terminate(pipeline)
+    end
+  end)
 
   @tag :vibe_coded
   test "toilet overflow kills the receiver of the push link, not the elements downstream" do
@@ -400,32 +373,6 @@ defmodule Membrane.Integration.ToiletForwardingTest do
   end
 
   @tag :vibe_coded
-  test "toilet capacity in bytes counts the payload sizes" do
-    toilet_capacity = 100
-    target_queue_size = 10
-    buffers_before_overflow = div(target_queue_size + toilet_capacity, @payload_size)
-
-    spec = [
-      {child(:sink, BytesSink), group: :sink_group, crash_group_mode: :temporary},
-      child(:source, PushSource)
-      |> child(AutoFilter)
-      |> via_in(:input, toilet_capacity: toilet_capacity, target_queue_size: target_queue_size)
-      |> get_child(:sink)
-    ]
-
-    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
-    assert_pipeline_notified(pipeline, :sink, :playing)
-
-    forward_buffers(pipeline, 1..buffers_before_overflow)
-    refute_pipeline_crash_group_down(pipeline, :sink_group, 300)
-
-    forward_buffers(pipeline, [buffers_before_overflow + 1])
-    assert_pipeline_crash_group_down(pipeline, :sink_group)
-
-    Testing.Pipeline.terminate(pipeline)
-  end
-
-  @tag :vibe_coded
   test "sink demanding in bytes through auto filters receives exactly the demanded bytes" do
     buffers_count = 10
     <<payload_3_head::binary-size(4), payload_3_tail::binary-size(4)>> = <<3::64>>
@@ -459,6 +406,9 @@ defmodule Membrane.Integration.ToiletForwardingTest do
 
     Testing.Pipeline.terminate(pipeline)
   end
+
+  defp sink_with_buffer_size(:buffers), do: {%Testing.Sink{autodemand: false}, 1}
+  defp sink_with_buffer_size(:bytes), do: {BytesSink, @payload_size}
 
   defp forward_buffers(pipeline, payloads) do
     buffers = Enum.map(payloads, &%Membrane.Buffer{payload: <<&1::size(8 * @payload_size)>>})

@@ -5,6 +5,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
+  alias Membrane.Support.DemandsTest.{ControlledSource, ReportingSource}
   alias Membrane.Testing.{Pipeline, Sink, Source}
 
   require Membrane.Pad, as: Pad
@@ -135,59 +136,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
     end
   end
 
-  defmodule ReportingSource do
-    use Membrane.Source
-
-    def_output_pad :output, accepted_format: _any, flow_control: :manual
-
-    def_options payloads_count: [spec: pos_integer()],
-                batch_size: [spec: pos_integer() | nil, default: nil]
-
-    @impl true
-    def handle_init(_ctx, opts), do: {[], opts |> Map.from_struct() |> Map.put(:produced, 0)}
-
-    @impl true
-    def handle_playing(_ctx, state),
-      do: {[stream_format: {:output, %Membrane.RemoteStream{}}], state}
-
-    @impl true
-    def handle_demand(:output, size, :buffers, _ctx, state) do
-      first_payload = state.produced + 1
-      last_payload = min(state.produced + (state.batch_size || size), state.payloads_count)
-      buffers = Enum.map(first_payload..last_payload, &%Buffer{payload: &1})
-
-      continuation =
-        if last_payload == state.payloads_count,
-          do: [end_of_stream: :output],
-          else: [redemand: :output]
-
-      actions = [buffer: {:output, buffers}, notify_parent: {:handle_demand, size, last_payload}]
-      {actions ++ continuation, %{state | produced: last_payload}}
-    end
-  end
-
-  defmodule TestStreamFormat do
-    defstruct [:id]
-  end
-
-  defmodule ControlledSource do
-    use Membrane.Source
-
-    def_output_pad :output, accepted_format: _any, flow_control: :manual
-
-    @impl true
-    def handle_playing(_ctx, state) do
-      actions = [stream_format: {:output, %TestStreamFormat{id: 1}}, notify_parent: :playing]
-      {actions, state}
-    end
-
-    @impl true
-    def handle_parent_notification(actions, _ctx, state), do: {actions, state}
-
-    @impl true
-    def handle_demand(:output, _size, :buffers, _ctx, state), do: {[], state}
-  end
-
   defmodule BlockingSink do
     use Membrane.Sink
 
@@ -312,75 +260,91 @@ defmodule Membrane.Integration.AutoDemandsTest do
     Pipeline.terminate(pipeline)
   end
 
-  @tag :vibe_coded
-  test "one output pad without demand corks the tee until its sink demands" do
-    tee_auto_demand_size = 400
-    slow_sink_queue_size = 10
-    payloads_count = 3000
-    first_demand = 500
+  @tee_auto_demand_size 400
+  @tee_payloads_count 3000
+  @slow_sink_queue_size 10
+  @first_slow_sink_demand 500
 
-    pipeline =
-      Pipeline.start_link_supervised!(
-        spec: [
-          child(:source, %Source{output: 1..payloads_count}) |> child(:tee, AutoDemandTee),
-          get_child(:tee) |> child(:fast_sink, Sink),
-          get_child(:tee)
-          |> via_in(:input, target_queue_size: slow_sink_queue_size)
-          |> child(:slow_sink, %Sink{autodemand: false})
-        ]
+  [
+    {"one output pad without demand corks the tee until its sink demands", :demand},
+    {"end of stream on the undemanded output uncorks the other output", :end_of_stream},
+    {"handle removed branch", :removal}
+  ]
+  |> Enum.map(fn {test_name, uncorking_trigger} ->
+    @tag :vibe_coded
+    test test_name do
+      uncorking_trigger = unquote(uncorking_trigger)
+
+      pipeline =
+        Pipeline.start_link_supervised!(
+          spec: [
+            child(:source, %Source{output: 1..@tee_payloads_count}) |> child(:tee, AutoDemandTee),
+            get_child(:tee) |> via_out(Pad.ref(:output, :fast)) |> child(:fast_sink, Sink),
+            get_child(:tee)
+            |> via_out(Pad.ref(:output, :slow))
+            |> via_in(:input, target_queue_size: @slow_sink_queue_size)
+            |> child(:slow_sink, %Sink{autodemand: false})
+          ]
+        )
+
+      assert_sink_playing(pipeline, :slow_sink)
+
+      stalled_at = drain_sink_payloads(pipeline, :fast_sink, 1)
+      assert stalled_at in @slow_sink_queue_size..@tee_auto_demand_size
+      refute_sink_buffer(pipeline, :slow_sink, _buffer, 0)
+
+      fast_sink_received_until = uncork_tee(pipeline, uncorking_trigger, stalled_at)
+
+      assert_sink_payloads(
+        pipeline,
+        :fast_sink,
+        (fast_sink_received_until + 1)..@tee_payloads_count
       )
 
-    assert_sink_playing(pipeline, :slow_sink)
+      assert_end_of_stream(pipeline, :fast_sink)
+      assert_slow_sink_completed(pipeline, uncorking_trigger, stalled_at)
 
-    stalled_at = drain_sink_payloads(pipeline, :fast_sink, 1)
-    assert stalled_at in slow_sink_queue_size..tee_auto_demand_size
-    refute_sink_buffer(pipeline, :slow_sink, _buffer, 0)
+      Pipeline.terminate(pipeline)
+    end
+  end)
 
-    Pipeline.notify_child(pipeline, :slow_sink, {:make_demand, first_demand})
-    assert_sink_payloads(pipeline, :slow_sink, 1..first_demand)
+  defp uncork_tee(pipeline, :demand, stalled_at) do
+    Pipeline.notify_child(pipeline, :slow_sink, {:make_demand, @first_slow_sink_demand})
+    assert_sink_payloads(pipeline, :slow_sink, 1..@first_slow_sink_demand)
 
     resumed_until = drain_sink_payloads(pipeline, :fast_sink, stalled_at + 1)
-    assert resumed_until >= first_demand
-    assert resumed_until - stalled_at <= tee_auto_demand_size
+    assert resumed_until >= @first_slow_sink_demand
+    assert resumed_until - stalled_at <= @tee_auto_demand_size
     refute_sink_buffer(pipeline, :slow_sink, _buffer, 0)
 
-    Pipeline.notify_child(pipeline, :slow_sink, {:make_demand, payloads_count - first_demand})
-    assert_sink_payloads(pipeline, :slow_sink, (first_demand + 1)..payloads_count)
-    assert_sink_payloads(pipeline, :fast_sink, (resumed_until + 1)..payloads_count)
+    remaining_demand = @tee_payloads_count - @first_slow_sink_demand
+    Pipeline.notify_child(pipeline, :slow_sink, {:make_demand, remaining_demand})
+    resumed_until
+  end
+
+  defp uncork_tee(pipeline, :end_of_stream, stalled_at) do
+    Pipeline.notify_child(pipeline, :tee, end_of_stream: Pad.ref(:output, :slow))
+    stalled_at
+  end
+
+  defp uncork_tee(pipeline, :removal, stalled_at) do
+    Pipeline.execute_actions(pipeline, remove_children: :slow_sink)
+    stalled_at
+  end
+
+  defp assert_slow_sink_completed(pipeline, :demand, _stalled_at) do
+    assert_sink_payloads(pipeline, :slow_sink, (@first_slow_sink_demand + 1)..@tee_payloads_count)
     assert_end_of_stream(pipeline, :slow_sink)
-    assert_end_of_stream(pipeline, :fast_sink)
-
-    Pipeline.terminate(pipeline)
   end
 
-  @tag :vibe_coded
-  test "handle removed branch" do
-    tee_auto_demand_size = 400
-    right_sink_queue_size = 100
-    payloads_count = 5000
-
-    pipeline =
-      Pipeline.start_link_supervised!(
-        spec: [
-          child(:source, %Source{output: 1..payloads_count}) |> child(:tee, AutoDemandTee),
-          get_child(:tee) |> child(:left_sink, Sink),
-          get_child(:tee)
-          |> via_in(:input, target_queue_size: right_sink_queue_size)
-          |> child(:right_sink, %Sink{autodemand: false})
-        ]
-      )
-
-    stalled_at = drain_sink_payloads(pipeline, :left_sink, 1)
-    assert stalled_at in right_sink_queue_size..tee_auto_demand_size
-    refute_sink_buffer(pipeline, :right_sink, _buffer, 0)
-
-    Pipeline.execute_actions(pipeline, remove_children: :right_sink)
-
-    assert_sink_payloads(pipeline, :left_sink, (stalled_at + 1)..payloads_count)
-    assert_end_of_stream(pipeline, :left_sink)
-
-    Pipeline.terminate(pipeline)
+  defp assert_slow_sink_completed(pipeline, :end_of_stream, stalled_at) do
+    Pipeline.notify_child(pipeline, :slow_sink, {:make_demand, @tee_payloads_count})
+    assert_sink_payloads(pipeline, :slow_sink, 1..stalled_at)
+    assert_end_of_stream(pipeline, :slow_sink)
+    refute_sink_buffer(pipeline, :slow_sink, _buffer, 0)
   end
+
+  defp assert_slow_sink_completed(_pipeline, :removal, _stalled_at), do: :ok
 
   @tag :vibe_coded
   test "big batches flow through a corked auto filter only as far as the sink demands" do
@@ -429,8 +393,8 @@ defmodule Membrane.Integration.AutoDemandsTest do
   @tag :vibe_coded
   test "items queued on a corked auto input keep their order" do
     sink_queue_size = 5
-    first_stream_format = %TestStreamFormat{id: 1}
-    second_stream_format = %TestStreamFormat{id: 2}
+    first_stream_format = %Membrane.RemoteStream{}
+    second_stream_format = %Membrane.RemoteStream{type: :packetized}
     first_event = %Membrane.Event.Discontinuity{duration: 1}
     second_event = %Membrane.Event.Discontinuity{duration: 2}
 
@@ -494,18 +458,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     first_demand = 100
 
     pipeline =
-      Pipeline.start_link_supervised!(
-        spec:
-          child(:source, %Source{output: 1..payloads_count})
-          |> child(:tee, AutoDemandTee)
-          |> via_in(:input, target_queue_size: sink_a_queue_size)
-          |> child(:sink_a, %Sink{autodemand: false})
-      )
-
-    assert_sink_playing(pipeline, :sink_a)
-    Pipeline.notify_child(pipeline, :sink_a, {:make_demand, first_demand})
-    assert_sink_payloads(pipeline, :sink_a, 1..first_demand)
-    refute_sink_buffer(pipeline, :sink_a, _buffer, 0)
+      start_tee_with_demanding_sink_a(payloads_count, sink_a_queue_size, first_demand)
 
     Pipeline.execute_actions(pipeline,
       spec: get_child(:tee) |> child(:sink_b, %Sink{autodemand: false})
@@ -540,17 +493,7 @@ defmodule Membrane.Integration.AutoDemandsTest do
     first_demand = 100
 
     pipeline =
-      Pipeline.start_link_supervised!(
-        spec:
-          child(:source, %Source{output: 1..payloads_count})
-          |> child(:tee, AutoDemandTee)
-          |> via_in(:input, target_queue_size: sink_a_queue_size)
-          |> child(:sink_a, %Sink{autodemand: false})
-      )
-
-    assert_sink_playing(pipeline, :sink_a)
-    Pipeline.notify_child(pipeline, :sink_a, {:make_demand, first_demand})
-    assert_sink_payloads(pipeline, :sink_a, 1..first_demand)
+      start_tee_with_demanding_sink_a(payloads_count, sink_a_queue_size, first_demand)
 
     Pipeline.execute_actions(pipeline,
       spec:
@@ -570,6 +513,23 @@ defmodule Membrane.Integration.AutoDemandsTest do
     assert_end_of_stream(pipeline, :sink_a)
 
     Pipeline.terminate(pipeline)
+  end
+
+  defp start_tee_with_demanding_sink_a(payloads_count, sink_a_queue_size, first_demand) do
+    pipeline =
+      Pipeline.start_link_supervised!(
+        spec:
+          child(:source, %Source{output: 1..payloads_count})
+          |> child(:tee, AutoDemandTee)
+          |> via_in(:input, target_queue_size: sink_a_queue_size)
+          |> child(:sink_a, %Sink{autodemand: false})
+      )
+
+    assert_sink_playing(pipeline, :sink_a)
+    Pipeline.notify_child(pipeline, :sink_a, {:make_demand, first_demand})
+    assert_sink_payloads(pipeline, :sink_a, 1..first_demand)
+    refute_sink_buffer(pipeline, :sink_a, _buffer, 0)
+    pipeline
   end
 
   @tag :vibe_coded
@@ -663,7 +623,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
     pipeline =
       Pipeline.start_link_supervised!(
         spec:
-          child(:source, batched_source(1..payloads_count, source_batch_size))
+          child(:source, %ReportingSource{
+            payloads_count: payloads_count,
+            batch_size: source_batch_size
+          })
           |> via_in(Pad.ref(:input, 0))
           |> child(:filter, NotifyingAutoFilter)
           |> via_in(:input, target_queue_size: sink_queue_size)
@@ -724,43 +687,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     assert_pipeline_notified(pipeline, :source, {:handle_demand, _size, ^payloads_count})
     assert_end_of_stream(pipeline, :sink)
-
-    Pipeline.terminate(pipeline)
-  end
-
-  @tag :vibe_coded
-  test "end of stream on the undemanded output uncorks the other output" do
-    tee_auto_demand_size = 400
-    sink_b_queue_size = 10
-    payloads_count = 1000
-
-    pipeline =
-      Pipeline.start_link_supervised!(
-        spec: [
-          child(:source, %Source{output: 1..payloads_count}) |> child(:tee, AutoDemandTee),
-          get_child(:tee) |> via_out(Pad.ref(:output, :a)) |> child(:sink_a, Sink),
-          get_child(:tee)
-          |> via_out(Pad.ref(:output, :b))
-          |> via_in(:input, target_queue_size: sink_b_queue_size)
-          |> child(:sink_b, %Sink{autodemand: false})
-        ]
-      )
-
-    assert_sink_playing(pipeline, :sink_b)
-
-    stalled_at = drain_sink_payloads(pipeline, :sink_a, 1)
-    assert stalled_at in sink_b_queue_size..tee_auto_demand_size
-    refute_sink_buffer(pipeline, :sink_b, _buffer, 0)
-
-    Pipeline.notify_child(pipeline, :tee, end_of_stream: Pad.ref(:output, :b))
-
-    assert_sink_payloads(pipeline, :sink_a, (stalled_at + 1)..payloads_count)
-    assert_end_of_stream(pipeline, :sink_a)
-
-    Pipeline.notify_child(pipeline, :sink_b, {:make_demand, payloads_count})
-    assert_sink_payloads(pipeline, :sink_b, 1..stalled_at)
-    assert_end_of_stream(pipeline, :sink_b)
-    refute_sink_buffer(pipeline, :sink_b, _buffer, 0)
 
     Pipeline.terminate(pipeline)
   end
@@ -1227,17 +1153,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
   defp received_item({:start_of_stream, _pad}), do: :start_of_stream
   defp received_item({:end_of_stream, _pad}), do: :end_of_stream
   defp received_item(other), do: other
-
-  defp batched_source(payloads, batch_size) do
-    generator = fn payloads_left, _size ->
-      {batch, rest} = Enum.split(payloads_left, batch_size)
-      buffers = Enum.map(batch, &%Buffer{payload: &1})
-      continuation = if rest == [], do: [end_of_stream: :output], else: [redemand: :output]
-      {[buffer: {:output, buffers}] ++ continuation, rest}
-    end
-
-    %Source{output: {Enum.to_list(payloads), generator}}
-  end
 
   defp tagged_payloads(tag, payloads), do: Enum.map(payloads, &{tag, &1})
 

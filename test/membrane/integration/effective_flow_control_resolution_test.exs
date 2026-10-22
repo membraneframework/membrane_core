@@ -4,6 +4,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
+  alias Membrane.Support.DemandsTest.ControlledSource
   alias Membrane.Testing
 
   require Membrane.Pad, as: Pad
@@ -60,26 +61,13 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     end
 
     @impl true
-    def handle_parent_notification({:buffers, buffers}, _ctx, state) do
-      {[buffer: {:output, buffers}], state}
-    end
+    def handle_parent_notification(actions, _ctx, state), do: {actions, state}
   end
 
   defmodule PullSource do
     use Membrane.Source
 
     def_output_pad :output, accepted_format: _any, flow_control: :manual
-
-    @impl true
-    def handle_playing(_ctx, state) do
-      actions = [stream_format: {:output, %Membrane.StreamFormat.Mock{}}, notify_parent: :playing]
-      {actions, state}
-    end
-
-    @impl true
-    def handle_parent_notification({:buffers, buffers}, _ctx, state) do
-      {[buffer: {:output, buffers}], state}
-    end
 
     @impl true
     def handle_demand(_pad, _size, _unit, _ctx, state), do: {[], state}
@@ -247,7 +235,9 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
 
     Testing.Pipeline.execute_actions(pipeline,
       spec: {
-        child(:pull_source, PullSource) |> via_in(Pad.ref(:input, 2)) |> get_child(:filter_1),
+        child(:pull_source, ControlledSource)
+        |> via_in(Pad.ref(:input, 2))
+        |> get_child(:filter_1),
         group: :upstream_group, crash_group_mode: :temporary
       }
     )
@@ -293,7 +283,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     next_payload =
       Enum.reduce(1..2, 1, fn i, next_payload ->
         Testing.Pipeline.execute_actions(pipeline,
-          spec: child({:pull_source, i}, PullSource) |> get_child(:filter_1)
+          spec: child({:pull_source, i}, ControlledSource) |> get_child(:filter_1)
         )
 
         assert_pipeline_notified(pipeline, {:pull_source, i}, :playing)
@@ -315,7 +305,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
       end)
 
     Testing.Pipeline.execute_actions(pipeline,
-      spec: child(:pull_source, PullSource) |> get_child(:filter_1)
+      spec: child(:pull_source, ControlledSource) |> get_child(:filter_1)
     )
 
     assert_pipeline_notified(pipeline, :pull_source, :playing)
@@ -340,7 +330,9 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
       |> child(:filter, AutoFilter)
       |> via_in(:input, target_queue_size: sink_queue_size)
       |> child(:sink, %Testing.Sink{autodemand: false}),
-      child(:pull_source, PullSource) |> via_in(Pad.ref(:input, :pull)) |> get_child(:filter)
+      child(:pull_source, ControlledSource)
+      |> via_in(Pad.ref(:input, :pull))
+      |> get_child(:filter)
     ]
 
     pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
@@ -366,7 +358,7 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
 
   defp send_buffers(pipeline, source, payloads) do
     buffers = Enum.map(payloads, &%Membrane.Buffer{payload: &1})
-    Testing.Pipeline.notify_child(pipeline, source, {:buffers, buffers})
+    Testing.Pipeline.notify_child(pipeline, source, buffer: {:output, buffers})
   end
 
   defp assert_sink_payloads(pipeline, payloads) do
