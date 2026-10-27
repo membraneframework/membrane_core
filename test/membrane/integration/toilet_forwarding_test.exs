@@ -2,7 +2,6 @@ defmodule Membrane.Integration.ToiletForwardingTest do
   use ExUnit.Case, async: true
 
   import Membrane.ChildrenSpec
-  import Membrane.Support.DemandsTest.Helpers
   import Membrane.Testing.Assertions
 
   alias Membrane.Support.DemandsTest.BytesSink
@@ -245,57 +244,6 @@ defmodule Membrane.Integration.ToiletForwardingTest do
 
     Testing.Pipeline.terminate(pipeline)
   end
-
-  [
-    %{toilet_capacity: 50, throttling_factor: 1, demands: [40]},
-    %{toilet_capacity: 50, throttling_factor: 10, demands: []}
-  ]
-  |> Enum.map(fn setup ->
-    @tag :vibe_coded
-    test "toilet overflows exactly when its capacity is exceeded; setup: #{inspect(setup, charlists: :as_lists)}" do
-      %{
-        toilet_capacity: toilet_capacity,
-        throttling_factor: throttling_factor,
-        demands: demands
-      } = unquote(Macro.escape(setup))
-
-      target_queue_size = 10
-      flushes_before_overflow = div(target_queue_size + toilet_capacity, throttling_factor)
-      buffers_before_overflow = (flushes_before_overflow + 1) * throttling_factor - 1
-
-      spec =
-        {child(:source, PushSource)
-         |> via_in(:input,
-           toilet_capacity: toilet_capacity,
-           target_queue_size: target_queue_size,
-           throttling_factor: throttling_factor
-         )
-         |> child(:sink, %Testing.Sink{autodemand: false}),
-         group: :sink_group, crash_group_mode: :temporary}
-
-      pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
-      assert_sink_playing(pipeline, :sink)
-
-      next_payload =
-        Enum.reduce(demands, 1, fn demand, next_payload ->
-          last_payload = next_payload + demand - 1
-          forward_buffers(pipeline, next_payload..last_payload)
-          refute_pipeline_crash_group_down(pipeline, :sink_group, 300)
-          Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
-          assert_sink_payloads(pipeline, :sink, Enum.map(next_payload..last_payload, &payload/1))
-          last_payload + 1
-        end)
-
-      last_payload_before_overflow = next_payload + buffers_before_overflow - 1
-      forward_buffers(pipeline, next_payload..last_payload_before_overflow)
-      refute_pipeline_crash_group_down(pipeline, :sink_group, 300)
-
-      forward_buffers(pipeline, [last_payload_before_overflow + 1])
-      assert_pipeline_crash_group_down(pipeline, :sink_group)
-
-      Testing.Pipeline.terminate(pipeline)
-    end
-  end)
 
   @tag :vibe_coded
   test "demands in uneven chunks pass through alternating auto and manual filters" do

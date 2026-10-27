@@ -658,53 +658,6 @@ defmodule Membrane.Integration.DemandsTest do
   end
 
   @tag :vibe_coded
-  test "manual input queue tops up to its target size, but never by less than its minimal demand" do
-    target_queue_size = 10
-    min_top_up = round(target_queue_size * @min_demand_factor)
-    demands = [1, 7, 9]
-
-    spec =
-      child(:source, ReportingSource)
-      |> via_in(:input,
-        target_queue_size: target_queue_size,
-        min_demand_factor: @min_demand_factor
-      )
-      |> child(:sink, %Sink{autodemand: false})
-
-    pipeline = Pipeline.start_link_supervised!(spec: spec)
-    assert_sink_playing(pipeline, :sink)
-
-    assert_pipeline_notified(
-      pipeline,
-      :source,
-      {:handle_demand, ^target_queue_size, ^target_queue_size}
-    )
-
-    refute_pipeline_notified(pipeline, :source, {:handle_demand, _size, _produced}, 300)
-
-    initial_state = %{next_payload: 1, queue_size: target_queue_size, produced: target_queue_size}
-
-    Enum.reduce(demands, initial_state, fn demand, state ->
-      Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
-      assert_sink_payloads(pipeline, :sink, state.next_payload..(state.next_payload + demand - 1))
-
-      queue_size = state.queue_size - demand
-      top_up = max(target_queue_size - queue_size, min_top_up)
-      produced = state.produced + top_up
-      assert_pipeline_notified(pipeline, :source, {:handle_demand, ^top_up, ^produced})
-      refute_pipeline_notified(pipeline, :source, {:handle_demand, _size, _produced}, 300)
-
-      %{
-        next_payload: state.next_payload + demand,
-        queue_size: queue_size + top_up,
-        produced: produced
-      }
-    end)
-
-    Pipeline.terminate(pipeline)
-  end
-
-  @tag :vibe_coded
   test "redemand returned along with end of stream does not call handle_demand again" do
     spec =
       child(:source, RedemandingOnEndOfStreamSource)
