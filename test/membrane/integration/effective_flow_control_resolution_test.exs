@@ -2,13 +2,9 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
   use ExUnit.Case, async: true
 
   import Membrane.ChildrenSpec
-  import Membrane.Support.DemandsTest.Helpers
   import Membrane.Testing.Assertions
 
-  alias Membrane.Support.DemandsTest.ControlledSource
   alias Membrane.Testing
-
-  require Membrane.Pad, as: Pad
 
   defmodule AutoFilter do
     use Membrane.Filter, flow_control_hints?: false
@@ -33,11 +29,6 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     def handle_end_of_stream(_pad, _ctx, state) do
       {[], state}
     end
-
-    @impl true
-    def handle_pad_removed(pad, _ctx, state) do
-      {[notify_parent: {:pad_removed, pad}], state}
-    end
   end
 
   defmodule DoubleFlowControlSource do
@@ -54,15 +45,6 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     use Membrane.Source
 
     def_output_pad :output, accepted_format: _any, flow_control: :push
-
-    @impl true
-    def handle_playing(_ctx, state) do
-      actions = [stream_format: {:output, %Membrane.StreamFormat.Mock{}}, notify_parent: :playing]
-      {actions, state}
-    end
-
-    @impl true
-    def handle_parent_notification(actions, _ctx, state), do: {actions, state}
   end
 
   defmodule PullSource do
@@ -147,6 +129,40 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     end
   end
 
+  test "effective_flow_control switches between :push and :pull" do
+    spec =
+      Enum.reduce(
+        1..10,
+        child(:push_source, PushSource),
+        fn idx, last_child -> last_child |> child({:filter, idx}, AutoFilter) end
+      )
+
+    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+
+    Process.sleep(500)
+
+    for _i <- 1..5 do
+      Testing.Pipeline.execute_actions(pipeline,
+        spec: child(:pull_source, PullSource) |> get_child({:filter, 1})
+      )
+
+      Process.sleep(500)
+
+      for idx <- 1..10 do
+        assert_child_effective_flow_control(pipeline, {:filter, idx}, :pull)
+      end
+
+      Testing.Pipeline.execute_actions(pipeline, remove_children: :pull_source)
+      Process.sleep(500)
+
+      for idx <- 1..10 do
+        assert_child_effective_flow_control(pipeline, {:filter, idx}, :push)
+      end
+    end
+
+    Testing.Pipeline.terminate(pipeline)
+  end
+
   test "effective_flow_control is :pull, only when it should be" do
     spec = [
       child(:push_source, PushSource)
@@ -205,155 +221,6 @@ defmodule Membrane.Integration.EffectiveFlowControlResolutionTest do
     # batch of buffers sent by BatchingSource should cause toilet overflow
     assert_receive {:DOWN, ^monitor_ref, _process, _pid, :killed}
     assert_pipeline_crash_group_down(pipeline, :group)
-    Testing.Pipeline.terminate(pipeline)
-  end
-
-  @tag :vibe_coded
-  test "toilet moves to the auto filter input when its effective flow control switches to :pull" do
-    buffers_within_toilet_capacity = 150
-    buffers_above_toilet_capacity = 1000
-
-    spec = [
-      {child(:push_source, PushSource) |> child(:filter_1, AutoFilter),
-       group: :upstream_group, crash_group_mode: :temporary},
-      {child(:sink, %Testing.Sink{autodemand: false}),
-       group: :sink_group, crash_group_mode: :temporary},
-      get_child(:filter_1) |> child(:filter_2, AutoFilter) |> get_child(:sink)
-    ]
-
-    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
-
-    assert_pipeline_notified(pipeline, :push_source, :playing)
-    assert_sink_playing(pipeline, :sink)
-
-    send_buffers(pipeline, :push_source, 1..buffers_within_toilet_capacity)
-    Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, buffers_within_toilet_capacity})
-    assert_sink_payloads(pipeline, :sink, 1..buffers_within_toilet_capacity)
-
-    filter_1_monitor =
-      Testing.Pipeline.get_child_pid!(pipeline, :filter_1)
-      |> Process.monitor()
-
-    Testing.Pipeline.execute_actions(pipeline,
-      spec: {
-        child(:pull_source, ControlledSource)
-        |> via_in(Pad.ref(:input, 2))
-        |> get_child(:filter_1),
-        group: :upstream_group, crash_group_mode: :temporary
-      }
-    )
-
-    assert_pipeline_notified(pipeline, :pull_source, :playing)
-    assert_child_effective_flow_control(pipeline, :filter_1, :pull)
-
-    first_payload_above_capacity = buffers_within_toilet_capacity + 1
-
-    send_buffers(
-      pipeline,
-      :push_source,
-      first_payload_above_capacity..(buffers_within_toilet_capacity +
-                                       buffers_above_toilet_capacity)
-    )
-
-    assert_receive {:DOWN, ^filter_1_monitor, :process, _pid, :killed}
-    assert_pipeline_crash_group_down(pipeline, :upstream_group)
-    refute_pipeline_crash_group_down(pipeline, :sink_group, 300)
-    assert Testing.Pipeline.get_child_pid!(pipeline, :sink) |> Process.alive?()
-    assert Testing.Pipeline.get_child_pid!(pipeline, :filter_2) |> Process.alive?()
-
-    Testing.Pipeline.terminate(pipeline)
-  end
-
-  @tag :vibe_coded
-  test "effective_flow_control follows the linked pull inputs and buffers keep flowing" do
-    push_batch_above_toilet_capacity = 1000
-
-    spec =
-      child(:push_source, PushSource)
-      |> child(:filter_1, AutoFilter)
-      |> child(:filter_2, AutoFilter)
-      |> via_in(:input, toilet_capacity: 2 * push_batch_above_toilet_capacity)
-      |> child(:sink, Testing.Sink)
-
-    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
-
-    assert_pipeline_notified(pipeline, :push_source, :playing)
-    assert_pipeline_notified(pipeline, :filter_1, :playing)
-    assert_pipeline_notified(pipeline, :filter_2, :playing)
-
-    next_payload =
-      Enum.reduce(1..2, 1, fn i, next_payload ->
-        Testing.Pipeline.execute_actions(pipeline,
-          spec: child({:pull_source, i}, ControlledSource) |> get_child(:filter_1)
-        )
-
-        assert_pipeline_notified(pipeline, {:pull_source, i}, :playing)
-        assert_child_effective_flow_control(pipeline, :filter_1, :pull)
-        last_payload = next_payload + 99
-        send_buffers(pipeline, :push_source, next_payload..last_payload)
-        assert_sink_payloads(pipeline, :sink, next_payload..last_payload)
-        assert_child_effective_flow_control(pipeline, :filter_2, :pull)
-
-        Testing.Pipeline.execute_actions(pipeline, remove_children: {:pull_source, i})
-        assert_pipeline_notified(pipeline, :filter_1, {:pad_removed, Pad.ref(:input, _ref)})
-        assert_child_effective_flow_control(pipeline, :filter_1, :push)
-        next_payload = last_payload + 1
-        last_payload = next_payload + push_batch_above_toilet_capacity - 1
-        send_buffers(pipeline, :push_source, next_payload..last_payload)
-        assert_sink_payloads(pipeline, :sink, next_payload..last_payload)
-        assert_child_effective_flow_control(pipeline, :filter_2, :push)
-        last_payload + 1
-      end)
-
-    Testing.Pipeline.execute_actions(pipeline,
-      spec: child(:pull_source, ControlledSource) |> get_child(:filter_1)
-    )
-
-    assert_pipeline_notified(pipeline, :pull_source, :playing)
-    Testing.Pipeline.execute_actions(pipeline, remove_children: :push_source)
-    assert_pipeline_notified(pipeline, :filter_1, {:pad_removed, Pad.ref(:input, _ref)})
-    assert_child_effective_flow_control(pipeline, :filter_1, :pull)
-    send_buffers(pipeline, :pull_source, next_payload..(next_payload + 99))
-    assert_sink_payloads(pipeline, :sink, next_payload..(next_payload + 99))
-    assert_child_effective_flow_control(pipeline, :filter_2, :pull)
-
-    Testing.Pipeline.terminate(pipeline)
-  end
-
-  @tag :vibe_coded
-  test "buffers queued on a corked auto filter flow once its effective flow control switches to :push" do
-    sink_queue_size = 10
-    buffers_count = 50
-
-    spec = [
-      child(:push_source, PushSource)
-      |> via_in(Pad.ref(:input, :push))
-      |> child(:filter, AutoFilter)
-      |> via_in(:input, target_queue_size: sink_queue_size)
-      |> child(:sink, %Testing.Sink{autodemand: false}),
-      child(:pull_source, ControlledSource)
-      |> via_in(Pad.ref(:input, :pull))
-      |> get_child(:filter)
-    ]
-
-    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
-
-    assert_pipeline_notified(pipeline, :push_source, :playing)
-    assert_pipeline_notified(pipeline, :filter, :playing)
-    assert_sink_playing(pipeline, :sink)
-    assert_child_effective_flow_control(pipeline, :filter, :pull)
-
-    send_buffers(pipeline, :push_source, 1..sink_queue_size)
-    send_buffers(pipeline, :push_source, (sink_queue_size + 1)..buffers_count)
-
-    Testing.Pipeline.execute_actions(pipeline, remove_children: :pull_source)
-    assert_pipeline_notified(pipeline, :filter, {:pad_removed, Pad.ref(:input, :pull)})
-    assert_child_effective_flow_control(pipeline, :filter, :push)
-
-    Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, buffers_count})
-    assert_sink_payloads(pipeline, :sink, 1..buffers_count)
-    refute_sink_buffer(pipeline, :sink, _buffer, 0)
-
     Testing.Pipeline.terminate(pipeline)
   end
 

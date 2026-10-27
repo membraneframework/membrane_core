@@ -92,12 +92,11 @@ defmodule Membrane.Integration.DistributedPipelineTest do
   end
 
   @tag :vibe_coded
-  test "toilet across nodes overflows only once the default throttling factor flushes the decrement",
-       context do
+  test "toilet across nodes overflows only after the throttled decrement is flushed", context do
     toilet_capacity = 100
     target_queue_size = 10
-    distributed_throttling_factor = 150
-    buffers_below_throttling_factor = distributed_throttling_factor - 1
+    throttling_factor = 150
+    buffers_below_throttling_factor = throttling_factor - 1
     buffers_above_toilet_capacity = 1000
 
     pipeline =
@@ -107,7 +106,8 @@ defmodule Membrane.Integration.DistributedPipelineTest do
           {get_child(:source)
            |> via_in(:input,
              toilet_capacity: toilet_capacity,
-             target_queue_size: target_queue_size
+             target_queue_size: target_queue_size,
+             throttling_factor: throttling_factor
            )
            |> child(:sink, %Testing.Sink{autodemand: false}),
            node: context.second_node, group: :sink_group, crash_group_mode: :temporary}

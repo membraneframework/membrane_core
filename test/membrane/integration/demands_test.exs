@@ -482,6 +482,8 @@ defmodule Membrane.Integration.DemandsTest do
     def handle_parent_notification(:ping, _ctx, state), do: {[notify_parent: :pong], state}
   end
 
+  @min_demand_factor 0.5
+
   @tag :vibe_coded
   test "many single-buffer demands deliver exactly one buffer each" do
     spec =
@@ -512,20 +514,32 @@ defmodule Membrane.Integration.DemandsTest do
     target_queue_size = 10
     filters_count = 3
     queues_count = filters_count + 1
-    min_demand = div(target_queue_size, 2)
+    min_demand = round(target_queue_size * @min_demand_factor)
     max_queue_fill = target_queue_size - 1 + min_demand
     production_upper_bound = queues_count * max_queue_fill
     production_lower_bound = queues_count * target_queue_size
 
     spec =
       child(:source, %ReportingSource{payload: &<<&1::16>>})
-      |> via_in(:input, target_queue_size: target_queue_size)
+      |> via_in(:input,
+        target_queue_size: target_queue_size,
+        min_demand_factor: @min_demand_factor
+      )
       |> child(:filter1, Filter)
-      |> via_in(:input, target_queue_size: target_queue_size)
+      |> via_in(:input,
+        target_queue_size: target_queue_size,
+        min_demand_factor: @min_demand_factor
+      )
       |> child(:filter2, Filter)
-      |> via_in(:input, target_queue_size: target_queue_size)
+      |> via_in(:input,
+        target_queue_size: target_queue_size,
+        min_demand_factor: @min_demand_factor
+      )
       |> child(:filter3, Filter)
-      |> via_in(:input, target_queue_size: target_queue_size)
+      |> via_in(:input,
+        target_queue_size: target_queue_size,
+        min_demand_factor: @min_demand_factor
+      )
       |> child(:sink, %Sink{autodemand: false})
 
     pipeline = Pipeline.start_link_supervised!(spec: spec)
@@ -619,7 +633,10 @@ defmodule Membrane.Integration.DemandsTest do
 
     spec =
       child(:source, %ReportingSource{surplus: surplus})
-      |> via_in(:input, target_queue_size: target_queue_size)
+      |> via_in(:input,
+        target_queue_size: target_queue_size,
+        min_demand_factor: @min_demand_factor
+      )
       |> child(:sink, %Sink{autodemand: false})
 
     pipeline = Pipeline.start_link_supervised!(spec: spec)
@@ -641,14 +658,17 @@ defmodule Membrane.Integration.DemandsTest do
   end
 
   @tag :vibe_coded
-  test "manual input queue tops up by at least half of its target size" do
+  test "manual input queue tops up to its target size, but never by less than its minimal demand" do
     target_queue_size = 10
-    min_top_up = div(target_queue_size, 2)
+    min_top_up = round(target_queue_size * @min_demand_factor)
     demands = [1, 7, 9]
 
     spec =
       child(:source, ReportingSource)
-      |> via_in(:input, target_queue_size: target_queue_size)
+      |> via_in(:input,
+        target_queue_size: target_queue_size,
+        min_demand_factor: @min_demand_factor
+      )
       |> child(:sink, %Sink{autodemand: false})
 
     pipeline = Pipeline.start_link_supervised!(spec: spec)

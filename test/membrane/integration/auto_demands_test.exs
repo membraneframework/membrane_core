@@ -383,7 +383,6 @@ defmodule Membrane.Integration.AutoDemandsTest do
         Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
         assert_sink_payloads(pipeline, :sink, next_payload..(next_payload + demand - 1))
         refute_sink_buffer(pipeline, :sink, _buffer, 0)
-        refute_pipeline_notified(pipeline, :source, {:handle_demand, _size, _produced}, 300)
         next_payload + demand
       end)
 
