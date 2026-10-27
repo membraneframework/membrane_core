@@ -30,4 +30,35 @@ defmodule Membrane.Integration.FunnelTest do
 
     Membrane.Pipeline.terminate(pipeline)
   end
+
+  @tag :vibe_coded
+  test "Sends NewInputEvent when an input is linked while playing" do
+    import Membrane.ChildrenSpec
+
+    pipeline =
+      Testing.Pipeline.start_link_supervised!(
+        spec:
+          child(:src1, %Testing.Source{output: 1..10})
+          |> child(:funnel, %Funnel{end_of_stream: :never})
+          |> child(:sink, Testing.Sink)
+      )
+
+    Enum.each(1..10, fn payload ->
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: ^payload})
+    end)
+
+    refute_sink_event(pipeline, :sink, %Funnel.NewInputEvent{}, 0)
+
+    Testing.Pipeline.execute_actions(pipeline,
+      spec: child(:src2, %Testing.Source{output: 11..20}) |> get_child(:funnel)
+    )
+
+    assert_sink_event(pipeline, :sink, %Funnel.NewInputEvent{})
+
+    Enum.each(11..20, fn payload ->
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: ^payload})
+    end)
+
+    Testing.Pipeline.terminate(pipeline)
+  end
 end
