@@ -4,19 +4,21 @@ defmodule Membrane.Integration.DemandsTest do
 
   import ExUnit.Assertions
   import Membrane.ChildrenSpec
+  import Membrane.Support.DemandsTest.Helpers
   import Membrane.Testing.Assertions
 
   alias Membrane.Buffer
-  alias Membrane.Support.DemandsTest.Filter
+  alias Membrane.Support.DemandsTest.{BytesSink, ControlledSource, Filter, ReportingSource}
   alias Membrane.Testing
   alias Membrane.Testing.{Pipeline, Sink, Source}
 
   require Membrane.Pad, as: Pad
 
-  defp assert_buffers_received(range, pid) do
+  defp assert_buffers_received(range, pipeline, filters_count \\ 1) do
+    suffix = String.duplicate(<<255>>, filters_count)
+
     Enum.each(range, fn i ->
-      assert_sink_buffer(pid, :sink, buffer)
-      assert %Buffer{payload: <<^i::16>> <> <<255>>} = buffer
+      assert_sink_buffer(pipeline, :sink, %Buffer{payload: <<^i::16, ^suffix::binary>>})
     end)
   end
 
@@ -318,7 +320,8 @@ defmodule Membrane.Integration.DemandsTest do
     {{:timestamp, :dts_or_pts}, Sink.Timestamp.DTSorPTS}
   ]
 
-  for {demand_unit, sink_name} <- @timestamp_demand_units_with_sink_names do
+  for {demand_unit, sink_name} <-
+        @timestamp_demand_units_with_sink_names ++ [{:buffers, Sink.Buffers}] do
     defmodule sink_name do
       use Membrane.Sink
 
@@ -333,6 +336,21 @@ defmodule Membrane.Integration.DemandsTest do
       @impl true
       def handle_buffer(:input, buffer, _ctx, state) do
         {[notify_parent: {:buffer, buffer}], state}
+      end
+
+      @impl true
+      def handle_event(:input, event, _ctx, state) do
+        {[notify_parent: {:event, event}], state}
+      end
+
+      @impl true
+      def handle_stream_format(:input, stream_format, _ctx, state) do
+        {[notify_parent: {:stream_format, stream_format}], state}
+      end
+
+      @impl true
+      def handle_end_of_stream(:input, _ctx, state) do
+        {[notify_parent: :end_of_stream], state}
       end
 
       @impl true
@@ -407,4 +425,327 @@ defmodule Membrane.Integration.DemandsTest do
   end
 
   defp timestamp(buffer_idx, offset), do: 10 * buffer_idx + offset
+
+  defmodule RedemandingOnEndOfStreamSource do
+    use Membrane.Source
+
+    def_output_pad :output, flow_control: :manual, accepted_format: _any
+
+    @impl true
+    def handle_init(_ctx, _opts), do: {[], %{eos_sent?: false}}
+
+    @impl true
+    def handle_playing(_ctx, state) do
+      {[stream_format: {:output, %Membrane.RemoteStream{}}], state}
+    end
+
+    @impl true
+    def handle_demand(:output, _size, :buffers, _ctx, %{eos_sent?: true}) do
+      raise "handle_demand cannot be called after sending end of stream"
+    end
+
+    @impl true
+    def handle_demand(:output, _size, :buffers, _ctx, state) do
+      actions = [
+        buffer: {:output, %Buffer{payload: 1}},
+        end_of_stream: :output,
+        redemand: :output
+      ]
+
+      {actions, %{state | eos_sent?: true}}
+    end
+  end
+
+  defmodule DemandingOnEndOfStreamSink do
+    use Membrane.Sink
+
+    def_input_pad :input, accepted_format: _any, flow_control: :manual, demand_unit: :buffers
+
+    @impl true
+    def handle_playing(_ctx, state), do: {[notify_parent: :playing], state}
+
+    @impl true
+    def handle_buffer(:input, buffer, _ctx, state),
+      do: {[notify_parent: {:buffer, buffer}], state}
+
+    @impl true
+    def handle_end_of_stream(:input, _ctx, state) do
+      {[demand: {:input, 5}, notify_parent: :end_of_stream], state}
+    end
+
+    @impl true
+    def handle_parent_notification({:make_demand, size}, _ctx, state) do
+      {[demand: {:input, size}], state}
+    end
+
+    @impl true
+    def handle_parent_notification(:ping, _ctx, state), do: {[notify_parent: :pong], state}
+  end
+
+  @min_demand_factor 0.5
+
+  @tag :vibe_coded
+  test "many single-buffer demands deliver exactly one buffer each" do
+    spec =
+      child(:source, Source)
+      |> child(:filter, Filter)
+      |> child(:sink, %Sink{autodemand: false})
+
+    pipeline = Pipeline.start_link_supervised!(spec: spec)
+    assert_sink_playing(pipeline, :sink)
+
+    single_demands = 50
+
+    for i <- 0..(single_demands - 1) do
+      Pipeline.notify_child(pipeline, :sink, {:make_demand, 1})
+      assert_buffers_received(i..i, pipeline)
+    end
+
+    batch_demand = 200
+    Pipeline.notify_child(pipeline, :sink, {:make_demand, batch_demand})
+    assert_buffers_received(single_demands..(single_demands + batch_demand - 1), pipeline)
+    refute_sink_buffer(pipeline, :sink, _, 100)
+
+    Pipeline.terminate(pipeline)
+  end
+
+  @tag :vibe_coded
+  test "manual input queues with small target sizes bound the production of the source" do
+    target_queue_size = 10
+    filters_count = 3
+    queues_count = filters_count + 1
+    min_demand = round(target_queue_size * @min_demand_factor)
+    max_queue_fill = target_queue_size - 1 + min_demand
+    production_upper_bound = queues_count * max_queue_fill
+    production_lower_bound = queues_count * target_queue_size
+
+    spec =
+      child(:source, %ReportingSource{payload: &<<&1::16>>})
+      |> via_in(:input,
+        target_queue_size: target_queue_size,
+        min_demand_factor: @min_demand_factor
+      )
+      |> child(:filter1, Filter)
+      |> via_in(:input,
+        target_queue_size: target_queue_size,
+        min_demand_factor: @min_demand_factor
+      )
+      |> child(:filter2, Filter)
+      |> via_in(:input,
+        target_queue_size: target_queue_size,
+        min_demand_factor: @min_demand_factor
+      )
+      |> child(:filter3, Filter)
+      |> via_in(:input,
+        target_queue_size: target_queue_size,
+        min_demand_factor: @min_demand_factor
+      )
+      |> child(:sink, %Sink{autodemand: false})
+
+    pipeline = Pipeline.start_link_supervised!(spec: spec)
+    assert_sink_playing(pipeline, :sink)
+
+    produced = await_settled_production(pipeline, :source)
+    assert produced in production_lower_bound..production_upper_bound
+    refute_sink_buffer(pipeline, :sink, _, 0)
+
+    demand = 100
+    Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
+    assert_buffers_received(1..demand, pipeline, filters_count)
+
+    produced = await_settled_production(pipeline, :source, produced)
+    assert produced in (demand + production_lower_bound)..(demand + production_upper_bound)
+    refute_sink_buffer(pipeline, :sink, _, 0)
+
+    Pipeline.terminate(pipeline)
+  end
+
+  @tag :vibe_coded
+  test "demands in bytes split buffers across demands" do
+    target_queue_size = 4
+
+    spec =
+      child(:source, %ReportingSource{payload: &ten_byte_payload/1})
+      |> via_in(:input, target_queue_size: target_queue_size)
+      |> child(:sink, BytesSink)
+
+    pipeline = Pipeline.start_link_supervised!(spec: spec)
+    assert_pipeline_notified(pipeline, :sink, :playing)
+
+    <<payload_3_head::binary-size(5), payload_3_tail::binary-size(5)>> =
+      ten_byte_payload(3)
+
+    <<payload_14_head::binary-size(5), _payload_14_tail::binary-size(5)>> =
+      ten_byte_payload(14)
+
+    [
+      {25, [ten_byte_payload(1), ten_byte_payload(2), payload_3_head]},
+      {35, [payload_3_tail | Enum.map(4..6, &ten_byte_payload/1)]},
+      {60, Enum.map(7..12, &ten_byte_payload/1)},
+      {15, [ten_byte_payload(13), payload_14_head]}
+    ]
+    |> Enum.each(fn {demand_bytes, expected_payloads} ->
+      Pipeline.notify_child(pipeline, :sink, {:make_demand, demand_bytes})
+
+      Enum.each(expected_payloads, fn payload ->
+        assert_pipeline_notified(pipeline, :sink, {:buffer, %Buffer{payload: ^payload}})
+      end)
+
+      refute_pipeline_notified(pipeline, :sink, {:buffer, _buffer}, 100)
+    end)
+
+    Pipeline.terminate(pipeline)
+  end
+
+  @tag :vibe_coded
+  test "demand altering function changes the pending demand" do
+    spec =
+      child(:source, Source)
+      |> child(:sink, Sink.Buffers)
+
+    pipeline = Pipeline.start_link_supervised!(spec: spec)
+    assert_pipeline_notified(pipeline, :sink, :playing)
+
+    [
+      {2, 0..1},
+      {&(&1 + 3), 2..4},
+      {fn _pending_demand -> 0 end, []},
+      {&(&1 + 1), [5]}
+    ]
+    |> Enum.each(fn {demand, expected_range} ->
+      Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
+
+      Enum.each(expected_range, fn i ->
+        assert_pipeline_notified(pipeline, :sink, {:buffer, %Buffer{payload: <<^i::16>>}})
+      end)
+
+      refute_pipeline_notified(pipeline, :sink, {:buffer, _buffer}, 100)
+    end)
+
+    Pipeline.terminate(pipeline)
+  end
+
+  @tag :vibe_coded
+  test "handle_demand is not called while the demand is overestimated" do
+    target_queue_size = 20
+    surplus = 5
+    demand = 10
+
+    spec =
+      child(:source, %ReportingSource{surplus: surplus})
+      |> via_in(:input,
+        target_queue_size: target_queue_size,
+        min_demand_factor: @min_demand_factor
+      )
+      |> child(:sink, %Sink{autodemand: false})
+
+    pipeline = Pipeline.start_link_supervised!(spec: spec)
+    assert_sink_playing(pipeline, :sink)
+
+    produced = target_queue_size + surplus
+    assert_pipeline_notified(pipeline, :source, {:handle_demand, ^target_queue_size, ^produced})
+    refute_pipeline_notified(pipeline, :source, {:handle_demand, _size, _produced}, 300)
+
+    Pipeline.notify_child(pipeline, :sink, {:make_demand, demand})
+    assert_sink_payloads(pipeline, :sink, 1..demand)
+
+    expected_size = demand - surplus
+    produced = produced + demand
+    assert_pipeline_notified(pipeline, :source, {:handle_demand, ^expected_size, ^produced})
+    refute_pipeline_notified(pipeline, :source, {:handle_demand, _size, _produced}, 300)
+
+    Pipeline.terminate(pipeline)
+  end
+
+  @tag :vibe_coded
+  test "redemand returned along with end of stream does not call handle_demand again" do
+    spec =
+      child(:source, RedemandingOnEndOfStreamSource)
+      |> child(:sink, Sink)
+
+    pipeline = Pipeline.start_link_supervised!(spec: spec)
+
+    assert_sink_buffer(pipeline, :sink, %Buffer{payload: 1})
+    assert_end_of_stream(pipeline, :sink)
+    assert Process.alive?(Pipeline.get_child_pid!(pipeline, :source))
+
+    Pipeline.terminate(pipeline)
+  end
+
+  @tag :vibe_coded
+  test "events and stream formats keep their order in the manual input queue" do
+    spec =
+      child(:source, ControlledSource)
+      |> child(:sink, Sink.Buffers)
+
+    pipeline = Pipeline.start_link_supervised!(spec: spec)
+    assert_pipeline_notified(pipeline, :sink, :playing)
+    assert_notified_in_order(pipeline, :sink, [{:stream_format, %Membrane.RemoteStream{}}])
+
+    second_stream_format = %Membrane.RemoteStream{type: :packetized}
+
+    actions = [
+      buffer: {:output, %Buffer{payload: 1}},
+      buffer: {:output, %Buffer{payload: 2}},
+      event: {:output, %Membrane.Event.Discontinuity{duration: 1}},
+      stream_format: {:output, second_stream_format},
+      buffer: {:output, %Buffer{payload: 3}},
+      event: {:output, %Membrane.Event.Discontinuity{duration: 2}},
+      end_of_stream: :output
+    ]
+
+    Pipeline.notify_child(pipeline, :source, actions)
+    refute_pipeline_notified(pipeline, :sink, _notification, 100)
+
+    Pipeline.notify_child(pipeline, :sink, {:make_demand, 2})
+
+    assert_notified_in_order(pipeline, :sink, [
+      {:buffer, %Buffer{payload: 1}},
+      {:buffer, %Buffer{payload: 2}},
+      {:event, %Membrane.Event.Discontinuity{duration: 1}},
+      {:stream_format, second_stream_format}
+    ])
+
+    refute_pipeline_notified(pipeline, :sink, _notification, 100)
+
+    Pipeline.notify_child(pipeline, :sink, {:make_demand, 1})
+
+    assert_notified_in_order(pipeline, :sink, [
+      {:buffer, %Buffer{payload: 3}},
+      {:event, %Membrane.Event.Discontinuity{duration: 2}},
+      :end_of_stream
+    ])
+
+    assert_end_of_stream(pipeline, :sink)
+
+    Pipeline.terminate(pipeline)
+  end
+
+  @tag :vibe_coded
+  test "demand returned from handle_end_of_stream does not crash the element" do
+    payloads = Enum.to_list(1..10)
+
+    spec =
+      child(:source, %Source{output: payloads})
+      |> child(:sink, DemandingOnEndOfStreamSink)
+
+    pipeline = Pipeline.start_link_supervised!(spec: spec)
+    assert_pipeline_notified(pipeline, :sink, :playing)
+
+    Pipeline.notify_child(pipeline, :sink, {:make_demand, 20})
+
+    Enum.each(payloads, fn i ->
+      assert_pipeline_notified(pipeline, :sink, {:buffer, %Buffer{payload: ^i}})
+    end)
+
+    assert_pipeline_notified(pipeline, :sink, :end_of_stream)
+    assert_end_of_stream(pipeline, :sink)
+
+    Pipeline.notify_child(pipeline, :sink, :ping)
+    assert_pipeline_notified(pipeline, :sink, :pong)
+
+    Pipeline.terminate(pipeline)
+  end
+
+  defp ten_byte_payload(i), do: <<i::40, 0::40>>
 end

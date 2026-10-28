@@ -4,9 +4,12 @@ defmodule Membrane.Integration.ToiletForwardingTest do
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
 
+  alias Membrane.Support.DemandsTest.BytesSink
   alias Membrane.Testing
 
   require Membrane.Pad, as: Pad
+
+  @payload_size 8
 
   defmodule StreamFormat do
     defstruct []
@@ -241,4 +244,80 @@ defmodule Membrane.Integration.ToiletForwardingTest do
 
     Testing.Pipeline.terminate(pipeline)
   end
+
+  @tag :vibe_coded
+  test "demands in uneven chunks pass through alternating auto and manual filters" do
+    buffers_count = 2000
+    demand_chunks = [1, 7, 100, 3, 500, 1389]
+
+    spec =
+      Enum.reduce(1..5, child(:source, %Testing.Source{output: 1..buffers_count}), fn _i, spec ->
+        spec
+        |> child(AutoFilter)
+        |> child(RedemandingFilter)
+      end)
+      |> child(:sink, %Testing.Sink{autodemand: false})
+
+    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+    assert_sink_playing(pipeline, :sink)
+
+    Enum.reduce(demand_chunks, 1, fn chunk, first_payload ->
+      Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, chunk})
+      last_payload = first_payload + chunk - 1
+
+      for i <- first_payload..last_payload do
+        assert_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: ^i})
+      end
+
+      following_payload = last_payload + 1
+      refute_sink_buffer(pipeline, :sink, %Membrane.Buffer{payload: ^following_payload}, 100)
+      following_payload
+    end)
+
+    assert_end_of_stream(pipeline, :sink)
+    Testing.Pipeline.terminate(pipeline)
+  end
+
+  @tag :vibe_coded
+  test "sink demanding in bytes through auto filters receives exactly the demanded bytes" do
+    buffers_count = 10
+    <<payload_3_head::binary-size(4), payload_3_tail::binary-size(4)>> = payload(3)
+
+    spec =
+      child(:source, PullSource)
+      |> child(AutoFilter)
+      |> child(AutoFilter)
+      |> child(:sink, BytesSink)
+
+    pipeline = Testing.Pipeline.start_link_supervised!(spec: spec)
+    assert_pipeline_notified(pipeline, :sink, :playing)
+
+    forward_buffers(pipeline, 1..buffers_count)
+    refute_pipeline_notified(pipeline, :sink, {:buffer, _buffer}, 100)
+
+    [
+      {20, [payload(1), payload(2), payload_3_head]},
+      {60, [payload_3_tail | Enum.map(4..buffers_count, &payload/1)]}
+    ]
+    |> Enum.each(fn {demand_bytes, expected_payloads} ->
+      Testing.Pipeline.notify_child(pipeline, :sink, {:make_demand, demand_bytes})
+
+      Enum.each(expected_payloads, fn payload ->
+        assert_pipeline_notified(pipeline, :sink, {:buffer, %Membrane.Buffer{payload: ^payload}})
+      end)
+
+      refute_pipeline_notified(pipeline, :sink, {:buffer, _buffer}, 100)
+    end)
+
+    Testing.Pipeline.terminate(pipeline)
+  end
+
+  defp forward_buffers(pipeline, payloads) do
+    Enum.each(payloads, fn payload ->
+      buffer = %Membrane.Buffer{payload: payload(payload)}
+      Testing.Pipeline.notify_child(pipeline, :source, {:forward_buffers, [buffer]})
+    end)
+  end
+
+  defp payload(i), do: <<i::size(8 * @payload_size)>>
 end
