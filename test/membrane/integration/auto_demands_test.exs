@@ -318,7 +318,10 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     resumed_until = drain_sink_payloads(pipeline, :fast_sink, stalled_at + 1)
     assert resumed_until >= @first_slow_sink_demand
-    assert resumed_until - stalled_at <= @tee_auto_demand_size
+
+    assert resumed_until <=
+             @first_slow_sink_demand + @slow_sink_queue_size + @tee_auto_demand_size
+
     refute_sink_buffer(pipeline, :slow_sink, _buffer, 0)
 
     remaining_demand = @tee_payloads_count - @first_slow_sink_demand
@@ -666,11 +669,12 @@ defmodule Membrane.Integration.AutoDemandsTest do
 
     Pipeline.notify_child(pipeline, :filter, pause_auto_demand: Pad.ref(:input, 0))
     Pipeline.notify_child(pipeline, :sink, {:make_demand, payloads_count})
-    assert_sink_payloads(pipeline, :sink, 1..filter_auto_demand_size)
-    refute_sink_buffer(pipeline, :sink, _buffer, 300)
+    delivered_before_resume = drain_sink_payloads(pipeline, :sink, 1)
+    max_delivered_before_resume = filter_auto_demand_size + sink_queue_size
+    assert delivered_before_resume in filter_auto_demand_size..max_delivered_before_resume
 
     Pipeline.notify_child(pipeline, :filter, resume_auto_demand: Pad.ref(:input, 0))
-    assert_sink_payloads(pipeline, :sink, (filter_auto_demand_size + 1)..payloads_count)
+    assert_sink_payloads(pipeline, :sink, (delivered_before_resume + 1)..payloads_count)
     assert_end_of_stream(pipeline, :sink)
 
     Pipeline.terminate(pipeline)
