@@ -174,16 +174,16 @@ defmodule Membrane.Core.Telemetry do
   def track_callback_handler(f, callback, args, state, context) do
     component_type = state_module_to_atom(state.__struct__)
 
-    meta =
-      callback_meta(
-        state,
-        callback,
-        args,
-        context,
-        component_type
-      )
-
     if handler_reported?(component_type, callback) |> Function.identity() do
+      meta =
+        callback_meta(
+          state,
+          callback,
+          args,
+          context,
+          component_type
+        )
+
       :telemetry.span([:membrane, component_type, callback], meta, fn ->
         {_actions, int_state} = res = f.()
 

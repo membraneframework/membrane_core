@@ -393,22 +393,22 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
-  defp join_buffers(actions) do
-    actions
-    |> Bunch.Enum.chunk_by_prev(
-      fn
-        {:buffer, {pad, _buffer1}}, {:buffer, {pad, _buffer2}} -> true
-        _prev_action, _action -> false
-      end,
-      fn
-        [{:buffer, {pad, _buffer}} | _rest] = buffers ->
-          {:buffer,
-           {pad, buffers |> Enum.map(fn {:buffer, {_pad, b}} -> [b] end) |> List.flatten()}}
+  defp join_buffers([]), do: []
+  defp join_buffers([action]), do: [action]
 
-        [other] ->
-          other
-      end
-    )
+  defp join_buffers([{:buffer, {pad, buffers}} | rest]) do
+    {joined, rest} = join_buffers_for_pad(pad, rest, [List.wrap(buffers)])
+    [{:buffer, {pad, joined}} | join_buffers(rest)]
+  end
+
+  defp join_buffers([action | rest]), do: [action | join_buffers(rest)]
+
+  defp join_buffers_for_pad(pad, [{:buffer, {pad, buffers}} | rest], acc) do
+    join_buffers_for_pad(pad, rest, [List.wrap(buffers) | acc])
+  end
+
+  defp join_buffers_for_pad(_pad, rest, acc) do
+    {acc |> Enum.reverse() |> List.flatten(), rest}
   end
 
   @spec send_buffer(Pad.ref(), [Buffer.t()] | Buffer.t(), State.t()) :: State.t()
@@ -448,7 +448,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       :atomics.add(stalker_metrics.total_buffers, 1, length(buffers))
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
 
-      PadModel.set_data!(state, pad_ref, :start_of_stream?, true)
+      mark_start_of_stream(pad_ref, pad_data, state)
       |> Map.update!(:pads_to_snapshot, &MapSet.put(&1, pad_ref))
     else
       %{direction: :input} ->
@@ -467,6 +467,11 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp send_buffer(_pad_ref, invalid_value, _state) do
     raise ElementError, "Tried to send an invalid buffer #{inspect(invalid_value)}"
   end
+
+  defp mark_start_of_stream(_pad_ref, %{start_of_stream?: true}, state), do: state
+
+  defp mark_start_of_stream(pad_ref, _pad_data, state),
+    do: PadModel.set_data!(state, pad_ref, :start_of_stream?, true)
 
   @spec send_stream_format(Pad.ref(), StreamFormat.t(), State.t()) :: State.t()
   def send_stream_format(pad_ref, stream_format, state) do
@@ -532,10 +537,10 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp handle_redemand(pad_ref, %{type: type} = state)
        when type in [:source, :filter, :endpoint] do
     with %{direction: :output, flow_control: :manual} <- PadModel.get_data!(state, pad_ref) do
-      state = PadModel.update_data!(state, pad_ref, :uninterrupted_redemands, &(&1 + 1))
+      {uninterrupted_redemands, state} =
+        PadModel.get_and_update_data!(state, pad_ref, :uninterrupted_redemands, &{&1 + 1, &1 + 1})
 
-      if PadModel.get_data!(state, pad_ref, :uninterrupted_redemands) ==
-           @uninterrupted_redemands_warning_limit do
+      if uninterrupted_redemands == @uninterrupted_redemands_warning_limit do
         Membrane.Logger.warning("""
         This element has returned #{@uninterrupted_redemands_warning_limit} :redemand actions without any :buffer actions in between for pad #{inspect(pad_ref)}. \
         This can be an indication that the element is in an infinite handle_demand loop without actually supplying the demand.
