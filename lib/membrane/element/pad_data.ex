@@ -49,9 +49,10 @@ defmodule Membrane.Element.PadData do
           auto_demand_size: private_field,
           sticky_messages: private_field,
 
-          # Used only for output pads with :pull or :auto flow control. Holds the last captured value of AtomicDemand,
+          # Used only for output pads with :manual or :auto flow control. Holds the last captured value of AtomicDemand,
           # decreased by the size of buffers sent via specific pad since the last capture, expressed in the appropriate metric.
-          # Moment, when demand value drops to 0 or less, triggers another capture of AtomicDemand value.
+          # It is captured again when :atomic_demand_increased arrives. On manual pads it is also captured
+          # when it drops to 0 or less, on auto pads whenever a decrease reaches AtomicDemand.
           demand: integer() | nil,
 
           # Instance of AtomicDemand shared by both sides of link. Holds amount of data, that has been demanded by the element

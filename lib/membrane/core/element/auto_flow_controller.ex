@@ -32,9 +32,8 @@ defmodule Membrane.Core.Element.AutoFlowController do
 
   # The following events can make the element shift from `corked` state to `uncorked` state:
   #   - change of effective flow control from :pull to :push
-  #   - increase in the value of auto output pad demand. We check the demand value:
-  #     - after sending the buffer to a given output pad
-  #     - after receiving a message :atomic_demand_increased from the next element
+  #   - increase in the value of auto output pad demand. The next element reports it with
+  #     :atomic_demand_increased, which it sends whenever it increases a non-positive demand
   #   - unlinking an auto output pad
   #   - sending EOS to an auto output pad
 
@@ -205,7 +204,7 @@ defmodule Membrane.Core.Element.AutoFlowController do
   defp increase_atomic_demand?(pad_data, state) do
     state.effective_flow_control == :pull and
       not pad_data.auto_demand_paused? and
-      pad_data.demand < pad_data.auto_demand_size / 2 and
+      pad_data.demand * 2 < pad_data.auto_demand_size and
       state.satisfied_auto_output_pads == @empty_map_set
   end
 
@@ -239,7 +238,7 @@ defmodule Membrane.Core.Element.AutoFlowController do
       pad_data = PadModel.get_data!(state, pad_ref)
 
       if not pad_data.auto_demand_paused? and
-           pad_data.demand < pad_data.auto_demand_size / 2 do
+           pad_data.demand * 2 < pad_data.auto_demand_size do
         diff = pad_data.auto_demand_size - pad_data.demand
         :ok = AtomicDemand.increase(pad_data.atomic_demand, diff)
 
@@ -265,7 +264,11 @@ defmodule Membrane.Core.Element.AutoFlowController do
   end
 
   defp pop_random_auto_flow_queue(state) do
-    pad_ref = Enum.random(state.awaiting_auto_input_pads)
+    pad_ref =
+      case MapSet.to_list(state.awaiting_auto_input_pads) do
+        [pad_ref] -> pad_ref
+        pad_refs -> Enum.random(pad_refs)
+      end
 
     state
     |> PadModel.get_data!(pad_ref, :auto_flow_queue)

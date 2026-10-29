@@ -25,7 +25,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         playback: :stopped,
         synchronization: %{clock: nil, parent_clock: nil},
         delayed_demands: MapSet.new(),
-        pads_to_snapshot: MapSet.new(),
+        manual_pads_to_snapshot: MapSet.new(),
         pads_data: %{
           input:
             struct(Membrane.Element.PadData,
@@ -109,7 +109,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         synchronization: %{clock: nil, parent_clock: nil},
         delayed_demands: MapSet.new(),
         playback: :stopped,
-        pads_to_snapshot: MapSet.new(),
+        manual_pads_to_snapshot: MapSet.new(),
         pads_data: %{
           output: %{
             direction: :output,
@@ -194,11 +194,10 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         )
 
       assert result.pads_data.output.demand < 0
-      assert result.pads_to_snapshot == MapSet.new([:output])
+      assert result.manual_pads_to_snapshot == MapSet.new()
       assert AtomicDemand.get(result.pads_data.output.atomic_demand) < 0
 
-      assert put_in(result, [:pads_data, :output, :demand], 0)
-             |> Map.put(:pads_to_snapshot, MapSet.new()) == state
+      assert put_in(result, [:pads_data, :output, :demand], 0) == state
 
       assert_received Message.new(:buffer, [@mock_buffer], for_pad: :other_ref)
     end
@@ -515,7 +514,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         name: :elem_name,
         synchronization: %{clock: nil, parent_clock: nil},
         type: :source,
-        pads_to_snapshot: MapSet.new(),
+        manual_pads_to_snapshot: MapSet.new(),
         pads_data: %{
           output: %{
             direction: :output,
@@ -558,7 +557,7 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         synchronization: %{clock: nil, parent_clock: nil},
         delayed_demands: MapSet.new(),
         playback: :playing,
-        pads_to_snapshot: MapSet.new(),
+        manual_pads_to_snapshot: MapSet.new(),
         pads_data: %{
           output1: %{
             direction: :output,

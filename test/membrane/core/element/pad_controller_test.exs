@@ -17,7 +17,7 @@ defmodule Membrane.Core.Element.PadControllerTest do
       name: name,
       module: elem_module,
       delay_demands?: false,
-      pads_to_snapshot: MapSet.new(),
+      manual_pads_to_snapshot: MapSet.new(),
       delayed_demands: MapSet.new(),
       parent_pid: self(),
       internal_state: %{},

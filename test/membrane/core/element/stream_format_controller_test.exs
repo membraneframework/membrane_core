@@ -43,7 +43,7 @@ defmodule Membrane.Core.Element.StreamFormatControllerTest do
         playback: :playing,
         synchronization: %{clock: nil, parent_clock: nil},
         delay_demands?: false,
-        pads_to_snapshot: MapSet.new(),
+        manual_pads_to_snapshot: MapSet.new(),
         delayed_demands: MapSet.new(),
         handle_demand_loop_counter: 0,
         pads_data: %{

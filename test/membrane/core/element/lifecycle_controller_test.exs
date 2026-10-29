@@ -51,7 +51,7 @@ defmodule Membrane.Core.Element.LifecycleControllerTest do
         parent_pid: self(),
         synchronization: %{clock: nil, parent_clock: nil},
         delay_demands?: false,
-        pads_to_snapshot: MapSet.new(),
+        manual_pads_to_snapshot: MapSet.new(),
         delayed_demands: MapSet.new(),
         pads_data: %{
           input:
