@@ -51,28 +51,28 @@ defmodule Membrane.Core.Element.ActionHandler do
   @impl CallbackHandler
   def handle_end_of_actions(state) do
     cond do
-      state.pads_to_snapshot == @empty_map_set ->
+      state.manual_pads_to_snapshot == @empty_map_set ->
         maybe_handle_delayed_demands(state)
 
       state.delayed_demands == @empty_map_set ->
         state
-        |> handle_pads_to_snapshot()
+        |> handle_manual_pads_to_snapshot()
         |> maybe_handle_delayed_demands()
 
       true ->
-        handle_pads_to_snapshot_and_delayed_demands_in_random_order(state)
+        handle_manual_pads_to_snapshot_and_delayed_demands_in_random_order(state)
     end
   end
 
-  defp handle_pads_to_snapshot_and_delayed_demands_in_random_order(state) do
+  defp handle_manual_pads_to_snapshot_and_delayed_demands_in_random_order(state) do
     if Enum.random([true, false]) do
       state
-      |> handle_pads_to_snapshot()
+      |> handle_manual_pads_to_snapshot()
       |> maybe_handle_delayed_demands()
     else
       state
       |> maybe_handle_delayed_demands()
-      |> handle_pads_to_snapshot()
+      |> handle_manual_pads_to_snapshot()
     end
   end
 
@@ -85,18 +85,18 @@ defmodule Membrane.Core.Element.ActionHandler do
   # Suppress false positive dialyzer warnings resulting from
   # broken handling of opaque types - in this case MapSet.t()
   # https://github.com/elixir-lang/elixir/issues/14576
-  @dialyzer {:nowarn_function, handle_pads_to_snapshot: 1}
-  defp handle_pads_to_snapshot(state) do
-    case MapSet.to_list(state.pads_to_snapshot) do
+  @dialyzer {:nowarn_function, handle_manual_pads_to_snapshot: 1}
+  defp handle_manual_pads_to_snapshot(state) do
+    case MapSet.to_list(state.manual_pads_to_snapshot) do
       [] ->
         state
 
       [pad_ref] ->
-        state = %{state | pads_to_snapshot: MapSet.new()}
+        state = %{state | manual_pads_to_snapshot: MapSet.new()}
         DemandController.snapshot_atomic_demand(pad_ref, state)
 
       pad_refs ->
-        state = %{state | pads_to_snapshot: MapSet.new()}
+        state = %{state | manual_pads_to_snapshot: MapSet.new()}
 
         pad_refs
         |> Enum.shuffle()

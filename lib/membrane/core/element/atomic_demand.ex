@@ -1,6 +1,14 @@
 defmodule Membrane.Core.Element.AtomicDemand do
   @moduledoc false
 
+  # Both ends of a link share this demand counter. The receiver increases it when it demands
+  # data and the sender decreases it by the size of the buffers it sends. The sender buffers
+  # its decrements until they reach `throttling_factor`. When the receiver increases a counter
+  # that is not positive, it sends :atomic_demand_increased to the sender, so if the sender saw
+  # the counter exhausted, it will be told when demand is back. When the sender works in :push
+  # and the receiver in :pull, the counter works as a toilet: if it drops below -toilet_capacity,
+  # the receiver gets killed.
+
   alias Membrane.Core.Element.EffectiveFlowController
 
   alias __MODULE__.{

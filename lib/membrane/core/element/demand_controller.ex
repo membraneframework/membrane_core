@@ -1,7 +1,15 @@
 defmodule Membrane.Core.Element.DemandController do
   @moduledoc false
 
-  # Module handling changes in values of output pads atomic demand
+  # Module handling changes in values of output pads atomic demand.
+
+  # The `demand` field of an output pad holds the last snapshot of its AtomicDemand minus the size
+  # of the buffers that the element has sent since. A snapshot is taken when :atomic_demand_increased
+  # arrives, when the effective flow control becomes :pull and, for manual pads, at the end of the
+  # actions that exhausted the demand (see `manual_pads_to_snapshot`). The last case is needed
+  # because the counter may grow without ever being non-positive, and then no message is sent.
+  # If the snapshot finds positive demand, it calls handle_demand on a manual pad and it uncorks
+  # the element on an auto pad (see AutoFlowController).
 
   use Bunch
 
@@ -134,7 +142,7 @@ defmodule Membrane.Core.Element.DemandController do
       })
 
     if snapshot?,
-      do: %{state | pads_to_snapshot: MapSet.put(state.pads_to_snapshot, pad_ref)},
+      do: %{state | manual_pads_to_snapshot: MapSet.put(state.manual_pads_to_snapshot, pad_ref)},
       else: state
   end
 
