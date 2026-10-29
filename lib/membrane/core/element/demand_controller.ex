@@ -59,7 +59,7 @@ defmodule Membrane.Core.Element.DemandController do
     atomic_value = AtomicDemand.get(pad_data.atomic_demand)
     state = PadModel.set_data!(state, pad_data.ref, :demand, atomic_value)
 
-    if atomic_value > 0 do
+    if atomic_value > 0 and MapSet.member?(state.satisfied_auto_output_pads, pad_data.ref) do
       state
       |> Map.update!(:satisfied_auto_output_pads, &MapSet.delete(&1, pad_data.ref))
       |> AutoFlowController.pop_queues_and_bump_demand()
@@ -97,6 +97,7 @@ defmodule Membrane.Core.Element.DemandController do
 
   @doc """
   Decreases demand snapshot and atomic demand on the output by the size of outgoing buffers.
+  If the pad is manual and its demand got exhausted, the pad is scheduled for a snapshot.
   """
   @spec decrease_demand_by_outgoing_buffers(Pad.ref(), [Buffer.t()], State.t()) :: State.t()
   def decrease_demand_by_outgoing_buffers(pad_ref, buffers, state) do
@@ -108,21 +109,33 @@ defmodule Membrane.Core.Element.DemandController do
         buffers
       )
 
-    demand = pad_data.demand - buffers_size
     {decrease_result, atomic_demand} = AtomicDemand.decrease(pad_data.atomic_demand, buffers_size)
 
-    with {:decreased, new_value} when new_value <= 0 <- decrease_result,
-         %{flow_control: :auto} <- pad_data do
-      Map.update!(state, :satisfied_auto_output_pads, &MapSet.put(&1, pad_ref))
-    else
-      _other -> state
-    end
-    |> PadModel.set_data!(pad_ref, %{
-      pad_data
-      | demand: demand,
-        atomic_demand: atomic_demand,
-        uninterrupted_redemands: 0
-    })
+    {demand, state} =
+      case {pad_data.flow_control, decrease_result} do
+        {:auto, {:decreased, new_value}} when new_value <= 0 ->
+          {new_value, Map.update!(state, :satisfied_auto_output_pads, &MapSet.put(&1, pad_ref))}
+
+        {:auto, {:decreased, new_value}} ->
+          {new_value, state}
+
+        _other ->
+          {pad_data.demand - buffers_size, state}
+      end
+
+    snapshot? = pad_data.flow_control == :manual and demand <= 0
+
+    state =
+      PadModel.set_data!(state, pad_ref, %{
+        pad_data
+        | demand: demand,
+          atomic_demand: atomic_demand,
+          uninterrupted_redemands: 0
+      })
+
+    if snapshot?,
+      do: %{state | pads_to_snapshot: MapSet.put(state.pads_to_snapshot, pad_ref)},
+      else: state
   end
 
   @spec exec_handle_demand(Pad.ref(), State.t()) :: State.t()

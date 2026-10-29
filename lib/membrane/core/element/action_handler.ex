@@ -38,6 +38,7 @@ defmodule Membrane.Core.Element.ActionHandler do
   require Membrane.Core.LegacyTelemetry, as: LegacyTelemetry
 
   @uninterrupted_redemands_warning_limit 1000
+  @empty_map_set MapSet.new()
 
   @impl CallbackHandler
   def transform_actions(actions, _callback, _handler_params, state) do
@@ -49,10 +50,21 @@ defmodule Membrane.Core.Element.ActionHandler do
 
   @impl CallbackHandler
   def handle_end_of_actions(state) do
-    # Fixed order of handling demand of manual and auto pads would lead to
-    # favoring manual pads over auto pads (or vice versa), especially after
-    # introducting auto flow queues.
+    cond do
+      state.pads_to_snapshot == @empty_map_set ->
+        maybe_handle_delayed_demands(state)
 
+      state.delayed_demands == @empty_map_set ->
+        state
+        |> handle_pads_to_snapshot()
+        |> maybe_handle_delayed_demands()
+
+      true ->
+        handle_pads_to_snapshot_and_delayed_demands_in_random_order(state)
+    end
+  end
+
+  defp handle_pads_to_snapshot_and_delayed_demands_in_random_order(state) do
     if Enum.random([true, false]) do
       state
       |> handle_pads_to_snapshot()
@@ -70,11 +82,26 @@ defmodule Membrane.Core.Element.ActionHandler do
     end
   end
 
+  # Suppress false positive dialyzer warnings resulting from
+  # broken handling of opaque types - in this case MapSet.t()
+  # https://github.com/elixir-lang/elixir/issues/14576
+  @dialyzer {:nowarn_function, handle_pads_to_snapshot: 1}
   defp handle_pads_to_snapshot(state) do
-    state.pads_to_snapshot
-    |> Enum.shuffle()
-    |> Enum.reduce(state, &DemandController.snapshot_atomic_demand/2)
-    |> Map.put(:pads_to_snapshot, MapSet.new())
+    case MapSet.to_list(state.pads_to_snapshot) do
+      [] ->
+        state
+
+      [pad_ref] ->
+        state = %{state | pads_to_snapshot: MapSet.new()}
+        DemandController.snapshot_atomic_demand(pad_ref, state)
+
+      pad_refs ->
+        state = %{state | pads_to_snapshot: MapSet.new()}
+
+        pad_refs
+        |> Enum.shuffle()
+        |> Enum.reduce(state, &DemandController.snapshot_atomic_demand/2)
+    end
   end
 
   @impl CallbackHandler
@@ -447,9 +474,7 @@ defmodule Membrane.Core.Element.ActionHandler do
       state = DemandController.decrease_demand_by_outgoing_buffers(pad_ref, buffers, state)
       :atomics.add(stalker_metrics.total_buffers, 1, length(buffers))
       Message.send(pid, :buffer, buffers, for_pad: other_ref)
-
       mark_start_of_stream(pad_ref, pad_data, state)
-      |> Map.update!(:pads_to_snapshot, &MapSet.put(&1, pad_ref))
     else
       %{direction: :input} ->
         raise PadDirectionError, action: :buffer, direction: :input, pad: pad_ref
