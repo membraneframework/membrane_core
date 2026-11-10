@@ -1,6 +1,14 @@
 defmodule Membrane.Core.Element.AtomicDemand do
   @moduledoc false
 
+  # Both ends of a link share this demand counter. The receiver increases it when it demands
+  # data and the sender decreases it by the size of the buffers it sends. The sender buffers
+  # its decrements until they reach `throttling_factor`. When the receiver increases a counter
+  # that is not positive, it sends :atomic_demand_increased to the sender, so if the sender saw
+  # the counter exhausted, it will be told when demand is back. When the sender works in :push
+  # and the receiver in :pull, the counter works as a toilet: if it drops below -toilet_capacity,
+  # the receiver gets killed.
+
   alias Membrane.Core.Element.EffectiveFlowController
 
   alias __MODULE__.{
@@ -142,9 +150,10 @@ defmodule Membrane.Core.Element.AtomicDemand do
 
   @spec decrease(t, non_neg_integer()) :: {{:decreased, integer()}, t} | {:unchanged, t}
   def decrease(%__MODULE__{} = atomic_demand, value) do
-    atomic_demand = Map.update!(atomic_demand, :buffered_decrementation, &(&1 + value))
+    buffered_decrementation = atomic_demand.buffered_decrementation + value
+    atomic_demand = %{atomic_demand | buffered_decrementation: buffered_decrementation}
 
-    if atomic_demand.buffered_decrementation >= atomic_demand.throttling_factor do
+    if buffered_decrementation >= atomic_demand.throttling_factor do
       flush_buffered_decrementation(atomic_demand)
     else
       {:unchanged, atomic_demand}
@@ -166,10 +175,10 @@ defmodule Membrane.Core.Element.AtomicDemand do
     atomic_demand = %{atomic_demand | buffered_decrementation: 0}
 
     atomic_demand =
-      if not atomic_demand.toilet_overflowed? and
+      if -1 * atomic_demand_value > atomic_demand.toilet_capacity and
+           not atomic_demand.toilet_overflowed? and
            get_receiver_status(atomic_demand) == {:resolved, :pull} and
-           get_sender_status(atomic_demand) == {:resolved, :push} and
-           -1 * atomic_demand_value > atomic_demand.toilet_capacity do
+           get_sender_status(atomic_demand) == {:resolved, :push} do
         overflow(atomic_demand, atomic_demand_value)
       else
         atomic_demand

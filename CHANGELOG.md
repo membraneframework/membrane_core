@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.6
+* Reduce the per-buffer processing overhead in elements [#1188](https://github.com/membraneframework/membrane_core/pull/1188)
+
 ## 1.3.5
 * Fix `Membrane.Funnel` not sending `Membrane.Funnel.NewInputEvent` when an input pad is linked while playing [#1193](https://github.com/membraneframework/membrane_core/pull/1193)
 * Make logs more specific about the reason when linking elements fails [#1167](https://github.com/membraneframework/membrane_core/pull/1167)
