@@ -424,14 +424,14 @@ defmodule Membrane.Core.Element.ActionHandler do
   defp join_buffers([action]), do: [action]
 
   defp join_buffers([{:buffer, {pad, buffers}} | rest]) do
-    {joined, rest} = join_buffers_for_pad(pad, rest, [List.wrap(buffers)])
+    {joined, rest} = join_buffers_for_pad(pad, rest, [buffers])
     [{:buffer, {pad, joined}} | join_buffers(rest)]
   end
 
   defp join_buffers([action | rest]), do: [action | join_buffers(rest)]
 
   defp join_buffers_for_pad(pad, [{:buffer, {pad, buffers}} | rest], acc) do
-    join_buffers_for_pad(pad, rest, [List.wrap(buffers) | acc])
+    join_buffers_for_pad(pad, rest, [buffers | acc])
   end
 
   defp join_buffers_for_pad(_pad, rest, acc) do

@@ -712,5 +712,24 @@ defmodule Membrane.Core.Element.ActionHandlerTest do
         end
       )
     end
+
+    test "when consecutive :buffer actions for the same pad are joined", %{state: state} do
+      actions = [
+        buffer: {:output, @mock_buffer},
+        buffer: {:output, [@mock_buffer, @mock_buffer]},
+        notify: :a,
+        buffer: {:output, nil},
+        buffer: {:output, @mock_buffer}
+      ]
+
+      joined_actions = [
+        buffer: {:output, [@mock_buffer, @mock_buffer, @mock_buffer]},
+        notify: :a,
+        buffer: {:output, [nil, @mock_buffer]}
+      ]
+
+      assert {joined_actions, state} ==
+               @module.transform_actions(actions, :handle_info, %{}, state)
+    end
   end
 end
