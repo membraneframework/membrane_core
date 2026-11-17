@@ -32,6 +32,7 @@ defmodule Membrane.Core.Stalker do
           optional(:log_metadata) => Logger.metadata(),
           optional(:module) => module(),
           optional(:options) => any(),
+          optional(:effective_flow_control) => :push | :pull,
           name: Membrane.Child.name(),
           component_type: :element | :bin | :pipeline
         }
@@ -42,7 +43,7 @@ defmodule Membrane.Core.Stalker do
         }
 
   @type graph_update ::
-          {:graph, :add | :remove,
+          {:graph, :add | :remove | :update,
            [
              %{
                entity: :component,
@@ -50,7 +51,8 @@ defmodule Membrane.Core.Stalker do
                pid: pid,
                type: :element | :bin,
                module: module() | nil,
-               options: any()
+               options: any(),
+               effective_flow_control: :push | :pull | nil
              }
              | %{
                  entity: :link,
@@ -133,7 +135,26 @@ defmodule Membrane.Core.Stalker do
          type: config.component_type,
          path: Membrane.ComponentPath.get(),
          module: config[:module],
-         options: config[:options]
+         options: config[:options],
+         effective_flow_control: config[:effective_flow_control]
+       }}
+    )
+
+    :ok
+  end
+
+  @doc """
+  Reports the effective flow control of the calling element, sent to graph subscribers as an `:update`.
+  """
+  @spec report_effective_flow_control(t(), :push | :pull) :: :ok
+  def report_effective_flow_control(stalker, effective_flow_control) do
+    send(
+      stalker.pid,
+      {:graph,
+       %{
+         entity: :update_component,
+         pid: self(),
+         effective_flow_control: effective_flow_control
        }}
     )
 
@@ -529,6 +550,25 @@ defmodule Membrane.Core.Stalker do
       Enum.split_with(graph, &(&1.entity == :link and update.path in [&1.from, &1.to]))
 
     {:remove, removed_links ++ [update], %{state | graph: graph}}
+  end
+
+  defp handle_graph_update(%{entity: :update_component, pid: pid} = update, state) do
+    state =
+      put_in(
+        state,
+        [:pid_to_component, pid, :effective_flow_control],
+        update.effective_flow_control
+      )
+
+    component = state.pid_to_component[pid]
+
+    graph =
+      Enum.map(
+        state.graph,
+        &if(&1.entity == :component and &1.pid == pid, do: component, else: &1)
+      )
+
+    {:update, [component], %{state | graph: graph}}
   end
 
   defp handle_graph_update(%{entity: :link} = update, state) do

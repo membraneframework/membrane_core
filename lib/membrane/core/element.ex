@@ -116,7 +116,8 @@ defmodule Membrane.Core.Element do
       parent_path: options.parent_path,
       log_metadata: options.log_metadata,
       module: options.module,
-      options: options.user_options
+      options: options.user_options,
+      effective_flow_control: :push
     }
 
     Membrane.Core.Stalker.register_component(options.stalker, observability_config)

@@ -22,7 +22,7 @@ defmodule Membrane.Integration.StalkerTest do
     Testing.Pipeline.execute_actions(pipeline, remove_children: :children)
   end
 
-  defmacrop graph_updates do
+  defmacrop graph_updates(filter_effective_flow_control) do
     quote do
       [
         %{
@@ -31,7 +31,8 @@ defmodule Membrane.Integration.StalkerTest do
           pid: _,
           type: :element,
           module: Membrane.Debug.Filter,
-          options: %Membrane.Debug.Filter{}
+          options: %Membrane.Debug.Filter{},
+          effective_flow_control: unquote(filter_effective_flow_control)
         },
         %{
           entity: :component,
@@ -39,7 +40,8 @@ defmodule Membrane.Integration.StalkerTest do
           pid: _,
           type: :element,
           module: Testing.Sink,
-          options: %Testing.Sink{}
+          options: %Testing.Sink{},
+          effective_flow_control: :push
         },
         %{
           entity: :component,
@@ -47,7 +49,8 @@ defmodule Membrane.Integration.StalkerTest do
           pid: _,
           type: :element,
           module: Testing.Source,
-          options: %Testing.Source{output: [1, 2, 3]}
+          options: %Testing.Source{output: [1, 2, 3]},
+          effective_flow_control: :push
         },
         %{
           entity: :link,
@@ -96,7 +99,7 @@ defmodule Membrane.Integration.StalkerTest do
     # should get entire graph in a single update
     assert_receive {:graph, :add, update}
     refute_receive {:graph, :add, _update}
-    assert graph_updates() = sorted(update)
+    assert graph_updates(:pull) = sorted(update)
 
     stop_children(pipeline)
 
@@ -109,7 +112,7 @@ defmodule Membrane.Integration.StalkerTest do
 
     refute_receive {:graph, :remove, _update}
 
-    assert graph_updates() = sorted(updates)
+    assert graph_updates(:pull) = sorted(updates)
 
     run_children(pipeline)
 
@@ -122,7 +125,9 @@ defmodule Membrane.Integration.StalkerTest do
 
     refute_receive {:graph, :add, _update}
 
-    assert graph_updates() = sorted(updates)
+    assert_receive {:graph, :update, [%{path: [_, ":filter"], effective_flow_control: :pull}]}
+
+    assert graph_updates(:push) = sorted(updates)
 
     Testing.Pipeline.terminate(pipeline)
   end
