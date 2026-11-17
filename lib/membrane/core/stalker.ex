@@ -30,6 +30,8 @@ defmodule Membrane.Core.Stalker do
   @type component_config :: %{
           optional(:parent_path) => ComponentPath.path(),
           optional(:log_metadata) => Logger.metadata(),
+          optional(:module) => module(),
+          optional(:options) => any(),
           name: Membrane.Child.name(),
           component_type: :element | :bin | :pipeline
         }
@@ -42,7 +44,14 @@ defmodule Membrane.Core.Stalker do
   @type graph_update ::
           {:graph, :add | :remove,
            [
-             %{entity: :component, path: ComponentPath.path(), pid: pid}
+             %{
+               entity: :component,
+               path: ComponentPath.path(),
+               pid: pid,
+               type: :element | :bin,
+               module: module() | nil,
+               options: any()
+             }
              | %{
                  entity: :link,
                  from: ComponentPath.path(),
@@ -106,7 +115,9 @@ defmodule Membrane.Core.Stalker do
          entity: :component,
          pid: self(),
          type: config.component_type,
-         path: Membrane.ComponentPath.get()
+         path: Membrane.ComponentPath.get(),
+         module: config[:module],
+         options: config[:options]
        }}
     )
 

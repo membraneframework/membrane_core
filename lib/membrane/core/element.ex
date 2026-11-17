@@ -114,7 +114,9 @@ defmodule Membrane.Core.Element do
       name: options.name,
       component_type: :element,
       parent_path: options.parent_path,
-      log_metadata: options.log_metadata
+      log_metadata: options.log_metadata,
+      module: options.module,
+      options: options.user_options
     }
 
     Membrane.Core.Stalker.register_component(options.stalker, observability_config)

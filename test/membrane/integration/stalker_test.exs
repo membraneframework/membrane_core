@@ -16,6 +16,8 @@ defmodule Membrane.Integration.StalkerTest do
     )
   end
 
+  defp sorted(updates), do: Enum.sort_by(updates, &{&1.entity, &1[:path] || &1.from})
+
   defp stop_children(pipeline) do
     Testing.Pipeline.execute_actions(pipeline, remove_children: :children)
   end
@@ -27,19 +29,25 @@ defmodule Membrane.Integration.StalkerTest do
           entity: :component,
           path: [_, ":filter"],
           pid: _,
-          type: :element
+          type: :element,
+          module: Membrane.Debug.Filter,
+          options: %Membrane.Debug.Filter{}
         },
         %{
           entity: :component,
           path: [_, ":sink"],
           pid: _,
-          type: :element
+          type: :element,
+          module: Testing.Sink,
+          options: %Testing.Sink{}
         },
         %{
           entity: :component,
           path: [_, ":source"],
           pid: _,
-          type: :element
+          type: :element,
+          module: Testing.Source,
+          options: %Testing.Source{output: [1, 2, 3]}
         },
         %{
           entity: :link,
@@ -72,7 +80,7 @@ defmodule Membrane.Integration.StalkerTest do
     # should get entire graph in a single update
     assert_receive {:graph, :add, update}
     refute_receive {:graph, :add, _update}
-    assert graph_updates() = Enum.sort(update)
+    assert graph_updates() = sorted(update)
 
     stop_children(pipeline)
 
@@ -85,7 +93,7 @@ defmodule Membrane.Integration.StalkerTest do
 
     refute_receive {:graph, :remove, _update}
 
-    assert graph_updates() = Enum.sort(updates)
+    assert graph_updates() = sorted(updates)
 
     run_children(pipeline)
 
@@ -98,7 +106,7 @@ defmodule Membrane.Integration.StalkerTest do
 
     refute_receive {:graph, :add, _update}
 
-    assert graph_updates() = Enum.sort(updates)
+    assert graph_updates() = sorted(updates)
 
     Testing.Pipeline.terminate(pipeline)
   end
