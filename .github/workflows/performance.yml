@@ -1,13 +1,15 @@
 name: Performance Test
 
-# Replaces the CircleCI manual approval gate. Trigger this workflow
-# manually from the Actions tab on the branch you want to benchmark.
 on:
+  push:
+    branches-ignore:
+      - master
   workflow_dispatch:
 
 jobs:
   performance:
     runs-on: performance
+    environment: performance
     steps:
       - uses: actions/checkout@v4
         with:
