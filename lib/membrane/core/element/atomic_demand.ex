@@ -106,6 +106,9 @@ defmodule Membrane.Core.Element.AtomicDemand do
     }
   end
 
+  @spec toilet_capacity(t) :: pos_integer()
+  def toilet_capacity(%__MODULE__{toilet_capacity: capacity}), do: capacity
+
   @spec set_sender_status(t, AtomicFlowStatus.value()) :: :ok
   def set_sender_status(%__MODULE__{} = atomic_demand, mode) do
     AtomicFlowStatus.set(

@@ -57,9 +57,25 @@ defmodule Membrane.Core.Stalker do
                  from: ComponentPath.path(),
                  to: ComponentPath.path(),
                  output: Pad.ref(),
-                 input: Pad.ref()
+                 input: Pad.ref(),
+                 props: link_props()
                }
            ]}
+
+  @typedoc """
+  Static properties of a link, resolved by the receiving element once its input pad is linked.
+
+  `output_flow_control` is the sender pad's declared flow control. `target_queue_size`
+  applies to `:manual` input pads, `toilet_capacity` and `auto_demand_size` to `:auto` ones.
+  """
+  @type link_props :: %{
+          flow_control: Pad.flow_control(),
+          output_flow_control: Pad.flow_control(),
+          demand_unit: Membrane.Buffer.Metric.unit() | nil,
+          target_queue_size: non_neg_integer() | nil,
+          toilet_capacity: non_neg_integer() | nil,
+          auto_demand_size: non_neg_integer() | nil
+        }
 
   @type metrics_update ::
           {:metrics, [{{metric :: atom, ComponentPath.path(), Pad.ref()}, value :: integer()}],
@@ -240,8 +256,8 @@ defmodule Membrane.Core.Stalker do
   @doc """
   Registers a link in the stalker. Must be called by the sender element.
   """
-  @spec register_link(t, Pad.ref(), Pad.ref(), link_observability_data()) :: :ok
-  def register_link(stalker, input_ref, output_ref, observability_data) do
+  @spec register_link(t, Pad.ref(), Pad.ref(), link_observability_data(), link_props()) :: :ok
+  def register_link(stalker, input_ref, output_ref, observability_data, props) do
     send(
       stalker.pid,
       {:graph,
@@ -250,7 +266,8 @@ defmodule Membrane.Core.Stalker do
          from: observability_data.path,
          to: ComponentPath.get(),
          output: output_ref,
-         input: input_ref
+         input: input_ref,
+         props: props
        }}
     )
 

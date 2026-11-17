@@ -54,14 +54,30 @@ defmodule Membrane.Integration.StalkerTest do
           from: [_, ":filter"],
           input: :input,
           output: :output,
-          to: [_, ":sink"]
+          to: [_, ":sink"],
+          props: %{
+            flow_control: :manual,
+            output_flow_control: :auto,
+            demand_unit: :buffers,
+            target_queue_size: 100,
+            toilet_capacity: 200,
+            auto_demand_size: nil
+          }
         },
         %{
           entity: :link,
           from: [_, ":source"],
           input: :input,
           output: :output,
-          to: [_, ":filter"]
+          to: [_, ":filter"],
+          props: %{
+            flow_control: :auto,
+            output_flow_control: :manual,
+            demand_unit: :buffers,
+            target_queue_size: nil,
+            toilet_capacity: 200,
+            auto_demand_size: 400
+          }
         }
       ]
     end
