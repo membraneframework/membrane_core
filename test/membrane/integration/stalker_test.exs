@@ -101,6 +101,9 @@ defmodule Membrane.Integration.StalkerTest do
     refute_receive {:graph, :add, _update}
     assert graph_updates(:pull) = sorted(update)
 
+    assert pipeline |> Membrane.Core.Pipeline.get_stalker() |> Membrane.Core.Stalker.get_graph() ==
+             update
+
     stop_children(pipeline)
 
     # should get exactly 3 updates with removal of all components and links

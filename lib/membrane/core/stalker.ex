@@ -305,6 +305,14 @@ defmodule Membrane.Core.Stalker do
   end
 
   @doc """
+  Returns the current graph of the pipeline, as a late subscriber would receive it in the first `t:graph_update/0`.
+  """
+  @spec get_graph(t(), timeout()) :: [map()]
+  def get_graph(stalker, timeout \\ 5000) do
+    GenServer.call(stalker.pid, :get_graph, timeout)
+  end
+
+  @doc """
   Subscribes for updates from the stalker
 
   The following topics are supported:
@@ -421,6 +429,11 @@ defmodule Membrane.Core.Stalker do
        timestamp: nil,
        init_time: System.monotonic_time(:millisecond)
      }}
+  end
+
+  @impl true
+  def handle_call(:get_graph, _from, state) do
+    {:reply, Enum.reverse(state.graph), state}
   end
 
   @impl true
