@@ -19,7 +19,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
   # Effective flow control of a single element can switch between :push and :pull many times during the element's lifetime.
 
   alias Membrane.Core.Element.{AtomicDemand, AutoFlowController, DemandController, State}
-  alias Membrane.Core.Message
+  alias Membrane.Core.{Message, Stalker}
   alias Membrane.Pad
 
   require Membrane.Core.Child.PadModel, as: PadModel
@@ -100,6 +100,7 @@ defmodule Membrane.Core.Element.EffectiveFlowController do
     )
 
     state = %{state | effective_flow_control: new_effective_flow_control}
+    Stalker.report_effective_flow_control(state.stalker, new_effective_flow_control)
 
     state.pads_data
     |> Enum.filter(fn {_ref, %{flow_control: flow_control}} -> flow_control == :auto end)

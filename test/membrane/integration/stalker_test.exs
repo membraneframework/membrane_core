@@ -16,44 +16,71 @@ defmodule Membrane.Integration.StalkerTest do
     )
   end
 
+  defp sorted(updates), do: Enum.sort_by(updates, &{&1.entity, &1[:path] || &1.from})
+
   defp stop_children(pipeline) do
     Testing.Pipeline.execute_actions(pipeline, remove_children: :children)
   end
 
-  defmacrop graph_updates do
+  defmacrop graph_updates(filter_effective_flow_control) do
     quote do
       [
         %{
           entity: :component,
           path: [_, ":filter"],
           pid: _,
-          type: :element
+          type: :element,
+          module: Membrane.Debug.Filter,
+          options_string: "%Membrane.Debug.Filter{" <> _,
+          effective_flow_control: unquote(filter_effective_flow_control)
         },
         %{
           entity: :component,
           path: [_, ":sink"],
           pid: _,
-          type: :element
+          type: :element,
+          module: Testing.Sink,
+          options_string: "%Membrane.Testing.Sink{" <> _,
+          effective_flow_control: :push
         },
         %{
           entity: :component,
           path: [_, ":source"],
           pid: _,
-          type: :element
+          type: :element,
+          module: Testing.Source,
+          options_string: "%Membrane.Testing.Source{output: [1, 2, 3]" <> _,
+          effective_flow_control: :push
         },
         %{
           entity: :link,
           from: [_, ":filter"],
           input: :input,
           output: :output,
-          to: [_, ":sink"]
+          to: [_, ":sink"],
+          props: %{
+            flow_control: :manual,
+            output_flow_control: :auto,
+            demand_unit: :buffers,
+            target_queue_size: 100,
+            toilet_capacity: 200,
+            auto_demand_size: nil
+          }
         },
         %{
           entity: :link,
           from: [_, ":source"],
           input: :input,
           output: :output,
-          to: [_, ":filter"]
+          to: [_, ":filter"],
+          props: %{
+            flow_control: :auto,
+            output_flow_control: :manual,
+            demand_unit: :buffers,
+            target_queue_size: nil,
+            toilet_capacity: 200,
+            auto_demand_size: 400
+          }
         }
       ]
     end
@@ -72,7 +99,10 @@ defmodule Membrane.Integration.StalkerTest do
     # should get entire graph in a single update
     assert_receive {:graph, :add, update}
     refute_receive {:graph, :add, _update}
-    assert graph_updates() = Enum.sort(update)
+    assert graph_updates(:pull) = sorted(update)
+
+    assert pipeline |> Membrane.Core.Pipeline.get_stalker() |> Membrane.Core.Stalker.get_graph() ==
+             update
 
     stop_children(pipeline)
 
@@ -85,7 +115,7 @@ defmodule Membrane.Integration.StalkerTest do
 
     refute_receive {:graph, :remove, _update}
 
-    assert graph_updates() = Enum.sort(updates)
+    assert graph_updates(:pull) = sorted(updates)
 
     run_children(pipeline)
 
@@ -98,7 +128,9 @@ defmodule Membrane.Integration.StalkerTest do
 
     refute_receive {:graph, :add, _update}
 
-    assert graph_updates() = Enum.sort(updates)
+    assert_receive {:graph, :update, [%{path: [_, ":filter"], effective_flow_control: :pull}]}
+
+    assert graph_updates(:push) = sorted(updates)
 
     Testing.Pipeline.terminate(pipeline)
   end

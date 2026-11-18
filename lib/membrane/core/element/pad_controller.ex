@@ -162,13 +162,6 @@ defmodule Membrane.Core.Element.PadController do
         throttling_factor: input_endpoint.pad_props[:throttling_factor]
       })
 
-    Stalker.register_link(
-      state.stalker,
-      input_endpoint.pad_ref,
-      output_endpoint.pad_ref,
-      link_metadata.observability_data
-    )
-
     link_metadata =
       link_metadata
       |> Map.merge(%{
@@ -200,8 +193,27 @@ defmodule Membrane.Core.Element.PadController do
         state
       )
 
+    pad_data = PadModel.get_data!(state, input_endpoint.pad_ref)
+
+    props = %{
+      flow_control: pad_data.flow_control,
+      output_flow_control: output_pad_info.flow_control,
+      demand_unit: pad_data.demand_unit,
+      target_queue_size: pad_data.input_queue && pad_data.input_queue.target_size,
+      toilet_capacity: AtomicDemand.toilet_capacity(atomic_demand),
+      auto_demand_size: pad_data.auto_demand_size
+    }
+
+    Stalker.register_link(
+      state.stalker,
+      input_endpoint.pad_ref,
+      output_endpoint.pad_ref,
+      link_props.link_metadata.observability_data,
+      props
+    )
+
     state =
-      case PadModel.get_data!(state, input_endpoint.pad_ref) do
+      case pad_data do
         %{flow_control: :auto, direction: :input} = pad_data ->
           EffectiveFlowController.handle_sender_effective_flow_control(
             pad_data.ref,

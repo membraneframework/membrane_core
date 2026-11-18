@@ -30,6 +30,9 @@ defmodule Membrane.Core.Stalker do
   @type component_config :: %{
           optional(:parent_path) => ComponentPath.path(),
           optional(:log_metadata) => Logger.metadata(),
+          optional(:module) => module(),
+          optional(:options) => any(),
+          optional(:effective_flow_control) => :push | :pull,
           name: Membrane.Child.name(),
           component_type: :element | :bin | :pipeline
         }
@@ -40,17 +43,41 @@ defmodule Membrane.Core.Stalker do
         }
 
   @type graph_update ::
-          {:graph, :add | :remove,
+          {:graph, :add | :remove | :update,
            [
-             %{entity: :component, path: ComponentPath.path(), pid: pid}
+             %{
+               entity: :component,
+               path: ComponentPath.path(),
+               pid: pid,
+               type: :element | :bin,
+               module: module() | nil,
+               options_string: String.t() | nil,
+               effective_flow_control: :push | :pull | nil
+             }
              | %{
                  entity: :link,
                  from: ComponentPath.path(),
                  to: ComponentPath.path(),
                  output: Pad.ref(),
-                 input: Pad.ref()
+                 input: Pad.ref(),
+                 props: link_props()
                }
            ]}
+
+  @typedoc """
+  Static properties of a link, resolved by the receiving element once its input pad is linked.
+
+  `output_flow_control` is the sender pad's declared flow control. `target_queue_size`
+  applies to `:manual` input pads, `toilet_capacity` and `auto_demand_size` to `:auto` ones.
+  """
+  @type link_props :: %{
+          flow_control: Pad.flow_control(),
+          output_flow_control: Pad.flow_control(),
+          demand_unit: Membrane.Buffer.Metric.unit() | nil,
+          target_queue_size: non_neg_integer() | nil,
+          toilet_capacity: non_neg_integer() | nil,
+          auto_demand_size: non_neg_integer() | nil
+        }
 
   @type metrics_update ::
           {:metrics, [{{metric :: atom, ComponentPath.path(), Pad.ref()}, value :: integer()}],
@@ -106,7 +133,29 @@ defmodule Membrane.Core.Stalker do
          entity: :component,
          pid: self(),
          type: config.component_type,
-         path: Membrane.ComponentPath.get()
+         path: Membrane.ComponentPath.get(),
+         module: config[:module],
+         options_string:
+           config[:options] && inspect(config[:options], limit: 50, printable_limit: 256),
+         effective_flow_control: config[:effective_flow_control]
+       }}
+    )
+
+    :ok
+  end
+
+  @doc """
+  Reports the effective flow control of the calling element, sent to graph subscribers as an `:update`.
+  """
+  @spec report_effective_flow_control(t(), :push | :pull) :: :ok
+  def report_effective_flow_control(stalker, effective_flow_control) do
+    send(
+      stalker.pid,
+      {:graph,
+       %{
+         entity: :update_component,
+         pid: self(),
+         effective_flow_control: effective_flow_control
        }}
     )
 
@@ -229,8 +278,8 @@ defmodule Membrane.Core.Stalker do
   @doc """
   Registers a link in the stalker. Must be called by the sender element.
   """
-  @spec register_link(t, Pad.ref(), Pad.ref(), link_observability_data()) :: :ok
-  def register_link(stalker, input_ref, output_ref, observability_data) do
+  @spec register_link(t, Pad.ref(), Pad.ref(), link_observability_data(), link_props()) :: :ok
+  def register_link(stalker, input_ref, output_ref, observability_data, props) do
     send(
       stalker.pid,
       {:graph,
@@ -239,7 +288,8 @@ defmodule Membrane.Core.Stalker do
          from: observability_data.path,
          to: ComponentPath.get(),
          output: output_ref,
-         input: input_ref
+         input: input_ref,
+         props: props
        }}
     )
 
@@ -253,6 +303,14 @@ defmodule Membrane.Core.Stalker do
   def unregister_link(stalker, pad_ref) do
     send(stalker.pid, {:graph, %{entity: :remove_link, path: ComponentPath.get(), pad: pad_ref}})
     :ok
+  end
+
+  @doc """
+  Returns the current graph of the pipeline, as a late subscriber would receive it in the first `t:graph_update/0`.
+  """
+  @spec get_graph(t(), timeout()) :: [map()]
+  def get_graph(stalker, timeout \\ 5000) do
+    GenServer.call(stalker.pid, :get_graph, timeout)
   end
 
   @doc """
@@ -372,6 +430,11 @@ defmodule Membrane.Core.Stalker do
        timestamp: nil,
        init_time: System.monotonic_time(:millisecond)
      }}
+  end
+
+  @impl true
+  def handle_call(:get_graph, _from, state) do
+    {:reply, Enum.reverse(state.graph), state}
   end
 
   @impl true
@@ -501,6 +564,25 @@ defmodule Membrane.Core.Stalker do
       Enum.split_with(graph, &(&1.entity == :link and update.path in [&1.from, &1.to]))
 
     {:remove, removed_links ++ [update], %{state | graph: graph}}
+  end
+
+  defp handle_graph_update(%{entity: :update_component, pid: pid} = update, state) do
+    state =
+      put_in(
+        state,
+        [:pid_to_component, pid, :effective_flow_control],
+        update.effective_flow_control
+      )
+
+    component = state.pid_to_component[pid]
+
+    graph =
+      Enum.map(
+        state.graph,
+        &if(&1.entity == :component and &1.pid == pid, do: component, else: &1)
+      )
+
+    {:update, [component], %{state | graph: graph}}
   end
 
   defp handle_graph_update(%{entity: :link} = update, state) do
