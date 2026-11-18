@@ -51,7 +51,7 @@ defmodule Membrane.Core.Stalker do
                pid: pid,
                type: :element | :bin,
                module: module() | nil,
-               options: any(),
+               options_string: String.t() | nil,
                effective_flow_control: :push | :pull | nil
              }
              | %{
@@ -135,7 +135,8 @@ defmodule Membrane.Core.Stalker do
          type: config.component_type,
          path: Membrane.ComponentPath.get(),
          module: config[:module],
-         options: config[:options],
+         options_string:
+           config[:options] && inspect(config[:options], limit: 50, printable_limit: 256),
          effective_flow_control: config[:effective_flow_control]
        }}
     )

@@ -31,7 +31,7 @@ defmodule Membrane.Integration.StalkerTest do
           pid: _,
           type: :element,
           module: Membrane.Debug.Filter,
-          options: %Membrane.Debug.Filter{},
+          options_string: "%Membrane.Debug.Filter{" <> _,
           effective_flow_control: unquote(filter_effective_flow_control)
         },
         %{
@@ -40,7 +40,7 @@ defmodule Membrane.Integration.StalkerTest do
           pid: _,
           type: :element,
           module: Testing.Sink,
-          options: %Testing.Sink{},
+          options_string: "%Membrane.Testing.Sink{" <> _,
           effective_flow_control: :push
         },
         %{
@@ -49,7 +49,7 @@ defmodule Membrane.Integration.StalkerTest do
           pid: _,
           type: :element,
           module: Testing.Source,
-          options: %Testing.Source{output: [1, 2, 3]},
+          options_string: "%Membrane.Testing.Source{output: [1, 2, 3]" <> _,
           effective_flow_control: :push
         },
         %{
