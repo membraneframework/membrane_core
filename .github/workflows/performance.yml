@@ -1,15 +1,51 @@
 name: Performance Test
+run-name: Performance Test ${{ inputs.pr && format('#{0}', inputs.pr) || '' }}
 
 on:
-  push:
-    branches-ignore:
-      - master
+  issue_comment:
+    types: [created]
   workflow_dispatch:
+    inputs:
+      pr:
+        description: Number of the pull request to test
+        required: true
 
 jobs:
+  # We dispatch a separate run so that the test can also be started manually with a pull request number.
+  trigger:
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/test_performance')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      pull-requests: read
+      statuses: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      COMMENTER: ${{ github.event.comment.user.login }}
+      PR_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - name: Dispatch performance test for the pull request
+        run: |
+          perm=$(gh api "repos/$GH_REPO/collaborators/$COMMENTER/permission" -q .permission) || perm=none
+          if [[ ! "$perm" =~ ^(admin|write)$ ]]; then
+            echo "::error::$COMMENTER is not allowed to run performance tests (permission=$perm)"
+            exit 1
+          fi
+
+          sha=$(gh pr view "$PR_NUMBER" --json headRefOid -q .headRefOid)
+          ahead=$(gh run list --workflow performance.yml --event workflow_dispatch --json status \
+            -q '[.[] | select(.status == "queued" or .status == "in_progress")] | length')
+          gh workflow run performance.yml -f pr="$PR_NUMBER"
+          gh api "repos/$GH_REPO/statuses/$sha" -f state=pending -f context=performance \
+            -f description="Queued behind $ahead other run(s)" \
+            -f target_url="$GITHUB_SERVER_URL/$GH_REPO/actions/workflows/performance.yml"
+
   performance:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: performance
-    environment: performance
+    outputs:
+      sha: ${{ steps.head.outputs.sha }}
     steps:
       # The benchmark containers run as root, so we need to take their files back before checkout can clean the workspace.
       - name: Reclaim workspace ownership
@@ -17,7 +53,11 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          ref: refs/pull/${{ inputs.pr }}/head
           submodules: recursive
+
+      - id: head
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Back up benchmark and mix.exs
         run: |
@@ -69,3 +109,21 @@ jobs:
       - name: Clean up results
         if: always()
         run: rm -f $HOME/results/*
+
+  # Checks of a dispatched run are not shown on the pull request, so we report the result as a commit status.
+  report:
+    if: always() && github.event_name == 'workflow_dispatch'
+    needs: performance
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ needs.performance.outputs.sha }}
+      STATE: ${{ needs.performance.result == 'success' && 'success' || 'failure' }}
+    steps:
+      - name: Report the result on the tested commit
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=$STATE -f context=performance \
+            -f description="Performance test: ${{ needs.performance.result }}" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
