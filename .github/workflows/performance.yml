@@ -6,13 +6,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  # A run started by a comment would report its check on master, so we dispatch a separate run on the pull request's branch.
+  # A run started by a comment is tied to master, so we dispatch a separate run on the pull request's branch.
   trigger:
     if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/test_performance')
     runs-on: ubuntu-latest
     permissions:
       actions: write
       pull-requests: read
+      statuses: write
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -21,8 +22,25 @@ jobs:
     steps:
       - name: Dispatch performance test on the pull request's branch
         run: |
-          [[ $(gh api repos/$GH_REPO/collaborators/$COMMENTER/permission -q .permission) =~ ^(admin|write)$ ]]
-          gh workflow run performance.yml --ref "$(gh pr view $PR_NUMBER --json headRefName -q .headRefName)"
+          perm=$(gh api "repos/$GH_REPO/collaborators/$COMMENTER/permission" -q .permission) || perm=none
+          if [[ ! "$perm" =~ ^(admin|write)$ ]]; then
+            echo "::error::$COMMENTER is not allowed to run performance tests (permission=$perm)"
+            exit 1
+          fi
+
+          read -r cross ref sha < <(gh pr view "$PR_NUMBER" --json isCrossRepository,headRefName,headRefOid \
+            -q '"\(.isCrossRepository) \(.headRefName) \(.headRefOid)"')
+          if [[ "$cross" != "false" ]]; then
+            echo "::error::Performance tests cannot be run for a pull request from a fork"
+            exit 1
+          fi
+
+          ahead=$(gh run list --workflow performance.yml --event workflow_dispatch --json status \
+            -q '[.[] | select(.status == "queued" or .status == "in_progress")] | length')
+          gh workflow run performance.yml --ref "$ref"
+          gh api "repos/$GH_REPO/statuses/$sha" -f state=pending -f context=performance \
+            -f description="Queued behind $ahead other run(s)" \
+            -f target_url="$GITHUB_SERVER_URL/$GH_REPO/actions/workflows/performance.yml?query=branch:$ref"
 
   performance:
     if: github.event_name == 'workflow_dispatch'
@@ -86,3 +104,20 @@ jobs:
       - name: Clean up results
         if: always()
         run: rm -f $HOME/results/*
+
+  # Checks of a dispatched run are not shown on the pull request, so we report the result as a commit status.
+  report:
+    if: always() && github.event_name == 'workflow_dispatch'
+    needs: performance
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      STATE: ${{ needs.performance.result == 'success' && 'success' || 'failure' }}
+    steps:
+      - name: Report the result on the tested commit
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" -f state=$STATE -f context=performance \
+            -f description="Performance test: ${{ needs.performance.result }}" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
