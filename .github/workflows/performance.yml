@@ -11,6 +11,10 @@ jobs:
     runs-on: performance
     environment: performance
     steps:
+      # The benchmark containers run as root, so we need to take their files back before checkout can clean the workspace.
+      - name: Reclaim workspace ownership
+        run: docker run --rm -v $PWD:/root/app membraneframeworklabs/docker_membrane chown -R $(id -u):$(id -g) /root/app
+
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -36,7 +40,8 @@ jobs:
 
       - name: Switch to master and restore benchmark
         run: |
-          git checkout -f master
+          git fetch --depth 1 origin master
+          git checkout -f FETCH_HEAD
           cp $HOME/benchmark_backup/mix.exs .
 
       - name: Run benchmarks on master
