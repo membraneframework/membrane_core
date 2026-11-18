@@ -1,15 +1,32 @@
 name: Performance Test
 
 on:
-  push:
-    branches-ignore:
-      - master
+  issue_comment:
+    types: [created]
   workflow_dispatch:
 
 jobs:
+  # A run started by a comment would report its check on master, so we dispatch a separate run on the pull request's branch.
+  trigger:
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/test_performance')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      COMMENTER: ${{ github.event.comment.user.login }}
+      PR_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - name: Dispatch performance test on the pull request's branch
+        run: |
+          [[ $(gh api repos/$GH_REPO/collaborators/$COMMENTER/permission -q .permission) =~ ^(admin|write)$ ]]
+          gh workflow run performance.yml --ref "$(gh pr view $PR_NUMBER --json headRefName -q .headRefName)"
+
   performance:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: performance
-    environment: performance
     steps:
       # The benchmark containers run as root, so we need to take their files back before checkout can clean the workspace.
       - name: Reclaim workspace ownership
