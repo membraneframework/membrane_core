@@ -10,11 +10,11 @@ on:
         description: Number of the pull request to test
         required: true
       sha:
-        description: Commit to test, defaults to the current head of the pull request
-        required: false
+        description: Commit of the pull request to test
+        required: true
 
 jobs:
-  # We dispatch a separate run so that the test can also be started manually with a pull request number.
+  # We dispatch a separate run so that the test can also be started manually with a pull request number and a commit.
   trigger:
     if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/test_performance')
     runs-on: ubuntu-latest
@@ -58,7 +58,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.sha || format('refs/pull/{0}/head', inputs.pr) }}
+          ref: ${{ inputs.sha }}
           submodules: recursive
           persist-credentials: false
 
