@@ -44,6 +44,8 @@ jobs:
   performance:
     if: github.event_name == 'workflow_dispatch'
     runs-on: performance
+    permissions:
+      contents: read
     outputs:
       sha: ${{ steps.head.outputs.sha }}
     steps:
@@ -55,6 +57,7 @@ jobs:
         with:
           ref: refs/pull/${{ inputs.pr }}/head
           submodules: recursive
+          persist-credentials: false
 
       - id: head
         run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
