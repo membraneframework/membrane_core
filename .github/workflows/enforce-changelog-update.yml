@@ -8,6 +8,8 @@ jobs:
   check-changelog-update:
     if: ${{ !contains( github.event.pull_request.labels.*.name, 'no-changelog') }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
