@@ -7,6 +7,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     name: Update packages list in README
     steps:
       - uses: actions/checkout@v3

@@ -6,6 +6,8 @@ on:
 jobs:
   maybe_add_to_project_board:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
     - name: Checkout membrane_core
       uses: actions/checkout@v3
