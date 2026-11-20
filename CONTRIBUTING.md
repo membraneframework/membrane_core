@@ -15,3 +15,7 @@ When contributing to existing repo:
 If you wish to create a new plugin you can give us a shout and if it's something we want as a part of our ecosystem we'll create a repo for you, guide you on your work and maintain the plugin in future.
 
 However, if you feel confident enough to maintain it on your own, you can, of course, create your own repo and hex package - we only ask you to follow the naming convetions of the framework package and modules. In that case, don't forget to let us know about your work so we could include it on the list of available plugins.
+
+## Documentation analytics
+
+The docs published on [hexdocs](https://hexdocs.pm/membrane_core) send anonymous, cookieless page-view counts (the page URL, the referrer, time on page and scroll depth, nothing identifying the reader) to an analytics instance controlled by the Membrane team. The tracker script is vendored in this repository and no data is shared with third parties. See the [privacy policy](https://swmansion.com/privacy/policy) for details.
