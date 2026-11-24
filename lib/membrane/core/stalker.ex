@@ -47,6 +47,7 @@ defmodule Membrane.Core.Stalker do
            [
              %{
                entity: :component,
+               pipeline: pid,
                path: ComponentPath.path(),
                pid: pid,
                type: :element | :bin,
@@ -56,6 +57,7 @@ defmodule Membrane.Core.Stalker do
              }
              | %{
                  entity: :link,
+                 pipeline: pid,
                  from: ComponentPath.path(),
                  to: ComponentPath.path(),
                  output: Pad.ref(),
@@ -422,6 +424,7 @@ defmodule Membrane.Core.Stalker do
 
     {:ok,
      %{
+       pipeline: pipeline,
        ets: ets,
        graph: [],
        pid_to_component: %{},
@@ -550,6 +553,7 @@ defmodule Membrane.Core.Stalker do
 
   defp handle_graph_update(%{entity: :component, pid: pid} = update, state) do
     Process.monitor(pid)
+    update = Map.put(update, :pipeline, state.pipeline)
     state = put_in(state, [:pid_to_component, pid], update)
     state = %{state | graph: [update | state.graph]}
     {:add, [update], state}
@@ -586,6 +590,7 @@ defmodule Membrane.Core.Stalker do
   end
 
   defp handle_graph_update(%{entity: :link} = update, state) do
+    update = Map.put(update, :pipeline, state.pipeline)
     {:add, [update], %{state | graph: [update | state.graph]}}
   end
 
