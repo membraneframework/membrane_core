@@ -317,11 +317,17 @@ defmodule Membrane.Core.Stalker do
 
   @doc """
   Returns the current values of all metrics, read by the calling process without waiting for the next `t:metrics_update/0`.
+
+  Returns an empty list once the pipeline has terminated.
   """
   @spec get_metrics(t()) :: [
           {{metric :: atom, ComponentPath.path(), Pad.ref() | nil}, value :: term()}
         ]
-  def get_metrics(stalker), do: scrape_metrics(stalker)
+  def get_metrics(stalker) do
+    scrape_metrics(stalker)
+  rescue
+    ArgumentError -> []
+  end
 
   @doc """
   Subscribes for updates from the stalker

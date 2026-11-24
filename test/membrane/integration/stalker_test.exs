@@ -160,6 +160,8 @@ defmodule Membrane.Integration.StalkerTest do
     # no children == no more metrics
     refute_receive {:metrics, _metrics, _timestamp}
 
+    stalker = Membrane.Core.Pipeline.get_stalker(pipeline)
     Testing.Pipeline.terminate(pipeline)
+    assert Membrane.Core.Stalker.get_metrics(stalker) == []
   end
 end
