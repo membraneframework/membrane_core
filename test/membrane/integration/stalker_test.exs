@@ -150,6 +150,11 @@ defmodule Membrane.Integration.StalkerTest do
     assert_receive {:metrics, metrics, _timestamp}, 2000
     refute Enum.empty?(metrics)
 
+    assert [{{_metric, [_pipeline | _path], _pad}, _value} | _rest] =
+             pipeline
+             |> Membrane.Core.Pipeline.get_stalker()
+             |> Membrane.Core.Stalker.get_metrics()
+
     stop_children(pipeline)
 
     # no children == no more metrics
