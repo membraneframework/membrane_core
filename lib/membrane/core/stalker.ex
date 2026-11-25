@@ -318,7 +318,7 @@ defmodule Membrane.Core.Stalker do
   @doc """
   Returns the current values of all metrics, without waiting for the next `t:metrics_update/0`.
 
-  Returns an empty list once the pipeline has terminated.
+  Returns an empty list when the call to the stalker fails, as it does once the pipeline has terminated.
   """
   @spec get_metrics(t(), timeout()) :: [
           {{metric :: atom, ComponentPath.path(), Pad.ref() | nil}, value :: term()}
@@ -326,7 +326,9 @@ defmodule Membrane.Core.Stalker do
   def get_metrics(stalker, timeout \\ 5000) do
     GenServer.call(stalker.pid, :get_metrics, timeout)
   catch
-    :exit, {reason, {GenServer, :call, _args}} when reason in [:noproc, :normal, :shutdown] -> []
+    :exit, reason ->
+      Membrane.Logger.debug("Failed to get metrics from the stalker, reason: #{inspect(reason)}")
+      []
   end
 
   @doc """
