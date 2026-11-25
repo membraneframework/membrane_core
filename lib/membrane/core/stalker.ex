@@ -316,17 +316,17 @@ defmodule Membrane.Core.Stalker do
   end
 
   @doc """
-  Returns the current values of all metrics, read by the calling process without waiting for the next `t:metrics_update/0`.
+  Returns the current values of all metrics, without waiting for the next `t:metrics_update/0`.
 
   Returns an empty list once the pipeline has terminated.
   """
-  @spec get_metrics(t()) :: [
+  @spec get_metrics(t(), timeout()) :: [
           {{metric :: atom, ComponentPath.path(), Pad.ref() | nil}, value :: term()}
         ]
-  def get_metrics(stalker) do
-    scrape_metrics(stalker)
-  rescue
-    ArgumentError -> []
+  def get_metrics(stalker, timeout \\ 5000) do
+    GenServer.call(stalker.pid, :get_metrics, timeout)
+  catch
+    :exit, {reason, {GenServer, :call, _args}} when reason in [:noproc, :normal, :shutdown] -> []
   end
 
   @doc """
@@ -452,6 +452,10 @@ defmodule Membrane.Core.Stalker do
   @impl true
   def handle_call(:get_graph, _from, state) do
     {:reply, Enum.reverse(state.graph), state}
+  end
+
+  def handle_call(:get_metrics, _from, state) do
+    {:reply, scrape_metrics(state), state}
   end
 
   @impl true
