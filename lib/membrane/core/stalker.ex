@@ -50,7 +50,7 @@ defmodule Membrane.Core.Stalker do
                pipeline: pid,
                path: ComponentPath.path(),
                pid: pid,
-               type: :element | :bin,
+               type: :element | :bin | :pipeline,
                module: module() | nil,
                options_string: String.t() | nil,
                effective_flow_control: :push | :pull | nil
@@ -94,7 +94,7 @@ defmodule Membrane.Core.Stalker do
   end
 
   @doc """
-  Creates a new stalker and configures observability for the pipeline.
+  Creates a new stalker, registers the pipeline in it and configures the pipeline's observability.
 
   Must be called by the pipeline process.
   """
@@ -109,7 +109,7 @@ defmodule Membrane.Core.Stalker do
     ets = receive do: ({:ets, ets} -> ets)
 
     stalker = %__MODULE__{pid: pid, ets: ets}
-    setup_process_local_observability(config, %{stalker: stalker})
+    register_component(stalker, config)
     stalker
   end
 
@@ -122,7 +122,7 @@ defmodule Membrane.Core.Stalker do
   @doc """
   Registers a component in the stalker and configures the component's observability.
 
-  Must be called by an element's or bin's process.
+  Must be called by the component's process.
   """
   @spec register_component(t(), component_config()) :: :ok
   def register_component(stalker, config) do

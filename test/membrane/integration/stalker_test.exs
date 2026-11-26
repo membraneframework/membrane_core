@@ -99,7 +99,19 @@ defmodule Membrane.Integration.StalkerTest do
     # should get entire graph in a single update
     assert_receive {:graph, :add, update}
     refute_receive {:graph, :add, _update}
-    assert graph_updates(:pull) = sorted(update)
+    assert [pipeline_update | children_update] = sorted(update)
+
+    assert %{
+             entity: :component,
+             path: [_pipeline_name],
+             pid: ^pipeline,
+             type: :pipeline,
+             module: Testing.Pipeline,
+             options_string: nil,
+             effective_flow_control: nil
+           } = pipeline_update
+
+    assert graph_updates(:pull) = children_update
     assert Enum.all?(update, &(&1.pipeline == pipeline))
 
     assert pipeline |> Membrane.Core.Pipeline.get_stalker() |> Membrane.Core.Stalker.get_graph() ==
