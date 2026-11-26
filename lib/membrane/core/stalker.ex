@@ -47,6 +47,7 @@ defmodule Membrane.Core.Stalker do
            [
              %{
                entity: :component,
+               pipeline: pid,
                path: ComponentPath.path(),
                pid: pid,
                type: :element | :bin,
@@ -56,6 +57,7 @@ defmodule Membrane.Core.Stalker do
              }
              | %{
                  entity: :link,
+                 pipeline: pid,
                  from: ComponentPath.path(),
                  to: ComponentPath.path(),
                  output: Pad.ref(),
@@ -314,6 +316,22 @@ defmodule Membrane.Core.Stalker do
   end
 
   @doc """
+  Returns the current values of all metrics, without waiting for the next `t:metrics_update/0`.
+
+  Returns an empty list when the call to the stalker fails, as it does once the pipeline has terminated.
+  """
+  @spec get_metrics(t(), timeout()) :: [
+          {{metric :: atom, ComponentPath.path(), Pad.ref() | nil}, value :: term()}
+        ]
+  def get_metrics(stalker, timeout \\ 5000) do
+    GenServer.call(stalker.pid, :get_metrics, timeout)
+  catch
+    :exit, reason ->
+      Membrane.Logger.debug("Failed to get metrics from the stalker, reason: #{inspect(reason)}")
+      []
+  end
+
+  @doc """
   Subscribes for updates from the stalker
 
   The following topics are supported:
@@ -422,6 +440,7 @@ defmodule Membrane.Core.Stalker do
 
     {:ok,
      %{
+       pipeline: pipeline,
        ets: ets,
        graph: [],
        pid_to_component: %{},
@@ -435,6 +454,10 @@ defmodule Membrane.Core.Stalker do
   @impl true
   def handle_call(:get_graph, _from, state) do
     {:reply, Enum.reverse(state.graph), state}
+  end
+
+  def handle_call(:get_metrics, _from, state) do
+    {:reply, scrape_metrics(state), state}
   end
 
   @impl true
@@ -550,6 +573,7 @@ defmodule Membrane.Core.Stalker do
 
   defp handle_graph_update(%{entity: :component, pid: pid} = update, state) do
     Process.monitor(pid)
+    update = Map.put(update, :pipeline, state.pipeline)
     state = put_in(state, [:pid_to_component, pid], update)
     state = %{state | graph: [update | state.graph]}
     {:add, [update], state}
@@ -586,6 +610,7 @@ defmodule Membrane.Core.Stalker do
   end
 
   defp handle_graph_update(%{entity: :link} = update, state) do
+    update = Map.put(update, :pipeline, state.pipeline)
     {:add, [update], %{state | graph: [update | state.graph]}}
   end
 

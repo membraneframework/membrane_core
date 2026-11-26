@@ -100,6 +100,7 @@ defmodule Membrane.Integration.StalkerTest do
     assert_receive {:graph, :add, update}
     refute_receive {:graph, :add, _update}
     assert graph_updates(:pull) = sorted(update)
+    assert Enum.all?(update, &(&1.pipeline == pipeline))
 
     assert pipeline |> Membrane.Core.Pipeline.get_stalker() |> Membrane.Core.Stalker.get_graph() ==
              update
@@ -116,6 +117,7 @@ defmodule Membrane.Integration.StalkerTest do
     refute_receive {:graph, :remove, _update}
 
     assert graph_updates(:pull) = sorted(updates)
+    assert Enum.all?(updates, &(&1.pipeline == pipeline))
 
     run_children(pipeline)
 
@@ -148,11 +150,18 @@ defmodule Membrane.Integration.StalkerTest do
     assert_receive {:metrics, metrics, _timestamp}, 2000
     refute Enum.empty?(metrics)
 
+    assert [{{_metric, [_pipeline | _path], _pad}, _value} | _rest] =
+             pipeline
+             |> Membrane.Core.Pipeline.get_stalker()
+             |> Membrane.Core.Stalker.get_metrics()
+
     stop_children(pipeline)
 
     # no children == no more metrics
     refute_receive {:metrics, _metrics, _timestamp}
 
+    stalker = Membrane.Core.Pipeline.get_stalker(pipeline)
     Testing.Pipeline.terminate(pipeline)
+    assert Membrane.Core.Stalker.get_metrics(stalker) == []
   end
 end
