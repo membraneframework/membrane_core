@@ -103,7 +103,7 @@ defmodule Membrane.Integration.StalkerTest do
 
     assert %{
              entity: :component,
-             path: [_],
+             path: [_pipeline_name],
              pid: ^pipeline,
              type: :pipeline,
              module: Testing.Pipeline,
